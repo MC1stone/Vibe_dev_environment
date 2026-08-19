@@ -3,15 +3,22 @@ Views for the Analysis app in NIR Intelligence Platform.
 """
 
 import os
+import sys
 import json
 import logging
 import uuid
 from datetime import datetime
+
+# Add parent directory to Python path for agents module
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse, FileResponse
 from django.contrib import messages
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
+
 from django.views.decorators.http import require_http_methods
 from .models import SpectralData, AnalysisProject, Report, ChatSession, SystemLog
 from .forms import UploadFileForm, AnalysisForm, ChatForm
