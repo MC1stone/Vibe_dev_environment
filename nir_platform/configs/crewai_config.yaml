@@ -1,0 +1,80 @@
+# CrewAI Configuration for NIR Intelligence Platform
+
+# Agent configurations
+agents:
+  spectral_analysis_agent:
+    role: "Spectral Data Analyst"
+    goal: "Analyze NIR spectral data with high accuracy"
+    backstory: "Expert in near-infrared spectroscopy with years of experience in data analysis"
+    verbose: true
+    allow_delegation: false
+    
+  metadata_quality_agent:
+    role: "Metadata Quality Assessor"
+    goal: "Evaluate metadata quality against international standards"
+    backstory: "Specialist in metadata standards including ISO 19115, ASTM E131, and NIR-specific standards"
+    verbose: true
+    allow_delegation: false
+    
+  calibration_agent:
+    role: "Calibration Specialist"
+    goal: "Generate accurate calibration formulas for spectrometers"
+    backstory: "Expert in spectrometer calibration with knowledge of various calibration methods"
+    verbose: true
+    allow_delegation: false
+    
+  reporting_agent:
+    role: "Technical Report Writer"
+    goal: "Generate comprehensive analysis reports"
+    backstory: "Skilled in creating detailed technical reports with visualizations and source code"
+    verbose: true
+    allow_delegation: false
+    
+  quality_assurance_agent:
+    role: "Quality Assurance Engineer"
+    goal: "Ensure all analysis meets quality standards"
+    backstory: "Expert in quality assurance with focus on data integrity and analysis validation"
+    verbose: true
+    allow_delegation: false
+
+# Task configurations
+tasks:
+  spectral_analysis:
+    description: "Perform comprehensive spectral analysis"
+    expected_output: "Spectral analysis results with metrics, issues, and recommendations"
+    agent: spectral_analysis_agent
+    
+  metadata_quality:
+    description: "Evaluate metadata quality"
+    expected_output: "Metadata quality score and compliance report"
+    agent: metadata_quality_agent
+    
+  calibration:
+    description: "Generate calibration formulas"
+    expected_output: "Calibration curves and parameter recommendations"
+    agent: calibration_agent
+
+# Crew configuration
+crew:
+  name: "NIR Analysis Crew"
+  description: "Team of agents for NIR spectral analysis"
+  verbose: 2
+  
+# Process configuration
+process:
+  sequential: false
+  max_iterations: 5
+  
+# Tool configurations
+tools:
+  - name: "spectral_analysis"
+    description: "Analyze spectral data"
+    enabled: true
+    
+  - name: "metadata_validation"
+    description: "Validate metadata"
+    enabled: true
+    
+  - name: "calibration_generation"
+    description: "Generate calibration"
+    enabled: true

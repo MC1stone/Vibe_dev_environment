@@ -23,13 +23,12 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install fastapi uvicorn python-multipart httpx
 
-# Copy MCP server and agents
+# Copy application files
 COPY agents/ ./agents/
 COPY configs/ ./configs/
-COPY scripts/ ./scripts/
 
-# Create necessary directories
-RUN mkdir -p /app/uploads /app/reports
+# Create necessary directories (handle missing directories gracefully)
+RUN mkdir -p /app/scripts /app/uploads /app/reports
 
 # Expose port
 EXPOSE 8000
