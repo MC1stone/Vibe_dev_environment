@@ -154,7 +154,7 @@ AGENT_CONFIG = {
     'crewai_url': 'http://localhost:8002',
     'qdrant_url': 'http://localhost:6333',
     'faiss_url': 'http://localhost:5001',
-    'ollama_url': 'http://localhost:11434',
+    'ollama_url': 'http://localhost:11435',
     'n8n_url': 'http://localhost:5678'
 }
 
