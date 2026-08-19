@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load custom_filters %}
 
 {% block title %}{{ page_title|default:"Analysis Details" }}{% endblock %}
 
@@ -286,7 +285,7 @@
                                             <span class="badge bg-{% if issue.severity == 'high' %}danger{% elif issue.severity == 'medium' %}warning{% else %}info{% endif %}">
                                                 {{ issue.severity|title }}
                                             </span>
-                                            {{ issue.type|replace:'_', ' '|title }}
+                                            {{ issue.type|title }}
                                         </h6>
                                         <p class="mb-0 small text-muted">{{ issue.description }}</p>
                                     </div>
@@ -323,7 +322,7 @@
                                             <span class="badge bg-{% if rec.priority == 'high' %}danger{% elif rec.priority == 'medium' %}warning{% else %}info{% endif %}">
                                                 {{ rec.priority|title }}
                                             </span>
-                                            {{ rec.type|replace:'_', ' '|title }}
+                                            {{ rec.type|title }}
                                         </h6>
                                         <p class="mb-0 small text-muted">{{ rec.description }}</p>
                                     </div>
@@ -398,7 +397,7 @@
                     <h6>Missing Fields:</h6>
                     <ul class="mb-0">
                         {% for field in mq.missing_fields %}
-                        <li>{{ field|replace:'_', ' '|title }}</li>
+                        <li>{{ field|title }}</li>
                         {% endfor %}
                     </ul>
                     {% endif %}
@@ -475,7 +474,7 @@
                             <tbody>
                                 {% for param, info in cal.spectrometer_parameters.items %}
                                 <tr>
-                                    <td>{{ param|replace:'_', ' '|title }}</td>
+                                    <td>{{ param|title }}</td>
                                     <td>{{ info.current|default:"N/A" }}</td>
                                     <td>{{ info.recommended|default:"N/A" }} {{ info.unit|default:"", }}</td>
                                 </tr>
@@ -490,7 +489,7 @@
                     <div class="list-group list-group-flush">
                         {% for issue in cal.issues_detected %}
                         <div class="list-group-item">
-                            <h6 class="mb-1">{{ issue.type|replace:'_', ' '|title }}</h6>
+                            <h6 class="mb-1">{{ issue.type|title }}</h6>
                             <p class="mb-0 small text-muted">{{ issue.description }}</p>
                         </div>
                         {% endfor %}

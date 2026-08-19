@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load custom_filters %}
 
 {% block title %}{{ page_title|default:"Analysis Report" }}{% endblock %}
 
@@ -38,7 +37,7 @@
                 <div class="col-md-6">
                     <dl class="row mb-0">
                         <dt class="col-sm-4">Report Type:</dt>
-                        <dd class="col-sm-8">{{ report.report_type|replace:'_', ' '|title }}</dd>
+                        <dd class="col-sm-8">{{ report.report_type|title }}</dd>
                         
                         <dt class="col-sm-4">Analysis ID:</dt>
                         <dd class="col-sm-8">{{ spectral_data.id }}</dd>
@@ -301,7 +300,7 @@
                                 {% for std, score in metadata_quality.compliance_scores.items %}
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between mb-1">
-                                        <span>{{ std|replace:'_', ' '|title }}</span>
+                                        <span>{{ std|title }}</span>
                                         <span>{{ score|floatformat:1 }}%</span>
                                     </div>
                                     <div class="progress" style="height: 20px;">
@@ -331,7 +330,7 @@
                         <h6 class="mt-3">Missing Required Fields:</h6>
                         <ul>
                             {% for field in metadata_quality.missing_fields %}
-                            <li>{{ field|replace:'_', ' '|title }}</li>
+                            <li>{{ field|title }}</li>
                             {% endfor %}
                         </ul>
                         {% endif %}
@@ -341,7 +340,7 @@
                         <ul>
                             {% for field in metadata_quality.invalid_fields %}
                             <li>
-                                <strong>{{ field.field|replace:'_', ' '|title }}:</strong> 
+                                <strong>{{ field.field|title }}:</strong> 
                                 {{ field.error }}
                             </li>
                             {% endfor %}
@@ -428,7 +427,7 @@
                                         <tbody>
                                             {% for param, info in calibration.spectrometer_parameters.items %}
                                             <tr>
-                                                <td>{{ param|replace:'_', ' '|title }}</td>
+                                                <td>{{ param|title }}</td>
                                                 <td>{{ info.current|default:"N/A" }}</td>
                                                 <td>{{ info.recommended|default:"N/A" }} {{ info.unit|default:"", }}</td>
                                             </tr>
@@ -455,7 +454,7 @@
                                                     <span class="badge bg-{% if rec.priority == 'high' %}danger{% elif rec.priority == 'medium' %}warning{% else %}info{% endif %}">
                                                         {{ rec.priority|title }}
                                                     </span>
-                                                    {{ rec.type|replace:'_', ' '|title }}
+                                                    {{ rec.type|title }}
                                                 </h6>
                                                 <p class="mb-0 small text-muted">{{ rec.description }}</p>
                                             </div>
@@ -496,7 +495,7 @@
                                                         <span class="badge bg-{% if issue.severity == 'high' %}danger{% elif issue.severity == 'medium' %}warning{% else %}info{% endif %}">
                                                             {{ issue.severity|title }}
                                                         </span>
-                                                        {{ issue.type|replace:'_', ' '|title }}
+                                                        {{ issue.type|title }}
                                                     </h6>
                                                     <p class="mb-0 small text-muted">{{ issue.description }}</p>
                                                 </div>
@@ -533,7 +532,7 @@
                                                         <span class="badge bg-{% if rec.priority == 'high' %}danger{% elif rec.priority == 'medium' %}warning{% else %}info{% endif %}">
                                                             {{ rec.priority|title }}
                                                         </span>
-                                                        {{ rec.type|replace:'_', ' '|title }}
+                                                        {{ rec.type|title }}
                                                     </h6>
                                                     <p class="mb-0 small text-muted">{{ rec.description }}</p>
                                                 </div>

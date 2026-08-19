@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load custom_filters %}
 
 {% block title %}{{ page_title|default:"NIR Intelligence Platform" }}{% endblock %}
 
@@ -61,7 +60,7 @@
                 <div class="card h-100 fade-in">
                     <div class="card-body text-center">
                         <div class="mb-3">
-                            <i class="bi bi-{{ feature.title|lower|replace:' ', '-' }}" style="font-size: 3rem; color: var(--hswt-primary);"></i>
+                            <i class="bi bi-{{ feature.title|lower
                         </div>
                         <h4 class="card-title">{{ feature.title }}</h4>
                         <p class="card-text">{{ feature.description }}</p>

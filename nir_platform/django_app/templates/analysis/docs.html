@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load custom_filters %}
 
 {% block title %}{{ page_title|default:"Documentation" }}{% endblock %}
 
@@ -35,12 +34,12 @@
                 {% for doc in docs %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link {% if forloop.first %}active{% endif %}" 
-                            id="{{ doc.title|lower|replace:' ', '-' }}-tab" 
+                            id="{{ doc.title|lower
                             data-bs-toggle="tab" 
-                            data-bs-target="#{{ doc.title|lower|replace:' ', '-' }}" 
+                            data-bs-target="#{{ doc.title|lower
                             type="button" 
                             role="tab" 
-                            aria-controls="{{ doc.title|lower|replace:' ', '-' }}" 
+                            aria-controls="{{ doc.title|lower
                             aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
                         <i class="bi bi-file-earmark-text"></i> {{ doc.title }}
                     </button>
@@ -54,9 +53,9 @@
     <div class="tab-content" id="docsTabContent">
         {% for doc in docs %}
         <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" 
-             id="{{ doc.title|lower|replace:' ', '-' }}" 
+             id="{{ doc.title|lower
              role="tabpanel" 
-             aria-labelledby="{{ doc.title|lower|replace:' ', '-' }}-tab">
+             aria-labelledby="{{ doc.title|lower
             
             <div class="card mb-4">
                 <div class="card-header">
@@ -74,7 +73,7 @@
                             <ul class="list-group list-group-flush">
                                 {% for section in doc.sections %}
                                 <li class="list-group-item">
-                                    <a href="#{{ section|lower|replace:' ', '-' }}" class="text-decoration-none">
+                                    <a href="#{{ section|lower
                                         <i class="bi bi-chevron-right me-2"></i> {{ section }}
                                     </a>
                                 </li>
@@ -85,7 +84,7 @@
                     
                     <!-- Sections -->
                     {% for section in doc.sections %}
-                    <div class="mb-5" id="{{ section|lower|replace:' ', '-' }}">
+                    <div class="mb-5" id="{{ section|lower
                         <h3>{{ section }}</h3>
                         <hr>
                         
