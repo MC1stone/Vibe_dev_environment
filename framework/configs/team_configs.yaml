@@ -1,0 +1,280 @@
+# Team Configuration for Multi-Agent Framework
+
+# Team metadata
+team:
+  name: "Software Development Team"
+  description: "Multi-agent team for comprehensive software development"
+  version: "1.0.0"
+  created_at: "2024-01-01T00:00:00Z"
+
+# Orchestrator configuration
+orchestrator:
+  max_concurrent_projects: 5
+  max_agents_per_project: 10
+  task_timeout: 3600  # 1 hour in seconds
+  project_timeout: 86400  # 24 hours in seconds
+  retry_attempts: 3
+  auto_retry: true
+  load_balancing: "round_robin"  # Options: round_robin, random, workload_based
+  
+  # Logging configuration
+  logging:
+    level: "info"  # Options: debug, info, warning, error, critical
+    file: "orchestrator.log"
+    console: true
+    max_file_size: 10485760  # 10MB
+    backup_count: 5
+
+# Agent configurations
+agents:
+  # Specialist Agents
+  - agent_id: "backend_agent_001"
+    agent_type: "specialist"
+    name: "Backend Specialist"
+    description: "Expert in backend development, API design, and server architecture"
+    capabilities: ["backend", "api", "database", "server"]
+    skills: ["api_design", "authentication", "database_integration", "performance_optimization"]
+    module: "framework.agents.specialists.backend_agent.BackendAgent"
+    
+  - agent_id: "frontend_agent_001"
+    agent_type: "specialist"
+    name: "Frontend Specialist"
+    description: "Expert in frontend development, UI design, and user experience"
+    capabilities: ["frontend", "ui", "javascript", "react"]
+    skills: ["ui_design", "responsive_design", "state_management", "performance_optimization"]
+    module: "framework.agents.specialists.frontend_agent.FrontendAgent"
+    
+  - agent_id: "data_analysis_agent_001"
+    agent_type: "specialist"
+    name: "Data Analysis Specialist"
+    description: "Expert in data analysis, processing, and machine learning"
+    capabilities: ["data", "analysis", "ml", "statistics"]
+    skills: ["data_cleaning", "exploratory_analysis", "feature_engineering", "machine_learning"]
+    module: "framework.agents.specialists.data_analysis_agent.DataAnalysisAgent"
+    
+  - agent_id: "mcp_agent_001"
+    agent_type: "specialist"
+    name: "MCP Specialist"
+    description: "Expert in Model Context Protocol development and integration"
+    capabilities: ["mcp", "protocol", "server", "client"]
+    skills: ["server_development", "tool_creation", "resource_management", "protocol_implementation"]
+    module: "framework.agents.specialists.mcp_agent.MCPAgent"
+    
+  - agent_id: "n8n_agent_001"
+    agent_type: "specialist"
+    name: "n8n Specialist"
+    description: "Expert in n8n workflow automation and integration"
+    capabilities: ["n8n", "workflow", "automation", "integration"]
+    skills: ["workflow_design", "node_configuration", "integration_setup", "automation_scripting"]
+    module: "framework.agents.specialists.n8n_agent.N8NAgent"
+    
+  - agent_id: "crewai_agent_001"
+    agent_type: "specialist"
+    name: "CrewAI Specialist"
+    description: "Expert in CrewAI framework for multi-agent orchestration"
+    capabilities: ["crewai", "agents", "tasks", "orchestration"]
+    skills: ["crew_design", "agent_configuration", "task_management", "process_orchestration"]
+    module: "framework.agents.specialists.crewai_agent.CrewAIAgent"
+    
+  - agent_id: "faiss_agent_001"
+    agent_type: "specialist"
+    name: "Faiss Specialist"
+    description: "Expert in Faiss vector database and similarity search"
+    capabilities: ["faiss", "vector", "similarity", "indexing"]
+    skills: ["index_design", "index_creation", "similarity_search", "performance_tuning"]
+    module: "framework.agents.specialists.faiss_agent.FaissAgent"
+    
+  - agent_id: "postgresql_agent_001"
+    agent_type: "specialist"
+    name: "PostgreSQL Specialist"
+    description: "Expert in PostgreSQL database management and optimization"
+    capabilities: ["postgresql", "database", "sql", "query"]
+    skills: ["database_design", "query_optimization", "performance_tuning", "backup_recovery"]
+    module: "framework.agents.specialists.postgresql_agent.PostgreSQLAgent"
+    
+  - agent_id: "quadrant_agent_001"
+    agent_type: "specialist"
+    name: "Quadrant Specialist"
+    description: "Expert in Quadrant data visualization and dashboard creation"
+    capabilities: ["quadrant", "dashboard", "visualization", "data_source"]
+    skills: ["dashboard_design", "data_source_configuration", "visualization_creation", "layout_management"]
+    module: "framework.agents.specialists.quadrant_agent.QuadrantAgent"
+    
+  - agent_id: "quarto_agent_001"
+    agent_type: "specialist"
+    name: "Quarto Specialist"
+    description: "Expert in Quarto document publishing and code execution"
+    capabilities: ["quarto", "document", "publishing", "code_execution"]
+    skills: ["document_creation", "code_execution", "multi_format_publishing", "template_management"]
+    module: "framework.agents.specialists.quarto_agent.QuartoAgent"
+    
+  # Overview Agents
+  - agent_id: "team_lead_agent_001"
+    agent_type: "overview"
+    name: "Team Lead"
+    description: "Overall team coordination and leadership"
+    capabilities: ["leadership", "coordination", "management", "strategy"]
+    skills: ["team_management", "strategic_planning", "resource_allocation", "conflict_resolution"]
+    module: "framework.agents.overview.team_lead_agent.TeamLeadAgent"
+    
+  - agent_id: "project_manager_agent_001"
+    agent_type: "overview"
+    name: "Project Manager"
+    description: "Project planning, execution, and monitoring specialist"
+    capabilities: ["project", "planning", "scheduling", "risk_management"]
+    skills: ["project_planning", "task_breakdown", "risk_assessment", "resource_planning"]
+    module: "framework.agents.overview.project_manager_agent.ProjectManagerAgent"
+    
+  - agent_id: "task_coordinator_agent_001"
+    agent_type: "overview"
+    name: "Task Coordinator"
+    description: "Task distribution and workflow coordination specialist"
+    capabilities: ["task", "distribution", "coordination", "workflow"]
+    skills: ["task_distribution", "workflow_management", "dependency_management", "load_balancing"]
+    module: "framework.agents.overview.task_coordinator_agent.TaskCoordinatorAgent"
+    
+  # Quality Engineering Agents
+  - agent_id: "quality_assurance_agent_001"
+    agent_type: "quality"
+    name: "Quality Assurance"
+    description: "Overall quality management and standards enforcement"
+    capabilities: ["quality", "standards", "compliance", "audit"]
+    skills: ["quality_standards", "process_compliance", "quality_metrics", "continuous_improvement"]
+    module: "framework.agents.quality.quality_assurance_agent.QualityAssuranceAgent"
+    
+  - agent_id: "code_review_agent_001"
+    agent_type: "quality"
+    name: "Code Review"
+    description: "Code quality and review management specialist"
+    capabilities: ["code_review", "quality_gate", "static_analysis", "security_scanning"]
+    skills: ["code_review_coordination", "quality_gate_enforcement", "static_analysis", "security_scanning"]
+    module: "framework.agents.quality.code_review_agent.CodeReviewAgent"
+    
+  - agent_id: "testing_agent_001"
+    agent_type: "quality"
+    name: "Testing"
+    description: "Software testing and quality assurance specialist"
+    capabilities: ["testing", "test_automation", "defect_tracking", "quality_assurance"]
+    skills: ["test_planning", "test_case_development", "test_execution", "defect_tracking"]
+    module: "framework.agents.quality.testing_agent.TestingAgent"
+
+# Project templates
+project_templates:
+  full_stack_application:
+    name: "Full Stack Application"
+    description: "Complete application with backend, frontend, and database"
+    requirements:
+      backend:
+        api: true
+        database: true
+        implementation: true
+        testing: true
+      frontend:
+        ui_design: true
+        components: true
+        pages: true
+        testing: true
+      data_analysis:
+        data_loading: false
+        eda: false
+        feature_engineering: false
+        model_training: false
+      tools: ["postgresql", "faiss"]
+    
+  data_analysis_project:
+    name: "Data Analysis Project"
+    description: "Project focused on data analysis and machine learning"
+    requirements:
+      backend: {}
+      frontend: {}
+      data_analysis:
+        data_loading: true
+        eda: true
+        feature_engineering: true
+        model_training: true
+      tools: ["faiss", "postgresql"]
+    
+  automation_workflow:
+    name: "Automation Workflow"
+    description: "Workflow automation project using n8n"
+    requirements:
+      backend: {}
+      frontend: {}
+      data_analysis: {}
+      tools: ["n8n", "mcp"]
+
+# Task templates
+task_templates:
+  api_design:
+    name: "API Design"
+    description: "Design RESTful API endpoints"
+    task_type: "backend"
+    priority: 8
+    estimated_duration: 2.0  # hours
+    
+  database_design:
+    name: "Database Design"
+    description: "Design database schema and models"
+    task_type: "backend"
+    priority: 9
+    estimated_duration: 3.0
+    
+  ui_design:
+    name: "UI Design"
+    description: "Design user interface components and layouts"
+    task_type: "frontend"
+    priority: 8
+    estimated_duration: 4.0
+    
+  data_loading:
+    name: "Data Loading"
+    description: "Load and prepare data from various sources"
+    task_type: "data_analysis"
+    priority: 8
+    estimated_duration: 2.0
+    
+  eda:
+    name: "Exploratory Data Analysis"
+    description: "Perform EDA and generate insights"
+    task_type: "data_analysis"
+    priority: 7
+    estimated_duration: 4.0
+
+# Quality standards
+quality_standards:
+  code_quality:
+    name: "Code Quality Standard"
+    description: "Standards for code quality across all projects"
+    requirements:
+      - "All code must pass static analysis"
+      - "Code coverage must be at least 80%"
+      - "All critical bugs must be fixed before release"
+      - "Code must follow project coding standards"
+      - "All changes must be peer reviewed"
+    
+  process_compliance:
+    name: "Process Compliance Standard"
+    description: "Compliance with defined development processes"
+    requirements:
+      - "All tasks must follow defined workflows"
+      - "Documentation must be updated with changes"
+      - "All changes must be traceable"
+      - "Process deviations must be documented and approved"
+
+# Communication configuration
+communication:
+  enabled: true
+  protocols: ["http", "websocket"]
+  timeout: 30  # seconds
+  retry_attempts: 3
+  
+  # Message queue configuration
+  message_queue:
+    type: "memory"  # Options: memory, redis, rabbitmq
+    max_queue_size: 1000
+    
+  # Logging configuration
+  logging:
+    level: "info"
+    file: "communication.log"
+    console: true
