@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NIR Intelligence Platform{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <!-- Custom CSS for HSWT.de styling -->
+    <style>
+        :root {
+            --hswt-primary: #006699;
+            --hswt-secondary: #0099cc;
+            --hswt-accent: #ff6600;
+            --hswt-dark: #333333;
+            --hswt-light: #f8f9fa;
+            --hswt-success: #28a745;
+            --hswt-warning: #ffc107;
+            --hswt-danger: #dc3545;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: var(--hswt-dark);
+        }
+        
+        /* Header styling */
+        .header {
+            background: linear-gradient(135deg, var(--hswt-primary) 0%, var(--hswt-secondary) 100%);
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: white;
+        }
+        
+        .header .navbar-brand:hover {
+            color: rgba(255,255,255,0.8);
+        }
+        
+        .header .nav-link {
+            color: rgba(255,255,255,0.9);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        .header .nav-link:hover {
+            color: white;
+        }
+        
+        .header .nav-link.active {
+            color: white;
+            font-weight: 600;
+        }
+        
+        /* Main content */
+        .main-content {
+            min-height: calc(100vh - 56px - 40px);
+            padding: 2rem 0;
+        }
+        
+        .container-custom {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        /* Cards */
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            background: white;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, var(--hswt-primary) 0%, var(--hswt-secondary) 100%);
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 1rem 1.5rem;
+        }
+        
+        .card-header h2, .card-header h3, .card-header h4 {
+            color: white;
+            margin: 0;
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background-color: var(--hswt-primary);
+            border-color: var(--hswt-primary);
+            font-weight: 600;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--hswt-secondary);
+            border-color: var(--hswt-secondary);
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+        
+        .btn-accent {
+            background-color: var(--hswt-accent);
+            border-color: var(--hswt-accent);
+            color: white;
+        }
+        
+        .btn-accent:hover {
+            background-color: #e65c00;
+            border-color: #e65c00;
+        }
+        
+        /* Forms */
+        .form-control, .form-select {
+            border-radius: 5px;
+            padding: 0.5rem 1rem;
+            border: 1px solid #ced4da;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--hswt-primary);
+            box-shadow: 0 0 0 0.25rem rgba(0, 102, 153, 0.25);
+        }
+        
+        /* Alerts */
+        .alert {
+            border-radius: 5px;
+            border: none;
+            padding: 1rem;
+        }
+        
+        .alert-success {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: var(--hswt-success);
+        }
+        
+        .alert-warning {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: var(--hswt-warning);
+        }
+        
+        .alert-danger {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: var(--hswt-danger);
+        }
+        
+        /* Footer */
+        .footer {
+            background-color: var(--hswt-dark);
+            color: white;
+            padding: 2rem 0 1rem;
+            margin-top: 2rem;
+        }
+        
+        .footer a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            color: white;
+            text-decoration: underline;
+        }
+        
+        /* Quality badges */
+        .quality-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .quality-badge.A {
+            background-color: rgba(40, 167, 69, 0.2);
+            color: var(--hswt-success);
+        }
+        
+        .quality-badge.B {
+            background-color: rgba(0, 123, 255, 0.2);
+            color: #007bff;
+        }
+        
+        .quality-badge.C {
+            background-color: rgba(255, 193, 7, 0.2);
+            color: var(--hswt-warning);
+        }
+        
+        .quality-badge.D, .quality-badge.F {
+            background-color: rgba(220, 53, 69, 0.2);
+            color: var(--hswt-danger);
+        }
+        
+        /* Progress bars */
+        .progress {
+            height: 20px;
+            border-radius: 10px;
+        }
+        
+        .progress-bar {
+            transition: width 0.6s ease;
+        }
+        
+        /* Tables */
+        .table {
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .table th {
+            background-color: var(--hswt-primary);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 102, 153, 0.05);
+        }
+        
+        /* Chat interface */
+        .chat-container {
+            max-height: 500px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        
+        .chat-message {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 15px;
+            max-width: 80%;
+        }
+        
+        .chat-message.user {
+            background-color: var(--hswt-primary);
+            color: white;
+            margin-left: auto;
+        }
+        
+        .chat-message.ai {
+            background-color: #e9ecef;
+            color: var(--hswt-dark);
+            margin-right: auto;
+        }
+        
+        .chat-message.system {
+            background-color: #fff3cd;
+            color: #856404;
+            margin: 0 auto;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        /* File upload area */
+        .upload-area {
+            border: 2px dashed #ced4da;
+            border-radius: 10px;
+            padding: 3rem;
+            text-align: center;
+            background-color: white;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--hswt-primary);
+            background-color: rgba(0, 102, 153, 0.05);
+        }
+        
+        .upload-area.dragover {
+            border-color: var(--hswt-primary);
+            background-color: rgba(0, 102, 153, 0.1);
+        }
+        
+        /* Loading spinner */
+        .spinner-container {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .spinner-container.active {
+            display: block;
+        }
+        
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            border-width: 0.3em;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .header {
+                padding: 0.5rem 0;
+            }
+            
+            .header .navbar-brand {
+                font-size: 1.2rem;
+            }
+            
+            .main-content {
+                padding: 1rem 0;
+            }
+            
+            .chat-message {
+                max-width: 90%;
+            }
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        /* Code blocks */
+        pre {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+        
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="container-custom navbar navbar-expand-lg navbar-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="{% url 'home' %}">
+                    <i class="bi bi-graph-up"></i> NIR Intelligence Platform
+                </a>
+                
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" 
+                        aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/' %}active{% endif %}" 
+                               href="{% url 'home' %}">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'upload' in request.path %}active{% endif %}" 
+                               href="{% url 'upload_file' %}">Upload</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'docs' in request.path %}active{% endif %}" 
+                               href="{% url 'documentation' %}">Documentation</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'about' in request.path %}active{% endif %}" 
+                               href="{% url 'about' %}">About</a>
+                        </li>
+                    </ul>
+                    
+                    <ul class="navbar-nav">
+                        {% if user.is_authenticated %}
+                            <li class="nav-item">
+                                <span class="nav-link">Welcome, {{ user.username }}</span>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'admin:index' %}">Admin</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">Logout</a>
+                            </li>
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">Login</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container-custom">
+            {% block messages %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show fade-in" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endblock %}
+            
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container-custom">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>NIR Intelligence Platform</h5>
+                    <p>Open Science NIR Spectral Analysis System</p>
+                    <p>Built with Django, CrewAI, and the Agent Framework</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{% url 'home' %}">Home</a></li>
+                        <li><a href="{% url 'upload_file' %}">Upload Data</a></li>
+                        <li><a href="{% url 'documentation' %}">Documentation</a></li>
+                        <li><a href="{% url 'about' %}">About</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h5>Contact</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#">GitHub</a></li>
+                        <li><a href="#">Documentation</a></li>
+                        <li><a href="#">Support</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr style="border-color: rgba(255,255,255,0.2);">
+            <div class="text-center">
+                <p class="mb-0">&copy; {% now "Y" %} NIR Intelligence Platform. All rights reserved.</p>
+                <p class="mb-0 small">Version {{ nir_platform_version|default:"1.0.0" }}</p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Bootstrap 5 JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script>
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+        
+        // File upload drag and drop
+        const uploadArea = document.querySelector('.upload-area');
+        if (uploadArea) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => {
+                    uploadArea.classList.add('dragover');
+                }, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => {
+                    uploadArea.classList.remove('dragover');
+                }, false);
+            });
+        }
+        
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                const bsAlert = bootstrap.Alert.getInstance(alert);
+                if (bsAlert) {
+                    bsAlert.close();
+                }
+            });
+        }, 5000);
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

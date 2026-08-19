@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title|default:"NIR Intelligence Platform" }}{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Hero Section -->
+    <section class="mb-5">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="display-4 mb-3">
+                    <i class="bi bi-graph-up"></i> NIR Intelligence Platform
+                </h1>
+                <p class="lead mb-4">
+                    {{ app_description|default:"Open Science NIR Spectral Analysis System" }}
+                </p>
+                <div class="d-flex gap-3 mb-4">
+                    <a href="{% url 'upload_file' %}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-upload"></i> Upload Spectral Data
+                    </a>
+                    <a href="{% url 'documentation' %}" class="btn btn-outline-light btn-lg">
+                        <i class="bi bi-book"></i> Documentation
+                    </a>
+                </div>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> 
+                    <strong>New!</strong> Now supports DIY spectrometers with comprehensive calibration guides.
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4><i class="bi bi-gear"></i> Quick Start</h4>
+                    </div>
+                    <div class="card-body">
+                        <ol class="mb-0">
+                            <li>Upload your spectral data file</li>
+                            <li>Let our AI agents analyze it</li>
+                            <li>Review the comprehensive report</li>
+                            <li>Download results and share (optionally)</li>
+                        </ol>
+                        <hr>
+                        <div class="text-center">
+                            <a href="{% url 'upload_file' %}" class="btn btn-accent">
+                                <i class="bi bi-rocket"></i> Start Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="mb-5">
+        <h2 class="text-center mb-4"><i class="bi bi-stars"></i> Key Features</h2>
+        <div class="row g-4">
+            {% for feature in features %}
+            <div class="col-md-4">
+                <div class="card h-100 fade-in">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-{{ feature.title|lower|replace:' ', '-' }}" style="font-size: 3rem; color: var(--hswt-primary);"></i>
+                        </div>
+                        <h4 class="card-title">{{ feature.title }}</h4>
+                        <p class="card-text">{{ feature.description }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Recent Analyses Section -->
+    {% if recent_analyses %}
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-clock-history"></i> Recent Analyses</h2>
+            <a href="{% url 'upload_file' %}" class="btn btn-primary">
+                <i class="bi bi-plus"></i> New Analysis
+            </a>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Filename</th>
+                        <th>Upload Date</th>
+                        <th>Spectrometer</th>
+                        <th>Quality</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for analysis in recent_analyses %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'analysis_detail' analysis.id %}">
+                                {{ analysis.original_filename|truncatechars:50 }}
+                            </a>
+                        </td>
+                        <td>{{ analysis.upload_date|date:"Y-m-d H:i" }}</td>
+                        <td>{{ analysis.spectrometer_type|default:"Auto-detect" }}</td>
+                        <td>
+                            <span class="quality-badge {{ analysis.get_quality_grade }}">
+                                {{ analysis.get_quality_grade }}
+                            </span>
+                            {% if analysis.overall_quality_score %}
+                            <small class="text-muted">({{ analysis.overall_quality_score|floatformat:1 }})</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'analysis_detail' analysis.id %}" 
+                               class="btn btn-sm btn-outline-primary" title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'analysis_report' analysis.id %}" 
+                               class="btn btn-sm btn-outline-secondary" title="View Report">
+                                <i class="bi bi-file-earmark-text"></i>
+                            </a>
+                            <a href="{% url 'download_analysis' analysis.id %}" 
+                               class="btn btn-sm btn-outline-success" title="Download">
+                                <i class="bi bi-download"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Statistics Section -->
+    <section class="mb-5">
+        <h2 class="text-center mb-4"><i class="bi bi-bar-chart"></i> Platform Statistics</h2>
+        <div class="row text-center g-4">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="display-4">{{ recent_analyses.count }}</h3>
+                        <p class="text-muted mb-0">Analyses Performed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="display-4">10+</h3>
+                        <p class="text-muted mb-0">Supported Formats</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="display-4">6</h3>
+                        <p class="text-muted mb-0">AI Agents</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="display-4">100%</h3>
+                        <p class="text-muted mb-0">Open Source</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="text-center mb-5">
+        <div class="card">
+            <div class="card-body py-5">
+                <h3 class="mb-3">Ready to analyze your spectral data?</h3>
+                <p class="lead mb-4">
+                    Upload your files and let our AI agents do the work.
+                    Support for any spectrometer, including DIY devices.
+                </p>
+                <a href="{% url 'upload_file' %}" class="btn btn-primary btn-lg px-4">
+                    <i class="bi bi-upload"></i> Upload Now
+                </a>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

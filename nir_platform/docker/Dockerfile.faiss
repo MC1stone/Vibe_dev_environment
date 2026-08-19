@@ -1,0 +1,39 @@
+# Faiss Service Dockerfile for NIR Intelligence Platform
+
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create and set working directory
+WORKDIR /app
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install fastapi uvicorn faiss-cpu numpy
+
+# Copy Faiss service
+COPY scripts/faiss_service.py .
+
+# Create necessary directories
+RUN mkdir -p /app/faiss_index
+
+# Expose port
+EXPOSE 5000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD python -c "import httpx; httpx.get('http://localhost:5000/health').raise_for_status()" || exit 1
+
+# Start Faiss service
+CMD ["uvicorn", "faiss_service:app", "--host", "0.0.0.0", "--port", "5000"]

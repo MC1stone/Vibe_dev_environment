@@ -1,0 +1,648 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title|default:"Documentation" }}{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Documentation</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="card mb-4">
+        <div class="card-body text-center py-4">
+            <h1 class="display-4 mb-3">
+                <i class="bi bi-book"></i> Documentation
+            </h1>
+            <p class="lead mb-0">
+                Comprehensive guides and references for the NIR Intelligence Platform
+            </p>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="docsTab" role="tablist">
+                {% for doc in docs %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if forloop.first %}active{% endif %}" 
+                            id="{{ doc.title|lower|replace:' ', '-' }}-tab" 
+                            data-bs-toggle="tab" 
+                            data-bs-target="#{{ doc.title|lower|replace:' ', '-' }}" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="{{ doc.title|lower|replace:' ', '-' }}" 
+                            aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                        <i class="bi bi-file-earmark-text"></i> {{ doc.title }}
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Documentation Content -->
+    <div class="tab-content" id="docsTabContent">
+        {% for doc in docs %}
+        <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" 
+             id="{{ doc.title|lower|replace:' ', '-' }}" 
+             role="tabpanel" 
+             aria-labelledby="{{ doc.title|lower|replace:' ', '-' }}-tab">
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2><i class="bi bi-file-earmark-text"></i> {{ doc.title }}</h2>
+                </div>
+                <div class="card-body">
+                    <p class="lead">{{ doc.content }}</p>
+                    
+                    <!-- Table of Contents -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Table of Contents</h4>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                {% for section in doc.sections %}
+                                <li class="list-group-item">
+                                    <a href="#{{ section|lower|replace:' ', '-' }}" class="text-decoration-none">
+                                        <i class="bi bi-chevron-right me-2"></i> {{ section }}
+                                    </a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Sections -->
+                    {% for section in doc.sections %}
+                    <div class="mb-5" id="{{ section|lower|replace:' ', '-' }}">
+                        <h3>{{ section }}</h3>
+                        <hr>
+                        
+                        {% if section == "Getting Started" %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5>Installation</h5>
+                                <p>
+                                    The NIR Intelligence Platform can be installed using Docker for easy deployment.
+                                </p>
+                                <pre><code># Clone the repository
+git clone https://github.com/MC1stone/Vibe_dev_environment
+cd Vibe_dev_environment/nir_platform
+
+# Start Docker containers
+docker-compose -f docker/docker-compose.yml up -d
+
+# Access the platform
+# Django: http://localhost:8000
+# n8n: http://localhost:5678
+# Ollama: http://localhost:11434</code></pre>
+                                
+                                <h5 class="mt-4">Quick Start</h5>
+                                <ol>
+                                    <li>Upload your spectral data file</li>
+                                    <li>Wait for the AI agents to analyze it</li>
+                                    <li>Review the comprehensive report</li>
+                                    <li>Download results or share with federated learning</li>
+                                </ol>
+                            </div>
+                        </div>
+                        
+                        {% elif section == "Uploading Data" %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5>Supported File Formats</h5>
+                                <ul>
+                                    <li><strong>CSV:</strong> Comma-separated values with wavelength and intensity columns</li>
+                                    <li><strong>TXT:</strong> Tab or space-separated values</li>
+                                    <li><strong>Excel:</strong> XLSX or XLS files with spectral data</li>
+                                    <li><strong>JSON:</strong> JSON format with wavelengths and intensities arrays</li>
+                                    <li><strong>SPC/JDX:</strong> Standard spectroscopy file formats</li>
+                                    <li><strong>ZIP:</strong> Archive containing multiple spectral data files</li>
+                                </ul>
+                                
+                                <h5 class="mt-4">File Requirements</h5>
+                                <ul>
+                                    <li>Maximum file size: 100MB</li>
+                                    <li>Must contain wavelength and intensity data</li>
+                                    <li>Wavelengths should be in ascending order</li>
+                                    <li>Intensities should be numeric values</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        {% elif section == "Spectral Analysis" %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5>Analysis Process</h5>
+                                <p>
+                                    The spectral analysis process includes the following steps:
+                                </p>
+                                <ol>
+                                    <li><strong>Data Loading:</strong> Parse spectral data from the uploaded file</li>
+                                    <li><strong>Spectrometer Detection:</strong> Automatically detect spectrometer type</li>
+                                    <li><strong>Wavelength Calibration:</strong> Correct wavelength measurements using known emission lines</li>
+                                    <li><strong>Baseline Correction:</strong> Remove baseline drift and offset</li>
+                                    <li><strong>Noise Reduction:</strong> Apply Savitzky-Golay filter for noise reduction</li>
+                                    <li><strong>Smoothing:</strong> Apply moving average smoothing</li>
+                                    <li><strong>Peak Detection:</strong> Identify peaks and spectral features</li>
+                                    <li><strong>Issue Detection:</strong> Detect potential spectrometer issues</li>
+                                    <li><strong>Quality Assessment:</strong> Calculate overall data quality score</li>
+                                </ol>
+                                
+                                <h5 class="mt-4">Output</h5>
+                                <p>
+                                    The analysis produces:
+                                </p>
+                                <ul>
+                                    <li>Processed spectral data</li>
+                                    <li>Analysis metrics (peaks, statistics, quality scores)</li>
+                                    <li>Detected issues and warnings</li>
+                                    <li>Calibration recommendations</li>
+                                    <li>Quality assessment</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        {% elif section == "Metadata Quality" %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5>Standards</h5>
+                                <p>
+                                    Metadata is evaluated against the following international standards:
+                                </p>
+                                <ul>
+                                    <li><strong>ISO 19115:</strong> Geographic Information - Metadata</li>
+                                    <li><strong>ASTM E131:</strong> Molecular Spectroscopy Terminology</li>
+                                    <li><strong>ASTM E1421:</strong> Computerized IR Spectroscopy Data Fields</li>
+                                    <li><strong>NIR-Specific:</strong> Standards specific to Near-Infrared spectroscopy</li>
+                                    <li><strong>Open Science:</strong> Standards for open science data sharing</li>
+                                    <li><strong>Federated Learning:</strong> Standards for federated learning data sharing</li>
+                                </ul>
+                                
+                                <h5 class="mt-4">Scoring</h5>
+                                <p>
+                                    Each standard has required and optional fields. The metadata quality score 
+                                    is calculated based on:
+                                </p>
+                                <ul>
+                                    <li>Presence of required fields (70% weight)</li>
+                                    <li>Presence of optional fields (30% weight)</li>
+                                    <li>Field validation (correct data types, formats, etc.)</li>
+                                </ul>
+                                
+                                <h5 class="mt-4">Grading</h5>
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Score Range</th>
+                                            <th>Grade</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>95-100</td>
+                                            <td>A+</td>
+                                            <td>Excellent - All required fields present and valid</td>
+                                        </tr>
+                                        <tr>
+                                            <td>90-94</td>
+                                            <td>A</td>
+                                            <td>Very Good - Minor improvements possible</td>
+                                        </tr>
+                                        <tr>
+                                            <td>85-89</td>
+                                            <td>A-</td>
+                                            <td>Good - Some optional fields missing</td>
+                                        </tr>
+                                        <tr>
+                                            <td>80-84</td>
+                                            <td>B+</td>
+                                            <td>Above Average - Several optional fields missing</td>
+                                        </tr>
+                                        <tr>
+                                            <td>70-79</td>
+                                            <td>B-C</td>
+                                            <td>Average - Some required fields missing</td>
+                                        </tr>
+                                        <tr>
+                                            <td>60-69</td>
+                                            <td>D+</td>
+                                            <td>Below Average - Multiple required fields missing</td>
+                                        </tr>
+                                        <tr>
+                                            <td>0-59</td>
+                                            <td>F</td>
+                                            <td>Poor - Many required fields missing or invalid</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        {% elif section == "Calibration" %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5>Calibration Types</h5>
+                                <p>
+                                    The platform supports several types of calibration:
+                                </p>
+                                <ul>
+                                    <li><strong>Wavelength Calibration:</strong> Corrects wavelength measurements using known emission lines</li>
+                                    <li><strong>Intensity Calibration:</strong> Normalizes intensity measurements using white and dark references</li>
+                                    <li><strong>Drift Compensation:</strong> Compensates for temperature and time-related drift</li>
+                                </ul>
+                                
+                                <h5 class="mt-4">Calibration Methods</h5>
+                                <p>
+                                    Different calibration methods are available:
+                                </p>
+                                <ul>
+                                    <li><strong>Linear:</strong> Simple linear correction (y = mx + b)</li>
+                                    <li><strong>Polynomial:</strong> Higher-order polynomial fitting for non-linear corrections</li>
+                                    <li><strong>Exponential:</strong> For exponential relationships</li>
+                                </ul>
+                                
+                                <h5 class="mt-4">Reference Materials</h5>
+                                <p>
+                                    Supported reference materials for intensity calibration:
+                                </p>
+                                <ul>
+                                    <li><strong>Spectralon:</strong> High-reflectance white reference standard (99% reflectance)</li>
+                                    <li><strong>Infragold:</strong> Gold-coated diffuse reflectance standard (95% reflectance)</li>
+                                    <li><strong>Ceramic Tile:</strong> Ceramic white reference tile (97% reflectance)</li>
+                                    <li><strong>NIST SRM 2065:</strong> NIST traceable Spectralon reflectance standard</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        {% elif section == "Reporting" %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5>Report Types</h5>
+                                <p>
+                                    The platform generates comprehensive reports in multiple formats:
+                                </p>
+                                <ul>
+                                    <li><strong>Spectral Analysis Report:</strong> Complete analysis of spectral data</li>
+                                    <li><strong>Metadata Quality Report:</strong> Detailed metadata quality assessment</li>
+                                    <li><strong>Calibration Report:</strong> Comprehensive calibration results</li>
+                                </ul>
+                                
+                                <h5 class="mt-4">Report Contents</h5>
+                                <p>
+                                    Each report includes:
+                                </p>
+                                <ul>
+                                    <li>Executive summary with key findings</li>
+                                    <li>Detailed analysis results</li>
+                                    <li>Visualizations and charts</li>
+                                    <li>Python source code used for analysis</li>
+                                    <li>Raw and processed data</li>
+                                    <li>Recommendations for improvement</li>
+                                </ul>
+                                
+                                <h5 class="mt-4">Report Formats</h5>
+                                <p>
+                                    Reports can be generated in:
+                                </p>
+                                <ul>
+                                    <li><strong>HTML:</strong> Interactive web-based reports</li>
+                                    <li><strong>PDF:</strong> Printable reports</li>
+                                    <li><strong>Quarto:</strong> Source Quarto documents for further editing</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        {% elif section == "Federated Learning" %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5>What is Federated Learning?</h5>
+                                <p>
+                                    Federated learning is a collaborative approach to machine learning where 
+                                    multiple participants train models on their local data without sharing 
+                                    the data itself. This allows for:
+                                </p>
+                                <ul>
+                                    <li>Improved models trained on diverse data from many sources</li>
+                                    <li>Privacy preservation - your data never leaves your control</li>
+                                    <li>Decentralized model training</li>
+                                    <li>Continuous improvement of shared models</li>
+                                </ul>
+                                
+                                <h5 class="mt-4">How It Works</h5>
+                                <ol>
+                                    <li>You analyze your spectral data locally</li>
+                                    <li>You choose to share your results with the federated learning network</li>
+                                    <li>Your data is anonymized (if you choose) and only model updates are shared</li>
+                                    <li>The central model is updated with contributions from all participants</li>
+                                    <li>You receive an improved model for future analyses</li>
+                                </ol>
+                                
+                                <h5 class="mt-4">Privacy & Security</h5>
+                                <p>
+                                    Your privacy is our priority:
+                                </p>
+                                <ul>
+                                    <li><strong>Data Control:</strong> You always control your data - sharing is opt-in</li>
+                                    <li><strong>Anonymization:</strong> Data can be anonymized before sharing</li>
+                                    <li><strong>Local Processing:</strong> All analysis happens locally by default</li>
+                                    <li><strong>Transparent:</strong> You can see exactly what is being shared</li>
+                                    <li><strong>Reversible:</strong> You can revoke consent at any time</li>
+                                </ul>
+                                
+                                <div class="alert alert-info mt-4">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>Note:</strong> Federated learning is currently in development. 
+                                    This feature will be available in future versions.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% elif section == "DIY Spectrometer Guide" %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5>Introduction</h5>
+                                <p>
+                                    Building your own Near-Infrared (NIR) spectrometer is an exciting and 
+                                    educational project that allows you to perform spectral analysis at a 
+                                    fraction of the cost of professional equipment. This guide will walk you 
+                                    through the process of building a DIY NIR spectrometer.
+                                </p>
+                                
+                                <h5 class="mt-4">Supported DIY Spectrometers</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Components</th>
+                                                <th>Wavelength Range</th>
+                                                <th>Resolution</th>
+                                                <th>Cost</th>
+                                                <th>Difficulty</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Raspberry Pi + AS7262</td>
+                                                <td>Raspberry Pi, AS7262 sensor, White LED</td>
+                                                <td>650-1100 nm</td>
+                                                <td>~10 nm</td>
+                                                <td>~$100</td>
+                                                <td>Medium</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Arduino + TCS34725</td>
+                                                <td>Arduino Uno, TCS34725 sensor, White LED</td>
+                                                <td>700-1000 nm</td>
+                                                <td>~15 nm</td>
+                                                <td>~$30</td>
+                                                <td>Easy</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <h5 class="mt-4">Components</h5>
+                                <p>
+                                    Here are the components you'll need for each DIY spectrometer:
+                                </p>
+                                
+                                <h6>Raspberry Pi + AS7262:</h6>
+                                <ul>
+                                    <li>Raspberry Pi (any model with I2C)</li>
+                                    <li>AS7262 6-channel NIR sensor</li>
+                                    <li>White LED for reference</li>
+                                    <li>Diffuser material (optional)</li>
+                                    <li>Sample holder</li>
+                                    <li>Breadboard and jumper wires</li>
+                                    <li>Power supply</li>
+                                </ul>
+                                
+                                <h6 class="mt-3">Arduino + TCS34725:</h6>
+                                <ul>
+                                    <li>Arduino Uno or compatible</li>
+                                    <li>TCS34725 RGB color sensor</li>
+                                    <li>White LED for reference</li>
+                                    <li>Breadboard and jumper wires</li>
+                                    <li>Power supply</li>
+                                </ul>
+                                
+                                <h5 class="mt-4">Assembly Instructions</h5>
+                                <p>
+                                    Detailed assembly instructions are provided in the platform's DIY guide section.
+                                    The process typically involves:
+                                </p>
+                                <ol>
+                                    <li>Connecting the sensor to the microcontroller via I2C</li>
+                                    <li>Adding the white LED for intensity reference</li>
+                                    <li>Setting up the sample holder</li>
+                                    <li>Installing the necessary software</li>
+                                    <li>Calibrating the spectrometer</li>
+                                </ol>
+                                
+                                <h5 class="mt-4">Calibration</h5>
+                                <p>
+                                    Calibration is crucial for accurate measurements. The platform provides:
+                                </p>
+                                <ul>
+                                    <li>Step-by-step calibration procedures</li>
+                                    <li>Known emission lines for wavelength calibration</li>
+                                    <li>Reference materials for intensity calibration</li>
+                                    <li>Automated calibration verification</li>
+                                </ul>
+                                
+                                <h5 class="mt-4">Limitations</h5>
+                                <p>
+                                    While DIY spectrometers are great for education and basic analysis, they have some limitations:
+                                </p>
+                                <ul>
+                                    <li><strong>Lower Resolution:</strong> DIY sensors have lower spectral resolution than professional equipment</li>
+                                    <li><strong>Limited Range:</strong> Coverage is typically limited to specific wavelength ranges</li>
+                                    <li><strong>Lower Sensitivity:</strong> May require longer integration times or multiple scans</li>
+                                    <li><strong>Temperature Sensitivity:</strong> More sensitive to temperature changes</li>
+                                    <li><strong>Calibration Frequency:</strong> Requires more frequent calibration</li>
+                                </ul>
+                                
+                                <div class="alert alert-success mt-4">
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    <strong>Tip:</strong> Start with the Arduino + TCS34725 for a low-cost introduction, 
+                                    then upgrade to Raspberry Pi + AS7262 for better performance.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% elif section == "API Reference" %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5>REST API</h5>
+                                <p>
+                                    The platform provides a REST API for programmatic access to analysis functionality.
+                                </p>
+                                
+                                <h6>Endpoints:</h6>
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Endpoint</th>
+                                            <th>Method</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>/api/analyze/</td>
+                                            <td>POST</td>
+                                            <td>Perform spectral analysis</td>
+                                        </tr>
+                                        <tr>
+                                            <td>/api/chat/</td>
+                                            <td>POST</td>
+                                            <td>Chat with AI agents</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                
+                                <h6 class="mt-4">Request Examples:</h6>
+                                
+                                <h7>Spectral Analysis:</h7>
+                                <pre><code>POST /api/analyze/
+Content-Type: application/json
+
+{
+    "wavelengths": [700, 701, 702, ...],
+    "intensities": [100, 105, 110, ...],
+    "metadata": {
+        "spectrometer_type": "ocean_optics",
+        "sample_type": "solid",
+        "date": "2024-01-15"
+    }
+}</code></pre>
+                                
+                                <h7 class="mt-3">Chat:</h7>
+                                <pre><code>POST /api/chat/
+Content-Type: application/json
+
+{
+    "message": "What peaks are in my spectrum?",
+    "context": {
+        "analysis_id": "uuid"
+    }
+}</code></pre>
+                                
+                                <h5 class="mt-4">WebSocket API</h5>
+                                <p>
+                                    Real-time communication with the MCP server and AI agents.
+                                </p>
+                                
+                                <h6>Events:</h6>
+                                <ul>
+                                    <li><strong>agent_message:</strong> Messages from AI agents</li>
+                                    <li><strong>analysis_progress:</strong> Progress updates during analysis</li>
+                                    <li><strong>calibration_complete:</strong> Notification when calibration is done</li>
+                                </ul>
+                                
+                                <h6 class="mt-4">Connection:</h6>
+                                <pre><code>// Connect to MCP server
+const socket = new WebSocket('ws://localhost:8000/ws');
+
+// Send message
+socket.send(JSON.stringify({
+    type: 'agent_message',
+    agent_id: 'spectral_analysis_agent',
+    content: 'Analyze this spectrum...'
+}));
+
+// Receive messages
+socket.onmessage = (event) => {
+    const message = JSON.parse(event.data);
+    console.log('Received:', message);
+};</code></pre>
+                                
+                                <h5 class="mt-4">Integration Examples</h5>
+                                
+                                <h6>Python:</h6>
+                                <pre><code>import requests
+import json
+
+# Spectral analysis
+response = requests.post(
+    'http://localhost:8000/api/analyze/',
+    json={
+        'wavelengths': [700, 701, 702],
+        'intensities': [100, 105, 110]
+    }
+)
+
+results = response.json()
+print(results)</code></pre>
+                                
+                                <h6 class="mt-3">JavaScript:</h6>
+                                <pre><code>fetch('http://localhost:8000/api/analyze/', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        wavelengths: [700, 701, 702],
+        intensities: [100, 105, 110]
+    })
+})
+.then(response => response.json())
+.then(data => console.log(data));</code></pre>
+                            </div>
+                        </div>
+                        
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Documentation for this section is coming soon.
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize tab from URL hash
+    document.addEventListener('DOMContentLoaded', function() {
+        const hash = window.location.hash;
+        if (hash) {
+            const tabId = hash.substring(1);
+            const tab = document.querySelector(`[data-bs-target="#${tabId}"]`);
+            if (tab) {
+                const tabInstance = new bootstrap.Tab(tab);
+                tabInstance.show();
+            }
+        }
+    });
+    
+    // Update URL hash when tab changes
+    const tabElements = document.querySelectorAll('[data-bs-toggle="tab"]');
+    tabElements.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(event) {
+            const target = event.target.getAttribute('data-bs-target');
+            window.location.hash = target.substring(1);
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

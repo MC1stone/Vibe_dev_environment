@@ -1,0 +1,536 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title|default:"Analysis Details" }}{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'upload_file' %}">Upload</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ spectral_data.original_filename|truncatechars:30 }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Analysis Header -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="bi bi-file-earmark-text"></i> {{ spectral_data.original_filename }}</h2>
+                <p class="mb-0 text-white-50">
+                    Uploaded: {{ spectral_data.upload_date|date:"Y-m-d H:i:s" }}
+                </p>
+            </div>
+            <div>
+                <span class="quality-badge {{ spectral_data.get_quality_grade }}">
+                    {{ spectral_data.get_quality_grade }}
+                </span>
+                <span class="ms-2">
+                    {{ spectral_data.overall_quality_score|floatformat:1 }} / 100
+                </span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Spectrometer:</dt>
+                        <dd class="col-sm-8">{{ spectral_data.spectrometer_type|default:"Auto-detect" }}</dd>
+                        
+                        <dt class="col-sm-4">File Type:</dt>
+                        <dd class="col-sm-8">{{ spectral_data.file_type }}</dd>
+                        
+                        <dt class="col-sm-4">File Size:</dt>
+                        <dd class="col-sm-8">
+                            {% if spectral_data.file_path %}
+                                {% with size=spectral_data.file_path|filesize %}
+                                    {{ size }}
+                                {% endwith %}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </dd>
+                        
+                        <dt class="col-sm-4">Status:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-{% if spectral_data.is_processed %}success{% else %}warning{% endif %}">
+                                {% if spectral_data.is_processed %}Processed{% else %}Pending{% endif %}
+                            </span>
+                        </dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Data Points:</dt>
+                        <dd class="col-sm-8">{{ spectral_data.wavelengths|length }}</dd>
+                        
+                        <dt class="col-sm-4">Wavelength Range:</dt>
+                        <dd class="col-sm-8">
+                            {% with min_wl=spectral_data.wavelengths.0 max_wl=spectral_data.wavelengths|last %}
+                                {% if min_wl and max_wl %}
+                                    {{ min_wl|floatformat:1 }} - {{ max_wl|floatformat:1 }} nm
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            {% endwith %}
+                        </dd>
+                        
+                        <dt class="col-sm-4">Processing Date:</dt>
+                        <dd class="col-sm-8">
+                            {% if spectral_data.processing_date %}
+                                {{ spectral_data.processing_date|date:"Y-m-d H:i:s" }}
+                            {% else %}
+                                Not processed yet
+                            {% endif %}
+                        </dd>
+                        
+                        <dt class="col-sm-4">Federated:</dt>
+                        <dd class="col-sm-8">
+                            {% if spectral_data.is_federated %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'analysis_report' spectral_data.id %}" class="btn btn-outline-primary">
+                    <i class="bi bi-file-earmark-text"></i> View Report
+                </a>
+                <a href="{% url 'download_analysis' spectral_data.id %}" class="btn btn-outline-success">
+                    <i class="bi bi-download"></i> Download All
+                </a>
+                <a href="{% url 'chat_interface' spectral_data.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-chat-dots"></i> Chat with AI
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Status -->
+    {% if not spectral_data.is_processed %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4><i class="bi bi-hourglass-split"></i> Processing Status</h4>
+        </div>
+        <div class="card-body text-center">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Processing...</span>
+            </div>
+            <h5>Processing Your Data</h5>
+            <p class="text-muted">
+                Our AI agents are analyzing your spectral data. This may take a few moments.
+            </p>
+            <div class="progress mb-3">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                     role="progressbar" 
+                     style="width: 75%" 
+                     aria-valuenow="75" 
+                     aria-valuemin="0" 
+                     aria-valuemax="100">
+                    75%
+                </div>
+            </div>
+            <p class="small text-muted mb-0">
+                Analyzing spectral features, metadata quality, and calibration...
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Analysis Results -->
+    {% if spectral_data.is_processed %}
+    
+    <!-- Quality Scores -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4><i class="bi bi-award"></i> Quality Assessment</h4>
+        </div>
+        <div class="card-body">
+            <div class="row text-center g-4">
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="bi bi-graph-up" style="font-size: 3rem; color: var(--hswt-primary);"></i>
+                            </div>
+                            <h5>Spectral Quality</h5>
+                            <div class="display-4 fw-bold">
+                                {{ spectral_data.data_quality_score|floatformat:1 }}
+                            </div>
+                            <p class="text-muted mb-0">/ 100</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="bi bi-tags" style="font-size: 3rem; color: var(--hswt-primary);"></i>
+                            </div>
+                            <h5>Metadata Quality</h5>
+                            <div class="display-4 fw-bold">
+                                {{ spectral_data.metadata_quality_score|floatformat:1 }}
+                            </div>
+                            <p class="text-muted mb-0">/ 100</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="bi bi-calculator" style="font-size: 3rem; color: var(--hswt-primary);"></i>
+                            </div>
+                            <h5>Calibration Quality</h5>
+                            <div class="display-4 fw-bold">
+                                {{ spectral_data.calibration_quality_score|floatformat:1 }}
+                            </div>
+                            <p class="text-muted mb-0">/ 100</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spectral Analysis -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4><i class="bi bi-bar-chart-line"></i> Spectral Analysis</h4>
+        </div>
+        <div class="card-body">
+            {% with metrics=analysis_results.analysis_metrics %}
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Wavelength Information</h5>
+                    <dl class="row mb-4">
+                        <dt class="col-sm-5">Range:</dt>
+                        <dd class="col-sm-7">
+                            {{ metrics.wavelength_range.min|floatformat:1 }} - 
+                            {{ metrics.wavelength_range.max|floatformat:1 }} nm
+                        </dd>
+                        <dt class="col-sm-5">Total Range:</dt>
+                        <dd class="col-sm-7">{{ metrics.wavelength_range.range|floatformat:1 }} nm</dd>
+                        <dt class="col-sm-5">Resolution:</dt>
+                        <dd class="col-sm-7">
+                            {{ metrics.wavelength_range.range|div:metrics.wavelength_range.range|floatformat:2 }} nm
+                        </dd>
+                    </dl>
+                    
+                    <h5>Peak Analysis</h5>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Peaks Detected:</dt>
+                        <dd class="col-sm-7">{{ metrics.peak_analysis.num_peaks }}</dd>
+                        <dt class="col-sm-5">Valleys Detected:</dt>
+                        <dd class="col-sm-7">{{ metrics.peak_analysis.num_valleys }}</dd>
+                        <dt class="col-sm-5">Peak Density:</dt>
+                        <dd class="col-sm-7">{{ metrics.peak_analysis.peak_density|floatformat:2 }} peaks/100nm</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <h5>Intensity Statistics</h5>
+                    <dl class="row mb-4">
+                        <dt class="col-sm-5">Min:</dt>
+                        <dd class="col-sm-7">{{ metrics.intensity_statistics.min|floatformat:2 }}</dd>
+                        <dt class="col-sm-5">Max:</dt>
+                        <dd class="col-sm-7">{{ metrics.intensity_statistics.max|floatformat:2 }}</dd>
+                        <dt class="col-sm-5">Mean:</dt>
+                        <dd class="col-sm-7">{{ metrics.intensity_statistics.mean|floatformat:2 }}</dd>
+                        <dt class="col-sm-5">Std Dev:</dt>
+                        <dd class="col-sm-7">{{ metrics.intensity_statistics.std|floatformat:2 }}</dd>
+                    </dl>
+                    
+                    <h5>Data Quality</h5>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">SNR:</dt>
+                        <dd class="col-sm-7">{{ metrics.data_quality.signal_to_noise|floatformat:1 }}</dd>
+                        <dt class="col-sm-5">Coverage:</dt>
+                        <dd class="col-sm-7">{{ metrics.data_quality.wavelength_coverage|floatformat:2 }}</dd>
+                        <dt class="col-sm-5">Completeness:</dt>
+                        <dd class="col-sm-7">{{ metrics.data_quality.data_completeness|mul:100|floatformat:1 }}%</dd>
+                        <dt class="col-sm-5">Outliers:</dt>
+                        <dd class="col-sm-7">{{ metrics.data_quality.outliers }}</dd>
+                    </dl>
+                </div>
+            </div>
+            {% endwith %}
+        </div>
+    </div>
+
+    <!-- Issues and Recommendations -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4><i class="bi bi-exclamation-triangle"></i> Detected Issues</h4>
+                </div>
+                <div class="card-body">
+                    {% with issues=analysis_results.issues_detected %}
+                    {% if issues %}
+                        <div class="list-group list-group-flush">
+                            {% for issue in issues %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <span class="badge bg-{% if issue.severity == 'high' %}danger{% elif issue.severity == 'medium' %}warning{% else %}info{% endif %}">
+                                                {{ issue.severity|title }}
+                                            </span>
+                                            {{ issue.type|replace:'_', ' '|title }}
+                                        </h6>
+                                        <p class="mb-0 small text-muted">{{ issue.description }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
+                            <h5 class="mt-3">No Issues Detected</h5>
+                            <p class="text-muted">Your spectral data looks good!</p>
+                        </div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4><i class="bi bi-lightbulb"></i> Recommendations</h4>
+                </div>
+                <div class="card-body">
+                    {% with recommendations=analysis_results.calibration_recommendations %}
+                    {% if recommendations %}
+                        <div class="list-group list-group-flush">
+                            {% for rec in recommendations %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <span class="badge bg-{% if rec.priority == 'high' %}danger{% elif rec.priority == 'medium' %}warning{% else %}info{% endif %}">
+                                                {{ rec.priority|title }}
+                                            </span>
+                                            {{ rec.type|replace:'_', ' '|title }}
+                                        </h6>
+                                        <p class="mb-0 small text-muted">{{ rec.description }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
+                            <h5 class="mt-3">No Recommendations</h5>
+                            <p class="text-muted">Your data meets all quality standards!</p>
+                        </div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metadata Quality -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4><i class="bi bi-tags-fill"></i> Metadata Quality Assessment</h4>
+        </div>
+        <div class="card-body">
+            {% with mq=metadata_quality %}
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Overall Score</h5>
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="display-4 fw-bold me-3">{{ mq.overall_score|floatformat:1 }}</div>
+                        <div>
+                            <div class="badge bg-{% if mq.grade == 'A+' or mq.grade == 'A' or mq.grade == 'A-' %}success{% elif mq.grade == 'B+' or mq.grade == 'B' or mq.grade == 'B-' %}primary{% elif mq.grade == 'C+' or mq.grade == 'C' or mq.grade == 'C-' %}warning{% else %}danger{% endif %}">
+                                {{ mq.grade }}
+                            </div>
+                            <div class="text-muted small">Grade</div>
+                        </div>
+                    </div>
+                    
+                    <h5>Standards Compliance</h5>
+                    <div class="progress mb-3" style="height: 20px;">
+                        {% for std, score in mq.compliance_scores.items %}
+                        <div class="progress-bar bg-{% if score >= 90 %}success{% elif score >= 70 %}primary{% elif score >= 50 %}warning{% else %}danger{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ score }}%" 
+                             aria-valuenow="{{ score }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            {{ std }}: {{ score|floatformat:1 }}%
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5>Field Status</h5>
+                    <div class="mb-3">
+                        <span class="badge bg-success me-2">{{ mq.field_scores|length }}</span>
+                        <span>Fields Checked</span>
+                    </div>
+                    <div class="mb-3">
+                        <span class="badge bg-danger me-2">{{ mq.missing_fields|length }}</span>
+                        <span>Missing Required</span>
+                    </div>
+                    <div class="mb-3">
+                        <span class="badge bg-warning me-2">{{ mq.invalid_fields|length }}</span>
+                        <span>Invalid Fields</span>
+                    </div>
+                    
+                    {% if mq.missing_fields %}
+                    <h6>Missing Fields:</h6>
+                    <ul class="mb-0">
+                        {% for field in mq.missing_fields %}
+                        <li>{{ field|replace:'_', ' '|title }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+            {% endwith %}
+        </div>
+    </div>
+
+    <!-- Calibration -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4><i class="bi bi-calculator"></i> Calibration Results</h4>
+        </div>
+        <div class="card-body">
+            {% with cal=calibration_results %}
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Calibration Quality</h5>
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Wavelength:</span>
+                            <span>
+                                <span class="badge bg-{% if cal.calibration_quality.wavelength_quality >= 90 %}success{% elif cal.calibration_quality.wavelength_quality >= 70 %}primary{% elif cal.calibration_quality.wavelength_quality >= 50 %}warning{% else %}danger{% endif %}">
+                                    {{ cal.calibration_quality.wavelength_quality|floatformat:1 }}%
+                                </span>
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Intensity:</span>
+                            <span>
+                                <span class="badge bg-{% if cal.calibration_quality.intensity_quality >= 90 %}success{% elif cal.calibration_quality.intensity_quality >= 70 %}primary{% elif cal.calibration_quality.intensity_quality >= 50 %}warning{% else %}danger{% endif %}">
+                                    {{ cal.calibration_quality.intensity_quality|floatformat:1 }}%
+                                </span>
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Overall:</span>
+                            <span>
+                                <span class="badge bg-{% if cal.calibration_quality.overall_quality >= 90 %}success{% elif cal.calibration_quality.overall_quality >= 70 %}primary{% elif cal.calibration_quality.overall_quality >= 50 %}warning{% else %}danger{% endif %}">
+                                    {{ cal.calibration_quality.overall_quality|floatformat:1 }}%
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    {% if cal.wavelength_calibration %}
+                    <h5>Wavelength Calibration</h5>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Type:</dt>
+                        <dd class="col-sm-7">{{ cal.wavelength_calibration.curve_type|title }}</dd>
+                        <dt class="col-sm-5">R²:</dt>
+                        <dd class="col-sm-7">{{ cal.wavelength_calibration.r_squared|floatformat:4 }}</dd>
+                        <dt class="col-sm-5">RMSE:</dt>
+                        <dd class="col-sm-7">{{ cal.wavelength_calibration.rmse|floatformat:4 }} nm</dd>
+                        <dt class="col-sm-5">Points:</dt>
+                        <dd class="col-sm-7">{{ cal.wavelength_calibration.num_points }}</dd>
+                    </dl>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    {% if cal.spectrometer_parameters %}
+                    <h5>Parameter Recommendations</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Parameter</th>
+                                    <th>Current</th>
+                                    <th>Recommended</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for param, info in cal.spectrometer_parameters.items %}
+                                <tr>
+                                    <td>{{ param|replace:'_', ' '|title }}</td>
+                                    <td>{{ info.current|default:"N/A" }}</td>
+                                    <td>{{ info.recommended|default:"N/A" }} {{ info.unit|default:"", }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                    
+                    {% if cal.issues_detected %}
+                    <h5 class="mt-3">Calibration Issues</h5>
+                    <div class="list-group list-group-flush">
+                        {% for issue in cal.issues_detected %}
+                        <div class="list-group-item">
+                            <h6 class="mb-1">{{ issue.type|replace:'_', ' '|title }}</h6>
+                            <p class="mb-0 small text-muted">{{ issue.description }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endwith %}
+        </div>
+    </div>
+
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="card">
+        <div class="card-body text-center">
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{% url 'analysis_report' spectral_data.id %}" class="btn btn-primary">
+                    <i class="bi bi-file-earmark-text"></i> View Full Report
+                </a>
+                <a href="{% url 'download_analysis' spectral_data.id %}" class="btn btn-success">
+                    <i class="bi bi-download"></i> Download All Data
+                </a>
+                <a href="{% url 'chat_interface' spectral_data.id %}" class="btn btn-secondary">
+                    <i class="bi bi-chat-dots"></i> Chat with AI
+                </a>
+                <a href="{% url 'upload_file' %}" class="btn btn-outline-dark">
+                    <i class="bi bi-plus"></i> New Analysis
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+{% endblock %}

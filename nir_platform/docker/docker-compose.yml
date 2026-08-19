@@ -1,0 +1,174 @@
+version: '3.8'
+
+services:
+  # Django Web Application
+  django:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.django
+    container_name: nir_django
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../django_app:/app
+      - ../uploads:/app/uploads
+      - ../reports:/app/reports
+    environment:
+      - DJANGO_SETTINGS_MODULE=nir_platform.settings
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/nir_db
+      - QDRANT_URL=http://qdrant:6333
+      - FAISS_PATH=/app/faiss_index
+      - OLLAMA_URL=http://ollama:11434
+      - N8N_URL=http://n8n:5678
+    depends_on:
+      - postgres
+      - qdrant
+      - ollama
+      - n8n
+    networks:
+      - nir_network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: nir_postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=nir_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    networks:
+      - nir_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:v1.7.0
+    container_name: nir_qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - nir_network
+    restart: unless-stopped
+
+  # Faiss Vector Index (Python service)
+  faiss:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.faiss
+    container_name: nir_faiss
+    ports:
+      - "5001:5000"
+    volumes:
+      - ../faiss_index:/app/faiss_index
+    networks:
+      - nir_network
+    restart: unless-stopped
+
+  # Ollama with Mistral Model
+  ollama:
+    image: ollama/ollama:latest
+    container_name: nir_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - nir_network
+    restart: unless-stopped
+    # Pull Mistral model on startup
+    command: ["ollama", "pull", "mistral"]
+
+  # n8n Workflow Automation
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: nir_n8n
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ../workflows:/home/node/workflows
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=nir2024
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - NODE_ENV=production
+    networks:
+      - nir_network
+    restart: unless-stopped
+
+  # MCP Server
+  mcp_server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.mcp
+    container_name: nir_mcp
+    ports:
+      - "8001:8000"
+    volumes:
+      - ../agents:/app/agents
+      - ../configs:/app/configs
+    environment:
+      - MCP_PORT=8000
+      - CREWAI_CONFIG=/app/configs/crewai_config.yaml
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/nir_db
+      - QDRANT_URL=http://qdrant:6333
+      - OLLAMA_URL=http://ollama:11434
+    depends_on:
+      - postgres
+      - qdrant
+      - ollama
+    networks:
+      - nir_network
+    restart: unless-stopped
+
+  # Quarto Rendering Service
+  quarto:
+    image: quarto/quarto:1.3.450
+    container_name: nir_quarto
+    ports:
+      - "4242:4242"
+    volumes:
+      - ../reports:/app/reports
+      - ../uploads:/app/uploads
+    networks:
+      - nir_network
+    restart: unless-stopped
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: nir_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - nir_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  ollama_data:
+  n8n_data:
+  redis_data:
+
+networks:
+  nir_network:
+    driver: bridge
+    name: nir_network

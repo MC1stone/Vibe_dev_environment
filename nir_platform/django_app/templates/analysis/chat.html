@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title|default:"Chat with AI Agents" }}{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    {% if spectral_data %}
+                        <li class="breadcrumb-item"><a href="{% url 'analysis_detail' spectral_data.id %}">{{ spectral_data.original_filename|truncatechars:30 }}</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item active" aria-current="page">Chat</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2><i class="bi bi-chat-dots"></i> Chat with AI Agent</h2>
+                    {% if spectral_data %}
+                        <span class="badge bg-primary">
+                            Context: {{ spectral_data.original_filename|truncatechars:20 }}
+                        </span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <!-- Chat Messages -->
+                    <div class="chat-container mb-4" id="chatContainer">
+                        {% if chat_session.messages %}
+                            {% for message in chat_session.messages %}
+                            <div class="chat-message {{ message.sender }} fade-in">
+                                <div class="d-flex align-items-center mb-2">
+                                    {% if message.sender == 'user' %}
+                                        <i class="bi bi-person-circle me-2"></i>
+                                    {% elif message.sender == 'ai' %}
+                                        <i class="bi bi-robot me-2"></i>
+                                    {% else %}
+                                        <i class="bi bi-info-circle me-2"></i>
+                                    {% endif %}
+                                    <strong>
+                                        {% if message.sender == 'user' %}You{% elif message.sender == 'ai' %}AI Assistant{% else %}System{% endif %}
+                                    </strong>
+                                    <small class="text-muted ms-auto">
+                                        {{ message.timestamp|date:"H:i" }}
+                                    </small>
+                                </div>
+                                <div class="message-content">
+                                    {{ message.message|linebreaks }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5 text-muted">
+                                <i class="bi bi-chat-dots" style="font-size: 4rem;"></i>
+                                <h5 class="mt-3">Start a conversation</h5>
+                                <p>Ask me anything about your spectral analysis, calibration, or metadata quality.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Chat Form -->
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="message" 
+                                   placeholder="Type your message here..." 
+                                   autocomplete="off" 
+                                   autofocus
+                                   required>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send"></i> Send
+                            </button>
+                        </div>
+                        <div class="form-text text-muted">
+                            <i class="bi bi-info-circle"></i> 
+                            Ask about spectral analysis, calibration, metadata quality, or any other questions.
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Suggested Questions -->
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="bi bi-question-circle"></i> Suggested Questions</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary w-100 text-start" 
+                                    onclick="insertQuestion('What peaks are present in my spectrum?')">
+                                <i class="bi bi-graph-up"></i> What peaks are present in my spectrum?
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary w-100 text-start" 
+                                    onclick="insertQuestion('How can I improve my data quality?')">
+                                <i class="bi bi-award"></i> How can I improve my data quality?
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary w-100 text-start" 
+                                    onclick="insertQuestion('What is the signal-to-noise ratio?')">
+                                <i class="bi bi-soundwave"></i> What is the signal-to-noise ratio?
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary w-100 text-start" 
+                                    onclick="insertQuestion('How do I calibrate my spectrometer?')">
+                                <i class="bi bi-calculator"></i> How do I calibrate my spectrometer?
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary w-100 text-start" 
+                                    onclick="insertQuestion('What metadata fields are missing?')">
+                                <i class="bi bi-tags"></i> What metadata fields are missing?
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary w-100 text-start" 
+                                    onclick="insertQuestion('Explain the calibration results')">
+                                <i class="bi bi-exclamation-circle"></i> Explain the calibration results
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Chat Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4><i class="bi bi-info-circle"></i> Chat Information</h4>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Session ID:</dt>
+                        <dd class="col-sm-7">{{ chat_session.id|truncatechars:20 }}</dd>
+                        
+                        <dt class="col-sm-5">Agent Type:</dt>
+                        <dd class="col-sm-7">{{ chat_session.agent_type|title }}</dd>
+                        
+                        <dt class="col-sm-5">Messages:</dt>
+                        <dd class="col-sm-7">{{ chat_session.messages|length }}</dd>
+                        
+                        <dt class="col-sm-5">Started:</dt>
+                        <dd class="col-sm-7">{{ chat_session.created_at|date:"Y-m-d H:i" }}</dd>
+                        
+                        {% if spectral_data %}
+                        <dt class="col-sm-5">Context:</dt>
+                        <dd class="col-sm-7">{{ spectral_data.original_filename|truncatechars:25 }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Capabilities -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4><i class="bi bi-robot"></i> AI Capabilities</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <i class="bi bi-check-circle text-primary me-2"></i>
+                            Spectral Analysis
+                        </li>
+                        <li class="list-group-item">
+                            <i class="bi bi-check-circle text-primary me-2"></i>
+                            Metadata Quality Assessment
+                        </li>
+                        <li class="list-group-item">
+                            <i class="bi bi-check-circle text-primary me-2"></i>
+                            Calibration Recommendations
+                        </li>
+                        <li class="list-group-item">
+                            <i class="bi bi-check-circle text-primary me-2"></i>
+                            Issue Detection & Troubleshooting
+                        </li>
+                        <li class="list-group-item">
+                            <i class="bi bi-check-circle text-primary me-2"></i>
+                            DIY Spectrometer Support
+                        </li>
+                        <li class="list-group-item">
+                            <i class="bi bi-check-circle text-primary me-2"></i>
+                            Federated Learning Guidance
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="bi bi-lightning-charge"></i> Quick Actions</h4>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if spectral_data %}
+                            <a href="{% url 'analysis_detail' spectral_data.id %}" 
+                               class="btn btn-outline-primary">
+                                <i class="bi bi-eye"></i> View Analysis
+                            </a>
+                            <a href="{% url 'analysis_report' spectral_data.id %}" 
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-file-earmark-text"></i> View Report
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'upload_file' %}" class="btn btn-outline-success">
+                            <i class="bi bi-upload"></i> Upload New Data
+                        </a>
+                        <button class="btn btn-outline-danger" onclick="clearChat()">
+                            <i class="bi bi-trash"></i> Clear Chat
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Scroll to bottom of chat
+    function scrollToBottom() {
+        const chatContainer = document.getElementById('chatContainer');
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+    
+    // Call on page load
+    window.addEventListener('DOMContentLoaded', scrollToBottom);
+    
+    // Insert suggested question
+    function insertQuestion(question) {
+        const input = document.querySelector('input[name="message"]');
+        input.value = question;
+        input.focus();
+    }
+    
+    // Clear chat
+    function clearChat() {
+        if (confirm('Are you sure you want to clear this chat session?')) {
+            window.location.href = window.location.href;
+        }
+    }
+    
+    // Auto-focus input
+    document.addEventListener('DOMContentLoaded', function() {
+        const input = document.querySelector('input[name="message"]');
+        if (input) {
+            input.focus();
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

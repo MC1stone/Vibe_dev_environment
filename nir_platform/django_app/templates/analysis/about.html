@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title|default:"About" }}{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">About</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="card mb-4">
+        <div class="card-body text-center py-5">
+            <h1 class="display-3 mb-3">
+                <i class="bi bi-graph-up"></i> NIR Intelligence Platform
+            </h1>
+            <p class="lead mb-4">
+                {{ app_name|default:"NIR Intelligence Platform" }} - Version {{ version|default:"1.0.0" }}
+            </p>
+            <p class="mb-0">
+                {{ description|default:"Open Science NIR Spectral Analysis System" }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row g-4">
+        <!-- What is NIR Intelligence Platform -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h3><i class="bi bi-question-circle"></i> What is NIR Intelligence Platform?</h3>
+                </div>
+                <div class="card-body">
+                    <p>
+                        The <strong>NIR Intelligence Platform</strong> is a comprehensive, open-source system 
+                        designed for analyzing Near-Infrared (NIR) spectral data from any type of spectrometer, 
+                        including DIY devices. Built for the Open Science community, it provides powerful tools 
+                        for spectral analysis, metadata quality assessment, and spectrometer calibration.
+                    </p>
+                    
+                    <h5>Key Features:</h5>
+                    <ul>
+                        <li><strong>Universal Compatibility:</strong> Works with any spectrometer, from professional lab equipment to DIY devices</li>
+                        <li><strong>Comprehensive Analysis:</strong> Automated spectral analysis with peak detection, baseline correction, and noise reduction</li>
+                        <li><strong>Metadata Quality Assessment:</strong> Evaluates metadata against international standards (ISO, ASTM, etc.)</li>
+                        <li><strong>AI-Powered Calibration:</strong> Intelligent calibration using CrewAI agents and known emission lines</li>
+                        <li><strong>Professional Reporting:</strong> Generates comprehensive Quarto reports with embedded Python source code</li>
+                        <li><strong>Federated Learning:</strong> Optional data sharing to improve models for all users</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mission -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h3><i class="bi bi-bullseye"></i> Our Mission</h3>
+                </div>
+                <div class="card-body">
+                    <p>
+                        Our mission is to democratize access to advanced spectral analysis tools, enabling 
+                        researchers, students, and citizen scientists worldwide to analyze NIR data with 
+                        professional-grade accuracy and reproducibility.
+                    </p>
+                    
+                    <h5>We believe in:</h5>
+                    <ul>
+                        <li><strong>Open Science:</strong> All our tools and methodologies are open source and freely available</li>
+                        <li><strong>Accessibility:</strong> Complex analysis should be accessible to everyone, not just experts</li>
+                        <li><strong>Reproducibility:</strong> Every analysis includes complete source code and documentation</li>
+                        <li><strong>Collaboration:</strong> Federated learning allows users to contribute to improving models</li>
+                        <li><strong>Education:</strong> Comprehensive documentation and DIY guides help users learn</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technology Stack -->
+    <div class="row mt-4 g-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="bi bi-gear"></i> Technology Stack</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Backend & AI</h5>
+                            <ul class="list-group list-group-flush mb-4">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Django
+                                    <span class="badge bg-primary">Web Framework</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    CrewAI
+                                    <span class="badge bg-success">AI Orchestration</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Ollama (Mistral)
+                                    <span class="badge bg-info">LLM</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    MCP Server
+                                    <span class="badge bg-secondary">Orchestration</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Data Management</h5>
+                            <ul class="list-group list-group-flush mb-4">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    PostgreSQL
+                                    <span class="badge bg-primary">Relational DB</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Qdrant
+                                    <span class="badge bg-success">Vector DB</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Faiss
+                                    <span class="badge bg-info">Vector Index</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Workflow & Reporting</h5>
+                            <ul class="list-group list-group-flush mb-4">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    n8n
+                                    <span class="badge bg-primary">Workflow Automation</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Quarto
+                                    <span class="badge bg-success">Reporting</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Frontend</h5>
+                            <ul class="list-group list-group-flush mb-4">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Bootstrap 5
+                                    <span class="badge bg-primary">UI Framework</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    HSWT.de Styling
+                                    <span class="badge bg-secondary">Design</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team & Contributors -->
+    <div class="row mt-4 g-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="bi bi-people"></i> Team & Contributors</h3>
+                </div>
+                <div class="card-body">
+                    <p>
+                        The NIR Intelligence Platform is developed and maintained by a team of 
+                        researchers, developers, and Open Science enthusiasts.
+                    </p>
+                    
+                    <h5>Core Team:</h5>
+                    <ul>
+                        <li><strong>Project Lead:</strong> Open Science Initiative</li>
+                        <li><strong>AI/ML Specialists:</strong> CrewAI Development Team</li>
+                        <li><strong>Spectroscopy Experts:</strong> NIR Research Community</li>
+                        <li><strong>Software Engineers:</strong> Django & Python Developers</li>
+                    </ul>
+                    
+                    <h5>Contributors:</h5>
+                    <p>
+                        We welcome contributions from the Open Science community. 
+                        See our <a href="{% url 'documentation' %}">documentation</a> for 
+                        information on how to contribute.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- License & Support -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="bi bi-shield-check"></i> License & Support</h3>
+                </div>
+                <div class="card-body">
+                    <h5>License:</h5>
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-file-earmark-text me-2"></i>
+                        <strong>MIT License</strong> - Open for academic and commercial use
+                    </div>
+                    
+                    <h5>Support:</h5>
+                    <ul class="list-group list-group-flush mb-4">
+                        <li class="list-group-item">
+                            <i class="bi bi-github me-2"></i>
+                            <a href="#">GitHub Repository</a>
+                        </li>
+                        <li class="list-group-item">
+                            <i class="bi bi-book me-2"></i>
+                            <a href="{% url 'documentation' %}">Documentation</a>
+                        </li>
+                        <li class="list-group-item">
+                            <i class="bi bi-discord me-2"></i>
+                            <a href="#">Community Discord</a>
+                        </li>
+                        <li class="list-group-item">
+                            <i class="bi bi-envelope me-2"></i>
+                            <a href="#">Contact Email</a>
+                        </li>
+                    </ul>
+                    
+                    <h5>Acknowledgements:</h5>
+                    <p>
+                        This project is made possible by the support of the Open Science community 
+                        and the following technologies:
+                    </p>
+                    <ul>
+                        <li>Django Web Framework</li>
+                        <li>CrewAI for AI orchestration</li>
+                        <li>Ollama for local LLM inference</li>
+                        <li>Qdrant and Faiss for vector search</li>
+                        <li>Quarto for scientific reporting</li>
+                        <li>n8n for workflow automation</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Call to Action -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <h3 class="mb-3">Join the Open Science Movement</h3>
+                    <p class="lead mb-4">
+                        Start analyzing your spectral data today and contribute to the 
+                        growing knowledge base of the NIR research community.
+                    </p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="{% url 'upload_file' %}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-upload"></i> Upload Data
+                        </a>
+                        <a href="{% url 'documentation' %}" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-book"></i> Read Documentation
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
