@@ -11,9 +11,7 @@ pandas>=2.0.0
 scipy>=1.10.0
 scikit-learn>=1.3.0
 
-# Spectral Libraries (optional - may not install on all systems)
-# spectres>=1.0.0
-# librosa>=0.10.0
+# Spectral Libraries (optional)
 Pillow>=10.0.0
 
 # Vector Databases
@@ -21,7 +19,7 @@ faiss-cpu>=1.7.4
 qdrant-client>=1.7.0
 psycopg2-binary>=2.9.7
 
-# AI/ML - Use compatible versions for Python 3.12
+# AI/ML
 crewai>=0.1.0
 langchain>=0.0.300
 ollama>=0.1.0
@@ -52,9 +50,7 @@ black>=23.0.0
 flake8>=6.0.0
 isort>=5.12.0
 
-# Django specific
+# Django specific - Use django-crispy-forms and crispy-bootstrap5
+# Note: bootstrap5 is not a PyPI package, use django-bootstrap5 instead
 django-crispy-forms>=2.0.0
 crispy-bootstrap5>=2023.10
-
-# For HSWT.de styling compatibility
-bootstrap5>=23.3
