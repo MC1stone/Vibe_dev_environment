@@ -8,14 +8,14 @@ from .models import SpectralData, AnalysisProject, ChatSession
 from django.conf import settings
 
 
-class UploadFileForm(forms.ModelForm):
+class UploadFileForm(forms.Form):
     """Form for uploading spectral data files."""
     
     file = forms.FileField(
         label='Spectral Data File',
         help_text='Upload a file containing spectral data',
         validators=[
-            FileExtensionValidator(allowed_extensions=settings.NIR_PLATFORM['allowed_extensions'])
+            FileExtensionValidator(allowed_extensions=['.csv', '.txt', '.xlsx', '.json', '.spc', '.jdx', '.zip'])
         ]
     )
     
@@ -40,10 +40,6 @@ class UploadFileForm(forms.ModelForm):
         required=False,
         help_text='Optional: Additional metadata in JSON format'
     )
-    
-    class Meta:
-        model = SpectralData
-        fields = ['file', 'spectrometer_type', 'metadata']
 
 
 class AnalysisForm(forms.Form):
