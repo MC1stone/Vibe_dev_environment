@@ -2,6 +2,7 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
+import uuid
 
 
 class Migration(migrations.Migration):
@@ -9,30 +10,44 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
+        ('auth', '0012_alter_user_first_name_max_length'),
     ]
 
     operations = [
         migrations.CreateModel(
             name='SpectralData',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('file_name', models.CharField(max_length=255)),
-                ('original_file', models.FileField(upload_to='uploads/')),
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='auth.user')),
+                ('original_filename', models.CharField(max_length=255)),
+                ('file_path', models.CharField(max_length=500)),
                 ('file_type', models.CharField(max_length=50)),
-                ('spectrometer_type', models.CharField(blank=True, max_length=100, null=True)),
+                ('upload_date', models.DateTimeField(default=django.utils.timezone.now)),
                 ('wavelengths', models.JSONField(default=list)),
                 ('intensities', models.JSONField(default=list)),
                 ('metadata', models.JSONField(default=dict)),
-                ('calibration_status', models.CharField(choices=[('uncalibrated', 'Uncalibrated'), ('partial', 'Partial'), ('calibrated', 'Calibrated')], default='uncalibrated', max_length=20)),
-                ('quality_score', models.FloatField(blank=True, null=True)),
-                ('analysis_date', models.DateTimeField(auto_now_add=True)),
+                ('spectrometer_type', models.CharField(blank=True, max_length=100, null=True)),
+                ('is_processed', models.BooleanField(default=False)),
+                ('processing_date', models.DateTimeField(blank=True, null=True)),
+                ('data_quality_score', models.FloatField(blank=True, null=True)),
+                ('metadata_quality_score', models.FloatField(blank=True, null=True)),
+                ('calibration_quality_score', models.FloatField(blank=True, null=True)),
+                ('overall_quality_score', models.FloatField(blank=True, null=True)),
+                ('analysis_results', models.JSONField(default=dict)),
+                ('calibration_results', models.JSONField(default=dict)),
+                ('metadata_quality_results', models.JSONField(default=dict)),
+                ('federated_consent', models.BooleanField(default=False)),
+                ('is_federated', models.BooleanField(default=False)),
+                ('federation_id', models.CharField(blank=True, max_length=100, null=True)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
             ],
         ),
         migrations.CreateModel(
             name='AnalysisProject',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='auth.user')),
                 ('name', models.CharField(max_length=255)),
                 ('description', models.TextField(blank=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
@@ -43,7 +58,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Report',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='analysis.analysisproject')),
                 ('report_file', models.FileField(upload_to='reports/')),
                 ('report_type', models.CharField(max_length=50)),
@@ -54,7 +69,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ChatSession',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='auth.user')),
                 ('session_id', models.CharField(max_length=255, unique=True)),
                 ('user_query', models.TextField()),
                 ('agent_response', models.TextField()),
@@ -66,7 +82,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SystemLog',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('timestamp', models.DateTimeField(auto_now_add=True)),
                 ('level', models.CharField(max_length=20)),
                 ('message', models.TextField()),
@@ -77,7 +93,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='CalibrationHistory',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('spectral_data', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='analysis.spectraldata')),
                 ('calibration_type', models.CharField(max_length=100)),
                 ('parameters', models.JSONField(default=dict)),
