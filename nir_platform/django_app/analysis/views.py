@@ -10,7 +10,9 @@ import uuid
 from datetime import datetime
 
 # Add parent directory to Python path for agents module
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Inside Docker: /app/analysis/views.py -> /app
+# On host: /home/.../django_app/analysis/views.py -> /home/.../nir_platform
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 from django.shortcuts import render, redirect, get_object_or_404

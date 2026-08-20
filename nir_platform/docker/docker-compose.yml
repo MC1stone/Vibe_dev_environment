@@ -9,6 +9,8 @@ services:
       - "8000:8000"
     volumes:
       - ../django_app:/app
+      - ../agents:/app/agents
+      - ../configs:/app/configs
       - ../uploads:/app/uploads
       - ../reports:/app/reports
     environment:
