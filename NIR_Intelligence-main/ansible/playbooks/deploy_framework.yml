@@ -1,0 +1,141 @@
+#!/usr/bin/env ansible-playbook
+---
+# Playbook: Deploy DeveloperAgent Framework Updates
+# 
+# This playbook deploys updates to the DeveloperAgent Framework on existing installations
+#
+# Usage:
+#   ansible-playbook -i inventory/hosts.yml playbooks/deploy_framework.yml
+#   ansible-playbook -i inventory/hosts.yml playbooks/deploy_framework.yml --limit venty_stick
+
+- name: Deploy DeveloperAgent Framework Updates
+  hosts: framework_servers
+  become: true
+  gather_facts: false
+  
+  vars:
+    deploy_timestamp: "{{ ansible_date_time.iso8601 }}"
+  
+  tasks:
+    - name: Display deployment information
+      ansible.builtin.debug:
+        msg: |
+          ============================================
+          NIR_Mistral Framework Deployment
+          ============================================
+          Timestamp: {{ deploy_timestamp }}
+          Target: {{ inventory_hostname }}
+          ============================================
+
+    - name: Stop framework service
+      ansible.builtin.systemd:
+        name: nir_framework
+        state: stopped
+      ignore_errors: yes
+      register: stop_result
+      
+    - name: Display stop result
+      ansible.builtin.debug:
+        var: stop_result
+      when: stop_result.changed
+
+    - name: Backup current framework
+      ansible.builtin.archive:
+        path: "{{ storage.base_dir }}"
+        dest: "{{ storage.backups_dir }}/framework_backup_{{ deploy_timestamp }}.tar.gz"
+        format: gz
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0644'
+      when: backup.enabled
+
+    - name: Copy updated framework code
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: "{{ item.mode | default('0644') }}"
+        directory_mode: "{{ item.dir_mode | default('0755') }}"
+      loop:
+        - { src: 'dev_framework/', dest: '{{ storage.base_dir }}/dev_framework/' }
+        - { src: 'agents/', dest: '{{ storage.base_dir }}/agents/' }
+        - { src: 'config/', dest: '{{ storage.base_dir }}/config/' }
+        - { src: 'tests/', dest: '{{ storage.base_dir }}/tests/' }
+        - { src: 'scripts/', dest: '{{ storage.base_dir }}/scripts/' }
+        - { src: 'requirements.txt', dest: '{{ storage.base_dir }}/requirements.txt' }
+        - { src: 'dev_requirements.txt', dest: '{{ storage.base_dir }}/dev_requirements.txt' }
+      
+    - name: Update configuration files
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0644'
+      loop:
+        - { src: 'templates/framework_config.yml.j2', dest: '{{ storage.configs_dir }}/framework_config.yml' }
+        - { src: 'templates/agent_config.yml.j2', dest: '{{ storage.configs_dir }}/agent_config.yml' }
+
+    - name: Install new Python dependencies
+      ansible.builtin.pip:
+        requirements: requirements.txt
+        virtualenv: "{{ python_venv_path }}"
+        state: present
+
+    - name: Install development dependencies
+      ansible.builtin.pip:
+        requirements: dev_requirements.txt
+        virtualenv: "{{ python_venv_path }}"
+        state: present
+      ignore_errors: yes
+
+    - name: Run database migrations (if needed)
+      ansible.builtin.command: |
+        cd {{ storage.base_dir }} && 
+        {{ python_venv_path }}/bin/python scripts/run_migrations.py
+      args:
+        chdir: "{{ storage.base_dir }}"
+      register: migration_result
+      ignore_errors: yes
+      changed_when: migration_result.rc == 0
+
+    - name: Validate framework
+      ansible.builtin.command: |
+        cd {{ storage.base_dir }} && 
+        {{ python_venv_path }}/bin/python -m dev_framework validate
+      register: validation_result
+      changed_when: false
+
+    - name: Display validation results
+      ansible.builtin.debug:
+        var: validation_result.stdout_lines | select("match", "Validation passed") | list
+
+    - name: Start framework service
+      ansible.builtin.systemd:
+        name: nir_framework
+        state: started
+        daemon_reload: yes
+
+    - name: Verify framework is running
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}:{{ framework.port }}/health"
+        return_content: yes
+      register: health_check
+      until: health_check.status == 200
+      retries: 10
+      delay: 5
+
+    - name: Display completion message
+      ansible.builtin.debug:
+        msg: |
+          ============================================
+          ✅ FRAMEWORK DEPLOYMENT COMPLETED
+          ============================================
+          Timestamp: {{ deploy_timestamp }}
+          Target: {{ inventory_hostname }}
+          Validation: {{ validation_result.stdout | regex_replace('.*Validation (\w+).*', '\1') | default('UNKNOWN') }}
+          Health Check: {{ health_check.status | default('UNKNOWN') }}
+          
+          Framework Access: http://{{ ansible_host }}:{{ framework.port }}
+          ============================================

@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  postgresql:
+    image: postgres:15-alpine
+    container_name: nir_postgresql_test
+    environment:
+      POSTGRES_USER: nir_user
+      POSTGRES_PASSWORD: nir_password
+      POSTGRES_DB: nir_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - nir_test_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nir_user -d nir_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - nir_test_network
+
+  weaviate:
+    image: semitechnologies/weaviate:1.23.0
+    container_name: nir_weaviate_test
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+    ports:
+      - "8080:8080"
+    volumes:
+      - nir_test_weaviate_data:/var/lib/weaviate
+    restart: unless-stopped
+    networks:
+      - nir_test_network
+
+  ilias:
+    image: python:3.12-slim
+    container_name: nir_ilias_test
+    command: tail -f /dev/null
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./nir_test_env/server/data:/app/data
+    restart: unless-stopped
+    networks:
+      - nir_test_network
+
+volumes:
+  nir_test_postgres_data:
+  nir_test_weaviate_data:
+
+networks:
+  nir_test_network:
+    driver: bridge

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="NIR_Mistral DeveloperAgent Framework - Advanced NIR Spectroscopy Analysis Platform">
+    <meta name="theme-color" content="#7ab929">
+    {% load static %}
+    <title>{% block title %}NIR_Mistral Framework{% endblock %}</title>
+    
+    <!-- CSRF Token for AJAX requests -->
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}">
+    
+    <!-- Bootstrap CSS (for icons and utilities) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- HSWT Style Design System -->
+    <link rel="stylesheet" href="{% static 'css/hswt-style.css' %}">
+    
+    <!-- Colorful UI Enhancement -->
+    <link rel="stylesheet" href="{% static 'css/nir-colorful.css' %}">
+    
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Axios for API calls -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="o-page">
+    <!-- Skip Links (Accessibility) -->
+    <div class="c-skip-link-container">
+        <a class="c-button c-skip-link c-button--primary" href="#main-content">
+            <span class="c-button__text">Skip to main content</span>
+        </a>
+    </div>
+
+    <!-- Header -->
+    <header class="c-header js-header">
+        <div class="c-header__inner o-container o-container--full-width">
+            <!-- Logo -->
+            <div class="c-header__logo">
+                <a href="/" class="c-logo">
+                    <svg viewBox="0 0 210 28" xmlns="http://www.w3.org/2000/svg" width="150" height="35">
+                        <g fill="#7ab929">
+                            <path d="M41.672 10.861 40.436 3.89l-1.302 6.971h-2.396l-1.546-8.917h1.894l1.018 7.447 1.353-7.447h1.996l1.302 7.447 1.146-7.447h1.792l-1.56 8.917zM48.792 3.323v2.319h2.809v1.365h-2.809v2.462h3.453v1.391h-5.348V1.943h5.323l-.207 1.38zM53.73 10.86h1.907V1.943H53.73zM59.424 6.956v3.904H57.53V1.943h1.894v3.518h2.951V1.943h1.894v8.917h-1.894V6.956zM68.081 3.323v2.319h2.808v1.365h-2.808v2.462h3.453v1.391h-5.348V1.943h5.322l-.206 1.38zM77.291 10.86l-2.834-7.073c.103.799.257 1.959.257 3.607v3.467H73V1.944h2.384L78.27 9.03c-.09-.606-.258-1.842-.258-3.17V1.945h1.714v8.917zm10.09-8-.916 1.056c-.618-.53-1.236-.761-1.957-.761-.773 0-1.302.336-1.302.967 0 .619.335.876 1.79 1.327 1.612.515 2.642 1.185 2.642 2.835 0 1.636-1.288 2.783-3.452 2.783-1.483 0-2.565-.528-3.3-1.25l.993-1.083c.619.567 1.34.902 2.254.902.916 0 1.534-.438 1.534-1.224 0-.708-.348-1.018-1.7-1.43-1.933-.605-2.707-1.38-2.707-2.731 0-1.521 1.315-2.513 3.119-2.513 1.327 0 2.229.399 3.002 1.122M92.621 3.425v7.436h-1.895V3.425h-2.37V1.944h6.725l-.206 1.481zM98.058 3.323v2.319h2.809v1.365h-2.809v2.462h3.453v1.391h-5.348V1.943h5.322l-.206 1.38zM107.436 4.818c0-1.044-.619-1.508-1.727-1.508h-.837v3.118h.863c1.043 0 1.701-.4 1.701-1.61m1.958 0c0 2.062-1.469 3-3.505 3h-1.017v3.043h-1.894V1.944h2.757c2.267 0 3.66.928 3.66 2.874M112.519 6.956v3.904h-1.894V1.943h1.894v3.518h2.951V1.943h1.894v8.917h-1.894V6.956zM122.255 3.348l-1.03 4.11h2.073zm-1.392 5.516-.503 1.997h-1.97l2.743-8.917h2.307l2.732 8.917h-2.01l-.503-1.997z" fill="#7ab929"/>
+                        </g>
+                    </svg>
+                    <span class="c-logo__text">NIR_Mistral</span>
+                </a>
+            </div>
+
+            <!-- Main Navigation -->
+            <div class="c-header__navigation">
+                <nav class="c-nav-main">
+                    <ul class="c-nav-main__list js-disclosure-nav">
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="/" class="c-nav-main__action {% if request.path == '/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="/spectra/" class="c-nav-main__action {% if request.path == '/spectra/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">Spectra</span>
+                            </a>
+                        </li>
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="/analysis/" class="c-nav-main__action {% if request.path == '/analysis/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">Analysis</span>
+                            </a>
+                        </li>
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="/jobs/" class="c-nav-main__action {% if request.path == '/jobs/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">Jobs</span>
+                            </a>
+                        </li>
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="/agents/" class="c-nav-main__action {% if request.path == '/agents/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">Agents</span>
+                            </a>
+                        </li>
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="/documentation/" class="c-nav-main__action {% if request.path == '/documentation/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">Documentation</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+            <!-- Header Actions -->
+            <div class="c-header__actions">
+                {% if user.is_authenticated %}
+                    <div class="dropdown">
+                        <button class="c-button c-button--outline-secondary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle"></i>
+                            <span class="c-button__text">{{ user.username }}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <a class="dropdown-item" href="/settings/">
+                                    <i class="bi bi-gear"></i> Settings
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/admin/">
+                                    <i class="bi bi-person-workspace"></i> Admin Panel
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="/logout/">
+                                    <i class="bi bi-box-arrow-right"></i> Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <a href="/login/" class="c-button c-button--outline-primary">
+                        <i class="bi bi-box-arrow-in-right"></i>
+                        <span class="c-button__text">Login</span>
+                    </a>
+                    <a href="/register/" class="c-button c-button--primary">
+                        <i class="bi bi-person-plus"></i>
+                        <span class="c-button__text">Register</span>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="o-page__main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="o-page__footer c-footer">
+        <div class="o-container">
+            <div class="c-footer__inner">
+                <div class="row">
+                    <div class="col-md-4 mb-lg-0 mb-md-4">
+                        <h3 class="c-footer__title">NIR_Mistral Framework</h3>
+                        <p class="c-footer__text">
+                            Advanced NIR Spectroscopy Analysis Platform for research and industrial applications.
+                        </p>
+                        <div class="c-footer__social">
+                            <a href="https://github.com/martin/Development/vsCode_Environment/NIR_Mistral" 
+                               class="c-button c-button--outline-primary c-button--sm" target="_blank">
+                                <i class="bi bi-github"></i>
+                                <span class="c-button__text">GitHub</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-lg-0 mb-md-4">
+                        <h4 class="c-footer__heading">Quick Links</h4>
+                        <ul class="c-footer__list">
+                            <li><a href="/">Dashboard</a></li>
+                            <li><a href="/spectra/">Spectra</a></li>
+                            <li><a href="/analysis/">Analysis</a></li>
+                            <li><a href="/jobs/">Jobs</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-2 mb-lg-0 mb-md-4">
+                        <h4 class="c-footer__heading">Resources</h4>
+                        <ul class="c-footer__list">
+                            <li><a href="/agents/">Agents</a></li>
+                            <li><a href="/documentation/">Documentation</a></li>
+                            <li><a href="/api/">API Reference</a></li>
+                            <li><a href="/admin/">Admin</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4 mb-lg-0 mb-md-4">
+                        <h4 class="c-footer__heading">Contact</h4>
+                        <address class="c-footer__text">
+                            <p>
+                                <i class="bi bi-geo-alt"></i> 
+                                NIR Research Institute<br>
+                                Weihenstephan-Triesdorf University<br>
+                                Germany
+                            </p>
+                            <p>
+                                <i class="bi bi-envelope"></i> 
+                                <a href="mailto:info@nir-mistral.local">info@nir-mistral.local</a>
+                            </p>
+                        </address>
+                    </div>
+                </div>
+                <div class="c-footer__bottom">
+                    <div class="row">
+                        <div class="col-md-6 text-md-start text-center">
+                            <p class="c-footer__copyright">
+                                &copy; 2026 NIR_Mistral Framework. All rights reserved.
+                            </p>
+                        </div>
+                        <div class="col-md-6 text-md-end text-center">
+                            <p class="c-footer__legal">
+                                <a href="/privacy/">Privacy Policy</a> | 
+                                <a href="/terms/">Terms of Service</a> | 
+                                <a href="/imprint/">Imprint</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="c-toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="c-loading-overlay" style="display: none;">
+        <div class="c-loading-overlay__spinner"></div>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Main JavaScript -->
+    <script src="{% static 'js/main.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

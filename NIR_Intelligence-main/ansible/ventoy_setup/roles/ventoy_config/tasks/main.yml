@@ -1,0 +1,207 @@
+---
+# Ventoy Configuration Tasks
+# This role configures Ventoy-specific settings for the NIR_Mistral Framework
+
+- name: Ensure Ventoy directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - "{{ ventoy_mount_point }}"
+    - "{{ ventoy_iso_path }}"
+    - "{{ ventoy_iso_path }}/iso"
+    - "{{ ventoy_iso_path }}/config"
+    - "{{ ventoy_iso_path }}/plugins"
+
+- name: Check if Ventoy is already installed
+  stat:
+    path: "{{ ventoy_mount_point }}/ventoy/ventoy.json"
+  register: ventoy_installed
+
+- name: Download Ventoy ISO
+  get_url:
+    url: "https://github.com/ventoy/Ventoy/releases/download/v{{ ventoy_version }}/ventoy-{{ ventoy_version }}-linux.tar.gz"
+    dest: "/tmp/ventoy-{{ ventoy_version }}-linux.tar.gz"
+    mode: '0644'
+  when: not ventoy_installed.stat.exists
+
+- name: Extract Ventoy to temporary directory
+  unarchive:
+    src: "/tmp/ventoy-{{ ventoy_version }}-linux.tar.gz"
+    dest: "/tmp/"
+    remote_src: yes
+  when: not ventoy_installed.stat.exists
+
+- name: Install Ventoy to USB device
+  command: /tmp/ventoy-{{ ventoy_version }}/Ventoy2Disk.sh -i /dev/sdX
+  args:
+    creates: "{{ ventoy_mount_point }}/ventoy/ventoy.json"
+  when: not ventoy_installed.stat.exists and ansible_facts['devices'] is defined and '/dev/sdX' in ansible_facts['devices']
+  register: ventoy_install
+  ignore_errors: yes
+
+- name: Display Ventoy installation result
+  debug:
+    var: ventoy_install
+  when: ventoy_install is defined
+
+- name: Create Ventoy configuration directory
+  file:
+    path: "{{ ventoy_mount_point }}/ventoy"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create Ventoy ventoy.json configuration
+  template:
+    src: ventoy.json.j2
+    dest: "{{ ventoy_mount_point }}/ventoy/ventoy.json"
+    mode: '0644'
+
+- name: Create Ventoy global control file
+  template:
+    src: ventoy_control.json.j2
+    dest: "{{ ventoy_mount_point }}/ventoy/ventoy_control.json"
+    mode: '0644'
+
+- name: Create NIR_Mistral boot configuration
+  template:
+    src: nir_mistral_boot.conf.j2
+    dest: "{{ ventoy_mount_point }}/ventoy/nir_mistral_boot.conf"
+    mode: '0644'
+
+- name: Create Ventoy plugin directory
+  file:
+    path: "{{ ventoy_mount_point }}/ventoy/plugins"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create auto-boot plugin for NIR_Mistral
+  template:
+    src: auto_boot_plugin.json.j2
+    dest: "{{ ventoy_mount_point }}/ventoy/plugins/auto_boot_plugin.json"
+    mode: '0644'
+
+- name: Copy NIR_Mistral ISO to Ventoy
+  copy:
+    src: "{{ project_root }}/dist/nir_mistral_live.iso"
+    dest: "{{ ventoy_mount_point }}/nir_mistral_live.iso"
+    mode: '0644'
+  when: project_root is defined
+  ignore_errors: yes
+
+- name: Create Ventoy menu configuration
+  template:
+    src: ventoy_menu.conf.j2
+    dest: "{{ ventoy_mount_point }}/ventoy/ventoy_menu.conf"
+    mode: '0644'
+
+- name: Create persistence configuration
+  template:
+    src: persistence.conf.j2
+    dest: "{{ ventoy_mount_point }}/ventoy/persistence.conf"
+    mode: '0644'
+
+- name: Create Ventoy theme directory
+  file:
+    path: "{{ ventoy_mount_point }}/ventoy/themes/nir_mistral"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create custom Ventoy theme
+  template:
+    src: ventoy_theme.json.j2
+    dest: "{{ ventoy_mount_point }}/ventoy/themes/nir_mistral/theme.json"
+    mode: '0644'
+
+- name: Create Ventoy startup script for NIR_Mistral
+  template:
+    src: ventoy_startup.sh.j2
+    dest: "{{ ventoy_mount_point }}/ventoy/ventoy_startup.sh"
+    mode: '0755'
+
+- name: Create Ventoy README
+  template:
+    src: VENTOY_README.md.j2
+    dest: "{{ ventoy_mount_point }}/VENTOY_README.md"
+    mode: '0644'
+
+- name: Create Ventoy boot script for Django + Port Agent
+  template:
+    src: ventoy_boot_django.sh.j2
+    dest: "{{ ventoy_mount_point }}/ventoy/boot_django.sh"
+    mode: '0755'
+
+- name: Create Ventoy service manager
+  template:
+    src: ventoy_services.sh.j2
+    dest: "{{ ventoy_mount_point }}/ventoy/ventoy_services.sh"
+    mode: '0755'
+
+- name: Create Ventoy environment setup script
+  template:
+    src: ventoy_env_setup.sh.j2
+    dest: "{{ ventoy_mount_point }}/ventoy/ventoy_env_setup.sh"
+    mode: '0755'
+
+- name: Create Ventoy cleanup script
+  template:
+    src: ventoy_cleanup.sh.j2
+    dest: "{{ ventoy_mount_point }}/ventoy/ventoy_cleanup.sh"
+    mode: '0755'
+
+- name: Create Ventoy health check script
+  template:
+    src: ventoy_health_check.sh.j2
+    dest: "{{ ventoy_mount_point }}/ventoy/ventoy_health_check.sh"
+    mode: '0755'
+
+- name: Create Ventoy configuration summary
+  template:
+    src: VENTOY_CONFIG_SUMMARY.md.j2
+    dest: "{{ ventoy_mount_point }}/VENTOY_CONFIG_SUMMARY.md"
+    mode: '0644'
+
+- name: Display Ventoy configuration summary
+  debug:
+    msg: |
+      ============================================
+      VENTOY CONFIGURATION COMPLETE
+      ============================================
+      
+      Ventoy Version: {{ ventoy_version }}
+      Mount Point: {{ ventoy_mount_point }}
+      ISO Path: {{ ventoy_iso_path }}
+      
+      Configuration Files:
+      - ventoy.json: Main Ventoy configuration
+      - ventoy_control.json: Global control settings
+      - nir_mistral_boot.conf: NIR_Mistral boot configuration
+      - ventoy_menu.conf: Custom menu configuration
+      - persistence.conf: Persistence settings
+      
+      Scripts:
+      - ventoy_startup.sh: Main startup script
+      - boot_django.sh: Django + Port Agent boot script
+      - ventoy_services.sh: Service manager
+      - ventoy_env_setup.sh: Environment setup
+      - ventoy_health_check.sh: Health monitoring
+      
+      Theme:
+      - Custom NIR_Mistral theme installed
+      
+      ============================================
+      NEXT STEPS:
+      1. Copy files to Ventoy USB stick
+      2. Boot from Ventoy stick
+      3. Select NIR_Mistral from menu
+      4. Services will start automatically
+      ============================================

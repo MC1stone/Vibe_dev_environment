@@ -1,0 +1,61 @@
+# NIR Intelligence Platform - Minimal Docker Requirements
+# Only includes packages that are essential and can be installed in Docker
+
+# Data processing and scientific computing
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+scikit-learn>=1.3.0
+h5py>=3.9.0
+
+# Database and storage
+weaviate-client>=4.0.0
+faiss-cpu>=1.7.4
+psycopg2-binary>=2.9.6
+sqlalchemy>=2.0.0
+
+# Web development
+django>=4.2.0
+djangorestframework>=3.14.0
+djangorestframework-simplejwt>=5.2.0
+django-cors-headers>=4.2.0
+
+# Documentation and reporting
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.14.0
+
+# Multi-agent framework (minimal version)
+# crewai>=0.1.0  # Has dependency issues, install on host
+# langchain>=0.0.300  # Has Python version issues, install on host
+
+# Federated learning
+flwr>=1.4.0
+
+# Utility libraries
+pyyaml>=6.0.0
+tqdm>=4.65.0
+python-dotenv>=1.0.0
+loguru>=0.7.0
+
+# Redis for caching
+redis>=4.5.0
+django-redis>=5.2.0
+
+# Celery for async tasks
+celery>=5.3.0
+
+# Monitoring and observability
+prometheus-client>=0.16.0
+
+# Note: The following packages are excluded due to installation issues in Docker:
+# - tensorflow, keras (require CUDA/cuDNN)
+# - pytorch, torchvision (require specific system libraries)
+# - pyopenms, nmrglue (require system-level scientific libraries)
+# - crewai, langchain (have Python version compatibility issues)
+# - django-saml2, social-auth-app-django (have dependency issues)
+# - ollama (better installed on host)
+# - ansible and related (not needed in container)
+
+# For a complete installation, install the full requirements.txt on the host machine
+# or use a more comprehensive Docker image with system dependencies pre-installed

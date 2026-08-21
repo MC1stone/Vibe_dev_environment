@@ -1,0 +1,13 @@
+/var/log/nir_mistral/*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 0640 {{ app_user }} {{ app_group }}
+    sharedscripts
+    postrotate
+        systemctl reload nir_mistral > /dev/null 2>&1 || true
+    endscript
+}

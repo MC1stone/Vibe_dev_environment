@@ -1,0 +1,8 @@
+# External Tools Requirements (not Python packages)
+
+# Quarto CLI - Documentation generation
+# Current version: 1.10.184 (as of your installation)
+# Installation: See tools/scripts/install_quarto.sh
+# Required for: quarto_agent
+
+# Other tools would be listed here

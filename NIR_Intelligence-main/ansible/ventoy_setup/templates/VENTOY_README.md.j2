@@ -1,0 +1,422 @@
+# NIR_Mistral Framework - Ventoy Stick Setup
+
+## 🚀 Overview
+
+This Ventoy stick contains a complete **NIR_Mistral Framework** deployment with:
+- **Django Server** running on port {{ django_port }}
+- **Port Management Agent** running on port {{ port_agent_port }}
+- **Cross-platform support** (Windows/Linux/Mac)
+- **Docker integration** for containerized deployments
+
+## 📋 What's Included
+
+### Core Components
+- **Django Project**: Full NIR_Mistral Django application with REST API
+- **Port Agent**: Comprehensive port management system with conflict resolution
+- **Virtual Environment**: Python {{ ansible_python_version }} with all dependencies
+- **Systemd Services**: Automatic startup and management
+
+### Features
+✅ **Automatic Port Management**: No more port conflicts
+✅ **REST API**: Full API access to port management features
+✅ **Django Integration**: Seamless integration with Django applications
+✅ **Docker Support**: Manage Docker container ports
+✅ **Cross-platform**: Works on Linux, Windows, and Mac
+✅ **Thread-safe**: Safe for concurrent access
+✅ **Persistent Configuration**: Settings saved across reboots
+
+## 🚀 Quick Start
+
+### Method 1: Using the Startup Script (Recommended)
+
+```bash
+# Start all services
+{{ deploy_root }}/start_nir_mistral.sh start
+
+# Check status
+{{ deploy_root }}/start_nir_mistral.sh status
+
+# View logs
+{{ deploy_root }}/start_nir_mistral.sh logs
+
+# Stop all services
+{{ deploy_root }}/start_nir_mistral.sh stop
+
+# Restart services
+{{ deploy_root }}/start_nir_mistral.sh restart
+```
+
+### Method 2: Using Systemd Services
+
+```bash
+# Start Django server
+sudo systemctl start django
+
+# Start Port Agent
+sudo systemctl start port_agent
+
+# Enable auto-start on boot
+sudo systemctl enable django
+sudo systemctl enable port_agent
+
+# Check status
+sudo systemctl status django
+sudo systemctl status port_agent
+
+# View logs
+journalctl -u django -f
+journalctl -u port_agent -f
+```
+
+## 🌐 API Endpoints
+
+### Django Server (Port {{ django_port }})
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/health/` | GET | Health check |
+| `/api/ports/` | GET | Port management overview |
+| `/api/ports/status/` | GET | Detailed port status |
+| `/api/ports/scan/` | GET | Scan ports in range |
+| `/api/ports/check/<port>/` | GET | Check specific port |
+| `/api/ports/reserve/` | POST | Reserve a port |
+| `/api/ports/release/` | POST | Release a port |
+| `/api/ports/conflicts/` | GET | Get port conflicts |
+
+### Port Agent (Port {{ port_agent_port }})
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/ports/` | GET | Port management status |
+| `/api/ports/scan/` | GET | Scan port range |
+| `/api/ports/check/<port>/` | GET | Check port availability |
+| `/api/ports/assign/` | POST | Assign a free port |
+| `/api/ports/reserve/` | POST | Reserve specific port |
+| `/api/ports/release/` | POST | Release reserved port |
+| `/api/ports/conflicts/` | GET | Detect port conflicts |
+| `/api/ports/resolve/` | POST | Resolve port conflicts |
+
+## 📁 File Structure
+
+```
+{{ deploy_root }}/
+├── django_project/           # Django application
+│   ├── manage.py
+│   ├── nir_web/
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   └── wsgi.py
+│   └── port_manager/         # Port management Django app
+│       ├── middleware.py
+│       ├── views.py
+│       ├── urls.py
+│       └── management/
+│           └── commands/
+│               ├── check_ports.py
+│               └── reserve_port.py
+│
+├── agents/
+│   └── port_agent/           # Port Management Agent
+│       ├── agent.py
+│       ├── server.py
+│       ├── port_manager.py
+│       ├── docker_port_manager.py
+│       ├── integration.py
+│       └── exceptions.py
+│
+├── venv/                    # Python virtual environment
+│   └── bin/
+│       ├── python
+│       ├── pip
+│       └── activate
+│
+├── logs/                    # Log files
+│   ├── django.log
+│   ├── port_agent.log
+│   └── system.log
+│
+├── config/                  # Configuration files
+│   ├── django_settings.py
+│   └── port_agent_settings.py
+│
+└── start_nir_mistral.sh     # Main startup script
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+The system uses the following environment variables (configured in service files):
+
+```bash
+# Django Settings
+DJANGO_SETTINGS_MODULE={{ django_settings_module }}
+DJANGO_DEBUG={{ django_debug | lower }}
+DJANGO_SECRET_KEY=your-secret-key-here
+DJANGO_ALLOWED_HOSTS="['*']"
+
+# Port Agent Settings
+PORT_AGENT_PORT={{ port_agent_port }}
+PORT_MANAGER_ENABLED=True
+
+# Path Settings
+PYTHONPATH={{ deploy_root }}
+PATH={{ venv_path }}/bin:$PATH
+```
+
+### Custom Configuration
+
+To customize the configuration:
+
+1. **Django Settings**: Edit `{{ django_project_path }}/nir_web/settings.py`
+2. **Port Agent Settings**: Edit `{{ port_agent_path }}/config/settings.py`
+3. **Service Configuration**: Edit `/etc/systemd/system/django.service` and `/etc/systemd/system/port_agent.service`
+
+After making changes to service files:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart django
+sudo systemctl restart port_agent
+```
+
+## 🧪 Testing
+
+### Test Django Server
+
+```bash
+# Check health
+curl http://localhost:{{ django_port }}/api/health/
+
+# Get port status
+curl http://localhost:{{ django_port }}/api/ports/
+
+# Check specific port
+curl http://localhost:{{ django_port }}/api/ports/check/8080/
+
+# Scan port range
+curl "http://localhost:{{ django_port }}/api/ports/scan/?start=9000&end=9100"
+```
+
+### Test Port Agent
+
+```bash
+# Check health
+curl http://localhost:{{ port_agent_port }}/api/ports/
+
+# Assign a port
+curl -X POST http://localhost:{{ port_agent_port }}/api/ports/assign/ \
+  -H "Content-Type: application/json" \
+  -d '{"start": 9000, "end": 9100, "service_name": "test_service"}'
+
+# Check port conflicts
+curl http://localhost:{{ port_agent_port }}/api/ports/conflicts/
+
+# Resolve conflicts
+curl -X POST http://localhost:{{ port_agent_port }}/api/ports/resolve/ \
+  -H "Content-Type: application/json" \
+  -d '{"auto_assign": true}'
+```
+
+### Run Management Commands
+
+```bash
+# Activate virtual environment
+source {{ venv_path }}/bin/activate
+
+# Check ports
+cd {{ django_project_path }}
+python manage.py check_ports
+
+# Check ports with conflict resolution
+python manage.py check_ports --resolve
+
+# Reserve port for agent
+python manage.py reserve_port django_agent
+
+# List reserved ports
+python manage.py reserve_port --list
+```
+
+## 🐳 Docker Integration
+
+The Port Agent supports Docker container port management:
+
+```bash
+# Check Docker availability
+curl http://localhost:{{ port_agent_port }}/api/docker/available/
+
+# Get Docker version
+curl http://localhost:{{ port_agent_port }}/api/docker/version/
+
+# List running containers
+curl http://localhost:{{ port_agent_port }}/api/docker/containers/
+
+# Get port mappings
+curl http://localhost:{{ port_agent_port }}/api/docker/mappings/
+```
+
+## 🔄 Update Process
+
+To update the NIR_Mistral Framework:
+
+1. **Pull latest changes**:
+   ```bash
+   cd {{ project_root }}
+   git pull origin main
+   ```
+
+2. **Update dependencies**:
+   ```bash
+   source {{ venv_path }}/bin/activate
+   pip install -r requirements.txt
+   ```
+
+3. **Restart services**:
+   ```bash
+   sudo systemctl restart django
+   sudo systemctl restart port_agent
+   ```
+
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+#### Port Already in Use
+```bash
+# Find and kill process on port
+sudo lsof -i :{{ django_port }}
+sudo kill -9 <PID>
+
+# Or use the startup script
+{{ deploy_root }}/start_nir_mistral.sh stop
+{{ deploy_root }}/start_nir_mistral.sh start
+```
+
+#### Services Won't Start
+```bash
+# Check service logs
+journalctl -u django -xe
+journalctl -u port_agent -xe
+
+# Check application logs
+tail -f {{ deploy_root }}/logs/django.log
+tail -f {{ deploy_root }}/logs/port_agent.log
+```
+
+#### Dependency Issues
+```bash
+# Reinstall dependencies
+source {{ venv_path }}/bin/activate
+pip install -r {{ django_project_path }}/requirements.txt
+pip install -r {{ port_agent_path }}/requirements.txt
+```
+
+### Debug Mode
+
+To enable debug mode:
+
+1. Edit `{{ django_project_path }}/nir_web/settings.py`:
+   ```python
+   DEBUG = True
+   ```
+
+2. Restart Django:
+   ```bash
+   sudo systemctl restart django
+   ```
+
+## 📊 Monitoring
+
+### Log Files
+- **Django Logs**: `{{ deploy_root }}/logs/django.log`
+- **Port Agent Logs**: `{{ deploy_root }}/logs/port_agent.log`
+- **System Logs**: `journalctl -u django` and `journalctl -u port_agent`
+
+### Health Checks
+```bash
+# Django health
+curl http://localhost:{{ django_port }}/api/health/
+
+# Port Agent health
+curl http://localhost:{{ port_agent_port }}/api/ports/
+
+# Full status
+{{ deploy_root }}/start_nir_mistral.sh status
+```
+
+## 🎯 Use Cases
+
+### 1. Development Environment
+```bash
+# Start services
+{{ deploy_root }}/start_nir_mistral.sh start
+
+# Run tests
+source {{ venv_path }}/bin/activate
+cd {{ django_project_path }}
+python manage.py test
+```
+
+### 2. Production Deployment
+```bash
+# Enable services
+sudo systemctl enable django
+sudo systemctl enable port_agent
+
+# Start services
+sudo systemctl start django
+sudo systemctl start port_agent
+
+# Check status
+sudo systemctl status django port_agent
+```
+
+### 3. Port Management
+```bash
+# Reserve a port for your service
+curl -X POST http://localhost:{{ port_agent_port }}/api/ports/reserve/ \
+  -H "Content-Type: application/json" \
+  -d '{"port": 8080, "service_name": "my_service"}'
+
+# Release a port
+curl -X POST http://localhost:{{ port_agent_port }}/api/ports/release/ \
+  -H "Content-Type: application/json" \
+  -d '{"port": 8080}'
+```
+
+## 🔗 Related Resources
+
+- **Project Repository**: [NIR_Mistral Framework](file://{{ project_root }})
+- **Documentation**: [START_PORT_MANAGER_SERVER.md](file://{{ project_root }}/START_PORT_MANAGER_SERVER.md)
+- **Port Agent Documentation**: [agents/port_agent/README.md](file://{{ project_root }}/agents/port_agent/README.md)
+
+## 📞 Support
+
+For issues or questions:
+1. Check the logs in `{{ deploy_root }}/logs/`
+2. Review the troubleshooting section above
+3. Check the main documentation
+
+## 🏁 Conclusion
+
+Your Ventoy stick is now configured with a complete **NIR_Mistral Framework** deployment! 🎉
+
+**Key Benefits:**
+- ✅ Automatic port conflict resolution
+- ✅ REST API for easy integration
+- ✅ Cross-platform compatibility
+- ✅ Docker support
+- ✅ Thread-safe operations
+- ✅ Comprehensive logging
+
+**Next Steps:**
+1. Boot from your Ventoy stick
+2. Start the services using the startup script
+3. Test the API endpoints
+4. Integrate with your applications
+
+---
+
+*Generated by Ansible Ventoy Setup*
+*Timestamp: {{ ansible_date_time.iso8601 }}*
+*Environment: {{ environment | default('production') }}*

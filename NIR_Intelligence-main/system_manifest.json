@@ -1,0 +1,124 @@
+{
+"system": {
+"name": "NIR Intelligence Platform",
+"version": "1.0",
+"mode": "production"
+},
+
+"environment": {
+"python": "3.12",
+"package_manager": "uv",
+"virtual_environment": true
+},
+
+"containerization": {
+"docker": true,
+"docker_compose": true
+},
+
+"ai": {
+"llm_provider": "ollama",
+"model": "mistral:latest"
+},
+
+"orchestration": {
+"framework": "crewai",
+"master_agent": true,
+"cross_agent_review": true,
+"iterative_execution": true
+},
+
+"agents": {
+"master_implementation_agent": true,
+"data_preparation_agent": true,
+"sensor_quality_agent": true,
+"statistical_analysis_agent": true,
+"neural_network_agent": true,
+"calibration_agent": true,
+"metadata_agent": true,
+"weaviate_agent": true,
+"faiss_agent": true,
+"postgresql_agent": true,
+"django_agent": true,
+"mcp_agent": true,
+"quarto_agent": true,
+"flower_agent": true
+},
+
+"databases": {
+"postgresql": {
+"enabled": true,
+"purpose": "metadata_storage"
+},
+
+"weaviate": {
+"enabled": true,
+"purpose": "vector_database"
+},
+
+"faiss": {
+"enabled": true,
+"purpose": "similarity_search"
+}
+},
+
+"analysis": {
+"statistical_models": [
+"PCA",
+"PLS",
+"PCR",
+"ANOVA",
+"ClusterAnalysis"
+],
+
+"neural_models": [
+"CNN",
+"MLP",
+"AutoEncoder"
+],
+
+"parallel_execution": true
+},
+
+"calibration": {
+"models": [
+"PLS",
+"PCR",
+"SVM",
+"RandomForest",
+"XGBoost",
+"CNN"
+],
+"automatic_optimization": true
+},
+
+"documentation": {
+"quarto": true,
+"auto_generate_report": true,
+"include_source_code": true,
+"include_charts": true,
+"include_reasoning": true
+},
+
+"quality_control": {
+"require_all_agents_review": true,
+"allow_release_with_errors": false,
+"allow_release_with_open_requests": false
+},
+
+"final_report": {
+"required": [
+"metadata_analysis",
+"metadata_scoring",
+"sensor_evaluation",
+"statistical_results",
+"neural_network_results",
+"best_model_selection",
+"wavelength_database_comparison",
+"similarity_analysis",
+"optimization_log",
+"executive_summary"
+]
+}
+}
+

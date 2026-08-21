@@ -1,0 +1,366 @@
+#!/bin/bash
+# Ventoy Health Check Script for NIR_Mistral Framework
+# This script checks the health of all NIR_Mistral services
+
+# Configuration
+PROJECT_ROOT="{{ deploy_root }}"
+DJANGO_PORT="{{ django_port }}"
+PORT_AGENT_PORT="{{ port_agent_port }}"
+LOG_DIR="${PROJECT_ROOT}/logs"
+PID_DIR="/tmp/nir_mistral"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Logging functions
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+log_header() {
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}$1${NC}"
+    echo -e "${BLUE}========================================${NC}"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+# Check if service is running
+is_service_running() {
+    local service_name=$1
+    local pid_file="${PID_DIR}/${service_name}.pid"
+    
+    if [ -f "${pid_file}" ]; then
+        local pid=$(cat "${pid_file}")
+        if kill -0 ${pid} 2>/dev/null; then
+            return 0
+        fi
+    fi
+    
+    return 1
+}
+
+# Check service health via HTTP
+check_http_health() {
+    local url=$1
+    local service_name=$2
+    
+    if curl -s --max-time 5 "${url}" > /dev/null 2>&1; then
+        echo "${GREEN}✓${NC}"
+        return 0
+    else
+        echo "${RED}✗${NC}"
+        return 1
+    fi
+}
+
+# Check Django health
+check_django() {
+    local all_good=true
+    
+    echo -n "Django Server: "
+    
+    # Check if process is running
+    if is_service_running "django"; then
+        echo -n "Process: ${GREEN}RUNNING${NC}, "
+    else
+        echo -n "Process: ${RED}STOPPED${NC}, "
+        all_good=false
+    fi
+    
+    # Check HTTP health
+    if check_http_health "http://localhost:${DJANGO_PORT}/api/health/" "django"; then
+        echo "HTTP: ${GREEN}HEALTHY${NC}"
+    else
+        echo "HTTP: ${RED}UNHEALTHY${NC}"
+        all_good=false
+    fi
+    
+    return ${all_good}
+}
+
+# Check Port Agent health
+check_port_agent() {
+    local all_good=true
+    
+    echo -n "Port Agent: "
+    
+    # Check if process is running
+    if is_service_running "port_agent"; then
+        echo -n "Process: ${GREEN}RUNNING${NC}, "
+    else
+        echo -n "Process: ${RED}STOPPED${NC}, "
+        all_good=false
+    fi
+    
+    # Check HTTP health
+    if check_http_health "http://localhost:${PORT_AGENT_PORT}/api/ports/" "port_agent"; then
+        echo "HTTP: ${GREEN}HEALTHY${NC}"
+    else
+        echo "HTTP: ${RED}UNHEALTHY${NC}"
+        all_good=false
+    fi
+    
+    return ${all_good}
+}
+
+# Check port conflicts
+check_port_conflicts() {
+    echo -n "Port Conflicts: "
+    
+    local conflicts=0
+    
+    # Check if Django port is in use by someone else
+    if is_service_running "django"; then
+        local django_pid=$(cat "${PID_DIR}/django.pid" 2>/dev/null || echo "")
+        if [ -n "${django_pid}" ]; then
+            # Check if Django port is being used by the correct process
+            if lsof -t -i :${DJANGO_PORT} 2>/dev/null | grep -v "${django_pid}" > /dev/null 2>&1; then
+                conflicts=$((conflicts + 1))
+            fi
+        fi
+    fi
+    
+    # Check if Port Agent port is in use by someone else
+    if is_service_running "port_agent"; then
+        local port_agent_pid=$(cat "${PID_DIR}/port_agent.pid" 2>/dev/null || echo "")
+        if [ -n "${port_agent_pid}" ]; then
+            # Check if Port Agent port is being used by the correct process
+            if lsof -t -i :${PORT_AGENT_PORT} 2>/dev/null | grep -v "${port_agent_pid}" > /dev/null 2>&1; then
+                conflicts=$((conflicts + 1))
+            fi
+        fi
+    fi
+    
+    if [ ${conflicts} -eq 0 ]; then
+        echo "${GREEN}None detected${NC}"
+        return 0
+    else
+        echo "${RED}Found ${conflicts} conflict(s)${NC}"
+        return 1
+    fi
+}
+
+# Check disk space
+check_disk_space() {
+    echo -n "Disk Space: "
+    
+    local disk_usage=$(df -h / | awk 'NR==2 {print $5}' | tr -d '%')
+    
+    if [ "${disk_usage}" -lt 90 ] 2>/dev/null; then
+        echo "${GREEN}${disk_usage}% used${NC}"
+        return 0
+    else
+        echo "${RED}${disk_usage}% used (WARNING: >90%)${NC}"
+        return 1
+    fi
+}
+
+# Check memory usage
+check_memory() {
+    echo -n "Memory Usage: "
+    
+    if command -v free &> /dev/null; then
+        local total=$(free -m | awk 'NR==2 {print $2}')
+        local used=$(free -m | awk 'NR==2 {print $3}')
+        local percent=$((used * 100 / total))
+        
+        if [ "${percent}" -lt 80 ]; then
+            echo "${GREEN}${percent}% used (${used}MB/${total}MB)${NC}"
+            return 0
+        else
+            echo "${RED}${percent}% used (${used}MB/${total}MB) (WARNING: >80%)${NC}"
+            return 1
+        fi
+    else
+        echo "${YELLOW}Unable to check memory${NC}"
+        return 0
+    fi
+}
+
+# Check log files
+check_logs() {
+    echo -n "Log Files: "
+    
+    local log_files=(
+        "${LOG_DIR}/django.log"
+        "${LOG_DIR}/port_agent.log"
+        "${LOG_DIR}/port_agent_access.log"
+        "${LOG_DIR}/port_agent_error.log"
+    )
+    
+    local errors_found=0
+    
+    for log_file in "${log_files[@]}"; do
+        if [ -f "${log_file}" ]; then
+            # Check for ERROR in logs
+            if grep -q "ERROR\|error\|Error" "${log_file}" 2>/dev/null; then
+                errors_found=$((errors_found + 1))
+            fi
+        fi
+    done
+    
+    if [ ${errors_found} -eq 0 ]; then
+        echo "${GREEN}No errors detected${NC}"
+        return 0
+    else
+        echo "${RED}Found errors in ${errors_found} log file(s)${NC}"
+        return 1
+    fi
+}
+
+# Check system time
+check_system_time() {
+    echo -n "System Time: "
+    
+    # Check if NTP is synchronized
+    if command -v timedatectl &> /dev/null; then
+        local ntp_status=$(timedatectl show | grep "NTP service" | cut -d'=' -f2)
+        local sync_status=$(timedatectl show | grep "System clock synchronized" | cut -d'=' -f2)
+        
+        if [ "${sync_status}" = "yes" ]; then
+            echo "${GREEN}Synchronized${NC}"
+            return 0
+        else
+            echo "${YELLOW}Not synchronized${NC}"
+            return 1
+        fi
+    else
+        echo "${GREEN}$(date)${NC}"
+        return 0
+    fi
+}
+
+# Check network connectivity
+check_network() {
+    echo -n "Network: "
+    
+    # Check if we can reach localhost
+    if ping -c 1 -W 1 127.0.0.1 > /dev/null 2>&1; then
+        echo -n "${GREEN}Localhost: OK${NC}, "
+    else
+        echo -n "${RED}Localhost: FAILED${NC}, "
+        return 1
+    fi
+    
+    # Check if we can reach Google DNS (optional)
+    if ping -c 1 -W 2 8.8.8.8 > /dev/null 2>&1; then
+        echo "${GREEN}Internet: OK${NC}"
+        return 0
+    else
+        echo "${YELLOW}Internet: Unavailable${NC}"
+        return 0  # Not critical
+    fi
+}
+
+# Main health check function
+main() {
+    log_header "NIR_MISTRAL HEALTH CHECK"
+    
+    local all_good=true
+    local issues=0
+    
+    echo "Checking services..."
+    echo
+    
+    # Check Django
+    if ! check_django; then
+        all_good=false
+        issues=$((issues + 1))
+    fi
+    
+    # Check Port Agent
+    if ! check_port_agent; then
+        all_good=false
+        issues=$((issues + 1))
+    fi
+    
+    echo
+    echo "Checking system..."
+    echo
+    
+    # Check port conflicts
+    if ! check_port_conflicts; then
+        all_good=false
+        issues=$((issues + 1))
+    fi
+    
+    # Check disk space
+    if ! check_disk_space; then
+        all_good=false
+        issues=$((issues + 1))
+    fi
+    
+    # Check memory
+    if ! check_memory; then
+        all_good=false
+        issues=$((issues + 1))
+    fi
+    
+    # Check logs
+    if ! check_logs; then
+        all_good=false
+        issues=$((issues + 1))
+    fi
+    
+    # Check system time
+    if ! check_system_time; then
+        all_good=false
+        issues=$((issues + 1))
+    fi
+    
+    # Check network
+    if ! check_network; then
+        all_good=false
+        issues=$((issues + 1))
+    fi
+    
+    echo
+    log_header "HEALTH CHECK SUMMARY"
+    
+    if [ "${all_good}" = true ]; then
+        echo "${GREEN}✓ All systems are healthy!${NC}"
+        echo
+        echo "Services:"
+        echo "  Django Server: http://localhost:${DJANGO_PORT}"
+        echo "  Port Agent: http://localhost:${PORT_AGENT_PORT}"
+        echo
+        echo "API Endpoints:"
+        echo "  Django Health: http://localhost:${DJANGO_PORT}/api/health/"
+        echo "  Port Agent: http://localhost:${PORT_AGENT_PORT}/api/ports/"
+        echo "  Port Scan: http://localhost:${PORT_AGENT_PORT}/api/ports/scan/?start=8000&end=9000"
+        echo "  Port Check: http://localhost:${PORT_AGENT_PORT}/api/ports/check/8080/"
+        
+        return 0
+    else
+        echo "${RED}✗ ${issues} issue(s) detected${NC}"
+        echo
+        echo "Troubleshooting:"
+        echo "  1. Check service logs: ${LOG_DIR}/"
+        echo "  2. Restart services: ${PROJECT_ROOT}/start_nir_mistral.sh restart"
+        echo "  3. Check system resources: free -h, df -h"
+        echo "  4. Check running processes: ps aux | grep python"
+        
+        return 1
+    fi
+}
+
+# Run main function
+main "$@"
+exit $?

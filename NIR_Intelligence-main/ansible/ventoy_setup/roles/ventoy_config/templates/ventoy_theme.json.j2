@@ -1,0 +1,273 @@
+{
+    "theme": {
+        "name": "nir_mistral",
+        "version": "1.0.0",
+        "description": "Custom theme for NIR_Mistral Framework Ventoy stick",
+        "author": "NIR_Mistral Team",
+        "license": "MIT"
+    },
+    "metadata": {
+        "timestamp": "{{ ansible_date_time.iso8601 }}",
+        "ventoy_version": "{{ ventoy_version }}",
+        "framework_version": "1.0.0"
+    },
+    "colors": {
+        "primary": "#e94560",
+        "secondary": "#16213e",
+        "accent": "#0f3460",
+        "background": "#1a1a2e",
+        "foreground": "#ffffff",
+        "text": "#eaeaea",
+        "text_secondary": "#a0a0a0",
+        "success": "#4ade80",
+        "warning": "#fbbf24",
+        "error": "#f87171",
+        "info": "#60a5fa",
+        "border": "#374151",
+        "shadow": "#000000",
+        "highlight": "#fbbf24",
+        "selected": "#e94560"
+    },
+    "fonts": {
+        "title": {
+            "family": "DejaVu Sans",
+            "size": 24,
+            "weight": "bold",
+            "color": "#ffffff"
+        },
+        "subtitle": {
+            "family": "DejaVu Sans",
+            "size": 14,
+            "weight": "normal",
+            "color": "#a0a0a0"
+        },
+        "menu": {
+            "family": "DejaVu Sans Mono",
+            "size": 14,
+            "weight": "normal",
+            "color": "#eaeaea"
+        },
+        "menu_selected": {
+            "family": "DejaVu Sans Mono",
+            "size": 14,
+            "weight": "bold",
+            "color": "#ffffff"
+        },
+        "menu_hotkey": {
+            "family": "DejaVu Sans Mono",
+            "size": 14,
+            "weight": "bold",
+            "color": "#fbbf24"
+        },
+        "status": {
+            "family": "DejaVu Sans Mono",
+            "size": 12,
+            "weight": "normal",
+            "color": "#60a5fa"
+        }
+    },
+    "background": {
+        "type": "color",
+        "color": "#1a1a2e",
+        "image": "",
+        "opacity": 1.0,
+        "blur": 0
+    },
+    "menu": {
+        "width": 800,
+        "height": 600,
+        "position": "center",
+        "opacity": 0.95,
+        "border_radius": 10,
+        "border_width": 1,
+        "border_color": "#374151",
+        "shadow_enabled": true,
+        "shadow_color": "#000000",
+        "shadow_offset_x": 5,
+        "shadow_offset_y": 5,
+        "shadow_blur": 10,
+        "padding": 20,
+        "spacing": 10
+    },
+    "title_bar": {
+        "height": 60,
+        "background": "#16213e",
+        "foreground": "#ffffff",
+        "border_bottom": "#374151",
+        "border_width": 1,
+        "padding": 10,
+        "align": "center"
+    },
+    "menu_items": {
+        "height": 40,
+        "padding": 10,
+        "margin": 5,
+        "border_radius": 5,
+        "border_width": 1,
+        "border_color": "#374151",
+        "background": "#16213e",
+        "background_hover": "#0f3460",
+        "background_selected": "#e94560",
+        "foreground": "#eaeaea",
+        "foreground_hover": "#ffffff",
+        "foreground_selected": "#ffffff",
+        "icon_size": 24,
+        "icon_spacing": 10,
+        "text_spacing": 10
+    },
+    "separator": {
+        "height": 1,
+        "color": "#374151",
+        "margin": 10,
+        "style": "solid"
+    },
+    "scrollbar": {
+        "width": 10,
+        "color": "#374151",
+        "color_hover": "#4b5563",
+        "color_active": "#6b7280",
+        "border_radius": 5,
+        "opacity": 0.7
+    },
+    "status_bar": {
+        "height": 30,
+        "background": "#16213e",
+        "foreground": "#60a5fa",
+        "border_top": "#374151",
+        "border_width": 1,
+        "padding": 5,
+        "align": "left",
+        "font_size": 12
+    },
+    "progress_bar": {
+        "height": 20,
+        "background": "#374151",
+        "foreground": "#e94560",
+        "border_radius": 10,
+        "border_width": 1,
+        "border_color": "#4b5563"
+    },
+    "buttons": {
+        "height": 40,
+        "width": 120,
+        "border_radius": 5,
+        "border_width": 1,
+        "border_color": "#374151",
+        "background": "#16213e",
+        "background_hover": "#0f3460",
+        "background_active": "#e94560",
+        "foreground": "#eaeaea",
+        "foreground_hover": "#ffffff",
+        "foreground_active": "#ffffff",
+        "font_size": 14,
+        "font_weight": "bold"
+    },
+    "input_fields": {
+        "height": 40,
+        "border_radius": 5,
+        "border_width": 1,
+        "border_color": "#374151",
+        "background": "#16213e",
+        "foreground": "#eaeaea",
+        "font_size": 14,
+        "padding": 10
+    },
+    "dialogs": {
+        "background": "#16213e",
+        "foreground": "#eaeaea",
+        "border_radius": 10,
+        "border_width": 1,
+        "border_color": "#374151",
+        "opacity": 0.95,
+        "padding": 20,
+        "spacing": 15
+    },
+    "tooltips": {
+        "background": "#0f3460",
+        "foreground": "#ffffff",
+        "border_radius": 5,
+        "border_width": 1,
+        "border_color": "#374151",
+        "padding": 8,
+        "font_size": 12,
+        "delay": 500,
+        "duration": 3000
+    },
+    "animations": {
+        "enabled": true,
+        "menu_fade_in": 300,
+        "menu_slide_in": 200,
+        "item_hover": 100,
+        "progress_smooth": true
+    },
+    "sounds": {
+        "enabled": false,
+        "menu_open": "",
+        "menu_close": "",
+        "item_select": "",
+        "item_hover": "",
+        "error": ""
+    },
+    "icons": {
+        "size": 24,
+        "color": "#e94560",
+        "color_selected": "#ffffff",
+        "color_disabled": "#6b7280"
+    },
+    "cursors": {
+        "default": "arrow",
+        "hover": "hand",
+        "select": "hand",
+        "disabled": "no",
+        "busy": "wait"
+    },
+    "transitions": {
+        "menu": {
+            "type": "fade",
+            "duration": 300,
+            "easing": "ease-in-out"
+        },
+        "items": {
+            "type": "slide",
+            "duration": 200,
+            "easing": "ease-out"
+        },
+        "dialogs": {
+            "type": "fade",
+            "duration": 200,
+            "easing": "ease-in-out"
+        }
+    },
+    "responsive": {
+        "enabled": true,
+        "breakpoints": {
+            "small": 800,
+            "medium": 1200,
+            "large": 1600
+        },
+        "adjustments": {
+            "small": {
+                "menu_width": 600,
+                "menu_height": 400,
+                "font_size": 12
+            },
+            "medium": {
+                "menu_width": 700,
+                "menu_height": 500,
+                "font_size": 13
+            },
+            "large": {
+                "menu_width": 800,
+                "menu_height": 600,
+                "font_size": 14
+            }
+        }
+    },
+    "accessibility": {
+        "high_contrast": false,
+        "large_text": false,
+        "screen_reader": false,
+        "keyboard_navigation": true,
+        "focus_indicator": true
+    }
+}

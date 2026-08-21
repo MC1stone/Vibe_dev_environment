@@ -1,0 +1,6 @@
+wavelength,intensity,metadata
+900,0.123,"{\"instrument\":\"DIY_Spectrometer\",\"acquisition_time\":\"2026-07-30T10:00:00\",\"sample\":\"test_sample_1\"}"
+950,0.187,"{\"instrument\":\"DIY_Spectrometer\",\"acquisition_time\":\"2026-07-30T10:00:00\",\"sample\":\"test_sample_1\"}"
+1000,0.254,"{\"instrument\":\"DIY_Spectrometer\",\"acquisition_time\":\"2026-07-30T10:00:00\",\"sample\":\"test_sample_1\"}"
+1050,0.312,"{\"instrument\":\"DIY_Spectrometer\",\"acquisition_time\":\"2026-07-30T10:00:00\",\"sample\":\"test_sample_1\"}"
+1100,0.289,"{\"instrument\":\"DIY_Spectrometer\",\"acquisition_time\":\"2026-07-30T10:00:00\",\"sample\":\"test_sample_1\"}"

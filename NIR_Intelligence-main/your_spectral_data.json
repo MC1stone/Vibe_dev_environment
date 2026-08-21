@@ -1,0 +1,11 @@
+{
+  "sample_id": "your_sample_name",
+  "wavelengths": [700, 705, 710, 715, ..., 2495, 2500],
+  "intensities": [0.1, 0.12, 0.15, 0.18, ..., 0.8, 0.75],
+  "metadata": {
+    "instrument": "Your Spectrometer Model",
+    "user": "Your Name",
+    "date": "2026-08-06",
+    "description": "Your sample description"
+  }
+}

@@ -1,0 +1,291 @@
+{
+  "skill_id": "data_preprocessing_skills",
+  "name": "Data Preprocessing Skills",
+  "version": "1.0.0",
+  "description": "Specialized skills for the Data Preparation Agent to handle NIR spectroscopy data preprocessing.",
+  "agent_association": "data_preparation_agent",
+  "skills": [
+    {
+      "skill_name": "data_import",
+      "description": "Import NIR spectroscopy data from various formats",
+      "capabilities": [
+        "format_detection",
+        "file_validation",
+        "data_parsing",
+        "metadata_extraction",
+        "batch_processing"
+      ],
+      "supported_formats": [
+        {
+          "format": "CSV",
+          "description": "Comma-Separated Values",
+          "metadata_support": "limited"
+        },
+        {
+          "format": "JSON",
+          "description": "JavaScript Object Notation",
+          "metadata_support": "full"
+        },
+        {
+          "format": "HDF5",
+          "description": "Hierarchical Data Format",
+          "metadata_support": "full"
+        },
+        {
+          "format": "JDX",
+          "description": "Joint Committee on Atomic and Molecular Physical Data",
+          "metadata_support": "standardized"
+        },
+        {
+          "format": "SPC",
+          "description": "Galactic SPC",
+          "metadata_support": "standardized"
+        },
+        {
+          "format": "TXT",
+          "description": "Plain Text",
+          "metadata_support": "minimal"
+        }
+      ],
+      "validation_rules": [
+        "file_integrity_check",
+        "format_compliance",
+        "data_completeness",
+        "value_range_validation"
+      ],
+      "output": "unified_internal_format"
+    },
+    {
+      "skill_name": "data_cleaning",
+      "description": "Clean and validate NIR spectroscopy data",
+      "capabilities": [
+        "missing_value_handling",
+        "outlier_detection",
+        "noise_reduction",
+        "baseline_correction",
+        "data_smoothing"
+      ],
+      "methods": [
+        {
+          "name": "missing_value_imputation",
+          "techniques": ["mean", "median", "interpolation", "kNN"]
+        },
+        {
+          "name": "outlier_detection",
+          "techniques": ["IQR", "Z-score", "DBSCAN", "Isolation Forest"]
+        },
+        {
+          "name": "noise_reduction",
+          "techniques": ["moving_average", "Savitzky-Golay", "wavelet"]
+        }
+      ],
+      "quality_metrics": [
+        "missing_values_percentage",
+        "outlier_percentage",
+        "signal_to_noise_ratio",
+        "data_consistency_score"
+      ]
+    },
+    {
+      "skill_name": "spectral_preprocessing",
+      "description": "Apply NIR-specific spectral preprocessing techniques",
+      "capabilities": [
+        "scatter_correction",
+        "baseline_removal",
+        "normalization",
+        "derivative_calculation",
+        "feature_scaling"
+      ],
+      "techniques": [
+        {
+          "name": "SNV",
+          "description": "Standard Normal Variate",
+          "purpose": "Remove multiplicative effects of scatter",
+          "parameters": {}
+        },
+        {
+          "name": "MSC",
+          "description": "Multiplicative Scatter Correction",
+          "purpose": "Correct for additive and multiplicative scatter",
+          "parameters": {
+            "reference_spectrum": "mean"
+          }
+        },
+        {
+          "name": "Savitzky-Golay",
+          "description": "Savitzky-Golay smoothing and differentiation",
+          "purpose": "Noise reduction and feature enhancement",
+          "parameters": {
+            "window_length": 5,
+            "polyorder": 2,
+            "derivative_order": 0
+          }
+        },
+        {
+          "name": "Baseline Correction",
+          "description": "Baseline removal",
+          "purpose": "Remove background signal",
+          "parameters": {
+            "method": "als",
+            "lambda": 100000,
+            "p": 0.01
+          }
+        },
+        {
+          "name": "Detrending",
+          "description": "Remove linear trends",
+          "purpose": "Eliminate systematic variations",
+          "parameters": {}
+        }
+      ],
+      "quality_control": {
+        "preprocessing_effectiveness_metrics": [
+          "variance_explained",
+          "noise_reduction_factor",
+          "feature_enhancement_score"
+        ]
+      }
+    },
+    {
+      "skill_name": "metadata_management",
+      "description": "Extract, validate, and manage metadata",
+      "capabilities": [
+        "metadata_extraction",
+        "metadata_validation",
+        "metadata_enrichment",
+        "metadata_prioritization",
+        "metadata_storage"
+      ],
+      "required_metadata": [
+        {
+          "field": "spectrum",
+          "type": "array",
+          "description": "Spectral data points"
+        },
+        {
+          "field": "wavelength",
+          "type": "array",
+          "description": "Corresponding wavelengths"
+        },
+        {
+          "field": "instrument",
+          "type": "string",
+          "description": "Instrument used for measurement"
+        },
+        {
+          "field": "acquisition_time",
+          "type": "datetime",
+          "description": "Time of measurement"
+        }
+      ],
+      "optional_metadata": [
+        {
+          "field": "operator",
+          "type": "string",
+          "description": "Person operating the instrument"
+        },
+        {
+          "field": "humidity",
+          "type": "float",
+          "description": "Ambient humidity percentage"
+        },
+        {
+          "field": "temperature",
+          "type": "float",
+          "description": "Ambient temperature in Celsius"
+        },
+        {
+          "field": "notes",
+          "type": "string",
+          "description": "Additional notes"
+        },
+        {
+          "field": "location",
+          "type": "string",
+          "description": "Measurement location"
+        }
+      ],
+      "validation_rules": {
+        "required_fields": "strict",
+        "data_types": "strict",
+        "value_ranges": "warn_on_violation"
+      }
+    },
+    {
+      "skill_name": "quality_assessment",
+      "description": "Assess data quality and generate reports",
+      "capabilities": [
+        "quality_metric_calculation",
+        "threshold_comparison",
+        "report_generation",
+        "visualization",
+        "recommendation_engine"
+      ],
+      "quality_metrics": [
+        {
+          "name": "data_completeness",
+          "description": "Percentage of complete records",
+          "threshold": 95
+        },
+        {
+          "name": "value_range_compliance",
+          "description": "Percentage of values within expected ranges",
+          "threshold": 98
+        },
+        {
+          "name": "outlier_percentage",
+          "description": "Percentage of outliers",
+          "threshold": 5
+        },
+        {
+          "name": "signal_to_noise_ratio",
+          "description": "Average signal-to-noise ratio",
+          "threshold": 20
+        }
+      ],
+      "reporting": {
+        "format": "JSON",
+        "visualizations": ["histograms", "box_plots", "scatter_plots"],
+        "recommendations": ["preprocessing_suggestions", "data_collection_improvements"]
+      }
+    }
+  ],
+  "performance_requirements": {
+    "processing_speed": "1000 spectra per minute",
+    "memory_efficiency": "4GB max for 10,000 spectra",
+    "error_rate": "< 0.1% data loss",
+    "metadata_accuracy": "100% for required fields"
+  },
+  "error_handling": {
+    "recoverable_errors": [
+      "missing_optional_metadata",
+      "minor_format_violations",
+      "low_signal_to_noise_ratio"
+    ],
+    "critical_errors": [
+      "missing_required_metadata",
+      "corrupted_spectral_data",
+      "invalid_wavelength_range"
+    ],
+    "recovery_strategies": {
+      "missing_metadata": "impute_or_flag",
+      "format_violations": "attempt_auto_correction",
+      "quality_issues": "flag_for_review"
+    }
+  },
+  "dependencies": {
+    "required_libraries": [
+      "numpy",
+      "pandas",
+      "scipy",
+      "h5py",
+      "pybaselines",
+      "scikit-learn"
+    ],
+    "optional_libraries": [
+      "matplotlib",
+      "seaborn",
+      "plotly"
+    ]
+  }
+}

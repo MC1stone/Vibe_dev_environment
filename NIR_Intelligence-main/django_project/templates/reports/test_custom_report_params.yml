@@ -1,0 +1,12 @@
+# Quarto Parameters
+title: Custom NIR Analysis Report
+author: NIR_Mistral System
+date: 2026-08-07
+sample_info:
+  id: CUSTOM_001
+  type: Wheat Sample
+  origin: Test Laboratory
+analysis_results:
+  protein_content: 12.5
+  moisture_content: 8.2
+  quality_score: 95.0

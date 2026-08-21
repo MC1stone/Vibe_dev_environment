@@ -1,0 +1,645 @@
+{
+  "skill_id": "ansible_automation_skills",
+  "name": "Ansible Automation Skills",
+  "version": "1.0.0",
+  "description": "Specialized skills for infrastructure automation, system deployment, and continuous updates using Ansible.",
+  "agent_association": "ansible_agent",
+  "skills": [
+    {
+      "skill_name": "infrastructure_provisioning",
+      "description": "Provision and configure infrastructure for NIR platform deployment",
+      "capabilities": [
+        "cloud_provisioning",
+        "bare_metal_setup",
+        "virtual_machine_management",
+        "network_configuration",
+        "storage_setup"
+      ],
+      "supported_providers": [
+        {
+          "name": "AWS",
+          "modules": ["ec2", "s3", "rds", "elb"],
+          "authentication": "iam_role_or_access_keys"
+        },
+        {
+          "name": "Azure",
+          "modules": ["azure_rm", "azure_ad"],
+          "authentication": "service_principal"
+        },
+        {
+          "name": "GCP",
+          "modules": ["gcp_compute", "gcp_sql"],
+          "authentication": "service_account"
+        },
+        {
+          "name": "On-Premises",
+          "modules": ["vmware", "openstack", "proxmox"],
+          "authentication": "ssh_keys"
+        }
+      ],
+      "provisioning_workflow": [
+        "resource_allocation",
+        "network_setup",
+        "storage_configuration",
+        "security_groups",
+        "dns_configuration"
+      ]
+    },
+    {
+      "skill_name": "configuration_management",
+      "description": "Manage system configuration using Ansible roles and playbooks",
+      "capabilities": [
+        "idempotent_configuration",
+        "template_management",
+        "secret_management",
+        "dependency_resolution",
+        "state_validation"
+      ],
+      "configuration_methods": [
+        {
+          "name": "Role-Based",
+          "description": "Modular configuration using Ansible roles",
+          "structure": {
+            "tasks": "main.yml",
+            "handlers": "handlers/main.yml",
+            "templates": "templates/",
+            "files": "files/",
+            "vars": "defaults/main.yml",
+            "meta": "meta/main.yml"
+          }
+        },
+        {
+          "name": "Playbook-Based",
+          "description": "Orchestration using Ansible playbooks",
+          "structure": {
+            "hosts": "target_systems",
+            "tasks": "ordered_operations",
+            "variables": "playbook_vars",
+            "tags": "selective_execution"
+          }
+        }
+      ],
+      "secret_management": {
+        "methods": ["ansible_vault", "hashicorp_vault", "aws_secrets_manager"],
+        "encryption": "aes_256",
+        "rotation_policy": "quarterly"
+      }
+    },
+    {
+      "skill_name": "deployment_automation",
+      "description": "Automate NIR platform deployment across different environments",
+      "capabilities": [
+        "multi_environment_deployment",
+        "blue_green_deployment",
+        "canary_releases",
+        "rollback_strategies",
+        "health_checks"
+      ],
+      "deployment_strategies": [
+        {
+          "name": "Self-Hosted Server",
+          "playbook": "server_deployment.yml",
+          "steps": [
+            "prerequisite_check",
+            "docker_setup",
+            "database_configuration",
+            "web_interface_deployment",
+            "api_services_setup",
+            "monitoring_configuration",
+            "health_verification"
+          ],
+          "estimated_time": "30 minutes",
+          "success_criteria": "all_services_healthy"
+        },
+        {
+          "name": "Self-Hosted Client",
+          "playbook": "client_deployment.yml",
+          "steps": [
+            "prerequisite_check",
+            "core_tools_installation",
+            "local_database_setup",
+            "basic_ui_deployment",
+            "client_api_configuration",
+            "health_verification"
+          ],
+          "estimated_time": "15 minutes",
+          "success_criteria": "client_connectivity_verified"
+        },
+        {
+          "name": "Federated Client",
+          "playbook": "federated_client_deployment.yml",
+          "steps": [
+            "prerequisite_check",
+            "client_application_installation",
+            "api_connector_configuration",
+            "local_cache_setup",
+            "user_interface_deployment",
+            "server_connectivity_test"
+          ],
+          "estimated_time": "5 minutes",
+          "success_criteria": "server_connection_established"
+        }
+      ],
+      "deployment_validation": {
+        "checks": [
+          "service_availability",
+          "port_connectivity",
+          "resource_utilization",
+          "dependency_status",
+          "configuration_consistency"
+        ],
+        "thresholds": {
+          "cpu": 70,
+          "memory": 80,
+          "response_time": 2000
+        }
+      }
+    },
+    {
+      "skill_name": "system_updates",
+      "description": "Automate system updates and version management",
+      "capabilities": [
+        "version_detection",
+        "dependency_resolution",
+        "backup_management",
+        "update_scheduling",
+        "rollback_capabilities",
+        "change_logging"
+      ],
+      "update_workflow": {
+        "pre_update": [
+          {
+            "name": "Backup Configuration",
+            "method": "ansible.builtin.archive",
+            "retention": 3
+          },
+          {
+            "name": "Backup Database",
+            "method": "community.postgresql.postgresql_db",
+            "retention": 7
+          },
+          {
+            "name": "Notify Users",
+            "method": "community.general.mail",
+            "recipients": ["admins", "users"]
+          },
+          {
+            "name": "Check Dependencies",
+            "method": "ansible.builtin.package_facts",
+            "validation": "version_compatibility"
+          }
+        ],
+        "update": [
+          {
+            "name": "Download Packages",
+            "method": "ansible.builtin.get_url",
+            "validation": "checksum"
+          },
+          {
+            "name": "Stop Services",
+            "method": "ansible.builtin.service",
+            "state": "stopped"
+          },
+          {
+            "name": "Install Updates",
+            "method": "ansible.builtin.package",
+            "state": "latest"
+          },
+          {
+            "name": "Migrate Database",
+            "method": "community.postgresql.postgresql_db",
+            "action": "migrate"
+          },
+          {
+            "name": "Start Services",
+            "method": "ansible.builtin.service",
+            "state": "started"
+          },
+          {
+            "name": "Verify Installation",
+            "method": "ansible.builtin.uri",
+            "validation": "health_endpoint"
+          }
+        ],
+        "post_update": [
+          {
+            "name": "Health Check",
+            "method": "ansible.builtin.uri",
+            "endpoints": ["/health", "/status"]
+          },
+          {
+            "name": "Notify Success",
+            "method": "community.general.mail",
+            "template": "update_success"
+          },
+          {
+            "name": "Log Update",
+            "method": "ansible.builtin.copy",
+            "destination": "/var/log/nir/updates.log"
+          },
+          {
+            "name": "Cleanup",
+            "method": "ansible.builtin.file",
+            "state": "absent"
+          }
+        ]
+      },
+      "version_sources": [
+        {
+          "name": "GitHub Releases",
+          "method": "community.general.github_release",
+          "frequency": "hourly"
+        },
+        {
+          "name": "Docker Hub",
+          "method": "community.docker.docker_image_info",
+          "frequency": "daily"
+        },
+        {
+          "name": "PyPI",
+          "method": "ansible.builtin.pip",
+          "frequency": "daily"
+        },
+        {
+          "name": "Custom Repository",
+          "method": "ansible.builtin.uri",
+          "frequency": "daily"
+        }
+      ]
+    },
+    {
+      "skill_name": "federated_client_setup",
+      "description": "Configure federated client for remote server access",
+      "capabilities": [
+        "server_connection_configuration",
+        "api_token_management",
+        "local_cache_setup",
+        "data_synchronization",
+        "connection_testing"
+      ],
+      "setup_process": [
+        {
+          "name": "Server Connection",
+          "tasks": [
+            "configure_api_endpoint",
+            "set_authentication_method",
+            "test_connectivity",
+            "configure_retry_policy"
+          ],
+          "authentication_methods": ["api_key", "oauth2", "jwt"]
+        },
+        {
+          "name": "API Token Management",
+          "tasks": [
+            "generate_token",
+            "store_securely",
+            "set_expiration",
+            "rotate_periodically"
+          ],
+          "storage": "ansible_vault"
+        },
+        {
+          "name": "Local Cache Setup",
+          "tasks": [
+            "configure_cache_size",
+            "set_expiration_policy",
+            "implement_invalidation",
+            "monitor_usage"
+          ],
+          "default_size": "5GB"
+        },
+        {
+          "name": "Data Synchronization",
+          "tasks": [
+            "configure_sync_frequency",
+            "set_conflict_resolution",
+            "implement_delta_sync",
+            "monitor_performance"
+          ],
+          "frequency_options": ["real_time", "hourly", "daily"]
+        }
+      ],
+      "connection_testing": {
+        "tests": [
+          "ping_test",
+          "api_endpoint_test",
+          "authentication_test",
+          "data_transfer_test",
+          "latency_measurement"
+        ],
+        "performance_targets": {
+          "latency": "< 100ms",
+          "throughput": "> 10Mbps",
+          "success_rate": "99.9%"
+        }
+      }
+    },
+    {
+      "skill_name": "tools_orchestration",
+      "description": "Integrate and configure all platform tools",
+      "capabilities": [
+        "dependency_mapping",
+        "configuration_templating",
+        "service_management",
+        "health_monitoring",
+        "performance_optimization"
+      ],
+      "supported_tools": [
+        {
+          "name": "Docker",
+          "configuration": {
+            "version": "20.10.0+",
+            "storage_driver": "overlay2",
+            "network": "bridge",
+            "logs": {
+              "driver": "json-file",
+              "max_size": "100m",
+              "max_file": "3"
+            }
+          },
+          "management": "docker_compose"
+        },
+        {
+          "name": "PostgreSQL",
+          "configuration": {
+            "version": "15+",
+            "port": 5432,
+            "memory": "2GB",
+            "max_connections": 200,
+            "backup": "daily"
+          },
+          "management": "systemd"
+        },
+        {
+          "name": "Weaviate",
+          "configuration": {
+            "version": "1.23.0+",
+            "port": 8080,
+            "memory": "4GB",
+            "persistence": "/var/lib/weaviate"
+          },
+          "management": "docker"
+        },
+        {
+          "name": "FAISS",
+          "configuration": {
+            "index_type": "IVF100,Flat",
+            "metric": "L2",
+            "gpu": false,
+            "memory": "2GB"
+          },
+          "management": "python_library"
+        },
+        {
+          "name": "Django",
+          "configuration": {
+            "version": "4.2+",
+            "port": 8000,
+            "debug": false,
+            "allowed_hosts": ["localhost", "domain.com"]
+          },
+          "management": "gunicorn"
+        }
+      ],
+      "orchestration_methods": [
+        {
+          "name": "Dependency Graph",
+          "description": "Resolve tool dependencies automatically",
+          "algorithm": "topological_sort",
+          "conflict_resolution": "version_pinning"
+        },
+        {
+          "name": "Configuration Templating",
+          "description": "Generate tool configurations from templates",
+          "engine": "jinja2",
+          "validation": "schema_based"
+        },
+        {
+          "name": "Service Management",
+          "description": "Manage tool services consistently",
+          "methods": ["systemd", "docker_compose", "supervisord"]
+        }
+      ]
+    },
+    {
+      "skill_name": "version_management",
+      "description": "Manage platform versions and updates",
+      "capabilities": [
+        "semantic_versioning",
+        "changelog_generation",
+        "release_notes",
+        "rollback_management",
+        "update_notifications"
+      ],
+      "versioning_scheme": {
+        "format": "semantic",
+        "pattern": "MAJOR.MINOR.PATCH",
+        "pre_release": ["alpha", "beta", "rc"],
+        "build_metadata": "timestamp"
+      },
+      "changelog_management": {
+        "format": "keepachangelog",
+        "categories": ["added", "changed", "deprecated", "removed", "fixed", "security"],
+        "file": "CHANGELOG.md"
+      },
+      "release_process": [
+        {
+          "name": "Pre-Release",
+          "tasks": [
+            "version_bump",
+            "changelog_update",
+            "dependency_check",
+            "test_suite",
+            "build_packages"
+          ]
+        },
+        {
+          "name": "Release",
+          "tasks": [
+            "tag_release",
+            "publish_packages",
+            "update_documentation",
+            "notify_stakeholders",
+            "deploy_to_production"
+          ]
+        },
+        {
+          "name": "Post-Release",
+          "tasks": [
+            "monitor_deployment",
+            "collect_feedback",
+            "address_issues",
+            "plan_next_release"
+          ]
+        }
+      ],
+      "rollback_strategies": [
+        {
+          "name": "Automatic Rollback",
+          "trigger": "deployment_failure",
+          "action": "revert_to_previous_version",
+          "timeout": "30 minutes"
+        },
+        {
+          "name": "Manual Rollback",
+          "trigger": "admin_request",
+          "action": "select_target_version",
+          "approval": "required"
+        },
+        {
+          "name": "Partial Rollback",
+          "trigger": "component_failure",
+          "action": "revert_specific_component",
+          "scope": "selective"
+        }
+      ]
+    },
+    {
+      "skill_name": "monitoring_and_alerting",
+      "description": "Monitor system health and performance",
+      "capabilities": [
+        "health_checks",
+        "performance_metrics",
+        "log_aggregation",
+        "alert_escalation",
+        "dashboard_generation"
+      ],
+      "health_checks": [
+        {
+          "name": "Service Availability",
+          "method": "ansible.builtin.uri",
+          "endpoints": ["/health", "/status"],
+          "frequency": "every_5_minutes",
+          "threshold": "99.9% uptime"
+        },
+        {
+          "name": "Resource Utilization",
+          "method": "ansible.builtin.command",
+          "metrics": ["cpu", "memory", "disk", "network"],
+          "frequency": "every_minute",
+          "thresholds": {
+            "cpu": 80,
+            "memory": 85,
+            "disk": 90,
+            "network": "1Gbps"
+          }
+        },
+        {
+          "name": "Dependency Status",
+          "method": "ansible.builtin.package_facts",
+          "validation": "version_compatibility",
+          "frequency": "daily",
+          "threshold": "100% compatible"
+        }
+      ],
+      "alerting": {
+        "levels": [
+          {
+            "name": "Critical",
+            "conditions": ["service_down", "security_breach"],
+            "channels": ["email", "sms", "pagerduty"],
+            "escalation": "immediate"
+          },
+          {
+            "name": "High",
+            "conditions": ["resource_exhaustion", "deployment_failure"],
+            "channels": ["email", "slack"],
+            "escalation": "5_minutes"
+          },
+          {
+            "name": "Medium",
+            "conditions": ["performance_degradation", "warning_thresholds"],
+            "channels": ["email", "in_app"],
+            "escalation": "30_minutes"
+          },
+          {
+            "name": "Low",
+            "conditions": ["informational", "maintenance"],
+            "channels": ["in_app", "log_only"],
+            "escalation": "none"
+          }
+        ],
+        "notification_templates": {
+          "critical": "Immediate action required: {issue}",
+          "high": "High priority issue: {issue}",
+          "medium": "Warning: {issue}",
+          "low": "Information: {issue}"
+        }
+      },
+      "dashboard": {
+        "components": [
+          "system_overview",
+          "resource_utilization",
+          "service_status",
+          "alert_history",
+          "performance_trends"
+        ],
+        "update_frequency": "real_time",
+        "access_control": "role_based"
+      }
+    }
+  ],
+  "performance_indicators": [
+    "deployment_success_rate",
+    "update_completion_time",
+    "system_availability",
+    "resource_utilization",
+    "user_satisfaction"
+  ],
+  "security_requirements": {
+    "authentication": "ssh_key_based",
+    "encryption": "aes_256",
+    "secrets_management": "ansible_vault",
+    "audit_logging": true,
+    "compliance": ["CIS_benchmarks", "NIST_standards", "ISO_27001"]
+  },
+  "dependencies": {
+    "required_software": [
+      "ansible>=2.14.0",
+      "ansible-core>=2.14.0",
+      "ansible-runner>=2.0.0",
+      "docker>=20.10.0",
+      "docker-compose>=1.29.0"
+    ],
+    "python_libraries": [
+      "ansible>=7.0.0",
+      "ansible-lint>=6.0.0",
+      "molecule>=4.0.0",
+      "docker>=6.0.0",
+      "requests>=2.28.0",
+      "pyyaml>=6.0.0",
+      "jinja2>=3.1.0",
+      "jmespath>=1.0.0"
+    ],
+    "system_requirements": [
+      "ssh_access",
+      "sudo_privileges",
+      "python_3.8+",
+      "internet_connectivity",
+      "sufficient_disk_space"
+    ]
+  },
+  "best_practices": {
+    "playbook_design": [
+      "use_roles_for_modularity",
+      "implement_tags_for_selectivity",
+      "include_documentation",
+      "use_variables_for_configurability",
+      "implement_error_handling"
+    ],
+    "security": [
+      "use_ansible_vault_for_secrets",
+      "limit_sudo_privileges",
+      "validate_ssh_host_keys",
+      "use_latest_ansible_version",
+      "regular_security_audits"
+    ],
+    "performance": [
+      "use_async_tasks_for_long_operations",
+      "implement_caching",
+      "limit_facts_gathering",
+      "use_delegation_when_appropriate",
+      "optimize_playbook_structure"
+    ]
+  }
+}

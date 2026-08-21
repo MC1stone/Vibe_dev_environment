@@ -1,0 +1,257 @@
+project:
+  name: NIR Intelligence Platform
+  version: 1.0
+  description: Self-Optimizing Multi-Agent System for NIR Spectroscopy Data Analysis
+  start_date: 2026-07-30
+  expected_completion: 2026-12-31
+
+mandatory_files:
+  - TASK.md
+  - task_definition.yaml
+  - system_manifest.json
+
+execution:
+  iterative: true
+  max_iterations: 100
+  stop_conditions:
+    open_errors: 0
+    open_critical_warnings: 0
+    open_change_requests: 0
+
+phases:
+  - name: initialization
+    description: Setup development environment and dependencies
+    agents:
+      - uvx_agent
+      - docker_agent
+      - ansible_agent
+    mandatory: true
+
+  - name: data_preparation
+    description: Import and prepare NIR spectroscopy data
+    agents:
+      - data_preparation_agent
+      - metadata_agent
+    mandatory: true
+
+  - name: quality_assurance
+    description: Assess data and sensor quality
+    agents:
+      - sensor_quality_agent
+      - statistical_analysis_agent
+    mandatory: true
+
+  - name: analysis
+    description: Perform statistical and neural network analysis
+    agents:
+      - statistical_analysis_agent
+      - neural_network_agent
+    mandatory: true
+    parallel: true
+
+  - name: calibration
+    description: Create and optimize calibration models
+    agents:
+      - calibration_agent
+    mandatory: true
+
+  - name: database_integration
+    description: Store results in vector and relational databases
+    agents:
+      - weaviate_agent
+      - faiss_agent
+      - postgresql_agent
+    mandatory: true
+
+  - name: application_development
+    description: Develop web interface and APIs
+    agents:
+      - django_agent
+      - mcp_agent
+      - ilias_agent
+    mandatory: true
+
+  - name: documentation
+    description: Generate comprehensive documentation
+    agents:
+      - quarto_agent
+    mandatory: true
+
+  - name: federated_learning
+    description: Implement federated learning capabilities
+    agents:
+      - flower_agent
+    mandatory: false
+
+agents:
+  master_implementation_agent:
+    role: Orchestration and quality control
+    responsibilities:
+      - Overall project planning
+      - Agent coordination
+      - Conflict resolution
+      - Final approval
+    dependencies: []
+
+  data_preparation_agent:
+    role: Data import and preprocessing
+    responsibilities:
+      - Data import
+      - Data cleaning
+      - Outlier analysis
+      - Normalization
+    dependencies: []
+
+  sensor_quality_agent:
+    role: Sensor performance evaluation
+    responsibilities:
+      - Drift analysis
+      - Noise assessment
+      - Instrument monitoring
+      - Error identification
+    dependencies: [data_preparation_agent]
+
+  statistical_analysis_agent:
+    role: Statistical modeling
+    responsibilities:
+      - PCA
+      - PLS
+      - PCR
+      - ANOVA
+      - Cluster analysis
+    dependencies: [data_preparation_agent, sensor_quality_agent]
+
+  neural_network_agent:
+    role: Neural network analysis
+    responsibilities:
+      - CNN
+      - MLP
+      - Autoencoder
+      - Ensemble models
+    dependencies: [data_preparation_agent]
+    parallel_with: statistical_analysis_agent
+
+  calibration_agent:
+    role: Model calibration
+    responsibilities:
+      - PLS calibration
+      - PCR calibration
+      - SVM calibration
+      - Random Forest
+      - XGBoost
+      - CNN calibration
+    dependencies: [statistical_analysis_agent, neural_network_agent]
+
+  metadata_agent:
+    role: Metadata management
+    responsibilities:
+      - Extraction
+      - Evaluation
+      - Prioritization
+      - Quality assessment
+    dependencies: [data_preparation_agent]
+
+  weaviate_agent:
+    role: Vector database management
+    responsibilities:
+      - Embedding storage
+      - Semantic search
+      - Similarity search
+    dependencies: [calibration_agent]
+
+  faiss_agent:
+    role: Spectrum analysis
+    responsibilities:
+      - Spectrum comparison
+      - Peak analysis
+      - Nearest neighbor search
+    dependencies: [calibration_agent]
+
+  postgresql_agent:
+    role: Relational data management
+    responsibilities:
+      - Metadata storage
+      - Relational data management
+    dependencies: [metadata_agent]
+
+  django_agent:
+    role: Web application development
+    responsibilities:
+      - UI development
+      - Backend development
+      - API creation
+      - User management
+    dependencies: [postgresql_agent, weaviate_agent, faiss_agent]
+
+  mcp_agent:
+    role: Tool integration
+    responsibilities:
+      - External tool interfaces
+      - Protocol management
+    dependencies: [django_agent]
+
+  quarto_agent:
+    role: Documentation
+    responsibilities:
+      - Complete documentation
+      - Chart generation
+      - Report creation
+    dependencies: [all_analysis_agents]
+
+  flower_agent:
+    role: Federated learning
+    responsibilities:
+      - Federated learning implementation
+      - Model aggregation
+    dependencies: [calibration_agent]
+
+  ansible_agent:
+    role: Infrastructure Automation and System Deployment
+    responsibilities:
+      - Create Ansible playbooks for platform deployment
+      - Implement server version for self-hosted installations
+      - Develop client version for local/user installations
+      - Enable federated client setup for remote server access
+      - Automate system updates and version management
+      - Orchestrate tool integration and dependencies
+      - Ensure consistent configuration across environments
+      - Provide rollback capabilities for failed deployments
+      - Monitor system health and performance
+    dependencies: [docker_agent, uvx_agent]
+
+  ilias_agent:
+    role: E-Learning Platform Integration and User Communication
+    responsibilities:
+      - Integrate NIR platform with ILIAS via REST API and SOAP
+      - Synchronize user accounts between Django and ILIAS
+      - Create and manage NIR-specific courses in ILIAS
+      - Enable communication channels between users and students
+      - Provide learning analytics and progress tracking
+      - Implement single sign-on between platforms
+      - Synchronize learning content and resources
+      - Facilitate collaborative learning environments
+    dependencies: [django_agent, postgresql_agent]
+
+quality_control:
+  require_all_agents_review: true
+  allow_release_with_errors: false
+  allow_release_with_open_requests: false
+
+documentation:
+  required_sections:
+    - metadata_evaluation
+    - data_quality
+    - sensor_analysis
+    - statistical_analysis
+    - neural_network_analysis
+    - calibration_comparison
+    - wavelength_comparison
+    - similarity_search
+    - optimization_history
+    - executive_summary
+
+acceptance_criteria:
+  minimum_r2_score: 0.80
+  documentation_complete: true
+  all_agents_completed: true
+  no_critical_errors: true

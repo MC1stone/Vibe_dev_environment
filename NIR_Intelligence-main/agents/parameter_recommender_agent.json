@@ -1,0 +1,182 @@
+{
+  "name": "ParameterRecommenderAgent",
+  "version": "2.0.0",
+  "description": "Agent for recommending optimal spectrometer parameters based on spectral data analysis",
+  "author": "NIR Intelligence Platform Team",
+  "created_date": "2026-08-06",
+  "last_updated": "2026-08-06",
+  
+  "dependencies": [
+    "numpy",
+    "pandas",
+    "scipy", 
+    "scikit-learn"
+  ],
+  
+  "configuration": {
+    "wavelength_range": [700, 2500],
+    "min_data_points": 50,
+    "snr_threshold": 100.0,
+    "quality_threshold": 75.0
+  },
+  
+  "spectrometer_types": {
+    "generic": {
+      "description": "Generic NIR spectrometer",
+      "parameters": [
+        "integration_time",
+        "scans_to_average", 
+        "wavelength_range",
+        "spectral_resolution",
+        "gain",
+        "laser_power",
+        "temperature_compensation",
+        "dark_correction"
+      ]
+    },
+    "diy": {
+      "description": "DIY NIR spectrometer",
+      "parameters": [
+        "integration_time",
+        "scans_to_average",
+        "boxcar_width"
+      ]
+    }
+  },
+  
+  "quality_weights": {
+    "snr": 0.3,
+    "resolution": 0.2,
+    "coverage": 0.2,
+    "stability": 0.15,
+    "speed": 0.15
+  },
+  
+  "optimization_config": {
+    "max_iterations": 100,
+    "tolerance": 1e-6,
+    "method": "L-BFGS-B",
+    "population_size": 20,
+    "mutation_rate": 0.1,
+    "crossover_rate": 0.8,
+    "elite_size": 2
+  },
+  
+  "features": [
+    "Comprehensive parameter analysis for NIR spectrometers",
+    "Signal-to-noise ratio optimization recommendations",
+    "Integration time and averaging parameter optimization",
+    "Wavelength range and resolution recommendations",
+    "Temperature and environmental condition compensation",
+    "Multi-objective optimization for parameter combinations",
+    "Performance prediction and validation requirements",
+    "Implementation guidance and step-by-step recommendations"
+  ],
+  
+  "input_requirements": {
+    "required_fields": ["wavelengths", "intensities", "sample_id"],
+    "optional_fields": ["current_config", "spectrometer_type", "metadata"],
+    "wavelength_units": "nm",
+    "intensity_units": "arbitrary",
+    "min_wavelength": 600,
+    "max_wavelength": 3000,
+    "min_data_points": 50
+  },
+  
+  "output_format": {
+    "report_type": "ParameterRecommendationReport",
+    "includes": [
+      "current_configuration_analysis",
+      "parameter_recommendations",
+      "optimization_results", 
+      "overall_assessment",
+      "priority_recommendations",
+      "implementation_guidance",
+      "validation_requirements"
+    ]
+  },
+  
+  "parameter_recommendations": {
+    "integration_time": {
+      "description": "Time for each spectral measurement",
+      "unit": "ms",
+      "range": [1, 1000],
+      "default": 100,
+      "optimization_basis": "SNR target achievement"
+    },
+    "scans_to_average": {
+      "description": "Number of scans to average",
+      "unit": "count", 
+      "range": [1, 100],
+      "default": 10,
+      "optimization_basis": "Noise reduction"
+    },
+    "gain": {
+      "description": "Detector gain setting",
+      "unit": "dB",
+      "range": [0, 40],
+      "default": 20,
+      "optimization_basis": "Signal utilization"
+    },
+    "wavelength_range": {
+      "description": "Spectral range of the spectrometer",
+      "unit": "nm",
+      "range": [600, 3000],
+      "default": [700, 2500],
+      "optimization_basis": "Signal coverage"
+    }
+  },
+  
+  "quality_metrics": {
+    "quality_score_range": [0, 100],
+    "grades": ["poor", "fair", "good", "excellent"],
+    "thresholds": {
+      "excellent": 90,
+      "good": 75,
+      "fair": 50,
+      "poor": 0
+    }
+  },
+  
+  "impact_levels": {
+    "critical": "Immediate attention required, significant data quality issues",
+    "high": "Important for optimal performance, noticeable improvement expected",
+    "medium": "Moderate improvement expected, consider implementing",
+    "low": "Minor improvement, optional optimization"
+  },
+  
+  "performance_targets": {
+    "max_processing_time_seconds": 10.0,
+    "min_confidence": 0.7,
+    "min_quality_score": 75.0,
+    "target_snr": 100.0
+  },
+  
+  "error_handling": {
+    "validation_errors": [
+      "Missing required fields",
+      "Insufficient data points",
+      "Wavelengths outside expected range",
+      "Invalid parameter values"
+    ],
+    "recovery_strategies": [
+      "Return error with detailed message",
+      "Provide default recommendations",
+      "Log error for debugging"
+    ]
+  },
+  
+  "testing": {
+    "unit_tests": "tests/unit/test_parameter_recommender_agent.py",
+    "integration_tests": "tests/integration/test_parameter_recommender_integration.py",
+    "test_data": "data/test_spectral_data.json"
+  },
+  
+  "documentation": {
+    "user_guide": "docs/agents/parameter_recommender_agent.md",
+    "api_reference": "docs/api/parameter_recommender_agent.md",
+    "examples": "examples/parameter_recommender_examples.py"
+  },
+  
+  "notes": "This agent provides comprehensive parameter optimization for NIR spectrometers, analyzing current configuration and recommending improvements for integration time, scans to average, gain settings, wavelength range, and other critical parameters to achieve optimal measurement quality."
+}

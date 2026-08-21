@@ -1,0 +1,30 @@
+{
+  "name": "ILIASIntegrationAgent",
+  "version": "1.0.0",
+  "description": "ILIASIntegration for NIR Intelligence Platform",
+  "type": "api",
+  "dependencies": [
+    "fastapi",
+    "uvicorn",
+    "requests"
+  ],
+  "required_methods": [
+    "execute",
+    "_start_server",
+    "_handle_request"
+  ],
+  "configuration": {
+    "enabled": true,
+    "params": {}
+  },
+  "quality_control": {
+    "min_performance": 0.8,
+    "max_errors": 0,
+    "timeout_seconds": 300
+  },
+  "documentation": {
+    "author": "NIR Development Team",
+    "created": "2026",
+    "updated": "2026"
+  }
+}

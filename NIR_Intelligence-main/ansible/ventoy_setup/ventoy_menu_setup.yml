@@ -1,0 +1,209 @@
+# Ventoy Menu Setup Playbook
+# Creates a comprehensive Ventoy boot menu with multiple implementation options
+#
+# This playbook creates a Ventoy boot menu that allows users to select from:
+# 1. Full NIR_Mistral Framework (Django + Port Agent + Crew AI)
+# 2. Django Server Only
+# 3. Port Agent Only
+# 4. Crew AI Development Environment
+#
+# Usage:
+#   ansible-playbook ventoy_menu_setup.yml
+
+- name: Ventoy Menu Setup - Create Multi-Option Boot Menu
+  hosts: ventoy_stick
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    # Ventoy configuration
+    ventoy_config_dir: "/ventoy"
+    ventoy_iso_path: "/ventoy/ventoy.iso"
+    ventoy_menu_dir: "/ventoy/ventoy"
+    ventoy_grub_dir: "/ventoy/ventoy/grub"
+    
+    # Menu configuration
+    menu_title: "NIR_Mistral Framework - Ventoy Boot Menu"
+    menu_timeout: 10
+    menu_default: "0"
+    
+    # Implementation options
+    implementation_options:
+      - id: "full_framework"
+        name: "Full NIR_Mistral Framework"
+        description: "Complete deployment with Django, Port Agent, and Crew AI"
+        icon: "🚀"
+        boot_option: "0"
+        
+      - id: "django_only"
+        name: "Django Server Only"
+        description: "Django web interface with spectral analysis"
+        icon: "🌐"
+        boot_option: "1"
+        
+      - id: "port_agent_only"
+        name: "Port Agent Only"
+        description: "Port management service for device communication"
+        icon: "🔌"
+        boot_option: "2"
+        
+      - id: "crewai_dev"
+        name: "Crew AI Development"
+        description: "Development environment with Crew AI agents"
+        icon: "🤖"
+        boot_option: "3"
+    
+    # Color scheme (HSWT.de colors)
+    color_primary: "#7ab929"
+    color_primary_dark: "#225933"
+    color_primary_light: "#a8d065"
+    color_background: "#f8f9fa"
+    color_text: "#212529"
+    color_text_light: "#6c757d"
+
+  tasks:
+    - name: Create Ventoy directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      loop:
+        - "{{ ventoy_config_dir }}"
+        - "{{ ventoy_menu_dir }}"
+        - "{{ ventoy_grub_dir }}"
+        - "{{ ventoy_menu_dir }}/images"
+        - "{{ ventoy_menu_dir }}/scripts"
+        - "{{ ventoy_menu_dir }}/config"
+
+    - name: Create Ventoy configuration file
+      template:
+        src: templates/ventoy.json.j2
+        dest: "{{ ventoy_config_dir }}/ventoy.json"
+        mode: '0644'
+
+    - name: Create main Ventoy menu configuration
+      template:
+        src: templates/ventoy_menu.conf.j2
+        dest: "{{ ventoy_menu_dir }}/ventoy_menu.conf"
+        mode: '0644'
+
+    - name: Create boot configuration for each implementation option
+      template:
+        src: templates/boot_config.conf.j2
+        dest: "{{ ventoy_menu_dir }}/{{ item.id }}_boot.conf"
+        mode: '0644'
+      loop: "{{ implementation_options }}"
+      loop_control:
+        loop_var: item
+
+    - name: Create startup scripts for each option
+      template:
+        src: templates/startup_script.sh.j2
+        dest: "{{ ventoy_menu_dir }}/scripts/start_{{ item.id }}.sh"
+        mode: '0755'
+      loop: "{{ implementation_options }}"
+      loop_control:
+        loop_var: item
+
+    - name: Create service management scripts
+      template:
+        src: templates/service_manager.sh.j2
+        dest: "{{ ventoy_menu_dir }}/scripts/service_manager.sh"
+        mode: '0755'
+
+    - name: Create health check script
+      template:
+        src: templates/health_check.sh.j2
+        dest: "{{ ventoy_menu_dir }}/scripts/health_check.sh"
+        mode: '0755'
+
+    - name: Create environment setup script
+      template:
+        src: templates/env_setup.sh.j2
+        dest: "{{ ventoy_menu_dir }}/scripts/env_setup.sh"
+        mode: '0755'
+
+    - name: Create cleanup script
+      template:
+        src: templates/cleanup.sh.j2
+        dest: "{{ ventoy_menu_dir }}/scripts/cleanup.sh"
+        mode: '0755'
+
+    - name: Create Ventoy theme configuration
+      template:
+        src: templates/ventoy_theme.json.j2
+        dest: "{{ ventoy_menu_dir }}/ventoy_theme.json"
+        mode: '0644'
+
+    - name: Create auto-boot plugin configuration
+      template:
+        src: templates/auto_boot_plugin.json.j2
+        dest: "{{ ventoy_menu_dir }}/auto_boot_plugin.json"
+        mode: '0644'
+
+    - name: Create persistence configuration
+      template:
+        src: templates/persistence.conf.j2
+        dest: "{{ ventoy_menu_dir }}/persistence.conf"
+        mode: '0644'
+
+    - name: Create Ventoy README with usage instructions
+      template:
+        src: templates/VENTOY_MENU_README.md.j2
+        dest: "{{ ventoy_menu_dir }}/VENTOY_MENU_README.md"
+        mode: '0644'
+
+    - name: Create configuration summary
+      template:
+        src: templates/CONFIG_SUMMARY.md.j2
+        dest: "{{ ventoy_menu_dir }}/CONFIG_SUMMARY.md"
+        mode: '0644'
+
+    - name: Display Ventoy menu setup completion
+      debug:
+        msg: |
+          ==========================================
+          VENTOY MENU SETUP COMPLETE
+          ==========================================
+          
+          Ventoy Menu Configuration:
+          - Menu Title: {{ menu_title }}
+          - Timeout: {{ menu_timeout }} seconds
+          - Default Option: {{ menu_default }}
+          
+          Available Implementation Options:
+          {% for option in implementation_options %}
+          - {{ option.boot_option }}: {{ option.icon }} {{ option.name }}
+            Description: {{ option.description }}
+          {% endfor %}
+          
+          Files Created:
+          - Ventoy config: {{ ventoy_config_dir }}/ventoy.json
+          - Menu config: {{ ventoy_menu_dir }}/ventoy_menu.conf
+          - Boot configs: {{ ventoy_menu_dir }}/*_boot.conf
+          - Startup scripts: {{ ventoy_menu_dir }}/scripts/start_*.sh
+          - Service manager: {{ ventoy_menu_dir }}/scripts/service_manager.sh
+          - Health check: {{ ventoy_menu_dir }}/scripts/health_check.sh
+          - Environment setup: {{ ventoy_menu_dir }}/scripts/env_setup.sh
+          - Cleanup: {{ ventoy_menu_dir }}/scripts/cleanup.sh
+          - Theme: {{ ventoy_menu_dir }}/ventoy_theme.json
+          - Auto-boot: {{ ventoy_menu_dir }}/auto_boot_plugin.json
+          - Persistence: {{ ventoy_menu_dir }}/persistence.conf
+          - README: {{ ventoy_menu_dir }}/VENTOY_MENU_README.md
+          - Config Summary: {{ ventoy_menu_dir }}/CONFIG_SUMMARY.md
+          
+          ==========================================
+          NEXT STEPS:
+          1. Copy these files to your Ventoy stick
+          2. Update ventoy.json with your specific ISO paths
+          3. Customize the boot configurations as needed
+          4. Test each implementation option
+          5. Update the README with your specific instructions
+          ==========================================
+
+  handlers:
+    - name: reload ventoy
+      command: sync
+      when: ansible_os_family == 'Linux'

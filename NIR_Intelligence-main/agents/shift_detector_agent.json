@@ -1,0 +1,163 @@
+{
+  "name": "ShiftDetectorAgent",
+  "version": "2.0.0",
+  "description": "Agent for detecting and analyzing wavelength shifts, intensity drifts, and other spectrometer issues in NIR spectral data",
+  "author": "NIR Intelligence Platform Team",
+  "created_date": "2026-08-06",
+  "last_updated": "2026-08-06",
+  
+  "dependencies": [
+    "numpy",
+    "pandas", 
+    "scipy",
+    "scikit-learn"
+  ],
+  
+  "configuration": {
+    "wavelength_range": [700, 2500],
+    "min_data_points": 50,
+    "shift_threshold": 0.5,
+    "drift_threshold": 0.01,
+    "confidence_threshold": 0.7
+  },
+  
+  "detection_methods": {
+    "fft_correlation": {
+      "name": "FFT Correlation",
+      "description": "Detects wavelength shifts using FFT-based cross-correlation",
+      "threshold": 0.1,
+      "confidence_weight": 1.2,
+      "enabled": true
+    },
+    "peak_matching": {
+      "name": "Peak Matching",
+      "description": "Detects shifts by matching spectral peaks with reference",
+      "threshold": 0.5,
+      "confidence_weight": 1.1,
+      "enabled": true
+    },
+    "derivative_analysis": {
+      "name": "Derivative Analysis",
+      "description": "Detects shifts using first and second derivative analysis",
+      "threshold": 0.3,
+      "confidence_weight": 0.9,
+      "enabled": true
+    },
+    "cross_correlation": {
+      "name": "Cross-Correlation",
+      "description": "Direct cross-correlation of spectral data",
+      "threshold": 0.2,
+      "confidence_weight": 1.0,
+      "enabled": true
+    },
+    "statistical_analysis": {
+      "name": "Statistical Analysis",
+      "description": "Statistical comparison with reference data",
+      "threshold": 0.15,
+      "confidence_weight": 0.8,
+      "enabled": true
+    }
+  },
+  
+  "processing_config": {
+    "smoothing_window": 5,
+    "baseline_correction": true,
+    "noise_filtering": true,
+    "normalize_before_analysis": true,
+    "use_derivatives": true,
+    "min_peak_height": 0.1,
+    "max_peaks": 10
+  },
+  
+  "features": [
+    "Wavelength shift detection using multiple methods (FFT correlation, peak matching, derivative analysis)",
+    "Intensity drift detection (linear, exponential, random patterns)",
+    "Baseline analysis and correction recommendations",
+    "Multi-reference comparison for calibration verification",
+    "Statistical analysis of spectral consistency",
+    "Quality impact assessment",
+    "Comprehensive reporting and recommendations"
+  ],
+  
+  "input_requirements": {
+    "required_fields": ["wavelengths", "intensities", "sample_id"],
+    "wavelength_units": "nm",
+    "intensity_units": "arbitrary",
+    "min_wavelength": 600,
+    "max_wavelength": 3000,
+    "min_data_points": 50
+  },
+  
+  "output_format": {
+    "report_type": "ShiftDetectionReport",
+    "includes": [
+      "wavelength_shifts",
+      "intensity_drifts", 
+      "baseline_issues",
+      "overall_assessment",
+      "quality_metrics",
+      "recommendations",
+      "calibration_requirements"
+    ]
+  },
+  
+  "quality_metrics": {
+    "quality_score_range": [0, 100],
+    "grades": ["invalid", "poor", "fair", "good", "excellent"],
+    "thresholds": {
+      "excellent": 90,
+      "good": 75,
+      "fair": 50,
+      "poor": 25
+    }
+  },
+  
+  "severity_levels": {
+    "wavelength_shift": {
+      "critical": ">= 5.0 nm",
+      "high": ">= 2.0 nm", 
+      "medium": ">= 1.0 nm",
+      "low": "< 1.0 nm"
+    },
+    "intensity_drift": {
+      "critical": ">= 20%",
+      "high": ">= 10%",
+      "medium": ">= 5%", 
+      "low": "< 5%"
+    }
+  },
+  
+  "performance_targets": {
+    "max_processing_time_seconds": 5.0,
+    "min_confidence": 0.7,
+    "min_quality_score": 75.0
+  },
+  
+  "error_handling": {
+    "validation_errors": [
+      "Missing required fields",
+      "Insufficient data points", 
+      "Wavelengths outside expected range",
+      "Invalid data types"
+    ],
+    "recovery_strategies": [
+      "Return error with detailed message",
+      "Provide suggestions for correction",
+      "Log error for debugging"
+    ]
+  },
+  
+  "testing": {
+    "unit_tests": "tests/unit/test_shift_detector_agent.py",
+    "integration_tests": "tests/integration/test_shift_detector_integration.py",
+    "test_data": "data/test_spectral_data.json"
+  },
+  
+  "documentation": {
+    "user_guide": "docs/agents/shift_detector_agent.md",
+    "api_reference": "docs/api/shift_detector_agent.md",
+    "examples": "examples/shift_detector_examples.py"
+  },
+  
+  "notes": "This agent provides comprehensive analysis of spectrometer issues including wavelength shifts, intensity drifts, and baseline problems. It uses multiple detection methods for robust analysis and provides actionable recommendations for calibration and improvement."
+}

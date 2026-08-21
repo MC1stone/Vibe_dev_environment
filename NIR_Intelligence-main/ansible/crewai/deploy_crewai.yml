@@ -1,0 +1,300 @@
+---
+# NIR Intelligence Platform - Crew AI Deployment Playbook
+# This playbook deploys the Crew AI implementation to production servers
+
+- name: Deploy Crew AI Implementation
+  hosts: all
+  become: yes
+  become_method: sudo
+  
+  vars:
+    # Project variables
+    project_root: "/opt/nir_mistral"
+    venv_path: "{{ project_root }}/venv"
+    log_dir: "/var/log/nir_mistral"
+    data_dir: "/var/lib/nir_mistral"
+    
+    # System user for NIR Mistral
+    nir_user: "nir_mistral"
+    nir_group: "nir_mistral"
+    
+    # Service configuration
+    django_port: 8000
+    gunicorn_workers: 4
+    
+    # Required packages
+    required_packages:
+      - python3
+      - python3-venv
+      - python3-pip
+      - git
+      - nginx
+      - supervisor
+      - quarto
+      - pandoc
+    
+    # Python packages
+    python_packages:
+      - django
+      - djangorestframework
+      - numpy
+      - pandas
+      - scipy
+      - scikit-learn
+      - pyyaml
+      - gunicorn
+      - uvicorn
+      - flower
+      - weaviate-client
+      - faiss-cpu
+      - crewai
+
+  tasks:
+    - name: Create NIR Mistral user and group
+      user:
+        name: "{{ nir_user }}"
+        group: "{{ nir_group }}"
+        system: yes
+        shell: /bin/bash
+        home: "{{ project_root }}"
+        create_home: yes
+
+    - name: Create required directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ nir_user }}"
+        group: "{{ nir_group }}"
+        mode: '0755'
+      loop:
+        - "{{ project_root }}"
+        - "{{ project_root }}/agents"
+        - "{{ project_root }}/django_project"
+        - "{{ project_root }}/data"
+        - "{{ project_root }}/output"
+        - "{{ project_root }}/logs"
+        - "{{ project_root }}/templates"
+        - "{{ log_dir }}"
+        - "{{ data_dir }}"
+
+    - name: Install required system packages
+      apt:
+        name: "{{ required_packages }}"
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Install required system packages (RedHat)
+      yum:
+        name: "{{ required_packages }}"
+        state: present
+      when: ansible_os_family == 'RedHat'
+
+    - name: Create Python virtual environment
+      pip:
+        requirements: "{{ project_root }}/requirements.txt"
+        virtualenv: "{{ venv_path }}"
+        virtualenv_python: python3
+
+    - name: Install additional Python packages
+      pip:
+        name: "{{ python_packages }}"
+        virtualenv: "{{ venv_path }}"
+        state: present
+
+    - name: Copy project files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ nir_user }}"
+        group: "{{ nir_group }}"
+        mode: "{{ item.mode | default('0644') }}"
+      loop:
+        - { src: "../../agents/", dest: "{{ project_root }}/agents/" }
+        - { src: "../../django_project/", dest: "{{ project_root }}/django_project/" }
+        - { src: "../../requirements.txt", dest: "{{ project_root }}/requirements.txt" }
+        - { src: "../../ansible/", dest: "{{ project_root }}/ansible/" }
+      when: false  # Set to true when ready to copy files
+
+    - name: Set up Django settings
+      template:
+        src: "templates/django_settings.py.j2"
+        dest: "{{ project_root }}/django_project/nir_web/settings.py"
+        owner: "{{ nir_user }}"
+        group: "{{ nir_group }}"
+        mode: '0644'
+      when: false  # Set to true when template is ready
+
+    - name: Set up Gunicorn configuration
+      template:
+        src: "templates/gunicorn.conf.py.j2"
+        dest: "{{ project_root }}/django_project/gunicorn.conf.py"
+        owner: "{{ nir_user }}"
+        group: "{{ nir_group }}"
+        mode: '0644'
+
+    - name: Set up Supervisor configuration
+      template:
+        src: "templates/supervisor.conf.j2"
+        dest: "/etc/supervisor/conf.d/nir_mistral.conf"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart supervisor
+
+    - name: Set up Nginx configuration
+      template:
+        src: "templates/nginx.conf.j2"
+        dest: "/etc/nginx/sites-available/nir_mistral"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart nginx
+
+    - name: Enable Nginx site
+      file:
+        src: "/etc/nginx/sites-available/nir_mistral"
+        dest: "/etc/nginx/sites-enabled/nir_mistral"
+        state: link
+      notify: restart nginx
+
+    - name: Set up log rotation
+      template:
+        src: "templates/logrotate.conf.j2"
+        dest: "/etc/logrotate.d/nir_mistral"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Create systemd service for Crew AI
+      template:
+        src: "templates/crewai.service.j2"
+        dest: "/etc/systemd/system/crewai.service"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: daemon reload
+
+    - name: Create environment configuration
+      template:
+        src: "templates/environment.conf.j2"
+        dest: "/etc/nir_mistral/environment.conf"
+        owner: "{{ nir_user }}"
+        group: "{{ nir_group }}"
+        mode: '0644'
+
+    - name: Set permissions for sensitive files
+      file:
+        path: "{{ item }}"
+        owner: "{{ nir_user }}"
+        group: "{{ nir_group }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: "{{ project_root }}/django_project/manage.py", mode: '0755' }
+        - { path: "{{ project_root }}/django_project/db.sqlite3", mode: '0640' }
+
+    - name: Run Django migrations
+      command: "{{ venv_path }}/bin/python {{ project_root }}/django_project/manage.py migrate"
+      become: yes
+      become_user: "{{ nir_user }}"
+      args:
+        chdir: "{{ project_root }}/django_project"
+
+    - name: Collect static files
+      command: "{{ venv_path }}/bin/python {{ project_root }}/django_project/manage.py collectstatic --noinput"
+      become: yes
+      become_user: "{{ nir_user }}"
+      args:
+        chdir: "{{ project_root }}/django_project"
+
+    - name: Create initial superuser (non-interactive)
+      command: >
+        {{ venv_path }}/bin/python -c "
+        import os
+        import sys
+        import django
+        
+        sys.path.insert(0, '{{ project_root }}/django_project')
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'nir_web.settings')
+        django.setup()
+        
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        if not User.objects.filter(username='admin').exists():
+            User.objects.create_superuser(
+                username='admin',
+                email='admin@nir-mistral.local',
+                password='{{ admin_password | default('change_me_in_production') }}'
+            )
+            print('Superuser created')
+        else:
+            print('Superuser already exists')
+        "
+      become: yes
+      become_user: "{{ nir_user }}"
+      args:
+        chdir: "{{ project_root }}/django_project"
+      when: admin_password is defined
+      no_log: true
+
+    - name: Start and enable services
+      service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - nginx
+        - supervisor
+
+    - name: Verify Crew AI API is accessible
+      uri:
+        url: "http://localhost:{{ django_port }}/api/crewai/status/"
+        method: GET
+        return_content: yes
+      register: api_status
+      until: api_status.status == 200
+      retries: 5
+      delay: 10
+
+    - name: Display deployment summary
+      debug:
+        msg: |
+          Crew AI Deployment Complete!
+          
+          Services:
+          - Django: Running on port {{ django_port }}
+          - Nginx: Configured and running
+          - Supervisor: Managing processes
+          - Gunicorn: Configured with {{ gunicorn_workers }} workers
+          
+          Access:
+          - Web Interface: http://{{ ansible_host }}
+          - API: http://{{ ansible_host }}:{{ django_port }}/api/
+          - Crew AI API: http://{{ ansible_host }}:{{ django_port }}/api/crewai/
+          
+          Files:
+          - Project: {{ project_root }}
+          - Logs: {{ log_dir }}
+          - Data: {{ data_dir }}
+          
+          {% if api_status.status == 200 %}
+          API Status: ✅ Available
+          {% else %}
+          API Status: ❌ Not responding
+          {% endif %}
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
+
+    - name: restart supervisor
+      service:
+        name: supervisor
+        state: restarted
+
+    - name: daemon reload
+      systemd:
+        daemon_reload: yes

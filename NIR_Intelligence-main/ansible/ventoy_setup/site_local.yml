@@ -1,0 +1,133 @@
+# Local Ansible Playbook for Ventoy Stick Setup (No Sudo)
+#
+# This version is designed for local testing without requiring sudo privileges.
+# It will install to the current user's home directory instead of system-wide.
+
+- name: Ventoy Stick Setup - Local Deployment (No Sudo)
+  hosts: localhost
+  become: no
+  gather_facts: yes
+  connection: local
+  
+  vars:
+    # Local deployment settings
+    deploy_root: "{{ ansible_env.HOME }}/nir_mistral_ventoy"
+    venv_path: "{{ deploy_root }}/venv"
+    django_project_path: "{{ deploy_root }}/django_project"
+    port_agent_path: "{{ deploy_root }}/port_agent"
+    ventoy_iso_path: "{{ deploy_root }}/ventoy_iso"
+    
+    # Ports
+    django_port: 8000
+    port_agent_port: 8001
+    
+    # User settings
+    service_user: "{{ ansible_env.USER }}"
+    service_group: "{{ ansible_env.USER }}"
+    
+    # Environment
+    environment: "development"
+    django_debug: true
+    
+    # Disable system-wide services for local testing
+    create_systemd_services: false
+    install_dependencies: false
+    skip_verification: false
+    
+    # Deployment timestamp
+    deployment_timestamp: "{{ ansible_date_time.iso8601 }}"
+    
+    # System info
+    system_info:
+      hostname: "{{ ansible_hostname }}"
+      os: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+      python_version: "{{ ansible_python_version }}"
+      memory: "{{ ansible_memtotal_mb }}MB"
+      cpu: "{{ ansible_processor }}"
+  
+  pre_tasks:
+    - name: Display local deployment information
+      debug:
+        msg: |
+          ============================================
+          NIR_MISTRAL LOCAL VENTOY SETUP (NO SUDO)
+          ============================================
+          Timestamp: {{ deployment_timestamp }}
+          Target: {{ inventory_hostname }}
+          Environment: {{ environment }}
+          
+          Deployment Settings:
+          - Deploy Root: {{ deploy_root }}
+          - Django Port: {{ django_port }}
+          - Port Agent Port: {{ port_agent_port }}
+          - User: {{ service_user }}
+          ============================================
+    
+    - name: Create local deployment directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ deploy_root }}"
+        - "{{ deploy_root }}/logs"
+        - "{{ deploy_root }}/config"
+        - "{{ deploy_root }}/data"
+        - "{{ deploy_root }}/tmp"
+        - "{{ venv_path }}"
+        - "{{ django_project_path }}"
+        - "{{ port_agent_path }}"
+        - "{{ ventoy_iso_path }}"
+
+  roles:
+    - role: django_server
+      when: not (skip_django | default(false))
+    
+    - role: port_agent
+      when: not (skip_port_agent | default(false))
+
+  tasks:
+    - name: Create local startup script for Django + Port Agent
+      template:
+        src: templates/start_nir_mistral.sh.j2
+        dest: "{{ deploy_root }}/start_nir_mistral.sh"
+        mode: '0755'
+      when: deploy_everything | default(true)
+    
+    - name: Create README with local usage instructions
+      template:
+        src: templates/VENTOY_README.md.j2
+        dest: "{{ deploy_root }}/VENTOY_README.md"
+        mode: '0644'
+      when: deploy_everything | default(true)
+
+  post_tasks:
+    - name: Display local deployment summary
+      debug:
+        msg: |
+          ============================================
+          LOCAL DEPLOYMENT COMPLETE (NO SUDO)
+          ============================================
+          
+          Deployment Location: {{ deploy_root }}
+          
+          To start the services:
+          1. cd {{ deploy_root }}
+          2. ./start_nir_mistral.sh
+          
+          Or manually:
+          - Django: cd {{ django_project_path }} && {{ venv_path }}/bin/python manage.py runserver 0.0.0.0:{{ django_port }}
+          - Port Agent: cd {{ port_agent_path }} && {{ venv_path }}/bin/python -m agents.port_agent
+          
+          Access URLs:
+          - Django: http://localhost:{{ django_port }}
+          - Port Agent: http://localhost:{{ port_agent_port }}
+          
+          Logs:
+          - Django: {{ deploy_root }}/logs/django.log
+          - Port Agent: {{ deploy_root }}/logs/port_agent.log
+          
+          ============================================
+          NOTE: This is a local deployment without system-wide services.
+          For production, use the main site.yml with sudo privileges.
+          ============================================

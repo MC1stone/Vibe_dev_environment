@@ -1,0 +1,54 @@
+[Unit]
+Description=Port Management Agent for NIR_Mistral Framework
+After=network.target
+Requires=network.target
+
+[Service]
+Type=simple
+User={{ service_user | default('root') }}
+Group={{ service_group | default('root') }}
+WorkingDirectory={{ port_agent_path }}
+Environment="PYTHONPATH={{ deploy_root }}"
+Environment="DJANGO_SETTINGS_MODULE={{ django_settings_module }}"
+Environment="PORT_AGENT_PORT={{ port_agent_port }}"
+Environment="PORT_AGENT_DEBUG={{ django_debug | default(False) | lower }}"
+Environment="PATH={{ venv_path }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+ExecStart={{ venv_path }}/bin/gunicorn \
+    --bind 0.0.0.0:{{ port_agent_port }} \
+    --workers {{ port_agent_workers | default(2) }} \
+    --timeout {{ port_agent_timeout | default(60) }} \
+    --max-requests 1000 \
+    --max-request-jitter 50 \
+    --log-level info \
+    --access-logfile {{ deploy_root }}/logs/port_agent_access.log \
+    --error-logfile {{ deploy_root }}/logs/port_agent_error.log \
+    --capture-output \
+    --enable-stdio-inheritance \
+    --pythonpath {{ deploy_root }} \
+    --config {{ port_agent_path }}/config/gunicorn.conf.py \
+    agents.port_agent.server:app
+
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+
+# Standard output is logged to journalctl
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=port-agent-nir-mistral
+
+# Increase limits
+LimitNOFILE=65535
+LimitNPROC=65535
+
+# Security
+PrivateTmp=true
+ProtectSystem=full
+NoNewPrivileges=true
+
+# Environment File
+EnvironmentFile={{ port_agent_path }}/.env
+
+[Install]
+WantedBy=multi-user.target

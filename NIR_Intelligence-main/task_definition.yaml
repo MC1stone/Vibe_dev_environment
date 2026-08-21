@@ -1,0 +1,161 @@
+project:
+name: NIR Intelligence Platform
+version: 1.0
+type: Self-Optimizing Multi-Agent System
+
+startup:
+mandatory_file_order:
+- TASK.md
+- task_definition.yaml
+- system_manifest.json
+
+execution:
+iterative: true
+
+stop_conditions:
+open_errors: 0
+open_critical_warnings: 0
+open_change_requests: 0
+
+max_iterations: 100
+
+general_rules:
+
+mandatory_parallel_analysis:
+- statistical_analysis
+- neural_network_analysis
+
+mandatory_documentation: true
+
+mandatory_version_check: true
+
+mandatory_cross_review: true
+
+mandatory_self_optimization: true
+
+metadata:
+
+extraction: true
+
+auto_classification: true
+
+categories:
+
+required:
+- spectrum
+- wavelength
+- instrument
+- acquisition_time
+
+recommended:
+- operator
+- humidity
+- temperature
+
+optional:
+- notes
+- location
+
+data_preprocessing:
+
+enabled: true
+
+methods:
+- snv
+- msc
+- savitzky_golay
+- baseline_correction
+- detrending
+
+sensor_analysis:
+
+checks:
+- drift
+- offset
+- noise
+- reference_validity
+- environmental_impact
+
+statistics:
+
+methods:
+- pca
+- pls
+- pcr
+- anova
+- clustering
+
+machine_learning:
+
+required_models:
+- cnn
+- mlp
+- autoencoder
+
+compare_with_statistics: true
+
+calibration:
+
+methods:
+- pls
+- pcr
+- svm
+- random_forest
+- xgboost
+- cnn
+
+optimization:
+
+enabled: true
+
+algorithms:
+- bayesian_optimization
+- grid_search
+
+validation:
+
+metrics:
+- r2
+- rmse
+- rmsep
+- mae
+
+database:
+
+vector:
+- weaviate
+- faiss
+
+relational:
+- postgresql
+
+reporting:
+
+engine: quarto
+
+required_sections:
+- metadata_evaluation
+- data_quality
+- sensor_analysis
+- statistical_analysis
+- neural_network_analysis
+- calibration_comparison
+- wavelength_comparison
+- similarity_search
+- optimization_history
+- executive_summary
+
+quality_scoring:
+
+data_quality_weight: 0.5
+
+model_quality_weight: 0.5
+
+acceptance:
+
+minimum_r2: 0.80
+
+documentation_complete: true
+
+all_agents_completed: true
+

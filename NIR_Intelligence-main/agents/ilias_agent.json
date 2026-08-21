@@ -1,0 +1,198 @@
+{
+  "agent_id": "ilias_agent",
+  "name": "ILIAS Integration Agent",
+  "version": "1.0.0",
+  "role": "E-Learning Platform Integration and User Communication",
+  "description": "Responsible for integrating the NIR Intelligence Platform with ILIAS e-learning system, enabling user communication, course management, and collaborative learning features.",
+  "capabilities": [
+    "ilias_api_integration",
+    "user_management",
+    "course_management",
+    "communication_platform",
+    "learning_analytics",
+    "single_sign_on",
+    "content_synchronization",
+    "collaborative_learning"
+  ],
+  "dependencies": ["django_agent", "postgresql_agent"],
+  "responsibilities": [
+    "Integrate NIR platform with ILIAS via REST API and SOAP",
+    "Synchronize user accounts between Django and ILIAS",
+    "Create and manage NIR-specific courses in ILIAS",
+    "Enable communication channels between users and students",
+    "Provide learning analytics and progress tracking",
+    "Implement single sign-on between platforms",
+    "Synchronize learning content and resources",
+    "Facilitate collaborative learning environments",
+    "Generate reports on user engagement and learning outcomes"
+  ],
+  "integration_methods": [
+    {
+      "name": "REST_API",
+      "description": "ILIAS REST API integration",
+      "endpoints": [
+        "/api/users",
+        "/api/courses",
+        "/api/content",
+        "/api/grades",
+        "/api/forums"
+      ],
+      "authentication": "OAuth2"
+    },
+    {
+      "name": "SOAP_API",
+      "description": "ILIAS SOAP API for legacy systems",
+      "services": [
+        "UserManagement",
+        "CourseManagement",
+        "ContentManagement"
+      ]
+    },
+    {
+      "name": "LTI_Integration",
+      "description": "Learning Tools Interoperability",
+      "version": "LTI_1.3",
+      "capabilities": ["deep_linking", "grade_passback", "user_synchronization"]
+    }
+  ],
+  "user_management": {
+    "synchronization": {
+      "frequency": "daily",
+      "fields": ["username", "email", "first_name", "last_name", "role"],
+      "role_mapping": {
+        "student": "learner",
+        "researcher": "tutor",
+        "admin": "administrator"
+      }
+    },
+    "authentication": {
+      "sso_protocol": "SAML_2.0",
+      "session_timeout": 3600,
+      "password_policy": "inherit_from_ilias"
+    }
+  },
+  "course_management": {
+    "nir_courses": [
+      {
+        "title": "Introduction to NIR Spectroscopy",
+        "code": "NIR_101",
+        "description": "Fundamentals of Near-Infrared Spectroscopy",
+        "content_types": ["videos", "quizzes", "practical_exercises"]
+      },
+      {
+        "title": "Advanced NIR Data Analysis",
+        "code": "NIR_201",
+        "description": "Statistical and Machine Learning approaches for NIR",
+        "content_types": ["lectures", "case_studies", "hands_on_labs"]
+      },
+      {
+        "title": "NIR Platform Training",
+        "code": "NIR_PLATFORM",
+        "description": "Using the NIR Intelligence Platform",
+        "content_types": ["tutorials", "documentation", "support_forum"]
+      }
+    ],
+    "content_synchronization": {
+      "frequency": "on_update",
+      "supported_formats": ["HTML", "PDF", "SCORM", "video/mp4"],
+      "version_control": true
+    }
+  },
+  "communication_features": {
+    "messaging": {
+      "real_time_chat": true,
+      "persistent_messages": true,
+      "file_sharing": {
+        "max_size": "50MB",
+        "allowed_types": ["pdf", "docx", "xlsx", "pptx", "jpg", "png"]
+      }
+    },
+    "forums": {
+      "course_forums": true,
+      "general_forum": true,
+      "moderation": "automatic_and_manual"
+    },
+    "notifications": {
+      "email": true,
+      "in_app": true,
+      "push": false,
+      "digest_frequency": "weekly"
+    }
+  },
+  "learning_analytics": {
+    "tracked_metrics": [
+      "course_completion",
+      "quiz_scores",
+      "time_spent",
+      "resource_access",
+      "forum_participation",
+      "assignment_submissions"
+    ],
+    "reporting": {
+      "frequency": "monthly",
+      "formats": ["PDF", "CSV", "interactive_dashboard"],
+      "recipients": ["administrators", "course_instructors"]
+    },
+    "integration": {
+      "django_models": ["User", "Course", "LearningActivity"],
+      "data_warehouse": "postgresql_agent"
+    }
+  },
+  "collaborative_features": {
+    "group_learning": {
+      "max_group_size": 5,
+      "project_spaces": true,
+      "shared_workspaces": true
+    },
+    "peer_review": {
+      "enabled": true,
+      "rubrics": ["accuracy", "completeness", "clarity"],
+      "anonymous": false
+    },
+    "knowledge_sharing": {
+      "wiki": true,
+      "faq": true,
+      "best_practices_repository": true
+    }
+  },
+  "performance_requirements": {
+    "api_response_time": "< 2s",
+    "data_synchronization_time": "< 10s for 1000 users",
+    "memory_usage": "< 2GB",
+    "concurrent_users": 500
+  },
+  "security": {
+    "data_encryption": "TLS_1.2+",
+    "api_authentication": "OAuth2_with_JWT",
+    "audit_logging": true,
+    "compliance": ["GDPR", "FERPA"]
+  },
+  "error_handling": {
+    "retry_policy": {
+      "max_attempts": 3,
+      "backoff": "exponential"
+    },
+    "fallback_mechanisms": {
+      "api_failure": "cache_last_known_state",
+      "authentication_failure": "redirect_to_manual_login"
+    },
+    "notification": {
+      "admin_alerts": "immediate",
+      "user_notifications": "delayed"
+    }
+  },
+  "dependencies": {
+    "required_libraries": [
+      "requests",
+      "zeep",
+      "django-ilias",
+      "python-saml",
+      "lti"
+    ],
+    "optional_libraries": [
+      "celery",
+      "redis",
+      "django-channels"
+    ]
+  }
+}

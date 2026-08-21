@@ -1,0 +1,78 @@
+{
+  "name": "GenericFileHandlerAgent",
+  "description": "Generic File Handler Agent - Processes any uploaded file type for metadata extraction, analysis, and processing. Generalizes spectral-specific workflow to handle arbitrary file types.",
+  "version": "1.0.0",
+  "author": "NIR Intelligence Platform Team",
+  "license": "MIT",
+  "dependencies": ["pandas", "numpy", "python-magic"],
+  "optional_dependencies": ["Pillow", "librosa", "openpyxl", "xlrd", "pyarrow", "fastparquet"],
+  "capabilities": [
+    "file_type_detection",
+    "metadata_extraction",
+    "content_analysis",
+    "quality_assessment",
+    "batch_processing",
+    "report_generation",
+    "custom_handler_registration"
+  ],
+  "supported_file_categories": [
+    "spectral",
+    "tabular", 
+    "text",
+    "image",
+    "audio",
+    "video",
+    "archive",
+    "document",
+    "binary",
+    "unknown"
+  ],
+  "supported_extensions": [
+    ".csv", ".json", ".h5", ".jdx", ".spc", ".txt",
+    ".xlsx", ".xls", ".parquet", ".feather",
+    ".xml", ".yaml", ".yml", ".md",
+    ".png", ".jpg", ".jpeg", ".gif", ".tiff", ".webp", ".svg",
+    ".wav", ".mp3", ".ogg", ".flac",
+    ".mp4", ".avi", ".mov", ".wmv",
+    ".zip", ".tar", ".gz", ".rar", ".7z",
+    ".pdf", ".docx", ".doc", ".pptx",
+    ".bin", ".dat"
+  ],
+  "configuration": {
+    "input_directory": "data/uploads",
+    "output_directory": "data/processed",
+    "temp_directory": "data/temp",
+    "max_file_size": 524288000,
+    "batch_size": 100
+  },
+  "features": {
+    "automatic_file_categorization": true,
+    "metadata_extraction": true,
+    "content_analysis": true,
+    "quality_assessment": true,
+    "hash_calculation": true,
+    "batch_processing": true,
+    "comprehensive_reporting": true,
+    "custom_handler_support": true,
+    "error_handling": true,
+    "statistics_tracking": true
+  },
+  "usage_examples": [
+    {
+      "description": "Process all files in a directory",
+      "code": "agent.execute({'input_directory': '/path/to/files'})"
+    },
+    {
+      "description": "Process specific files",
+      "code": "agent.execute({'file_paths': ['file1.csv', 'file2.json']})"
+    },
+    {
+      "description": "Process with custom configuration",
+      "code": "agent.execute({'max_file_size': 104857600, 'batch_size': 50})"
+    },
+    {
+      "description": "Register custom handler",
+      "code": "agent.register_custom_handler(FileCategory.CUSTOM, my_handler)"
+    }
+  ]
+}

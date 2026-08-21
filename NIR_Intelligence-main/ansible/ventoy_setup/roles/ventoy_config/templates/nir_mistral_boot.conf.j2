@@ -1,0 +1,176 @@
+# NIR_Mistral Framework Boot Configuration
+# This file contains boot-time configuration for the NIR_Mistral Framework
+
+# Boot configuration
+[boot]
+# Boot delay in seconds (time to wait before starting services)
+boot_delay = 5
+
+# Auto-start services
+auto_start = true
+
+# Start services in order (space-separated list)
+start_order = port_agent django
+
+# Service dependencies (services that must start first)
+dependencies = 
+
+# Service timeouts (seconds to wait for each service to start)
+service_timeouts = {
+    "port_agent": 15,
+    "django": 20
+}
+
+# Health check configuration
+[health_check]
+# Enable health checks
+enabled = true
+
+# Check interval (seconds)
+interval = 30
+
+# Maximum retries before giving up
+max_retries = 3
+
+# Health check endpoints
+endpoints = [
+    "http://localhost:{{ port_agent_port }}/api/ports/",
+    "http://localhost:{{ django_port }}/api/health/"
+]
+
+# Health check timeout (seconds)
+timeout = 5
+
+# Network configuration
+[network]
+# Network interface to bind to
+interface = eth0
+
+# Bind address
+bind_address = 0.0.0.0
+
+# Allowed hosts
+allowed_hosts = localhost,127.0.0.1,::1
+
+# Open ports
+open_ports = {{ open_ports | default([8000, 8001, 8080, 5432, 6379, 9200]) | join(',') }}
+
+# DNS servers
+dns_servers = 8.8.8.8,8.8.4.4
+
+# Hostname
+hostname = nir-mistral-ventoy
+
+# Service configuration
+[services]
+# Django Server configuration
+[services.django]
+enabled = true
+port = {{ django_port }}
+bind_address = 0.0.0.0
+timeout = {{ django_timeout | default(300) }}
+workers = {{ django_workers | default(4) }}
+debug = {{ django_debug | default(False) | lower }}
+settings_module = {{ django_settings_module }}
+
+# Port Agent configuration
+[services.port_agent]
+enabled = true
+port = {{ port_agent_port }}
+bind_address = 0.0.0.0
+timeout = {{ port_agent_timeout | default(60) }}
+workers = {{ port_agent_workers | default(2) }}
+debug = {{ django_debug | default(False) | lower }}
+
+# Logging configuration
+[logging]
+# Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+level = INFO
+
+# Log format
+format = %(asctime)s - %(name)s - %(levelname)s - %(message)s
+
+# Log file locations
+log_dir = {{ deploy_root }}/logs
+
+# Individual log files
+[logging.files]
+django_log = ${log_dir}/django.log
+port_agent_log = ${log_dir}/port_agent.log
+access_log = ${log_dir}/port_agent_access.log
+error_log = ${log_dir}/port_agent_error.log
+
+# Log rotation
+[logging.rotation]
+enabled = true
+max_size = 10MB
+backup_count = 5
+compress = true
+
+# Security configuration
+[security]
+# Run as user
+user = {{ service_user | default('root') }}
+
+# Run as group
+group = {{ service_group | default('root') }}
+
+# UMASK
+umask = 0022
+
+# Environment variables
+[environment]
+PYTHONPATH = {{ deploy_root }}
+PATH = {{ venv_path }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+DJANGO_SETTINGS_MODULE = {{ django_settings_module }}
+DJANGO_DEBUG = {{ django_debug | default(False) | lower }}
+LANG = en_US.UTF-8
+LC_ALL = en_US.UTF-8
+
+# Performance configuration
+[performance]
+# Maximum file descriptors
+max_file_descriptors = 65535
+
+# Maximum processes
+max_processes = 65535
+
+# Memory limits
+memory_limit = unlimited
+
+# Cleanup configuration
+[cleanup]
+# Enable automatic cleanup
+enabled = true
+
+# Cleanup schedule (daily, weekly, monthly)
+schedule = daily
+
+# Cleanup temp files
+cleanup_temp = true
+
+# Cleanup cache
+cleanup_cache = true
+
+# Cleanup logs
+cleanup_logs = true
+
+# Cleanup interval (days)
+interval = 7
+
+# Persistence configuration
+[persistence]
+# Enable persistence
+enabled = true
+
+# Persistence directory
+persist_dir = {{ deploy_root }}/data
+
+# Save configuration
+save_config = true
+
+# Save logs
+save_logs = true
+
+# Save environment
+save_environment = true

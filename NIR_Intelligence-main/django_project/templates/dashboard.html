@@ -1,0 +1,638 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard - NIR_Mistral Framework{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/hswt-style.css' %}">
+<style>
+    .dashboard-card {
+        transition: all 0.3s ease;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(122, 185, 41, 0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <!-- Hero Section -->
+    <section class="o-section o-section--primary">
+        <div class="o-container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1 class="c-page-header__title text-white mb-md-0 mb-3">
+                        Welcome to NIR_Mistral Framework
+                    </h1>
+                    <p class="c-page-header__subtitle text-white opacity-75 mb-0">
+                        Advanced NIR Spectroscopy Analysis Platform for research and industrial applications
+                    </p>
+                </div>
+                <div class="col-lg-4 text-lg-end">
+                    <div class="d-flex gap-sm justify-content-lg-end">
+                        <a href="/spectra/" class="c-button c-button--secondary">
+                            <i class="bi bi-file-earmark-text c-button__icon"></i>
+                            <span class="c-button__text">View Spectra</span>
+                        </a>
+                        <a href="/analysis/" class="c-button c-button--white">
+                            <i class="bi bi-calculator c-button__icon"></i>
+                            <span class="c-button__text">New Analysis</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Statistics Section -->
+    <section class="o-section">
+        <div class="o-container">
+            <h2 class="c-card__title mb-xl">System Overview</h2>
+            <div class="row g-4">
+                <!-- Total Spectra -->
+                <div class="col-md-3 col-6">
+                    <div class="c-stat-card h-100">
+                        <div class="c-stat-card__icon c-stat-card__icon--primary">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </div>
+                        <div class="c-stat-card__number" id="totalSpectra">0</div>
+                        <div class="c-stat-card__label">Total Spectra</div>
+                    </div>
+                </div>
+                
+                <!-- Valid Spectra -->
+                <div class="col-md-3 col-6">
+                    <div class="c-stat-card h-100">
+                        <div class="c-stat-card__icon c-stat-card__icon--success">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div class="c-stat-card__number" id="validSpectra">0</div>
+                        <div class="c-stat-card__label">Valid Spectra</div>
+                    </div>
+                </div>
+                
+                <!-- Active Agents -->
+                <div class="col-md-3 col-6">
+                    <div class="c-stat-card h-100">
+                        <div class="c-stat-card__icon c-stat-card__icon--info">
+                            <i class="bi bi-robot"></i>
+                        </div>
+                        <div class="c-stat-card__number" id="activeAgents">0</div>
+                        <div class="c-stat-card__label">Active Agents</div>
+                    </div>
+                </div>
+                
+                <!-- Analysis Jobs -->
+                <div class="col-md-3 col-6">
+                    <div class="c-stat-card h-100">
+                        <div class="c-stat-card__icon c-stat-card__icon--warning">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                        <div class="c-stat-card__number" id="totalJobs">0</div>
+                        <div class="c-stat-card__label">Analysis Jobs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Actions Section -->
+    <section class="o-section o-section--light">
+        <div class="o-container">
+            <h2 class="c-card__title mb-xl">Quick Actions</h2>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="c-card h-100">
+                        <div class="c-card__body text-center">
+                            <div class="mb-md">
+                                <i class="bi bi-upload text-primary" style="font-size: 3rem;"></i>
+                            </div>
+                            <h3 class="h5 mb-sm">Upload Spectrum</h3>
+                            <p class="text-muted small mb-md">
+                                Upload new NIR spectroscopy data for analysis
+                            </p>
+                            <a href="/spectra/" class="c-button c-button--outline-primary">
+                                <i class="bi bi-upload c-button__icon"></i>
+                                <span class="c-button__text">Upload Now</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="c-card h-100">
+                        <div class="c-card__body text-center">
+                            <div class="mb-md">
+                                <i class="bi bi-play-circle text-primary" style="font-size: 3rem;"></i>
+                            </div>
+                            <h3 class="h5 mb-sm">Run Analysis</h3>
+                            <p class="text-muted small mb-md">
+                                Execute analysis using framework agents
+                            </p>
+                            <a href="/analysis/" class="c-button c-button--outline-primary">
+                                <i class="bi bi-play-circle c-button__icon"></i>
+                                <span class="c-button__text">Start Analysis</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="c-card h-100">
+                        <div class="c-card__body text-center">
+                            <div class="mb-md">
+                                <i class="bi bi-gear text-primary" style="font-size: 3rem;"></i>
+                            </div>
+                            <h3 class="h5 mb-sm">Manage Agents</h3>
+                            <p class="text-muted small mb-md">
+                                View and configure analysis agents
+                            </p>
+                            <a href="/agents/" class="c-button c-button--outline-primary">
+                                <i class="bi bi-gear c-button__icon"></i>
+                                <span class="c-button__text">View Agents</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Activity Section -->
+    <section class="o-section">
+        <div class="o-container">
+            <div class="d-flex justify-content-between align-items-center mb-xl">
+                <h2 class="c-card__title mb-0">Recent Activity</h2>
+                <a href="/jobs/" class="c-button c-button--outline-secondary c-button--sm">
+                    <i class="bi bi-clock-history c-button__icon"></i>
+                    <span class="c-button__text">View All</span>
+                </a>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="c-card">
+                        <div class="c-card__body p-0">
+                            <div class="table-responsive">
+                                <table class="c-table c-table--hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Job ID</th>
+                                            <th>Analysis Type</th>
+                                            <th>Spectrum</th>
+                                            <th>Agent</th>
+                                            <th>Status</th>
+                                            <th>Created</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentJobsTableBody">
+                                        <tr>
+                                            <td colspan="7" class="text-center py-lg">
+                                                <div class="c-loading-overlay__spinner" style="width: 2rem; height: 2rem; border-width: 0.2rem;"></div>
+                                                <p class="mt-sm text-muted">Loading recent activity...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- System Status Section -->
+    <section class="o-section o-section--light">
+        <div class="o-container">
+            <h2 class="c-card__title mb-xl">System Status</h2>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="c-card h-100">
+                        <div class="c-card__header">
+                            <h3 class="c-card__title mb-0">Framework Health</h3>
+                        </div>
+                        <div class="c-card__body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0">
+                                            <span class="c-badge c-badge--success rounded-circle p-2 d-inline-flex align-items-center justify-content-center">
+                                                <i class="bi bi-check"></i>
+                                            </span>
+                                        </div>
+                                        <div class="flex-grow-1 ms-sm">
+                                            <h6 class="mb-0">Database Connection</h6>
+                                            <small class="text-muted">Connected</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0">
+                                            <span class="c-badge c-badge--success rounded-circle p-2 d-inline-flex align-items-center justify-content-center">
+                                                <i class="bi bi-check"></i>
+                                            </span>
+                                        </div>
+                                        <div class="flex-grow-1 ms-sm">
+                                            <h6 class="mb-0">Storage Available</h6>
+                                            <small class="text-muted">Available</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0">
+                                            <span class="c-badge c-badge--success rounded-circle p-2 d-inline-flex align-items-center justify-content-center">
+                                                <i class="bi bi-check"></i>
+                                            </span>
+                                        </div>
+                                        <div class="flex-grow-1 ms-sm">
+                                            <h6 class="mb-0">Agent Framework</h6>
+                                            <small class="text-muted">Running</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0">
+                                            <span class="c-badge c-badge--success rounded-circle p-2 d-inline-flex align-items-center justify-content-center">
+                                                <i class="bi bi-check"></i>
+                                            </span>
+                                        </div>
+                                        <div class="flex-grow-1 ms-sm">
+                                            <h6 class="mb-0">API Service</h6>
+                                            <small class="text-muted">Operational</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="c-card h-100">
+                        <div class="c-card__header">
+                            <h3 class="c-card__title mb-0">Framework Information</h3>
+                        </div>
+                        <div class="c-card__body">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Version</dt>
+                                <dd class="col-sm-8" id="frameworkVersion">Loading...</dd>
+                                
+                                <dt class="col-sm-4">Environment</dt>
+                                <dd class="col-sm-8" id="frameworkEnvironment">Loading...</dd>
+                                
+                                <dt class="col-sm-4">Last Updated</dt>
+                                <dd class="col-sm-8" id="frameworkUpdated">Loading...</dd>
+                                
+                                <dt class="col-sm-4">Active Users</dt>
+                                <dd class="col-sm-8" id="activeUsers">Loading...</dd>
+                                
+                                <dt class="col-sm-4">Total Storage</dt>
+                                <dd class="col-sm-8" id="totalStorage">Loading...</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Charts Section -->
+    <section class="o-section">
+        <div class="o-container">
+            <h2 class="c-card__title mb-xl">Analytics</h2>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="c-card h-100">
+                        <div class="c-card__header">
+                            <h3 class="c-card__title mb-0">Spectra by Type</h3>
+                        </div>
+                        <div class="c-card__body">
+                            <canvas id="spectraTypeChart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="c-card h-100">
+                        <div class="c-card__header">
+                            <h3 class="c-card__title mb-0">Job Status Distribution</h3>
+                        </div>
+                        <div class="c-card__body">
+                            <canvas id="jobStatusChart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Global variables
+        let spectraTypeChart = null;
+        let jobStatusChart = null;
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+            loadRecentJobs();
+            loadFrameworkInfo();
+        });
+
+        function loadDashboardData() {
+            showLoading();
+            
+            // Load statistics
+            Promise.all([
+                axios.get('/api/spectra/'),
+                axios.get('/api/agents/'),
+                axios.get('/api/jobs/')
+            ])
+            .then(function(responses) {
+                const spectra = responses[0].data.results || [];
+                const agents = responses[1].data.results || [];
+                const jobs = responses[2].data.results || [];
+                
+                // Update statistics
+                const totalSpectra = spectra.length;
+                const validSpectra = spectra.filter(s => s.quality_status === 'valid').length;
+                const activeAgents = agents.filter(a => a.is_active).length;
+                const totalJobs = jobs.length;
+                
+                document.getElementById('totalSpectra').textContent = totalSpectra;
+                document.getElementById('validSpectra').textContent = validSpectra;
+                document.getElementById('activeAgents').textContent = activeAgents;
+                document.getElementById('totalJobs').textContent = totalJobs;
+                
+                // Create charts
+                createSpectraTypeChart(spectra);
+                createJobStatusChart(jobs);
+                
+                hideLoading();
+            })
+            .catch(function(error) {
+                console.error('Error loading dashboard data:', error);
+                hideLoading();
+                showError('Failed to load dashboard data. Please try again.');
+            });
+        }
+
+        function loadRecentJobs() {
+            axios.get('/api/jobs/?limit=5&ordering=-created_at')
+                .then(function(response) {
+                    const jobs = response.data.results || [];
+                    renderRecentJobs(jobs);
+                })
+                .catch(function(error) {
+                    console.error('Error loading recent jobs:', error);
+                });
+        }
+
+        function loadFrameworkInfo() {
+            axios.get('/api/health/')
+                .then(function(response) {
+                    const health = response.data;
+                    document.getElementById('frameworkVersion').textContent = health.version || 'Unknown';
+                    document.getElementById('frameworkEnvironment').textContent = health.environment || 'Unknown';
+                    document.getElementById('frameworkUpdated').textContent = new Date().toLocaleDateString();
+                })
+                .catch(function(error) {
+                    console.error('Error loading framework info:', error);
+                });
+        }
+
+        function renderRecentJobs(jobs) {
+            const tableBody = document.getElementById('recentJobsTableBody');
+            
+            if (jobs.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-lg">
+                            <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
+                            <p class="mt-sm text-muted">No recent jobs found</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tableBody.innerHTML = jobs.map(job => `
+                <tr>
+                    <td>${job.id || 'N/A'}</td>
+                    <td>${job.analysis_type || 'Unknown'}</td>
+                    <td>${job.spectrum_name || job.spectrum || 'N/A'}</td>
+                    <td>${job.agent || 'N/A'}</td>
+                    <td><span class="c-badge c-badge--${getStatusBadge(job.status)}">${job.status || 'unknown'}</span></td>
+                    <td>${formatDate(job.created_at)}</td>
+                    <td>
+                        <a href="/jobs/" class="c-button c-button--outline-primary c-button--sm">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function createSpectraTypeChart(spectra) {
+            const ctx = document.getElementById('spectraTypeChart');
+            
+            // Destroy existing chart if it exists
+            if (spectraTypeChart) {
+                spectraTypeChart.destroy();
+            }
+            
+            // Count spectra by type
+            const typeCounts = {};
+            spectra.forEach(spectrum => {
+                const type = spectrum.spectral_type || 'Unknown';
+                typeCounts[type] = (typeCounts[type] || 0) + 1;
+            });
+            
+            const types = Object.keys(typeCounts);
+            const counts = Object.values(typeCounts);
+            
+            // HSWT green color palette
+            const backgroundColors = types.map((type, index) => {
+                const colors = ['#7ab929', '#225933', '#a8d065', '#5a8a3f', '#8fca47'];
+                return colors[index % colors.length];
+            });
+            
+            spectraTypeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: types,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: backgroundColors,
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+
+        function createJobStatusChart(jobs) {
+            const ctx = document.getElementById('jobStatusChart');
+            
+            // Destroy existing chart if it exists
+            if (jobStatusChart) {
+                jobStatusChart.destroy();
+            }
+            
+            // Count jobs by status
+            const statusCounts = {};
+            jobs.forEach(job => {
+                const status = job.status || 'Unknown';
+                statusCounts[status] = (statusCounts[status] || 0) + 1;
+            });
+            
+            const statuses = Object.keys(statusCounts);
+            const counts = Object.values(statusCounts);
+            
+            // Status colors
+            const backgroundColors = statuses.map(status => {
+                const colors = {
+                    'completed': '#28a745',
+                    'running': '#007bff',
+                    'pending': '#ffc107',
+                    'failed': '#dc3545',
+                    'cancelled': '#6c757d'
+                };
+                return colors[status] || '#999999';
+            });
+            
+            jobStatusChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: statuses,
+                    datasets: [{
+                        label: 'Number of Jobs',
+                        data: counts,
+                        backgroundColor: backgroundColors,
+                        borderWidth: 0,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Jobs: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getStatusBadge(status) {
+            const statuses = {
+                'completed': 'success',
+                'running': 'primary',
+                'pending': 'warning',
+                'failed': 'danger',
+                'cancelled': 'secondary'
+            };
+            return statuses[status] || 'secondary';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            showToast('Success!', message, 'success');
+        }
+
+        function showError(message) {
+            showToast('Error!', message, 'danger');
+        }
+
+        function showToast(title, message, type) {
+            const toastContainer = document.getElementById('toastContainer');
+            
+            const toast = document.createElement('div');
+            toast.className = `c-toast c-toast--${type}`;
+            
+            toast.innerHTML = `
+                <div class="c-toast__content">
+                    <div class="c-toast__title">${title}</div>
+                    <div class="c-toast__message">${message}</div>
+                </div>
+                <button class="c-toast__close" onclick="this.parentElement.remove()">
+                    <i class="bi bi-x"></i>
+                </button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+    </script>
+{% endblock %}

@@ -1,0 +1,870 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}File Management - NIR_Mistral Framework{% endblock %}
+
+{% block extra_css %}
+<style>
+    .file-card {
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        cursor: pointer;
+    }
+    
+    .file-card:hover {
+        border-color: var(--color-primary);
+        box-shadow: 0 8px 25px rgba(122, 185, 41, 0.15);
+        transform: translateY(-4px);
+    }
+    
+    .file-preview {
+        height: 150px;
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .file-icon {
+        font-size: 3rem;
+        color: var(--color-primary);
+        margin: 20px;
+    }
+    
+    .quality-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .quality-excellent { background: var(--color-success); color: white; }
+    .quality-good { background: #28a745; color: white; }
+    .quality-fair { background: #ffc107; color: #212529; }
+    .quality-poor { background: var(--color-danger); color: white; }
+    .quality-unknown { background: var(--color-secondary); color: white; }
+    
+    .file-meta {
+        font-size: 0.85rem;
+        color: var(--color-text-muted);
+    }
+    
+    .file-actions {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .file-card:hover .file-actions {
+        opacity: 1;
+    }
+    
+    .drop-zone {
+        border: 2px dashed var(--color-border);
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .drop-zone:hover, .drop-zone.drag-over {
+        border-color: var(--color-primary);
+        background-color: rgba(122, 185, 41, 0.05);
+    }
+    
+    .file-type-tag {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin: 4px;
+        background: var(--color-background);
+        color: var(--color-text);
+    }
+    
+    /* File type specific icons and colors */
+    .file-type-spectral { color: #7ab929; }
+    .file-type-tabular { color: #20c997; }
+    .file-type-text { color: #6c757d; }
+    .file-type-image { color: #fd7e14; }
+    .file-type-audio { color: #e83e8c; }
+    .file-type-video { color: #6f42c1; }
+    .file-type-archive { color: #ffc107; }
+    .file-type-document { color: #dc3545; }
+    .file-type-binary { color: #6c757d; }
+    .file-type-unknown { color: #6c757d; }
+    
+    .progress-container {
+        margin-top: 10px;
+        height: 4px;
+        background: var(--color-background);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    
+    .progress-bar {
+        height: 100%;
+        background: var(--color-primary);
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="o-section o-section--primary">
+    <div class="o-container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1 class="c-page-header__title text-white mb-0">
+                    <i class="bi bi-files"></i> File Management
+                </h1>
+                <p class="c-page-header__subtitle text-white opacity-75 mb-0">
+                    Upload, view, and analyze any file type with Crew AI
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="c-button c-button--white" onclick="refreshFiles()">
+                    <i class="bi bi-arrow-clockwise c-button__icon"></i>
+                    <span class="c-button__text">Refresh</span>
+                </button>
+                <button class="c-button c-button--secondary" data-bs-toggle="modal" data-bs-target="#uploadFileModal">
+                    <i class="bi bi-upload c-button__icon"></i>
+                    <span class="c-button__text">Upload Files</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Statistics Section -->
+<section class="o-section">
+    <div class="o-container">
+        <div class="row g-4">
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--primary">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="totalFiles">0</div>
+                    <div class="c-stat-card__label">Total Files</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--success">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="validFiles">0</div>
+                    <div class="c-stat-card__label">Valid Files</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="invalidFiles">0</div>
+                    <div class="c-stat-card__label">Invalid Files</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--info">
+                        <i class="bi bi-database"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="totalStorage">0 MB</div>
+                    <div class="c-stat-card__label">Total Storage</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Quick Actions Section -->
+<section class="o-section o-section--light">
+    <div class="o-container">
+        <h2 class="c-card__title mb-xl">
+            <i class="bi bi-lightning-charge"></i> Quick Actions
+        </h2>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="c-card h-100">
+                    <div class="c-card__body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-upload text-primary" style="font-size: 3rem;"></i>
+                        </div>
+                        <h3 class="h5 mb-2">Upload Files</h3>
+                        <p class="text-muted small mb-3">Upload any file type for analysis</p>
+                        <button class="c-button c-button--outline-primary" data-bs-toggle="modal" data-bs-target="#uploadFileModal">
+                            <i class="bi bi-upload c-button__icon"></i>
+                            <span class="c-button__text">Upload Now</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="c-card h-100">
+                    <div class="c-card__body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-play-circle text-primary" style="font-size: 3rem;"></i>
+                        </div>
+                        <h3 class="h5 mb-2">Quick Analysis</h3>
+                        <p class="text-muted small mb-3">Run quick analysis on selected files</p>
+                        <button class="c-button c-button--outline-primary" onclick="quickAnalyzeSelected()">
+                            <i class="bi bi-play-circle c-button__icon"></i>
+                            <span class="c-button__text">Analyze Now</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="c-card h-100">
+                    <div class="c-card__body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-folder text-primary" style="font-size: 3rem;"></i>
+                        </div>
+                        <h3 class="h5 mb-2">Browse Library</h3>
+                        <p class="text-muted small mb-3">View all uploaded files</p>
+                        <button class="c-button c-button--outline-primary" onclick="scrollToFiles()">
+                            <i class="bi bi-list c-button__icon"></i>
+                            <span class="c-button__text">Browse All</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- File Categories Section -->
+<section class="o-section">
+    <div class="o-container">
+        <div class="d-flex justify-content-between align-items-center mb-xl">
+            <h2 class="c-card__title mb-0">
+                <i class="bi bi-tags"></i> File Categories
+            </h2>
+        </div>
+        
+        <div class="row g-4" id="fileCategories">
+            <!-- Categories will be loaded here -->
+            <div class="col-md-2 col-4 text-center">
+                <div class="c-card h-100 p-3">
+                    <i class="bi bi-graph-up file-type-spectral" style="font-size: 2rem;"></i>
+                    <div class="mt-2">
+                        <h6 class="mb-0">Spectral</h6>
+                        <small class="text-muted" id="spectralCount">0</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-4 text-center">
+                <div class="c-card h-100 p-3">
+                    <i class="bi bi-table file-type-tabular" style="font-size: 2rem;"></i>
+                    <div class="mt-2">
+                        <h6 class="mb-0">Tabular</h6>
+                        <small class="text-muted" id="tabularCount">0</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-4 text-center">
+                <div class="c-card h-100 p-3">
+                    <i class="bi bi-file-text file-type-text" style="font-size: 2rem;"></i>
+                    <div class="mt-2">
+                        <h6 class="mb-0">Text</h6>
+                        <small class="text-muted" id="textCount">0</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-4 text-center">
+                <div class="c-card h-100 p-3">
+                    <i class="bi bi-image file-type-image" style="font-size: 2rem;"></i>
+                    <div class="mt-2">
+                        <h6 class="mb-0">Image</h6>
+                        <small class="text-muted" id="imageCount">0</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-4 text-center">
+                <div class="c-card h-100 p-3">
+                    <i class="bi bi-volume-up file-type-audio" style="font-size: 2rem;"></i>
+                    <div class="mt-2">
+                        <h6 class="mb-0">Audio</h6>
+                        <small class="text-muted" id="audioCount">0</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-4 text-center">
+                <div class="c-card h-100 p-3">
+                    <i class="bi bi-file-earmark-zip file-type-archive" style="font-size: 2rem;"></i>
+                    <div class="mt-2">
+                        <h6 class="mb-0">Archive</h6>
+                        <small class="text-muted" id="archiveCount">0</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Files Gallery Section -->
+<section class="o-section">
+    <div class="o-container">
+        <div class="d-flex justify-content-between align-items-center mb-xl">
+            <h2 class="c-card__title mb-0">
+                <i class="bi bi-images"></i> Files Gallery
+            </h2>
+            <div class="d-flex gap-2">
+                <select class="c-form-control c-form-control--sm" id="fileFilter" onchange="filterFiles()">
+                    <option value="">All Files</option>
+                    <option value="valid">Valid Only</option>
+                    <option value="invalid">Invalid Only</option>
+                    <option value="recent">Recent First</option>
+                </select>
+                <select class="c-form-control c-form-control--sm" id="categoryFilter" onchange="filterFiles()">
+                    <option value="">All Categories</option>
+                    <option value="spectral">Spectral</option>
+                    <option value="tabular">Tabular</option>
+                    <option value="text">Text</option>
+                    <option value="image">Image</option>
+                    <option value="audio">Audio</option>
+                    <option value="video">Video</option>
+                    <option value="archive">Archive</option>
+                    <option value="document">Document</option>
+                    <option value="unknown">Unknown</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="row g-4" id="filesGallery">
+            <!-- Files will be loaded here -->
+            <div class="col-12 text-center py-lg">
+                <div class="c-loading-overlay__spinner" style="width: 2rem; height: 2rem; border-width: 0.2rem;"></div>
+                <p class="mt-sm text-muted">Loading files...</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Files Table Section -->
+<section class="o-section o-section--light">
+    <div class="o-container">
+        <div class="d-flex justify-content-between align-items-center mb-xl">
+            <h2 class="c-card__title mb-0">
+                <i class="bi bi-table"></i> Files Data Table
+            </h2>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-danger btn-sm" onclick="deleteSelectedFiles()">
+                    <i class="bi bi-trash"></i> Delete Selected
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="exportFilesList()">
+                    <i class="bi bi-download"></i> Export List
+                </button>
+            </div>
+        </div>
+        
+        <div class="c-card">
+            <div class="c-card__body p-0">
+                <div class="table-responsive">
+                    <table class="c-table c-table--hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>
+                                    <input type="checkbox" id="selectAllFiles" onchange="toggleSelectAll()">
+                                </th>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Category</th>
+                                <th>Size</th>
+                                <th>Quality</th>
+                                <th>Uploaded</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="filesTable">
+                            <tr>
+                                <td colspan="8" class="text-center py-lg">
+                                    <div class="c-loading-overlay__spinner" style="width: 2rem; height: 2rem; border-width: 0.2rem;"></div>
+                                    <p class="mt-sm text-muted">Loading files...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="c-card__footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span id="filesCount">0 files</span>
+                    <div class="d-flex gap-2">
+                        <button class="c-button c-button--outline-primary c-button--sm" onclick="loadMoreFiles()">
+                            <i class="bi bi-plus c-button__icon"></i>
+                            <span class="c-button__text">Load More</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Upload File Modal -->
+<div class="modal fade" id="uploadFileModal" tabindex="-1" aria-labelledby="uploadFileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadFileModalLabel">
+                    <i class="bi bi-upload"></i> Upload Files
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadFileForm">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="drop-zone" id="dropZone">
+                                <i class="bi bi-cloud-arrow-up" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 1rem;"></i>
+                                <p class="mb-0">Drag & drop files here or click to browse</p>
+                                <p class="text-muted small mb-0">
+                                    Supports: .csv, .json, .txt, .xml, .yaml, .h5, .png, .jpg, .wav, .mp3, .zip, .pdf, .xlsx, .docx, and more
+                                </p>
+                                <input type="file" id="fileInput" accept="*" style="display: none;" multiple>
+                            </div>
+                            
+                            <div class="file-preview" id="filePreview"></div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="c-form-label">File Name</label>
+                            <input type="text" class="c-form-control" id="fileName" placeholder="Optional custom name">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="c-form-label">File Category</label>
+                            <select class="c-form-control" id="fileCategory">
+                                <option value="auto">Auto Detect</option>
+                                <option value="spectral">Spectral Data</option>
+                                <option value="tabular">Tabular Data</option>
+                                <option value="text">Text</option>
+                                <option value="image">Image</option>
+                                <option value="audio">Audio</option>
+                                <option value="video">Video</option>
+                                <option value="archive">Archive</option>
+                                <option value="document">Document</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="c-form-label">Description</label>
+                            <textarea class="c-form-control" id="fileDescription" rows="3" placeholder="Brief description of the file..."></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="c-form-label">Tags</label>
+                            <input type="text" class="c-form-control" id="fileTags" placeholder="Comma-separated tags">
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="c-form-label">Metadata</label>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <input type="text" class="c-form-control" id="metadataAuthor" placeholder="Author">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="date" class="c-form-control" id="metadataDate">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="c-form-control" id="metadataSource" placeholder="Source">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="c-form-check">
+                                <input class="c-checkbox" type="checkbox" id="autoAnalyze" checked>
+                                <label class="c-checkbox__label" for="autoAnalyze">
+                                    Auto-analyze after upload
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="uploadFiles()">
+                    <i class="bi bi-upload"></i> Upload Files
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- File Details Modal -->
+<div class="modal fade" id="fileDetailsModal" tabindex="-1" aria-labelledby="fileDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="fileDetailsModalLabel">
+                    <i class="bi bi-file-earmark-text"></i> File Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="c-card h-100">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">File Preview</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <div class="file-preview" style="height: 250px;" id="filePreviewDetails">
+                                    <i class="bi bi-file-earmark text-muted" style="font-size: 4rem;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="c-card h-100">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">File Information</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <dl class="row mb-0">
+                                    <dt class="col-sm-4">Name:</dt>
+                                    <dd class="col-sm-8" id="detailName"></dd>
+                                    
+                                    <dt class="col-sm-4">File ID:</dt>
+                                    <dd class="col-sm-8" id="detailFileId"></dd>
+                                    
+                                    <dt class="col-sm-4">Type:</dt>
+                                    <dd class="col-sm-8" id="detailType"></dd>
+                                    
+                                    <dt class="col-sm-4">Category:</dt>
+                                    <dd class="col-sm-8" id="detailCategory"></dd>
+                                    
+                                    <dt class="col-sm-4">Size:</dt>
+                                    <dd class="col-sm-8" id="detailSize"></dd>
+                                    
+                                    <dt class="col-sm-4">Quality:</dt>
+                                    <dd class="col-sm-8" id="detailQuality"></dd>
+                                    
+                                    <dt class="col-sm-4">Uploaded:</dt>
+                                    <dd class="col-sm-8" id="detailUploaded"></dd>
+                                    
+                                    <dt class="col-sm-4">Modified:</dt>
+                                    <dd class="col-sm-8" id="detailModified"></dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="c-card">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">Metadata</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <dl class="row mb-0" id="detailMetadata">
+                                    <!-- Metadata will be loaded here -->
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="c-card">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">Description</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <p id="detailDescription" class="mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="c-card">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">Analysis Results</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <div id="detailAnalysis"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Close
+                </button>
+                <button type="button" class="btn btn-primary" onclick="analyzeCurrentFile()">
+                    <i class="bi bi-play-circle"></i> Analyze File
+                </button>
+                <button type="button" class="btn btn-primary" onclick="downloadFile()">
+                    <i class="bi bi-download"></i> Download
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="filesDeleteConfirmationModal" tabindex="-1" aria-labelledby="filesDeleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="filesDeleteConfirmationModalLabel">
+                    <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="filesDeleteMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/files.js' %}"></script>
+<script>
+// File type icons mapping
+const fileTypeIcons = {
+    'spectral': 'bi-graph-up',
+    'tabular': 'bi-table',
+    'text': 'bi-file-text',
+    'image': 'bi-image',
+    'audio': 'bi-volume-up',
+    'video': 'bi-film',
+    'archive': 'bi-file-earmark-zip',
+    'document': 'bi-file-earmark-pdf',
+    'binary': 'bi-file-binary',
+    'unknown': 'bi-file-earmark'
+};
+
+// File type colors mapping
+const fileTypeColors = {
+    'spectral': '#7ab929',
+    'tabular': '#20c997',
+    'text': '#6c757d',
+    'image': '#fd7e14',
+    'audio': '#e83e8c',
+    'video': '#6f42c1',
+    'archive': '#ffc107',
+    'document': '#dc3545',
+    'binary': '#6c757d',
+    'unknown': '#6c757d'
+};
+
+// Supported file extensions by category
+const supportedExtensions = {
+    'spectral': ['.csv', '.json', '.h5', '.jdx', '.spc'],
+    'tabular': ['.csv', '.xlsx', '.xls', '.parquet', '.feather'],
+    'text': ['.txt', '.json', '.xml', '.yaml', '.yml', '.md'],
+    'image': ['.png', '.jpg', '.jpeg', '.gif', '.tiff', '.webp', '.svg'],
+    'audio': ['.wav', '.mp3', '.ogg', '.flac'],
+    'video': ['.mp4', '.avi', '.mov', '.wmv'],
+    'archive': ['.zip', '.tar', '.gz', '.rar', '.7z'],
+    'document': ['.pdf', '.docx', '.doc', '.pptx']
+};
+
+// Initialize the page
+function initializeFilesPage() {
+    loadFiles();
+    setupDragAndDrop();
+    setupFileInput();
+}
+
+// Load files from server
+function loadFiles() {
+    // This will be implemented in files.js
+    console.log('Loading files...');
+}
+
+// Setup drag and drop functionality
+function setupDragAndDrop() {
+    const dropZone = document.getElementById('dropZone');
+    
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('drag-over');
+    });
+    
+    dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+    });
+    
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+        
+        if (e.dataTransfer.files.length > 0) {
+            handleFileSelection(e.dataTransfer.files);
+        }
+    });
+    
+    dropZone.addEventListener('click', function() {
+        document.getElementById('fileInput').click();
+    });
+}
+
+// Setup file input
+function setupFileInput() {
+    const fileInput = document.getElementById('fileInput');
+    
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            handleFileSelection(this.files);
+        }
+    });
+}
+
+// Handle file selection
+function handleFileSelection(files) {
+    const filePreview = document.getElementById('filePreview');
+    filePreview.innerHTML = '';
+    
+    for (let i = 0; i < Math.min(files.length, 5); i++) {
+        const file = files[i];
+        const fileInfo = document.createElement('div');
+        fileInfo.className = 'd-flex align-items-center gap-2 p-2 bg-light rounded mb-2';
+        
+        // Get file category and icon
+        const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+        let category = 'unknown';
+        
+        for (const [cat, exts] of Object.entries(supportedExtensions)) {
+            if (exts.includes(extension)) {
+                category = cat;
+                break;
+            }
+        }
+        
+        const icon = fileTypeIcons[category] || 'bi-file-earmark';
+        const color = fileTypeColors[category] || '#6c757d';
+        
+        fileInfo.innerHTML = `
+            <i class="bi ${icon}" style="color: ${color}; font-size: 1.5rem;"></i>
+            <div class="flex-fill">
+                <div class="fw-bold">${file.name}</div>
+                <div class="small text-muted">${formatFileSize(file.size)}</div>
+            </div>
+            <span class="badge bg-secondary">${category}</span>
+        `;
+        
+        filePreview.appendChild(fileInfo);
+    }
+    
+    if (files.length > 5) {
+        const moreFiles = document.createElement('div');
+        moreFiles.className = 'text-muted small';
+        moreFiles.textContent = `+ ${files.length - 5} more files`;
+        filePreview.appendChild(moreFiles);
+    }
+}
+
+// Format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Scroll to files section
+function scrollToFiles() {
+    document.getElementById('filesGallery').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Filter files
+function filterFiles() {
+    console.log('Filtering files...');
+}
+
+// Toggle select all
+function toggleSelectAll() {
+    const checkbox = document.getElementById('selectAllFiles');
+    const checkboxes = document.querySelectorAll('#filesTable input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+}
+
+// Load more files
+function loadMoreFiles() {
+    console.log('Loading more files...');
+}
+
+// Refresh files
+function refreshFiles() {
+    loadFiles();
+}
+
+// Delete selected files
+function deleteSelectedFiles() {
+    console.log('Deleting selected files...');
+}
+
+// Export files list
+function exportFilesList() {
+    console.log('Exporting files list...');
+}
+
+// Quick analyze selected
+function quickAnalyzeSelected() {
+    console.log('Quick analyzing selected files...');
+}
+
+// Upload files
+function uploadFiles() {
+    console.log('Uploading files...');
+}
+
+// Analyze current file
+function analyzeCurrentFile() {
+    console.log('Analyzing current file...');
+}
+
+// Download file
+function downloadFile() {
+    console.log('Downloading file...');
+}
+
+// Confirm delete
+function confirmDelete() {
+    console.log('Confirming delete...');
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', initializeFilesPage);
+</script>
+{% endblock %}

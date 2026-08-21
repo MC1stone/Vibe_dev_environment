@@ -1,0 +1,243 @@
+#!/bin/bash
+# Django Startup Script
+# This script starts the Django server for the NIR_Mistral Framework
+
+set -e
+set -o pipefail
+
+# Configuration
+DJANGO_PROJECT="{{ django_project_path }}"
+VENV_PATH="{{ venv_path }}"
+PROJECT_ROOT="{{ deploy_root }}"
+DJANGO_PORT="{{ django_port }}"
+LOG_DIR="${PROJECT_ROOT}/logs"
+PID_DIR="/tmp/nir_mistral"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Create directories
+mkdir -p "${LOG_DIR}"
+mkdir -p "${PID_DIR}"
+
+# Logging functions
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+log_header() {
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}$1${NC}"
+    echo -e "${BLUE}========================================${NC}"
+}
+
+# Check if already running
+check_already_running() {
+    if [ -f "${PID_DIR}/django.pid" ] && kill -0 $(cat "${PID_DIR}/django.pid") 2>/dev/null; then
+        log_warn "Django server is already running (PID: $(cat ${PID_DIR}/django.pid))"
+        return 1
+    fi
+    return 0
+}
+
+# Cleanup old processes
+cleanup_old_processes() {
+    log_info "Cleaning up old Django processes..."
+    
+    # Kill Django processes
+    if [ -f "${PID_DIR}/django.pid" ]; then
+        kill $(cat "${PID_DIR}/django.pid") 2>/dev/null || true
+        rm -f "${PID_DIR}/django.pid"
+    fi
+    
+    # Kill any processes using our port
+    local pid
+    pid=$(lsof -t -i :${DJANGO_PORT} 2>/dev/null || netstat -tlnp 2>/dev/null | grep :${DJANGO_PORT} | awk '{print $7}' | cut -d'/' -f1)
+    
+    if [ -n "${pid}" ]; then
+        log_warn "Killing process on port ${DJANGO_PORT} (PID: ${pid})"
+        kill ${pid} 2>/dev/null || true
+        sleep 1
+        kill -9 ${pid} 2>/dev/null || true
+    fi
+}
+
+# Check dependencies
+check_dependencies() {
+    log_info "Checking Django dependencies..."
+    
+    # Check Python
+    if ! command -v python3 &> /dev/null; then
+        log_error "Python3 is not installed. Please install Python3 first."
+        exit 1
+    fi
+    
+    # Check virtualenv
+    if [ ! -d "${VENV_PATH}" ]; then
+        log_error "Virtual environment not found at ${VENV_PATH}"
+        exit 1
+    fi
+    
+    # Check Django project
+    if [ ! -f "${DJANGO_PROJECT}/manage.py" ]; then
+        log_error "Django project not found at ${DJANGO_PROJECT}"
+        exit 1
+    fi
+}
+
+# Start Django with Gunicorn
+start_with_gunicorn() {
+    log_info "Starting Django server with Gunicorn on port ${DJANGO_PORT}..."
+    
+    cd "${DJANGO_PROJECT}"
+    
+    # Set environment variables
+    export DJANGO_SETTINGS_MODULE="{{ django_settings_module }}"
+    export PYTHONPATH="${PROJECT_ROOT}"
+    
+    # Start with Gunicorn
+    nohup ${VENV_PATH}/bin/gunicorn \
+        --bind 0.0.0.0:${DJANGO_PORT} \
+        --workers {{ django_workers | default(4) }} \
+        --timeout {{ django_timeout | default(300) }} \
+        --max-requests 1000 \
+        --max-request-jitter 50 \
+        --log-level info \
+        --access-logfile ${LOG_DIR}/access.log \
+        --error-logfile ${LOG_DIR}/gunicorn.log \
+        --capture-output \
+        --enable-stdio-inheritance \
+        --pythonpath ${PROJECT_ROOT} \
+        --config ${DJANGO_PROJECT}/gunicorn.conf.py \
+        nir_web.wsgi:application \
+        > ${LOG_DIR}/django.log 2>&1 &
+    
+    local pid=$!
+    echo ${pid} > "${PID_DIR}/django.pid"
+    
+    # Wait for Django to start
+    log_info "Waiting for Django server to start..."
+    local retries=15
+    local count=0
+    
+    while ! curl -s "http://localhost:${DJANGO_PORT}/api/health/" > /dev/null 2>&1; do
+        sleep 2
+        count=$((count + 1))
+        if [ ${count} -ge ${retries} ]; then
+            log_error "Django server failed to start within ${retries} seconds"
+            return 1
+        fi
+    done
+    
+    log_info "Django server started successfully with Gunicorn (PID: ${pid})"
+    return 0
+}
+
+# Start Django with development server
+start_with_dev_server() {
+    log_info "Starting Django server with development server on port ${DJANGO_PORT}..."
+    
+    cd "${DJANGO_PROJECT}"
+    
+    # Set environment variables
+    export DJANGO_SETTINGS_MODULE="{{ django_settings_module }}"
+    export PYTHONPATH="${PROJECT_ROOT}"
+    
+    # Start with Django development server
+    nohup ${VENV_PATH}/bin/python manage.py runserver 0.0.0.0:${DJANGO_PORT} > ${LOG_DIR}/django.log 2>&1 &
+    
+    local pid=$!
+    echo ${pid} > "${PID_DIR}/django.pid"
+    
+    # Wait for Django to start
+    log_info "Waiting for Django server to start..."
+    local retries=15
+    local count=0
+    
+    while ! curl -s "http://localhost:${DJANGO_PORT}/api/health/" > /dev/null 2>&1; do
+        sleep 2
+        count=$((count + 1))
+        if [ ${count} -ge ${retries} ]; then
+            log_error "Django server failed to start within ${retries} seconds"
+            return 1
+        fi
+    done
+    
+    log_info "Django server started successfully with development server (PID: ${pid})"
+    return 0
+}
+
+# Main execution
+main() {
+    log_header "DJANGO STARTUP SCRIPT"
+    
+    # Check if already running
+    if ! check_already_running; then
+        log_info "Django server is already running. Use 'stop' to stop it first."
+        exit 0
+    fi
+    
+    # Cleanup old processes
+    cleanup_old_processes
+    
+    # Check dependencies
+    check_dependencies
+    
+    # Start with Gunicorn (production) or development server (debug)
+    if [ "{{ django_debug | default(False) | lower }}" = "true" ]; then
+        start_with_dev_server
+    else
+        start_with_gunicorn
+    fi
+}
+
+# Handle commands
+case "$1" in
+    start)
+        main
+        ;;
+    stop)
+        log_info "Stopping Django server..."
+        cleanup_old_processes
+        log_info "Django server stopped"
+        ;;
+    restart)
+        log_info "Restarting Django server..."
+        cleanup_old_processes
+        main
+        ;;
+    status)
+        log_header "DJANGO SERVER STATUS"
+        
+        if [ -f "${PID_DIR}/django.pid" ] && kill -0 $(cat "${PID_DIR}/django.pid") 2>/dev/null; then
+            log_info "Django server: RUNNING (PID: $(cat ${PID_DIR}/django.pid))"
+        else
+            log_warn "Django server: STOPPED"
+        fi
+        
+        # Check port
+        if curl -s "http://localhost:${DJANGO_PORT}/api/health/" > /dev/null 2>&1; then
+            log_info "Django health check: OK"
+        else
+            log_warn "Django health check: FAILED"
+        fi
+        ;;
+    logs)
+        tail -f "${LOG_DIR}/django.log" "${LOG_DIR}/gunicorn.log" "${LOG_DIR}/access.log"
+        ;;
+    *)
+        main "$@"
+        ;;
+esac

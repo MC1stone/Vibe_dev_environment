@@ -1,0 +1,75 @@
+# Nginx configuration for NIR Mistral Crew AI
+
+upstream django {
+    server 127.0.0.1:{{ django_port }};
+}
+
+server {
+    listen 80;
+    server_name {{ ansible_host }};
+    
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    
+    # Static files
+    location /static/ {
+        alias {{ project_root }}/django_project/static/;
+        expires 30d;
+    }
+    
+    # Media files
+    location /media/ {
+        alias {{ project_root }}/django_project/media/;
+        expires 30d;
+    }
+    
+    # API endpoints
+    location /api/ {
+        proxy_pass http://django;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
+    
+    # Crew AI specific endpoints
+    location /api/crewai/ {
+        proxy_pass http://django;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
+    
+    # Main application
+    location / {
+        proxy_pass http://django;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
+    
+    # Error pages
+    error_page 500 502 503 504 /500.html;
+    location = /500.html {
+        root {{ project_root }}/django_project/templates/;
+    }
+    
+    # Logging
+    access_log {{ log_dir }}/nginx_access.log;
+    error_log {{ log_dir }}/nginx_error.log;
+    
+    # Timeout settings
+    client_max_body_size 100M;
+    proxy_read_timeout 300;
+    proxy_connect_timeout 300;
+    proxy_send_timeout 300;
+    send_timeout 300;
+}

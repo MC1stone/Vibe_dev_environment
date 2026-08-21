@@ -1,0 +1,104 @@
+# Port Agent Environment Configuration
+# This file contains environment variables for the Port Management Agent
+
+# Server Configuration
+PORT_AGENT_HOST=0.0.0.0
+PORT_AGENT_PORT={{ port_agent_port }}
+PORT_AGENT_DEBUG={{ django_debug | default(False) | lower }}
+
+# Path Configuration
+PROJECT_ROOT={{ deploy_root }}
+PORT_AGENT_PATH={{ port_agent_path }}
+VENV_PATH={{ venv_path }}
+DJANGO_PROJECT_PATH={{ django_project_path }}
+LOG_DIR={{ deploy_root }}/logs
+DATA_DIR={{ deploy_root }}/data
+CONFIG_DIR={{ deploy_root }}/config
+
+# Django Configuration
+DJANGO_SETTINGS_MODULE={{ django_settings_module }}
+DJANGO_SECRET_KEY={{ django_secret_key }}
+DJANGO_DEBUG={{ django_debug | default(False) | lower }}
+DJANGO_ALLOWED_HOSTS="['localhost', '127.0.0.1', '::1']"
+DJANGO_PORT={{ django_port }}
+
+# Port Management Configuration
+PORT_RANGE_START=8000
+PORT_RANGE_END=9000
+MAX_RESERVED_PORTS=100
+PORT_RESERVATION_TIMEOUT=3600
+
+# Docker Configuration
+DOCKER_ENABLED={{ docker_enabled | default(False) | lower }}
+DOCKER_SOCKET=/var/run/docker.sock
+
+# Framework Ports
+FRAMEWORK_DJANGO_PORT={{ django_port }}
+FRAMEWORK_PORT_AGENT_PORT={{ port_agent_port }}
+FRAMEWORK_WEAVIATE_PORT=8080
+FRAMEWORK_REDIS_PORT=6379
+FRAMEWORK_ELASTICSEARCH_PORT=9200
+FRAMEWORK_POSTGRESQL_PORT=5432
+
+# Agent Ports
+AGENT_DJANGO_PORT={{ django_port }}
+AGENT_PORT_AGENT_PORT={{ port_agent_port }}
+AGENT_RESEARCH_PORT=8002
+AGENT_ANALYSIS_PORT=8003
+AGENT_WEAVIATE_PORT=8081
+
+# Performance Configuration
+PORT_AGENT_WORKERS={{ port_agent_workers | default(2) }}
+PORT_AGENT_TIMEOUT={{ port_agent_timeout | default(60) }}
+MAX_REQUESTS=1000
+MAX_REQUEST_SIZE=16777216
+
+# Security Configuration
+PORT_AGENT_SECRET_KEY={{ django_secret_key }}
+PORT_AGENT_API_KEY=nir-mistral-port-agent-key
+
+# Database Configuration
+USE_DATABASE=False
+DATABASE_URL=sqlite:///{{ deploy_root }}/data/port_agent.db
+
+# Cache Configuration
+USE_CACHE=True
+CACHE_TYPE=simple
+CACHE_TIMEOUT=300
+
+# Health Check Configuration
+HEALTH_CHECK_INTERVAL=30
+HEALTH_CHECK_TIMEOUT=5
+
+# Cleanup Configuration
+AUTO_CLEANUP=True
+CLEANUP_INTERVAL=3600
+STALE_PORT_TIMEOUT=86400
+
+# Logging Configuration
+LOG_LEVEL=INFO
+LOG_FORMAT="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+LOG_FILE={{ deploy_root }}/logs/port_agent.log
+LOG_MAX_BYTES=10485760
+LOG_BACKUP_COUNT=5
+
+# Network Configuration
+ALLOWED_HOSTS=localhost,127.0.0.1,::1
+BIND_ADDRESS=0.0.0.0
+
+# Development Configuration
+DEVELOPMENT_MODE={{ django_debug | default(False) | lower }}
+ENABLE_DEBUG_ENDPOINTS={{ django_debug | default(False) | lower }}
+
+# Metrics Configuration
+METRICS_ENABLED=False
+METRICS_PORT=9090
+
+# Notification Configuration
+NOTIFICATIONS_ENABLED=False
+NOTIFICATION_WEBHOOK=
+NOTIFICATION_LEVEL=ERROR
+
+# Path Configuration for Python
+PYTHONPATH={{ deploy_root }}
+PATH={{ venv_path }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

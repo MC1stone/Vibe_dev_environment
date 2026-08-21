@@ -1,0 +1,40 @@
+# Gunicorn configuration for NIR Mistral Crew AI
+
+import multiprocessing
+
+# Server Socket
+bind = "0.0.0.0:{{ django_port }}"
+
+# Worker Processes
+workers = {{ gunicorn_workers }}
+worker_class = "gthread"
+threads = 2
+max_requests = 1000
+max_requests_jitter = 50
+
+# Worker Connections
+timeout = 30
+keepalive = 2
+
+# Server Mechanics
+preload_app = True
+sendfile = True
+
+# Process Naming
+proc_name = "nir_mistral_crewai"
+
+# Logging
+accesslog = "{{ log_dir }}/gunicorn_access.log"
+errorlog = "{{ log_dir }}/gunicorn_error.log"
+loglevel = "info"
+
+# Security
+limit_request_fields = 32000
+limit_request_field_size = 0
+
+# Environment
+raw_env = [
+    "DJANGO_SETTINGS_MODULE=nir_web.settings",
+    "PYTHONPATH={{ project_root }}/django_project",
+    "CREW_AI_ENABLED=True"
+]

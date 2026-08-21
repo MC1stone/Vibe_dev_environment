@@ -1,0 +1,531 @@
+{
+    "agents": {
+        "ilias_integration": {
+            "enabled": {{ enable_ilias_integration | lower }},
+            "config": {
+                "ilias_url": "",
+                "client_id": "nir_mistral_client",
+                "client_secret": "",
+                "api_version": "v1",
+                "saml_enabled": true,
+                "sync_users": true,
+                "sync_courses": true,
+                "sync_content": true,
+                "auto_connect": false,
+                "timeout": 30,
+                "retry_attempts": 3
+            },
+            "features": [
+                "user_synchronization",
+                "course_synchronization",
+                "content_synchronization",
+                "forum_integration",
+                "messaging",
+                "learning_analytics",
+                "single_sign_on"
+            ]
+        },
+        
+        "hswt_styling": {
+            "enabled": true,
+            "config": {
+                "color_scheme": {
+                    "primary": "#006699",
+                    "secondary": "#0099CC",
+                    "accent": "#FF6600",
+                    "background": "#FFFFFF",
+                    "text": "#333333",
+                    "text_light": "#666666",
+                    "border": "#CCCCCC",
+                    "success": "#28A745",
+                    "warning": "#FFC107",
+                    "error": "#DC3545",
+                    "info": "#17A2B8"
+                },
+                "typography": {
+                    "font_family": "'Open Sans', 'Helvetica Neue', Arial, sans-serif",
+                    "heading_font": "'Open Sans', 'Helvetica Neue', Arial, sans-serif",
+                    "base_size": "16px"
+                },
+                "output_dir": "{{ nir_project_root }}/static/css/hswt",
+                "template_dir": "{{ nir_project_root }}/templates",
+                "auto_apply": true,
+                "dark_mode_support": true
+            },
+            "features": [
+                "css_generation",
+                "template_styling",
+                "ilias_adaptation",
+                "responsive_design",
+                "component_styles",
+                "utility_classes"
+            ]
+        },
+        
+        "onboarding": {
+            "enabled": true,
+            "config": {
+                "onboarding_data_file": "{{ nir_deploy_root }}/config/onboarding.json",
+                "help_data_file": "{{ nir_deploy_root }}/config/help_topics.json",
+                "tooltip_data_file": "{{ nir_deploy_root }}/config/tooltips.json",
+                "output_dir": "{{ nir_project_root }}/static/onboarding",
+                "template_dir": "{{ nir_project_root }}/templates/onboarding",
+                "auto_start": true,
+                "completion_tracking": true,
+                "progress_indicators": true
+            },
+            "features": [
+                "interactive_tutorials",
+                "contextual_help",
+                "progress_tracking",
+                "tooltip_system",
+                "quick_start_guide",
+                "faq_system"
+            ]
+        },
+        
+        "audio_processor": {
+            "enabled": {{ enable_audio_processing | lower }},
+            "config": {
+                "supported_formats": ["wav", "mp3", "flac", "ogg", "aiff", "wma"],
+                "output_dir": "{{ nir_deploy_root }}/data/processed_audio",
+                "temp_dir": "/tmp/nir_audio",
+                "ffmpeg_path": "ffmpeg",
+                "ffprobe_path": "ffprobe",
+                "default_sample_rate": 44100,
+                "default_bits_per_sample": 16,
+                "default_channels": 1,
+                "normalize_audio": true,
+                "apply_bandpass": false,
+                "bandpass_range": [20, 20000],
+                "noise_reduction": false,
+                "batch_processing": true,
+                "max_file_size": 52428800
+            },
+            "features": [
+                "format_detection",
+                "metadata_extraction",
+                "audio_validation",
+                "audio_loading",
+                "preprocessing",
+                "fft_analysis",
+                "quality_assessment",
+                "spectral_content_detection",
+                "format_conversion",
+                "batch_processing",
+                "report_generation"
+            ]
+        },
+        
+        "image_processor": {
+            "enabled": {{ enable_image_processing | lower }},
+            "config": {
+                "supported_formats": ["png", "jpg", "jpeg", "tiff", "bmp", "gif"],
+                "output_dir": "{{ nir_deploy_root }}/data/processed_images",
+                "temp_dir": "/tmp/nir_images",
+                "max_file_size": 52428800,
+                "quality_threshold": 85,
+                "resize_enabled": true,
+                "max_width": 4096,
+                "max_height": 4096,
+                "auto_orient": true,
+                "color_correction": false,
+                "enhancement": true,
+                "metadata_extraction": true,
+                "exif_preservation": true
+            },
+            "features": [
+                "format_detection",
+                "metadata_extraction",
+                "image_validation",
+                "image_loading",
+                "preprocessing",
+                "spectral_analysis",
+                "quality_assessment",
+                "format_conversion",
+                "batch_processing",
+                "report_generation"
+            ]
+        },
+        
+        "shift_detector": {
+            "enabled": {{ enable_spectrometer_analysis | lower }},
+            "config": {
+                "detection_method": "fft_correlation",
+                "reference_spectra": [
+                    "standard_wavelengths.json",
+                    "common_spectrometers.json"
+                ],
+                "shift_threshold": 0.5,
+                "confidence_threshold": 0.8,
+                "max_shift": 10.0,
+                "min_correlation": 0.7,
+                "window_size": 100,
+                "smoothing": true,
+                "baseline_correction": true,
+                "noise_filtering": true
+            },
+            "features": [
+                "wavelength_shift_detection",
+                "intensity_drift_detection",
+                "baseline_shift_detection",
+                "resolution_assessment",
+                "noise_analysis",
+                "calibration_verification",
+                "shift_quantification",
+                "confidence_scoring"
+            ]
+        },
+        
+        "parameter_recommender": {
+            "enabled": {{ enable_spectrometer_analysis | lower }},
+            "config": {
+                "spectrometer_profiles": [
+                    "public_lab",
+                    "raspberry_pi",
+                    "arduino",
+                    "ocean_optics",
+                    "avantes",
+                    "custom"
+                ],
+                "recommendation_method": "ml_based",
+                "training_data": "{{ nir_deploy_root }}/data/spectrometer_profiles.json",
+                "default_parameters": {
+                    "integration_time": 100,
+                    "wavelength_range": [400, 1000],
+                    "resolution": 1.0,
+                    "averaging": 10,
+                    "dark_correction": true,
+                    "reference_measurement": true
+                },
+                "optimization_goals": [
+                    "signal_to_noise",
+                    "spectral_resolution",
+                    "measurement_speed",
+                    "dynamic_range"
+                ],
+                "constraints": {
+                    "max_integration_time": 10000,
+                    "min_resolution": 0.1,
+                    "max_averaging": 100
+                }
+            },
+            "features": [
+                "parameter_optimization",
+                "spectrometer_profiling",
+                "calibration_recommendations",
+                "hardware_suggestions",
+                "performance_estimation",
+                "constraint_analysis",
+                "multi_objective_optimization"
+            ]
+        },
+        
+        "metadata_quality": {
+            "enabled": true,
+            "config": {
+                "standards": [
+                    "dublin_core",
+                    "iso_19115",
+                    "fgdc",
+                    "schema_org",
+                    "nir_specific"
+                ],
+                "scoring_weights": {
+                    "completeness": 0.3,
+                    "accuracy": 0.25,
+                    "standards_compliance": 0.2,
+                    "consistency": 0.15,
+                    "timeliness": 0.1
+                },
+                "quality_thresholds": {
+                    "excellent": 90,
+                    "good": 80,
+                    "fair": 70,
+                    "poor": 60
+                },
+                "required_fields": [
+                    "title",
+                    "description",
+                    "creator",
+                    "date",
+                    "format",
+                    "identifier"
+                ],
+                "recommended_fields": [
+                    "subject",
+                    "type",
+                    "source",
+                    "language",
+                    "coverage",
+                    "rights"
+                ]
+            },
+            "features": [
+                "metadata_validation",
+                "quality_scoring",
+                "standards_compliance",
+                "completeness_check",
+                "accuracy_verification",
+                "consistency_analysis",
+                "improvement_recommendations"
+            ]
+        },
+        
+        "spectral_analysis": {
+            "enabled": true,
+            "config": {
+                "analysis_methods": [
+                    "fft",
+                    "wavelet",
+                    "pca",
+                    "pls",
+                    "svm",
+                    "neural_network"
+                ],
+                "preprocessing": {
+                    "smoothing": true,
+                    "baseline_correction": true,
+                    "noise_removal": true,
+                    "normalization": true,
+                    "derivative": false
+                },
+                "feature_extraction": {
+                    "spectral_features": true,
+                    "statistical_features": true,
+                    "textural_features": false,
+                    "custom_features": true
+                },
+                "model_parameters": {
+                    "fft_size": 2048,
+                    "window_function": "hamming",
+                    "overlap": 0.5,
+                    "max_components": 10
+                }
+            },
+            "features": [
+                "spectral_analysis",
+                "feature_extraction",
+                "pattern_recognition",
+                "classification",
+                "regression",
+                "clustering",
+                "anomaly_detection"
+            ]
+        },
+        
+        "flower": {
+            "enabled": {{ enable_federated_learning | lower }},
+            "config": {
+                "server_url": "http://localhost:{{ port_agent_port }}",
+                "client_name": "nir_mistral_client",
+                "auto_share": false,
+                "privacy_level": "high",
+                "data_types": [
+                    "spectral_data",
+                    "metadata",
+                    "analysis_results",
+                    "model_updates"
+                ],
+                "sharing_options": [
+                    "full_participation",
+                    "partial_participation",
+                    "anonymous_participation",
+                    "opt_out"
+                ],
+                "sync_interval": 3600,
+                "max_data_size": 10485760,
+                "encryption_enabled": true,
+                "compression_enabled": true
+            },
+            "features": [
+                "federated_training",
+                "model_aggregation",
+                "secure_communication",
+                "privacy_preservation",
+                "data_anonymization",
+                "model_distribution",
+                "progress_tracking"
+            ]
+        },
+        
+        "data_preparation": {
+            "enabled": true,
+            "config": {
+                "data_sources": [
+                    "local_files",
+                    "database",
+                    "api",
+                    "federated",
+                    "ilias"
+                ],
+                "file_formats": [
+                    "csv",
+                    "json",
+                    "xml",
+                    "txt",
+                    "xlsx",
+                    "hdf5",
+                    "netcdf"
+                ],
+                "preprocessing_steps": [
+                    "data_cleaning",
+                    "normalization",
+                    "feature_scaling",
+                    "missing_value_imputation",
+                    "outlier_detection",
+                    "dimensionality_reduction"
+                ],
+                "quality_checks": [
+                    "data_completeness",
+                    "value_ranges",
+                    "consistency",
+                    "duplicates",
+                    "statistical_properties"
+                ]
+            },
+            "features": [
+                "data_loading",
+                "format_conversion",
+                "data_validation",
+                "preprocessing",
+                "quality_assessment",
+                "data_augmentation",
+                "data_splitting"
+            ]
+        },
+        
+        "calibration": {
+            "enabled": true,
+            "config": {
+                "calibration_methods": [
+                    "single_point",
+                    "two_point",
+                    "multi_point",
+                    "polynomial",
+                    "spline",
+                    "machine_learning"
+                ],
+                "reference_materials": [
+                    "spectralon",
+                    "polystyrene",
+                    "ceramic",
+                    "custom"
+                ],
+                "calibration_frequency": "daily",
+                "validation_methods": [
+                    "cross_validation",
+                    "external_validation",
+                    "time_series_validation"
+                ],
+                "accuracy_targets": {
+                    "wavelength": 0.1,
+                    "intensity": 0.01,
+                    "reflectance": 0.005
+                }
+            },
+            "features": [
+                "calibration_creation",
+                "calibration_validation",
+                "calibration_optimization",
+                "calibration_monitoring",
+                "drift_detection",
+                "recalibration_scheduling"
+            ]
+        },
+        
+        "reporting": {
+            "enabled": true,
+            "config": {
+                "report_formats": [
+                    "html",
+                    "pdf",
+                    "json",
+                    "csv",
+                    "quarto",
+                    "markdown"
+                ],
+                "report_types": [
+                    "analysis_report",
+                    "quality_report",
+                    "comparison_report",
+                    "trend_report",
+                    "custom_report"
+                ],
+                "output_dir": "{{ nir_deploy_root }}/data/reports",
+                "template_dir": "{{ nir_project_root }}/templates/reports",
+                "auto_generate": true,
+                "email_reports": false,
+                "report_retention": 30
+            },
+            "features": [
+                "report_generation",
+                "template_management",
+                "data_visualization",
+                "statistical_analysis",
+                "custom_formatting",
+                "report_scheduling",
+                "report_sharing"
+            ]
+        },
+        
+        "quarto": {
+            "enabled": true,
+            "config": {
+                "quarto_path": "quarto",
+                "template_dir": "{{ nir_project_root }}/templates/quarto",
+                "output_dir": "{{ nir_deploy_root }}/data/quarto_reports",
+                "formats": ["html", "pdf", "docx", "pptx"],
+                "auto_render": true,
+                "include_source": true,
+                "include_data": true,
+                "custom_css": "{{ nir_project_root }}/static/css/quarto.css"
+            },
+            "features": [
+                "quarto_rendering",
+                "template_management",
+                "data_integration",
+                "code_execution",
+                "multi_format_output",
+                "report_customization"
+            ]
+        }
+    },
+    
+    "scheduling": {
+        "enabled": true,
+        "tasks": [
+            {
+                "name": "cleanup_old_files",
+                "schedule": "daily",
+                "time": "02:00",
+                "enabled": true
+            },
+            {
+                "name": "update_federated_models",
+                "schedule": "hourly",
+                "time": ":00",
+                "enabled": {{ enable_federated_learning | lower }}
+            },
+            {
+                "name": "sync_ilias_data",
+                "schedule": "every_30_minutes",
+                "time": ":00",
+                "enabled": {{ enable_ilias_integration | lower }}
+            },
+            {
+                "name": "backup_database",
+                "schedule": "daily",
+                "time": "03:00",
+                "enabled": true
+            },
+            {
+                "name": "generate_reports",
+                "schedule": "weekly",
+                "time": "04:00",
+                "day": "monday",
+                "enabled": true
+            }
+        ]
+    }
+}

@@ -1,0 +1,34 @@
+# Ansible Requirements for NIR_Mistral DeveloperAgent Framework
+# Install with: pip install -r ansible/requirements.txt
+
+# Core Ansible
+ansible>=8.0.0
+ansible-core>=2.15.0
+
+# Python dependencies for Ansible modules
+paramiko>=3.0.0
+pyyaml>=6.0.0
+jinja2>=3.1.0
+httpx>=0.25.0
+
+# Docker support
+docker>=6.0.0
+pydocker>=2.0.0
+
+# Database clients
+psycopg2-binary>=2.9.0
+
+# HTTP and API support
+requests>=2.31.0
+urllib3>=2.0.0
+
+# Development tools support
+gitpython>=3.1.0
+
+# Monitoring and metrics
+prometheus-client>=0.17.0
+
+# Utility packages
+jmespath>=1.0.0
+netaddr>=0.8.0
+pytz>=2023.0.0

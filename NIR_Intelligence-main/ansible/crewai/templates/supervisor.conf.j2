@@ -1,0 +1,62 @@
+; Supervisor configuration for NIR Mistral Crew AI
+
+[program:nir_mistral_gunicorn]
+command={{ venv_path }}/bin/gunicorn -c {{ project_root }}/django_project/gunicorn.conf.py nir_web.wsgi:application
+directory={{ project_root }}/django_project
+user={{ nir_user }}
+group={{ nir_group }}
+numprocs=1
+stdout_logfile={{ log_dir }}/gunicorn_supervisor.log
+stderr_logfile={{ log_dir }}/gunicorn_supervisor_error.log
+environment=
+    PYTHONPATH="{{ project_root }}/django_project",
+    DJANGO_SETTINGS_MODULE="nir_web.settings"
+autostart=true
+autorestart=true
+startsecs=10
+stopwaitsecs=60
+stopasgroup=true
+killasgroup=true
+
+[program:nir_mistral_celery]
+command={{ venv_path }}/bin/celery -A nir_web worker --loglevel=info
+process_name=%(program_name)s_%(process_num)02d
+numprocs=2
+user={{ nir_user }}
+group={{ nir_group }}
+directory={{ project_root }}/django_project
+stdout_logfile={{ log_dir }}/celery.log
+stderr_logfile={{ log_dir }}/celery_error.log
+environment=
+    PYTHONPATH="{{ project_root }}/django_project",
+    DJANGO_SETTINGS_MODULE="nir_web.settings"
+autostart=true
+autorestart=true
+startsecs=10
+
+[program:nir_mistral_flower]
+command={{ venv_path }}/bin/celery -A nir_web flower --port=5555
+user={{ nir_user }}
+group={{ nir_group }}
+directory={{ project_root }}/django_project
+stdout_logfile={{ log_dir }}/flower.log
+stderr_logfile={{ log_dir }}/flower_error.log
+environment=
+    PYTHONPATH="{{ project_root }}/django_project",
+    DJANGO_SETTINGS_MODULE="nir_web.settings"
+autostart=true
+autorestart=true
+startsecs=10
+
+[program:nir_mistral_quarto]
+command=/usr/bin/quarto render --server
+user={{ nir_user }}
+group={{ nir_group }}
+directory={{ project_root }}
+stdout_logfile={{ log_dir }}/quarto.log
+stderr_logfile={{ log_dir }}/quarto_error.log
+environment=
+    QUARTO_SERVER_ADDRESS="0.0.0.0",
+    QUARTO_SERVER_PORT="4242"
+autostart=false
+autorestart=false

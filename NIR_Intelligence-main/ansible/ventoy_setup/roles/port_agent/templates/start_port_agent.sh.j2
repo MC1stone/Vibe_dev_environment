@@ -1,0 +1,273 @@
+#!/bin/bash
+# Port Agent Startup Script
+# This script starts the Port Management Agent for the NIR_Mistral Framework
+
+set -e
+set -o pipefail
+
+# Configuration
+PORT_AGENT_PATH="{{ port_agent_path }}"
+VENV_PATH="{{ venv_path }}"
+PROJECT_ROOT="{{ deploy_root }}"
+PORT_AGENT_PORT="{{ port_agent_port }}"
+LOG_DIR="${PROJECT_ROOT}/logs"
+PID_DIR="/tmp/nir_mistral"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Create directories
+mkdir -p "${LOG_DIR}"
+mkdir -p "${PID_DIR}"
+
+# Logging functions
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+log_header() {
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}$1${NC}"
+    echo -e "${BLUE}========================================${NC}"
+}
+
+# Check if already running
+check_already_running() {
+    if [ -f "${PID_DIR}/port_agent.pid" ] && kill -0 $(cat "${PID_DIR}/port_agent.pid") 2>/dev/null; then
+        log_warn "Port Agent is already running (PID: $(cat ${PID_DIR}/port_agent.pid))"
+        return 1
+    fi
+    return 0
+}
+
+# Cleanup old processes
+cleanup_old_processes() {
+    log_info "Cleaning up old Port Agent processes..."
+    
+    if [ -f "${PID_DIR}/port_agent.pid" ]; then
+        kill $(cat "${PID_DIR}/port_agent.pid") 2>/dev/null || true
+        rm -f "${PID_DIR}/port_agent.pid"
+    fi
+    
+    # Kill any processes using our port
+    local pid
+    pid=$(lsof -t -i :${PORT_AGENT_PORT} 2>/dev/null || netstat -tlnp 2>/dev/null | grep :${PORT_AGENT_PORT} | awk '{print $7}' | cut -d'/' -f1)
+    
+    if [ -n "${pid}" ]; then
+        log_warn "Killing process on port ${PORT_AGENT_PORT} (PID: ${pid})"
+        kill ${pid} 2>/dev/null || true
+        sleep 1
+        kill -9 ${pid} 2>/dev/null || true
+    fi
+}
+
+# Check dependencies
+check_dependencies() {
+    log_info "Checking Port Agent dependencies..."
+    
+    # Check Python
+    if ! command -v python3 &> /dev/null; then
+        log_error "Python3 is not installed. Please install Python3 first."
+        exit 1
+    fi
+    
+    # Check virtualenv
+    if [ ! -d "${VENV_PATH}" ]; then
+        log_error "Virtual environment not found at ${VENV_PATH}"
+        exit 1
+    fi
+    
+    # Check Port Agent
+    if [ ! -f "${PORT_AGENT_PATH}/agent.py" ]; then
+        log_error "Port Agent not found at ${PORT_AGENT_PATH}"
+        exit 1
+    fi
+}
+
+# Start Port Agent with Gunicorn
+start_with_gunicorn() {
+    log_info "Starting Port Agent with Gunicorn on port ${PORT_AGENT_PORT}..."
+    
+    cd "${PORT_AGENT_PATH}"
+    
+    # Load environment variables
+    if [ -f "${PORT_AGENT_PATH}/.env" ]; then
+        set -a
+        source "${PORT_AGENT_PATH}/.env"
+        set +a
+    fi
+    
+    # Start with Gunicorn
+    nohup ${VENV_PATH}/bin/gunicorn \
+        --bind 0.0.0.0:${PORT_AGENT_PORT} \
+        --workers {{ port_agent_workers | default(2) }} \
+        --timeout {{ port_agent_timeout | default(60) }} \
+        --max-requests 1000 \
+        --max-request-jitter 50 \
+        --log-level info \
+        --access-logfile ${LOG_DIR}/port_agent_access.log \
+        --error-logfile ${LOG_DIR}/port_agent_error.log \
+        --capture-output \
+        --enable-stdio-inheritance \
+        --pythonpath ${PROJECT_ROOT} \
+        agents.port_agent.server:app \
+        > ${LOG_DIR}/port_agent_gunicorn.log 2>&1 &
+    
+    local pid=$!
+    echo ${pid} > "${PID_DIR}/port_agent.pid"
+    
+    # Wait for Port Agent to start
+    log_info "Waiting for Port Agent to start..."
+    local retries=10
+    local count=0
+    
+    while ! curl -s "http://localhost:${PORT_AGENT_PORT}/api/ports/" > /dev/null 2>&1; do
+        sleep 2
+        count=$((count + 1))
+        if [ ${count} -ge ${retries} ]; then
+            log_error "Port Agent failed to start within ${retries} seconds"
+            return 1
+        fi
+    done
+    
+    log_info "Port Agent started successfully with Gunicorn (PID: ${pid})"
+    return 0
+}
+
+# Start Port Agent with Flask development server
+start_with_flask() {
+    log_info "Starting Port Agent with Flask development server on port ${PORT_AGENT_PORT}..."
+    
+    cd "${PORT_AGENT_PATH}"
+    
+    # Load environment variables
+    if [ -f "${PORT_AGENT_PATH}/.env" ]; then
+        set -a
+        source "${PORT_AGENT_PATH}/.env"
+        set +a
+    fi
+    
+    # Start with Flask
+    nohup ${VENV_PATH}/bin/python -c "
+import sys
+sys.path.insert(0, '${PROJECT_ROOT}')
+
+from agents.port_agent.agent import port_agent
+from agents.port_agent.server import create_app
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('${LOG_DIR}/port_agent.log'),
+        logging.StreamHandler()
+    ]
+)
+
+# Initialize and start
+result = port_agent.initialize()
+print(f'Port Agent initialized: {result}')
+
+# Create Flask app and run
+app = create_app()
+print(f'Starting Port Agent server on port {PORT_AGENT_PORT}')
+app.run(host='0.0.0.0', port=${PORT_AGENT_PORT}, debug=${PORT_AGENT_DEBUG:-False})
+" > "${LOG_DIR}/port_agent_startup.log" 2>&1 &
+    
+    local pid=$!
+    echo ${pid} > "${PID_DIR}/port_agent.pid"
+    
+    # Wait for Port Agent to start
+    log_info "Waiting for Port Agent to start..."
+    local retries=10
+    local count=0
+    
+    while ! curl -s "http://localhost:${PORT_AGENT_PORT}/api/ports/" > /dev/null 2>&1; do
+        sleep 2
+        count=$((count + 1))
+        if [ ${count} -ge ${retries} ]; then
+            log_error "Port Agent failed to start within ${retries} seconds"
+            return 1
+        fi
+    done
+    
+    log_info "Port Agent started successfully with Flask (PID: ${pid})"
+    return 0
+}
+
+# Main execution
+main() {
+    log_header "PORT AGENT STARTUP SCRIPT"
+    
+    # Check if already running
+    if ! check_already_running; then
+        log_info "Port Agent is already running. Use 'stop' to stop it first."
+        exit 0
+    fi
+    
+    # Cleanup old processes
+    cleanup_old_processes
+    
+    # Check dependencies
+    check_dependencies
+    
+    # Start with Gunicorn (production) or Flask (development)
+    if [ "${PORT_AGENT_DEBUG:-false}" = "true" ] || [ "${PORT_AGENT_DEBUG:-false}" = "True" ]; then
+        start_with_flask
+    else
+        start_with_gunicorn
+    fi
+}
+
+# Handle commands
+case "$1" in
+    start)
+        main
+        ;;
+    stop)
+        log_info "Stopping Port Agent..."
+        cleanup_old_processes
+        log_info "Port Agent stopped"
+        ;;
+    restart)
+        log_info "Restarting Port Agent..."
+        cleanup_old_processes
+        main
+        ;;
+    status)
+        log_header "PORT AGENT STATUS"
+        
+        if [ -f "${PID_DIR}/port_agent.pid" ] && kill -0 $(cat "${PID_DIR}/port_agent.pid") 2>/dev/null; then
+            log_info "Port Agent: RUNNING (PID: $(cat ${PID_DIR}/port_agent.pid))"
+        else
+            log_warn "Port Agent: STOPPED"
+        fi
+        
+        # Check port
+        if curl -s "http://localhost:${PORT_AGENT_PORT}/api/ports/" > /dev/null 2>&1; then
+            log_info "Port Agent health check: OK"
+        else
+            log_warn "Port Agent health check: FAILED"
+        fi
+        ;;
+    logs)
+        tail -f "${LOG_DIR}/port_agent.log" "${LOG_DIR}/port_agent_access.log" "${LOG_DIR}/port_agent_error.log"
+        ;;
+    *)
+        main "$@"
+        ;;
+esac

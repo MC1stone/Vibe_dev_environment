@@ -1,0 +1,47 @@
+---
+title: "NIR Spectral Comparison Report"
+author: "NIR Intelligence Platform"
+format: html
+date: "`r Sys.Date()`"
+---
+
+# NIR Spectral Comparison Report
+
+## Comparison Overview
+
+Number of samples: `r length(params$samples)`
+
+## Sample Information
+
+```{r}
+sample_info <- data.frame(
+  Sample = names(params$samples),
+  Quality = sapply(params$samples, function(s) s$quality_grade),
+  Score = sapply(params$samples, function(s) s$quality_score),
+  Wavelength.Range = sapply(params$samples, function(s) paste(s$wavelength_range, collapse = "-")),
+  Data.Points = sapply(params$samples, function(s) s$data_points)
+)
+
+print(xtable(sample_info), type = "html")
+```
+
+## Comparative Analysis
+
+### Quality Comparison
+```{r}
+quality_scores <- sapply(params$samples, function(s) s$quality_score)
+names(quality_scores) <- names(params$samples)
+
+barplot(quality_scores, main = "Spectral Quality Score Comparison", 
+        ylab = "Quality Score", xlab = "Sample", col = "skyblue")
+```
+
+## Detailed Sample Reports
+
+`r for (sample_name in names(params$samples)) {
+  sample <- params$samples[[sample_name]]
+  cat("### ", sample_name, "\n\n")
+  cat("- **Quality Score**: ", sample$quality_score, " (", sample$quality_grade, ")\n")
+  cat("- **Wavelength Range**: ", sample$wavelength_range[1], "-", sample$wavelength_range[2], " nm\n")
+  cat("- **Issues**: ", paste(sample$issues_detected, collapse = ", "), "\n\n")
+}`

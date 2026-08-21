@@ -1,0 +1,16 @@
+# Quarto Parameters
+sample_id: TEST_SAMPLE_001
+metadata_quality_score: 92.3
+metadata_grade: excellent
+missing_fields:
+  - measurement_date
+  - operator_name
+quality_issues:
+  - incomplete_metadata
+recommendations:
+  - Add measurement date
+  - Include operator information
+standards_compliance:
+  ISO_12345: 0.95
+  ASTM_E1655: 0.88
+analysis_timestamp: 2026-08-07T13:01:35.320923

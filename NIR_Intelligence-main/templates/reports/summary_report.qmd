@@ -1,0 +1,382 @@
+---
+title: "NIR Analysis Summary Report"
+author: "NIR Intelligence Platform"
+format: 
+  html:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    code-fold: true
+    fig-width: 12
+    fig-height: 8
+    css: styles.css
+date: "`r Sys.Date()`"
+params:
+  workflow_id: ""
+  workflow_type: ""
+  start_time: ""
+  end_time: ""
+  processing_time: 0
+  total_samples: 0
+  successful_analyses: 0
+  failed_analyses: 0
+  generated_reports: 0
+  quarto_files: []
+  html_files: []
+  input_files: []
+  errors: []
+  warnings: []
+  sample_results: []
+---
+
+```{r setup, include=FALSE}
+# Load required libraries
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(DT)
+
+# Set global options
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+# Custom function to check if parameter exists
+param_exists <- function(param_name) {
+  !is.null(params[[param_name]]) && !identical(params[[param_name]], "")
+}
+```
+
+# NIR Analysis Summary Report
+
+## Overview
+
+This summary report provides an overview of the complete NIR spectral analysis workflow executed on **`r params$start_time`** with workflow ID **`r params$workflow_id`**. The analysis processed **`r params$total_samples`** samples with a total processing time of **`r round(params$processing_time, 2)`** seconds.
+
+**Workflow Type:** `r params$workflow_type`
+
+**Status Summary:**
+- ✅ Successful Analyses: `r params$successful_analyses`
+- ❌ Failed Analyses: `r params$failed_analyses`
+- 📊 Generated Reports: `r params$generated_reports`
+- 📄 Quarto Files: `r length(params$quarto_files)`
+- 🌐 HTML Files: `r length(params$html_files)`
+
+## Workflow Statistics
+
+```{r workflow-stats, echo=FALSE}
+# Create workflow statistics table
+stats <- data.frame(
+  Metric = c(
+    "Workflow ID",
+    "Workflow Type", 
+    "Start Time",
+    "End Time",
+    "Processing Time (s)",
+    "Total Samples",
+    "Successful Analyses",
+    "Failed Analyses",
+    "Generated Reports",
+    "Quarto Files",
+    "HTML Files"
+  ),
+  Value = c(
+    params$workflow_id,
+    params$workflow_type,
+    params$start_time,
+    params$end_time,
+    round(params$processing_time, 2),
+    params$total_samples,
+    params$successful_analyses,
+    params$failed_analyses,
+    params$generated_reports,
+    length(params$quarto_files),
+    length(params$html_files)
+  )
+)
+
+knitr::kable(stats, caption = "Workflow Statistics")
+```
+
+## Input Files
+
+**Files Processed:** `r length(params$input_files)`
+
+```{r input-files, echo=FALSE}
+if (length(params$input_files) > 0) {
+  files_df <- data.frame(
+    File = basename(params$input_files),
+    Path = params$input_files
+  )
+  
+  knitr::kable(files_df, caption = "Input Files Processed")
+}
+```
+
+## Sample Results Overview
+
+### Performance Summary
+
+```{r performance-summary, echo=FALSE}
+if (length(params$sample_results) > 0) {
+  # Extract key metrics from sample results
+  sample_metrics <- lapply(params$sample_results, function(result) {
+    list(
+      sample_id = result$sample_id,
+      quality_score = round(result$overall_quality_score, 2),
+      processing_time = round(result$processing_time, 2),
+      spectral_quality = result$spectral_quality,
+      metadata_quality = result$metadata_quality,
+      recommendations = result$recommendations_count,
+      warnings = result$warnings_count,
+      errors = result$errors_count,
+      reports = result$reports_generated
+    )
+  })
+  
+  sample_df <- do.call(rbind, lapply(sample_metrics, as.data.frame))
+  
+  # Summary statistics
+  summary_stats <- data.frame(
+    Metric = c("Average Quality Score", "Total Processing Time", "Average Processing Time", 
+               "Total Recommendations", "Total Warnings", "Total Errors", "Total Reports"),
+    Value = c(
+      round(mean(sample_df$quality_score), 2),
+      round(sum(sample_df$processing_time), 2),
+      round(mean(sample_df$processing_time), 2),
+      sum(sample_df$recommendations),
+      sum(sample_df$warnings),
+      sum(sample_df$errors),
+      sum(sample_df$reports)
+    )
+  )
+  
+  knitr::kable(summary_stats, caption = "Sample Analysis Summary")
+}
+```
+
+### Individual Sample Results
+
+```{r sample-results, echo=FALSE}
+if (length(params$sample_results) > 0) {
+  # Create detailed results table
+  results_list <- list()
+  
+  for (result in params$sample_results) {
+    results_list <- c(results_list, list(
+      Sample_ID = result$sample_id,
+      Request_ID = result$request_id,
+      Quality_Score = round(result$overall_quality_score, 2),
+      Processing_Time = round(result$processing_time, 2),
+      Spectral_Quality = result$spectral_quality,
+      Metadata_Quality = result$metadata_quality,
+      Recommendations = result$recommendations_count,
+      Warnings = result$warnings_count,
+      Errors = result$errors_count,
+      Reports = result$reports_generated
+    ))
+  }
+  
+  results_df <- do.call(rbind, lapply(results_list, as.data.frame))
+  
+  # Display as interactive table if possible, otherwise as static table
+  if (interactive()) {
+    datatable(results_df, options = list(pageLength = 10, scrollX = TRUE))
+  } else {
+    knitr::kable(results_df, caption = "Individual Sample Results", digits = 2)
+  }
+}
+```
+
+## Quality Distribution
+
+### Quality Score Distribution
+
+```{r quality-distribution, echo=FALSE, fig.cap="Quality Score Distribution", fig.alt="Histogram showing distribution of quality scores across samples"}
+if (length(params$sample_results) > 0 && params$successful_analyses > 0) {
+  # Extract quality scores
+  quality_scores <- sapply(params$sample_results, function(result) result$overall_quality_score)
+  
+  # Create histogram
+  hist_data <- data.frame(
+    Score = cut(quality_scores, 
+                breaks = seq(0, 100, by = 10),
+                include.lowest = TRUE)
+  )
+  
+  ggplot(hist_data, aes(x = Score, y = ..count.., fill = Score)) +
+    geom_bar(stat = "count", width = 0.6) +
+    labs(title = "Quality Score Distribution",
+         x = "Quality Score Range",
+         y = "Number of Samples") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+```
+
+### Quality Comparison: Spectral vs Metadata
+
+```{r quality-comparison, echo=FALSE, fig.cap="Spectral vs Metadata Quality Comparison", fig.alt="Scatter plot comparing spectral and metadata quality scores"}
+if (length(params$sample_results) > 0 && params$successful_analyses > 0) {
+  # Extract quality data
+  spectral_qualities <- sapply(params$sample_results, function(result) {
+    if (result$spectral_quality == "N/A") NA else {
+      # Convert letter grades to numerical values
+      grade_map <- c("A" = 5, "B" = 4, "C" = 3, "D" = 2, "F" = 1)
+      grade_map[result$spectral_quality]
+    }
+  })
+  
+  metadata_qualities <- sapply(params$sample_results, function(result) {
+    if (result$metadata_quality == "N/A") NA else {
+      grade_map <- c("A" = 5, "B" = 4, "C" = 3, "D" = 2, "F" = 1)
+      grade_map[result$metadata_quality]
+    }
+  })
+  
+  # Remove NA values
+  valid_indices <- complete.cases(spectral_qualities, metadata_qualities)
+  spectral_qualities <- spectral_qualities[valid_indices]
+  metadata_qualities <- metadata_qualities[valid_indices]
+  sample_ids <- sapply(params$sample_results[valid_indices], function(r) r$sample_id)
+  
+  if (length(spectral_qualities) > 0) {
+    quality_df <- data.frame(
+      Sample_ID = sample_ids,
+      Spectral_Quality = as.factor(spectral_qualities),
+      Metadata_Quality = as.factor(metadata_qualities)
+    )
+    
+    ggplot(quality_df, aes(x = Spectral_Quality, y = Metadata_Quality, label = Sample_ID)) +
+      geom_point(size = 3, color = "#1f77b4") +
+      geom_text(vjust = -0.5, size = 3, check_overlap = TRUE) +
+      labs(title = "Spectral vs Metadata Quality Comparison",
+           x = "Spectral Quality Grade",
+           y = "Metadata Quality Grade") +
+      scale_x_discrete(labels = c("1" = "F", "2" = "D", "3" = "C", "4" = "B", "5" = "A")) +
+      scale_y_discrete(labels = c("1" = "F", "2" = "D", "3" = "C", "4" = "B", "5" = "A")) +
+      theme_minimal()
+  }
+}
+```
+
+## Generated Outputs
+
+### Quarto Files
+
+**Total Quarto Files Generated:** `r length(params$quarto_files)`
+
+```{r quarto-files, echo=FALSE}
+if (length(params$quarto_files) > 0) {
+  quarto_df <- data.frame(
+    File = basename(params$quarto_files),
+    Path = params$quarto_files
+  )
+  
+  knitr::kable(quarto_df, caption = "Generated Quarto Files")
+}
+```
+
+### HTML Files
+
+**Total HTML Files Generated:** `r length(params$html_files)`
+
+```{r html-files, echo=FALSE}
+if (length(params$html_files) > 0) {
+  html_df <- data.frame(
+    File = basename(params$html_files),
+    Path = params$html_files
+  )
+  
+  knitr::kable(html_df, caption = "Generated HTML Files")
+}
+```
+
+## Issues and Warnings
+
+### Warnings Summary
+
+```{r warnings-summary, echo=FALSE}
+if (length(params$warnings) > 0) {
+  cat("**Workflow Warnings:**\n\n")
+  for (warning in params$warnings) {
+    cat("- ", warning, "\n")
+  }
+  cat("\n")
+}
+```
+
+### Errors Summary
+
+```{r errors-summary, echo=FALSE}
+if (length(params$errors) > 0) {
+  cat("**Workflow Errors:**\n\n")
+  for (error in params$errors) {
+    cat("- ", error, "\n")
+  }
+}
+```
+
+## Technical Details
+
+### System Configuration
+
+- **NIR Intelligence Platform Version:** 1.0.0
+- **Analysis Engine:** CrewAI with specialized NIR agents
+- **Report Generation:** Quarto with R and Python code execution
+- **Visualization Tools:** ggplot2, knitr, DT
+
+### Analysis Components
+
+The workflow includes the following analysis components:
+
+1. **Data Preparation Agent** - Handles file upload, extraction, and data validation
+2. **Spectral Analysis Agent** - Performs comprehensive spectral data analysis
+3. **Metadata Quality Agent** - Assesses metadata completeness and standards compliance
+4. **Calibration Agent** - Handles spectrometer calibration and optimization
+5. **Quarto Agent** - Generates comprehensive documentation and reports
+6. **Workflow Orchestrator** - Coordinates the complete analysis pipeline
+
+### Data Standards Compliance
+
+This analysis follows open science principles and adheres to established NIR spectroscopy standards:
+
+- **ASTM E1655** - Standard Practices for Infrared Multivariate Quantitative Analysis
+- **ISO 12099** - Near Infrared Spectrometry
+- **EURACHEM** - Guidelines for analytical chemistry
+- **NIR Public Database Standards** - Community-established metadata standards
+
+### Privacy and Data Handling
+
+- **Privacy Level:** Local Only (no data shared with external systems)
+- **Federated Learning:** Disabled (local analysis only)
+- **Data Storage:** All data processed locally and securely
+- **Report Access:** Generated reports are available only to the local user
+
+## Recommendations
+
+### Next Steps
+
+Based on the analysis results, consider the following next steps:
+
+1. **Review Individual Reports:** Examine the detailed Quarto reports for each sample to understand specific findings and recommendations.
+
+2. **Address Warnings:** Review and address any warnings that were generated during the analysis process.
+
+3. **Implement Recommendations:** Apply the parameter recommendations to improve spectrometer performance and data quality.
+
+4. **Metadata Enhancement:** Update metadata based on the quality assessment results to improve standards compliance.
+
+5. **Calibration:** If calibration issues were detected, consider recalibrating the spectrometer using the provided guidelines.
+
+6. **Data Backup:** Ensure all generated reports and analysis results are properly backed up for future reference.
+
+## Conclusion
+
+This summary report provides a comprehensive overview of the NIR spectral analysis workflow execution. The analysis successfully processed `r params$total_samples` samples with an overall success rate of `r ifelse(params$total_samples > 0, round((params$successful_analyses / params$total_samples) * 100, 1), 0)`%.
+
+All generated reports, including detailed Quarto documents and HTML outputs, are available for review and further analysis. The system has identified areas for improvement and provided actionable recommendations to enhance spectral data quality and analysis accuracy.
+
+For detailed information about individual samples, please refer to the comprehensive analysis reports generated for each sample.
+
+---
+
+*This summary report was automatically generated by the NIR Intelligence Platform on `r Sys.time()`. For questions or support, please refer to the platform documentation or contact the development team.*

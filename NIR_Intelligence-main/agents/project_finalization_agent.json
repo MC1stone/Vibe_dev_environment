@@ -1,0 +1,32 @@
+{
+  "name": "ProjectFinalizationAgent",
+  "version": "1.0.0",
+  "description": "ProjectFinalization for NIR Intelligence Platform",
+  "type": "analysis",
+  "dependencies": [
+    "pandas",
+    "numpy",
+    "scipy",
+    "scikit-learn"
+  ],
+  "required_methods": [
+    "execute",
+    "_perform_pca",
+    "_perform_pls",
+    "_perform_cluster"
+  ],
+  "configuration": {
+    "enabled": true,
+    "params": {}
+  },
+  "quality_control": {
+    "min_performance": 0.8,
+    "max_errors": 0,
+    "timeout_seconds": 300
+  },
+  "documentation": {
+    "author": "NIR Development Team",
+    "created": "2026",
+    "updated": "2026"
+  }
+}

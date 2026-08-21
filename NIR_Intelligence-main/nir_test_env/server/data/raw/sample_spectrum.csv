@@ -1,0 +1,6 @@
+wavelength,intensity,instrument,acquisition_time,sample
+900,0.123,DIY_Spectrometer,2026-07-30T10:00:00,test_sample_1
+950,0.187,DIY_Spectrometer,2026-07-30T10:00:00,test_sample_1
+1000,0.254,DIY_Spectrometer,2026-07-30T10:00:00,test_sample_1
+1050,0.312,DIY_Spectrometer,2026-07-30T10:00:00,test_sample_1
+1100,0.289,DIY_Spectrometer,2026-07-30T10:00:00,test_sample_1

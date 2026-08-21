@@ -1,0 +1,43 @@
+# Quarto Parameters
+sample_id: TEST_SAMPLE_001
+quality_score: 87.5
+quality_grade: excellent
+issues_detected:
+  - wavelength_shift
+wavelength_range:
+  - 700
+  - 2500
+data_points: 1500
+noise_level: 3.2
+signal_to_noise_ratio: 52.8
+shift_detected: 1.5
+preprocessing_steps:
+  - baseline_correction
+  - smoothing
+  - noise_removal
+parameter_recommendations:
+  - Adjust wavelength calibration by -1.5nm
+  - Increase integration time for better SNR
+wavelengths:
+  - 700
+  - 750
+  - 800
+  - 850
+  - 900
+  - 950
+  - 1000
+  - 1050
+  - 1100
+  - 1150
+intensities:
+  - 0.1
+  - 0.15
+  - 0.25
+  - 0.3
+  - 0.28
+  - 0.22
+  - 0.18
+  - 0.15
+  - 0.12
+  - 0.1
+analysis_timestamp: 2026-08-07T13:01:34.743921

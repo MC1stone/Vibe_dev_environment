@@ -1,0 +1,577 @@
+% extends "base.html" %
+
+% block title %}
+NIR Intelligence - Upload Files
+% endblock %
+
+% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="page-title">
+                <i class="fas fa-upload"></i> Upload Files for Analysis
+            </h1>
+            <p class="page-subtitle">Upload spectral data files to start a new analysis workflow</p>
+        </div>
+    </div>
+
+    <!-- Upload Instructions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-info-circle"></i> Upload Instructions
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h4>Supported File Types</h4>
+                            <ul class="list-group mb-3">
+                                <li class="list-group-item">
+                                    <strong>Spectral Data:</strong> .csv, .json, .h5, .jdx, .spc, .txt
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Metadata:</strong> .json, .xml, .yaml, .yml
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Images:</strong> .png, .jpg, .jpeg
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Audio:</strong> .wav, .mp3
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Archives:</strong> .zip (containing multiple files)
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h4>Upload Options</h4>
+                            <div class="alert alert-success">
+                                <strong>Single File:</strong> Upload one spectral data file for analysis
+                            </div>
+                            <div class="alert alert-info">
+                                <strong>Multiple Files:</strong> Upload multiple files for batch processing
+                            </div>
+                            <div class="alert alert-warning">
+                                <strong>ZIP Archive:</strong> Upload a ZIP file containing your complete NIR project
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Form -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-file-upload"></i> File Upload Form
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form id="uploadForm" enctype="multipart/form-data" method="post">
+                        {% csrf_token %}
+                        
+                        <!-- File Selection -->
+                        <div class="form-group">
+                            <label for="files">Select Files to Upload</label>
+                            <input type="file" 
+                                   class="form-control-file" 
+                                   id="files" 
+                                   name="files" 
+                                   multiple 
+                                   required>
+                            <small class="form-text text-muted">
+                                Select one or more files to upload. Maximum file size: 100MB
+                            </small>
+                        </div>
+
+                        <!-- Workflow Type Selection -->
+                        <div class="form-group">
+                            <label for="workflowType">Analysis Workflow Type</label>
+                            <select class="form-control" id="workflowType" name="workflow_type">
+                                <option value="standard_analysis">Standard Analysis</option>
+                                <option value="comprehensive_analysis">Comprehensive Analysis</option>
+                                <option value="quick_analysis">Quick Analysis</option>
+                                <option value="metadata_only">Metadata Only</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Choose the type of analysis to perform on your files
+                            </small>
+                        </div>
+
+                        <!-- Additional Options -->
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="includeCalibration" 
+                                       name="include_calibration" 
+                                       checked>
+                                <label class="form-check-label" for="includeCalibration">
+                                    Include Calibration Analysis
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="generateReports" 
+                                       name="generate_reports" 
+                                       checked>
+                                <label class="form-check-label" for="generateReports">
+                                    Generate Quarto Reports
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="includeSourceCode" 
+                                       name="include_source_code" 
+                                       checked>
+                                <label class="form-check-label" for="includeSourceCode">
+                                    Include Python Source Code in Reports
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="form-group">
+                            <div class="d-flex justify-content-between">
+                                <button type="reset" class="btn btn-secondary">
+                                    <i class="fas fa-undo"></i> Reset
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="submitBtn">
+                                    <i class="fas fa-paper-plane"></i> Start Analysis
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Progress -->
+    <div class="row mb-4" id="progressRow" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-spinner fa-spin"></i> Upload Progress
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3">
+                        <div id="uploadProgress" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" 
+                             style="width: 0%" 
+                             aria-valuenow="0" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            0%
+                        </div>
+                    </div>
+                    <div id="progressMessage" class="text-center">
+                        <p>Preparing to upload files...</p>
+                    </div>
+                    <div id="uploadDetails" class="mt-3">
+                        <ul id="fileList" class="list-group"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Display -->
+    <div class="row mb-4" id="resultsRow" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-check-circle"></i> Analysis Results
+                    </h3>
+                </div>
+                <div class="card-body" id="resultsContent">
+                    <!-- Results will be displayed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <button class="btn btn-secondary" onclick="clearForm()">
+                                <i class="fas fa-trash"></i> Clear Form
+                            </button>
+                        </div>
+                        <div>
+                            <button class="btn btn-info" onclick="viewRecentWorkflows()">
+                                <i class="fas fa-list"></i> View Recent Workflows
+                            </button>
+                            <button class="btn btn-success" onclick="viewDashboard()">
+                                <i class="fas fa-home"></i> Return to Dashboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: none;
+    }
+    
+    .card-header {
+        border-radius: 5px 5px 0 0 !important;
+    }
+    
+    .form-control-file {
+        padding: 10px;
+        border: 2px dashed #ced4da;
+        border-radius: 5px;
+        background-color: #f8f9fa;
+    }
+    
+    .form-check {
+        margin-bottom: 10px;
+    }
+    
+    #progressRow, #resultsRow {
+        transition: all 0.3s ease;
+    }
+    
+    .list-group-item {
+        padding: 10px 15px;
+        border-left: 3px solid transparent;
+    }
+    
+    .list-group-item.success {
+        border-left-color: #28a745;
+        background-color: rgba(40, 167, 69, 0.1);
+    }
+    
+    .list-group-item.error {
+        border-left-color: #dc3545;
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+</style>
+
+<script>
+    // Handle form submission
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Show progress section
+        document.getElementById('progressRow').style.display = 'block';
+        document.getElementById('resultsRow').style.display = 'none';
+        
+        // Update progress
+        document.getElementById('progressMessage').innerHTML = '<p>Uploading files...</p>';
+        document.getElementById('uploadProgress').style.width = '0%';
+        document.getElementById('uploadProgress').innerHTML = '0%';
+        
+        // Get form data
+        const formData = new FormData(this);
+        
+        // Display selected files
+        const files = document.getElementById('files').files;
+        const fileList = document.getElementById('fileList');
+        fileList.innerHTML = '';
+        
+        for (let i = 0; i < files.length; i++) {
+            const li = document.createElement('li');
+            li.className = 'list-group-item';
+            li.innerHTML = `<i class="fas fa-file"></i> ${files[i].name} (${formatFileSize(files[i].size)})`;
+            fileList.appendChild(li);
+        }
+        
+        // Simulate upload progress (in a real implementation, this would be actual progress)
+        let progress = 0;
+        const progressInterval = setInterval(function() {
+            progress += 10;
+            if (progress > 90) {
+                clearInterval(progressInterval);
+                return;
+            }
+            document.getElementById('uploadProgress').style.width = progress + '%';
+            document.getElementById('uploadProgress').innerHTML = progress + '%';
+        }, 200);
+        
+        // Submit form via AJAX
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/workflows/upload-and-analyze/', true);
+        
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                document.getElementById('uploadProgress').style.width = percentComplete + '%';
+                document.getElementById('uploadProgress').innerHTML = percentComplete + '%';
+            }
+        };
+        
+        xhr.onload = function() {
+            clearInterval(progressInterval);
+            document.getElementById('uploadProgress').style.width = '100%';
+            document.getElementById('uploadProgress').innerHTML = '100%';
+            
+            if (xhr.status === 200) {
+                const response = JSON.parse(xhr.responseText);
+                
+                if (response.success) {
+                    // Show results
+                    document.getElementById('progressMessage').innerHTML = '<p class="text-success">Analysis completed successfully!</p>';
+                    
+                    // Display results
+                    displayResults(response);
+                } else {
+                    document.getElementById('progressMessage').innerHTML = `<p class="text-danger">Error: ${response.error}</p>`;
+                }
+            } else {
+                document.getElementById('progressMessage').innerHTML = '<p class="text-danger">Error uploading files</p>';
+            }
+        };
+        
+        xhr.onerror = function() {
+            clearInterval(progressInterval);
+            document.getElementById('progressMessage').innerHTML = '<p class="text-danger">Error uploading files</p>';
+        };
+        
+        xhr.send(formData);
+    });
+    
+    // Display results
+    function displayResults(response) {
+        const resultsContent = document.getElementById('resultsContent');
+        
+        let html = `
+            <div class="alert alert-success">
+                <h4><i class="fas fa-check-circle"></i> Workflow Completed Successfully</h4>
+                <p>Workflow ID: <strong>${response.workflow_id}</strong></p>
+                <p>Workflow Type: <strong>${response.workflow_type}</strong></p>
+                <p>Status: <span class="badge badge-success">${response.status}</span></p>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Workflow Statistics</h5>
+                    <ul class="list-group mb-3">
+                        <li class="list-group-item">
+                            <i class="fas fa-clock"></i> Processing Time: ${response.processing_time.toFixed(2)}s
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-file"></i> Total Samples: ${response.total_samples}
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-check"></i> Successful Analyses: ${response.successful_analyses}
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-times"></i> Failed Analyses: ${response.failed_analyses}
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-file-alt"></i> Generated Reports: ${response.generated_reports}
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5>Uploaded Files</h5>
+                    <ul class="list-group mb-3">
+        `;
+        
+        if (response.uploaded_files && response.uploaded_files.length > 0) {
+            response.uploaded_files.forEach(function(file) {
+                html += `<li class="list-group-item"><i class="fas fa-file"></i> ${file}</li>`;
+            });
+        } else {
+            html += `<li class="list-group-item">No files uploaded</li>`;
+        }
+        
+        html += `
+                    </ul>
+                </div>
+            </div>
+        `;
+        
+        // Add report links if available
+        if (response.report_urls && response.report_urls.length > 0) {
+            html += `
+                <h5 class="mt-3">Generated Reports</h5>
+                <div class="row">
+            `;
+            
+            response.report_urls.forEach(function(report) {
+                html += `
+                    <div class="col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">${report.file}</h6>
+                                <a href="${report.url}" class="btn btn-primary btn-sm" target="_blank">
+                                    <i class="fas fa-external-link-alt"></i> Open Report
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                </div>
+            `;
+        }
+        
+        // Add sample results table
+        if (response.sample_results && response.sample_results.length > 0) {
+            html += `
+                <h5 class="mt-3">Sample Results</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover table-bordered">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Sample ID</th>
+                                <th>Quality Score</th>
+                                <th>Spectral Quality</th>
+                                <th>Metadata Quality</th>
+                                <th>Processing Time</th>
+                                <th>Reports</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            response.sample_results.forEach(function(sample) {
+                html += `
+                    <tr>
+                        <td>${sample.sample_id}</td>
+                        <td>${sample.overall_quality_score.toFixed(1)}</td>
+                        <td><span class="badge badge-${getQualityBadge(sample.spectral_quality)}">${sample.spectral_quality}</span></td>
+                        <td><span class="badge badge-${getQualityBadge(sample.metadata_quality)}">${sample.metadata_quality}</span></td>
+                        <td>${sample.processing_time.toFixed(2)}s</td>
+                        <td>${sample.reports_generated}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        
+        // Add errors and warnings if any
+        if ((response.errors && response.errors.length > 0) || (response.warnings && response.warnings.length > 0)) {
+            html += `<h5 class="mt-3">Issues</h5>`;
+            
+            if (response.errors && response.errors.length > 0) {
+                html += `
+                    <div class="alert alert-danger">
+                        <h6><i class="fas fa-times-circle"></i> Errors</h6>
+                        <ul>
+                `;
+                response.errors.forEach(function(error) {
+                    html += `<li>${error}</li>`;
+                });
+                html += `</ul></div>`;
+            }
+            
+            if (response.warnings && response.warnings.length > 0) {
+                html += `
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-circle"></i> Warnings</h6>
+                        <ul>
+                `;
+                response.warnings.forEach(function(warning) {
+                    html += `<li>${warning}</li>`;
+                });
+                html += `</ul></div>`;
+            }
+        }
+        
+        // Add action buttons
+        html += `
+            <div class="mt-4">
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-primary" onclick="viewWorkflowResults('${response.workflow_id}')">
+                        <i class="fas fa-eye"></i> View Full Results
+                    </button>
+                    <button class="btn btn-success" onclick="startNewWorkflow()">
+                        <i class="fas fa-plus"></i> Start New Workflow
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        resultsContent.innerHTML = html;
+        
+        // Show results section
+        document.getElementById('resultsRow').style.display = 'block';
+    }
+    
+    // Helper function to get quality badge class
+    function getQualityBadge(quality) {
+        const qualityMap = {
+            'A': 'success',
+            'B': 'info',
+            'C': 'warning',
+            'D': 'warning',
+            'F': 'danger',
+            'N/A': 'secondary'
+        };
+        return qualityMap[quality] || 'secondary';
+    }
+    
+    // Helper function to format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Function to clear form
+    function clearForm() {
+        document.getElementById('uploadForm').reset();
+        document.getElementById('progressRow').style.display = 'none';
+        document.getElementById('resultsRow').style.display = 'none';
+    }
+    
+    // Function to view workflow results
+    function viewWorkflowResults(workflowId) {
+        window.location.href = `/workflows/${workflowId}/`;
+    }
+    
+    // Function to view recent workflows
+    function viewRecentWorkflows() {
+        window.location.href = '/workflows/';
+    }
+    
+    // Function to view dashboard
+    function viewDashboard() {
+        window.location.href = '/';
+    }
+    
+    // Function to start new workflow
+    function startNewWorkflow() {
+        window.location.href = '/upload/';
+    }
+    
+    // Initialize tooltips
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip();
+    });
+</script>
+% endblock %

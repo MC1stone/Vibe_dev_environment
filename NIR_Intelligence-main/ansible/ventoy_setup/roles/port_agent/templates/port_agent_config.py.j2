@@ -1,0 +1,118 @@
+"""
+Port Agent Configuration for NIR_Mistral Framework
+
+This configuration file sets up the Port Management Agent with appropriate
+settings for the Ventoy stick deployment.
+"""
+
+import os
+from pathlib import Path
+
+# Base configuration
+class PortAgentConfig:
+    """Main configuration class for Port Agent"""
+    
+    # Server configuration
+    HOST = "0.0.0.0"
+    PORT = {{ port_agent_port }}
+    DEBUG = {{ django_debug | default(False) | lower }}
+    
+    # Path configuration
+    PROJECT_ROOT = Path("{{ deploy_root }}")
+    PORT_AGENT_PATH = Path("{{ port_agent_path }}")
+    LOG_DIR = PROJECT_ROOT / "logs"
+    DATA_DIR = PROJECT_ROOT / "data"
+    CONFIG_DIR = PROJECT_ROOT / "config"
+    
+    # Logging configuration
+    LOG_LEVEL = "INFO"
+    LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    LOG_FILE = str(LOG_DIR / "port_agent.log")
+    LOG_MAX_BYTES = 10 * 1024 * 1024  # 10MB
+    LOG_BACKUP_COUNT = 5
+    
+    # Port management configuration
+    PORT_RANGE_START = 8000
+    PORT_RANGE_END = 9000
+    MAX_RESERVED_PORTS = 100
+    PORT_RESERVATION_TIMEOUT = 3600  # 1 hour
+    
+    # Docker configuration
+    DOCKER_ENABLED = {{ docker_enabled | default(False) | lower }}
+    DOCKER_SOCKET = "/var/run/docker.sock"
+    
+    # Framework configuration
+    FRAMEWORK_PORTS = {
+        "django": {{ django_port }},
+        "port_agent": {{ port_agent_port }},
+        "weaviate": 8080,
+        "redis": 6379,
+        "elasticsearch": 9200,
+        "postgresql": 5432,
+    }
+    
+    # Agent configuration
+    AGENT_PORTS = {
+        "django_agent": {{ django_port }},
+        "port_agent": {{ port_agent_port }},
+        "research_agent": 8002,
+        "analysis_agent": 8003,
+        "weaviate_agent": 8081,
+    }
+    
+    # Network configuration
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1", "::1"]
+    BIND_ADDRESS = "0.0.0.0"
+    
+    # Security configuration
+    SECRET_KEY = os.environ.get("PORT_AGENT_SECRET_KEY", "{{ django_secret_key }}")
+    API_KEY = os.environ.get("PORT_AGENT_API_KEY", "nir-mistral-port-agent-key")
+    
+    # Performance configuration
+    MAX_WORKERS = {{ port_agent_workers | default(2) }}
+    WORKER_TIMEOUT = {{ port_agent_timeout | default(60) }}
+    MAX_REQUESTS = 1000
+    MAX_REQUEST_SIZE = 16 * 1024 * 1024  # 16MB
+    
+    # Database configuration (for persistent storage)
+    USE_DATABASE = False
+    DATABASE_URL = "sqlite:///{{ DATA_DIR }}/port_agent.db"
+    
+    # Cache configuration
+    USE_CACHE = True
+    CACHE_TYPE = "simple"  # 'simple', 'redis', 'memcached'
+    CACHE_TIMEOUT = 300  # 5 minutes
+    
+    # Health check configuration
+    HEALTH_CHECK_INTERVAL = 30  # seconds
+    HEALTH_CHECK_TIMEOUT = 5  # seconds
+    
+    # Cleanup configuration
+    AUTO_CLEANUP = True
+    CLEANUP_INTERVAL = 3600  # 1 hour
+    STALE_PORT_TIMEOUT = 86400  # 24 hours
+    
+    # Notification configuration
+    NOTIFICATIONS_ENABLED = False
+    NOTIFICATION_WEBHOOK = None
+    NOTIFICATION_LEVEL = "ERROR"
+    
+    # Metrics configuration
+    METRICS_ENABLED = False
+    METRICS_PORT = 9090
+    
+    # Development configuration
+    DEVELOPMENT_MODE = {{ django_debug | default(False) | lower }}
+    ENABLE_DEBUG_ENDPOINTS = {{ django_debug | default(False) | lower }}
+
+
+# Create configuration instance
+config = PortAgentConfig()
+
+# Ensure directories exist
+os.makedirs(str(config.LOG_DIR), exist_ok=True)
+os.makedirs(str(config.DATA_DIR), exist_ok=True)
+os.makedirs(str(config.CONFIG_DIR), exist_ok=True)
+
+# Export configuration
+__all__ = ['PortAgentConfig', 'config']

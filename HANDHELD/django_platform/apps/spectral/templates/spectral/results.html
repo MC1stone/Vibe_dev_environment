@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Napari Results Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f7fb; margin: 0; padding: 24px; color: #1f2937; }
+        h1 { margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+        .card { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .status { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: bold; }
+        .ready { background: #dcfce7; color: #166534; }
+        .pending { background: #fef3c7; color: #92400e; }
+        .failed { background: #fee2e2; color: #991b1b; }
+        .meta { margin-top: 10px; font-size: 13px; color: #4b5563; }
+        a { color: #1d4ed8; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <h1>Napari Results Dashboard</h1>
+    <div class="grid">
+        {% for result in results %}
+            <div class="card">
+                <h3><a href="/spectral/results/{{ result.id }}/">{{ result.title }}</a></h3>
+                <span class="status {{ result.status }}">{{ result.status }}</span>
+                <p>{{ result.summary|default:"No summary available yet." }}</p>
+                {% if result.image_url %}
+                    <img src="{{ result.image_url }}" alt="{{ result.title }}" style="max-width:100%; border-radius:8px; margin-top:12px;">
+                {% endif %}
+                <div class="meta">
+                    <div>Session: {{ result.session.name }}</div>
+                    <div>Created: {{ result.created_at }}</div>
+                    {% if result.metrics %}
+                        <div>Metrics: {{ result.metrics }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <div class="card">
+                <p>No Napari results have been published yet.</p>
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

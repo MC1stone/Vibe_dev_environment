@@ -1,0 +1,25 @@
+---
+# Django Server Handlers
+# This file contains handlers for the Django server role
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart django
+  systemd:
+    name: django
+    state: restarted
+  when: create_systemd_services | default(true)
+
+- name: restart gunicorn
+  systemd:
+    name: gunicorn
+    state: restarted
+  when: create_systemd_services | default(true)
+
+- name: reload nginx
+  systemd:
+    name: nginx
+    state: reloaded
+  when: create_systemd_services | default(true) and ansible_facts['os_family'] == 'Debian'

@@ -1,0 +1,42 @@
+[Unit]
+Description=NIR_Mistral DeveloperAgent Framework Service
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User={{ admin_user }}
+Group={{ admin_group }}
+WorkingDirectory={{ storage.base_dir }}
+Environment="PATH={{ python_venv_path }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+EnvironmentFile={{ storage.base_dir }}/.env
+
+ExecStart={{ python_venv_path }}/bin/python -m dev_framework serve --host {{ services.framework.host }} --port {{ services.framework.port }}
+ExecStop=/bin/bash {{ storage.base_dir }}/stop_framework.sh
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+# Resource limits for USB storage
+MemoryLimit={{ framework_optimizations.memory_limit | default('2G') }}
+CPUQuota=50%
+IOReadBandwidthMax=/dev/sda 50M
+IOWriteBandwidthMax=/dev/sda 50M
+
+# Logging
+StandardOutput=append:{{ log_dir }}/framework.log
+StandardError=append:{{ log_dir }}/framework_error.log
+SyslogIdentifier=nir_framework
+
+# Security
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+PrivateDevices=true
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_SYS_CHROOT CAP_DAC_OVERRIDE
+
+[Install]
+WantedBy=multi-user.target

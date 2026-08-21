@@ -1,0 +1,33 @@
+*.pyc
+__pycache__/
+*.backup
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+temp/
+
+# Output files
+output/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+
+# Environment
+venv/
+.env
+
+# Test files
+test_*.py
+
+# Django specific
+*.sqlite3
+media/
+staticfiles/
+
+# Quarto specific
+_quarto.yml

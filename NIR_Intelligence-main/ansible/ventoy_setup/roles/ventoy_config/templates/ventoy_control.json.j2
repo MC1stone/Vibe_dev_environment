@@ -1,0 +1,134 @@
+{
+    "control": {
+        "version": "1.0",
+        "timestamp": "{{ ansible_date_time.iso8601 }}",
+        "nir_mistral": {
+            "name": "NIR_Mistral Framework",
+            "version": "1.0.0",
+            "description": "Complete NIR_Mistral Framework with Django Server and Port Agent",
+            "author": "NIR_Mistral Team",
+            "license": "MIT",
+            "homepage": "https://github.com/nir-mistral/nir_mistral",
+            "repository": "file://{{ project_root }}"
+        },
+        "settings": {
+            "auto_boot": true,
+            "default_selection": "NIR_Mistral Framework",
+            "timeout": 10,
+            "password_protect": false,
+            "password": "",
+            "menu_style": "graphical",
+            "language": "en_US",
+            "resolution": "1920x1080",
+            "persistence": true,
+            "save_settings": true,
+            "theme": "nir_mistral"
+        },
+        "features": {
+            "django_server": {
+                "enabled": true,
+                "port": {{ django_port }},
+                "auto_start": true,
+                "restart_on_failure": true,
+                "health_check": true
+            },
+            "port_agent": {
+                "enabled": true,
+                "port": {{ port_agent_port }},
+                "auto_start": true,
+                "restart_on_failure": true,
+                "health_check": true
+            },
+            "docker_support": {{ docker_enabled | default(False) | lower }},
+            "firewall": {{ firewall_enabled | default(False) | lower }},
+            "monitoring": false,
+            "logging": true
+        },
+        "network": {
+            "bind_address": "0.0.0.0",
+            "allowed_hosts": ["localhost", "127.0.0.1", "::1"],
+            "open_ports": {{ open_ports | default([8000, 8001, 8080, 5432, 6379, 9200]) }},
+            "dns_servers": ["8.8.8.8", "8.8.4.4"],
+            "hostname": "nir-mistral-ventoy"
+        },
+        "paths": {
+            "project_root": "{{ project_root }}",
+            "deploy_root": "{{ deploy_root }}",
+            "venv_path": "{{ venv_path }}",
+            "django_project": "{{ django_project_path }}",
+            "port_agent": "{{ port_agent_path }}",
+            "logs_dir": "{{ deploy_root }}/logs",
+            "config_dir": "{{ deploy_root }}/config",
+            "data_dir": "{{ deploy_root }}/data",
+            "ventoy_mount": "{{ ventoy_mount_point }}",
+            "ventoy_iso": "{{ ventoy_iso_path }}"
+        },
+        "services": {
+            "django": {
+                "name": "Django Server",
+                "description": "NIR_Mistral Django application server",
+                "port": {{ django_port }},
+                "protocol": "http",
+                "bind_address": "0.0.0.0",
+                "timeout": {{ django_timeout | default(300) }},
+                "max_workers": {{ django_workers | default(4) }},
+                "auto_start": true,
+                "enabled": true
+            },
+            "port_agent": {
+                "name": "Port Management Agent",
+                "description": "Port management service for NIR_Mistral Framework",
+                "port": {{ port_agent_port }},
+                "protocol": "http",
+                "bind_address": "0.0.0.0",
+                "timeout": {{ port_agent_timeout | default(60) }},
+                "max_workers": {{ port_agent_workers | default(2) }},
+                "auto_start": true,
+                "enabled": true
+            }
+        },
+        "environment": {
+            "DJANGO_SETTINGS_MODULE": "{{ django_settings_module }}",
+            "DJANGO_DEBUG": {{ django_debug | default(False) | lower }},
+            "PYTHONPATH": "{{ deploy_root }}",
+            "PATH": "{{ venv_path }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "LANG": "en_US.UTF-8",
+            "LC_ALL": "en_US.UTF-8"
+        },
+        "security": {
+            "run_as_user": "{{ service_user | default('root') }}",
+            "run_as_group": "{{ service_group | default('root') }}",
+            "umask": "0022",
+            "capabilities": [],
+            "seccomp": false
+        },
+        "logging": {
+            "level": "INFO",
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            "max_size": "10MB",
+            "backup_count": 5,
+            "log_files": {
+                "django": "{{ deploy_root }}/logs/django.log",
+                "port_agent": "{{ deploy_root }}/logs/port_agent.log",
+                "access": "{{ deploy_root }}/logs/port_agent_access.log",
+                "error": "{{ deploy_root }}/logs/port_agent_error.log"
+            }
+        },
+        "health_check": {
+            "enabled": true,
+            "interval": 30,
+            "timeout": 5,
+            "endpoints": [
+                "http://localhost:{{ django_port }}/api/health/",
+                "http://localhost:{{ port_agent_port }}/api/ports/"
+            ]
+        },
+        "cleanup": {
+            "enabled": true,
+            "temp_files": true,
+            "log_rotation": true,
+            "cache_cleanup": true,
+            "schedule": "daily"
+        }
+    }
+}

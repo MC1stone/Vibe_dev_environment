@@ -1,0 +1,179 @@
+services:
+  # Weaviate Vector Database
+  weaviate:
+    image: semitechnologies/weaviate:1.23.0
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      DEFAULT_VECTORIZER_MODULE: "text2vec-transformers"
+      ENABLE_MODULES: "text2vec-transformers"
+      TRANSFORMERS_INFERENCE_API: "http://t2v-transformers:8080"
+      CLUSTER_HOSTNAME: "node1"
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    networks:
+      - nir_network
+
+  # Transformers for Weaviate
+  t2v-transformers:
+    image: semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2
+    environment:
+      ENABLE_CUDA: "0"
+    networks:
+      - nir_network
+
+  # PostgreSQL Database
+  postgresql:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: "nir_user"
+      POSTGRES_PASSWORD: "Kooky0-Hatching1-Mullets2-Ninetieth7-Shimmer6-Crayon4-Flashily2"
+      POSTGRES_DB: "nir_mistral"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    networks:
+      - nir_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nir_user -d nir_mistral"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # FAISS Similarity Search (simulated service)
+  faiss:
+    image: python:3.12-slim
+    command: tail -f /dev/null
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./data/faiss_index:/app/index
+    working_dir: /app
+    networks:
+      - nir_network
+
+  # MCP Server for tool integration
+  mcp_server:
+    image: python:3.12-slim
+    command: tail -f /dev/null
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./scripts:/app/scripts
+    working_dir: /app
+    networks:
+      - nir_network
+
+  # Flower Federated Learning Server
+  flower_server:
+    image: python:3.12-slim
+    command: tail -f /dev/null
+    ports:
+      - "5555:5555"
+      - "5556:5556"
+    volumes:
+      - ./scripts:/app/scripts
+    working_dir: /app
+    networks:
+      - nir_network
+
+  # Django Web Application
+  django_app:
+    build:
+      context: .
+      dockerfile: Dockerfile.django
+    working_dir: /app
+    command: sh -c "python django_project/manage.py migrate && python django_project/manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app:/app/agents
+      - DJANGO_SETTINGS_MODULE=nir_web.settings
+      - DEBUG=1
+      - DATABASE_URL=postgres://nir_user:Kooky0-Hatching1-Mullets2-Ninetieth7-Shimmer6-Crayon4-Flashily2@postgresql:5432/nir_mistral
+      - DJANGO_DB_ENGINE=postgresql
+      - DJANGO_DB_NAME=nir_mistral
+      - DJANGO_DB_USER=nir_user
+      - DJANGO_DB_PASSWORD=Kooky0-Hatching1-Mullets2-Ninetieth7-Shimmer6-Crayon4-Flashily2
+      - DJANGO_DB_HOST=postgresql
+      - DJANGO_DB_PORT=5432
+      - NIR_FRAMEWORK_PATH=/app
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,::1,*
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    networks:
+      - nir_network
+
+  # Quarto Documentation Server (disabled - using host installation)
+  # quarto_server:
+  #   image: quartobio/quarto-cli:1.3.0
+  #   command: tail -f /dev/null
+  #   ports:
+  #     - "8083:8083"
+  #   volumes:
+  #     - ./reports:/app/reports
+  #     - ./data:/app/data
+  #   working_dir: /app
+  #   networks:
+  #     - nir_network
+
+  # Ollama for Local AI (Mistral Model)
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    networks:
+      - nir_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching and task queue
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - nir_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# Networks
+networks:
+  nir_network:
+    driver: bridge
+
+# Volumes
+volumes:
+  weaviate_data:
+    driver: local
+  postgres_data:
+    driver: local
+  ollama_data:
+    driver: local
+  redis_data:
+    driver: local

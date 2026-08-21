@@ -1,0 +1,313 @@
+% extends "base.html" %
+
+% block title %}
+NIR Intelligence - All Workflows
+% endblock %
+
+% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="page-title">
+                <i class="fas fa-list"></i> All Workflows
+            </h1>
+            <p class="page-subtitle">Complete history of executed analysis workflows</p>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-chart-bar"></i> Workflow Statistics
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-success">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value">{{ workflows|length }}</span>
+                                    <span class="stat-label">Total Workflows</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-info">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value">{{ workflows|sum(attribute='total_samples') }}</span>
+                                    <span class="stat-label">Total Samples</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-warning">
+                                    <i class="fas fa-file-alt"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value">{{ workflows|sum(attribute='generated_reports') }}</span>
+                                    <span class="stat-label">Total Reports</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-danger">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value">{{ workflows|sum(attribute='failed_analyses') }}</span>
+                                    <span class="stat-label">Failed Analyses</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workflow List Table -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-table"></i> Workflow History
+                    </h3>
+                    <div>
+                        <button class="btn btn-success btn-sm" onclick="startNewWorkflow()">
+                            <i class="fas fa-plus"></i> New Workflow
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-bordered">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Workflow ID</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Start Time</th>
+                                    <th>Processing Time</th>
+                                    <th>Samples</th>
+                                    <th>Success</th>
+                                    <th>Failed</th>
+                                    <th>Reports</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for workflow in workflows %}
+                                <tr class="
+                                    {% if workflow.status == 'completed' %}table-success
+                                    {% elif workflow.status == 'processing' %}table-info
+                                    {% elif workflow.status == 'failed' %}table-danger
+                                    {% else %}table-active{% endif %}">
+                                    <td>{{ workflow.workflow_id }}</td>
+                                    <td>{{ workflow.workflow_type }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if workflow.status == 'completed' %}badge-success
+                                            {% elif workflow.status == 'processing' %}badge-info
+                                            {% elif workflow.status == 'failed' %}badge-danger
+                                            {% else %}badge-secondary{% endif %}">
+                                            {{ workflow.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ workflow.start_time }}</td>
+                                    <td>{{ "%.2f"|format(workflow.processing_time) }}s</td>
+                                    <td>{{ workflow.total_samples }}</td>
+                                    <td>{{ workflow.successful_analyses }}</td>
+                                    <td>{{ workflow.failed_analyses }}</td>
+                                    <td>{{ workflow.generated_reports }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="/workflows/{{ workflow.workflow_id }}/" 
+                                               class="btn btn-primary btn-sm" 
+                                               data-toggle="tooltip" title="View Results">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="/workflows/{{ workflow.workflow_id }}/details/" 
+                                               class="btn btn-info btn-sm" 
+                                               data-toggle="tooltip" title="View Details">
+                                                <i class="fas fa-info-circle"></i>
+                                            </a>
+                                            {% if workflow.generated_reports > 0 %}
+                                            <a href="#" class="btn btn-success btn-sm" 
+                                               onclick="viewReports('{{ workflow.workflow_id }}')" 
+                                               data-toggle="tooltip" title="View Reports">
+                                                <i class="fas fa-file-alt"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <button class="btn btn-primary" onclick="refreshWorkflowList()">
+                                <i class="fas fa-sync-alt"></i> Refresh List
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportWorkflowList()">
+                                <i class="fas fa-file-export"></i> Export List
+                            </button>
+                        </div>
+                        <div>
+                            <button class="btn btn-warning" onclick="cleanupAllWorkflows()">
+                                <i class="fas fa-trash"></i> Cleanup All
+                            </button>
+                            <button class="btn btn-success" onclick="startNewWorkflow()">
+                                <i class="fas fa-plus"></i> New Workflow
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reports Modal -->
+<div class="modal fade" id="reportsModal" tabindex="-1" role="dialog" aria-labelledby="reportsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportsModalLabel">Workflow Reports</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="reportsContent">
+                <!-- Content will be loaded dynamically -->
+                <p>Loading reports...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stat-card {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        color: white;
+        margin-right: 15px;
+    }
+    
+    .stat-info {
+        flex: 1;
+    }
+    
+    .stat-value {
+        display: block;
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .stat-label {
+        display: block;
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    
+    .badge {
+        font-size: 12px;
+        padding: 5px 8px;
+        border-radius: 3px;
+    }
+    
+    .btn-group .btn {
+        margin-right: 5px;
+    }
+</style>
+
+<script>
+    // Function to view reports for a workflow
+    function viewReports(workflowId) {
+        console.log('View reports for workflow:', workflowId);
+        $('#reportsModal').modal('show');
+        $('#reportsContent').html('<p>Loading reports for workflow: ' + workflowId + '</p>');
+        
+        // This would be implemented to fetch and display reports
+        // For now, just show a message
+        $('#reportsContent').html('<div class="alert alert-info">Reports functionality would be implemented here.</div>');
+    }
+    
+    // Function to refresh workflow list
+    function refreshWorkflowList() {
+        console.log('Refreshing workflow list...');
+        location.reload();
+    }
+    
+    // Function to export workflow list
+    function exportWorkflowList() {
+        console.log('Exporting workflow list...');
+        alert('Export functionality would be implemented here.');
+    }
+    
+    // Function to cleanup all workflows
+    function cleanupAllWorkflows() {
+        if (confirm('Are you sure you want to cleanup all workflow files? This will remove temporary files but keep reports.')) {
+            console.log('Cleaning up all workflow files...');
+            alert('Cleanup functionality would be implemented here.');
+        }
+    }
+    
+    // Function to start a new workflow
+    function startNewWorkflow() {
+        window.location.href = '/upload/';
+    }
+    
+    // Initialize tooltips
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip();
+    });
+</script>
+% endblock %

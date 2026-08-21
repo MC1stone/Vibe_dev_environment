@@ -1,0 +1,48 @@
+# NIR Test Data Metadata
+# Created: 2026-08-03
+# Purpose: Test environment for NIR_Mistral DeveloperAgent Framework
+
+## Sample Information
+
+### Sample 001 - Wheat Flour
+- File: nir_spectrum_001.txt
+- Type: Absorbance
+- Sample ID: WH-FL-2026-001
+- Collection Date: 2026-08-03
+- Instrument: NIR Spectrometer Model X200
+- Wavelength Range: 700-2500 nm
+- Resolution: 2 nm
+- Sample Temperature: 22°C
+- Humidity: 45%
+- Notes: High-quality wheat flour, protein content ~12%
+
+### Sample 002 - Corn Meal
+- File: nir_spectrum_002.txt
+- Type: Reflectance
+- Sample ID: CM-ML-2026-002
+- Collection Date: 2026-08-03
+- Instrument: NIR Spectrometer Model X200
+- Wavelength Range: 700-2500 nm
+- Resolution: 2 nm
+- Sample Temperature: 22°C
+- Humidity: 45%
+- Notes: Yellow corn meal, moisture content ~10%
+
+## Data Format
+- Column 1: Wavelength in nanometers (nm)
+- Column 2: Spectral value (Absorbance or Reflectance)
+- Delimiter: Comma (,)
+- Header: Contains metadata in comment lines starting with #
+
+## Quality Control
+- All spectra have been baseline corrected
+- No missing data points
+- Signal-to-noise ratio > 1000:1
+- Wavelength accuracy: ±1 nm
+
+## Usage
+These test data files can be used for:
+1. Testing NIR spectroscopy analysis algorithms
+2. Validating machine learning models
+3. Demonstrating framework functionality
+4. Performance benchmarking

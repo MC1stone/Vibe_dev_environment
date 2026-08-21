@@ -1,0 +1,173 @@
+---
+# Port Agent Deployment Tasks
+# This role deploys and configures the Port Management Agent for the NIR_Mistral Framework
+
+- name: Ensure Port Agent directory structure exists
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ service_user | default('root') }}"
+    group: "{{ service_group | default('root') }}"
+    mode: '0755'
+  loop:
+    - "{{ port_agent_path }}"
+    - "{{ port_agent_path }}/config"
+    - "{{ port_agent_path }}/logs"
+    - "{{ port_agent_path }}/data"
+    - "{{ port_agent_path }}/scripts"
+
+- name: Copy Port Agent source code from project
+  copy:
+    src: "{{ project_root }}/agents/port_agent/"
+    dest: "{{ port_agent_path }}"
+    owner: "{{ service_user | default('root') }}"
+    group: "{{ service_group | default('root') }}"
+    mode: '0755'
+    remote_src: yes
+  when: project_root is defined and project_root != ''
+
+- name: Create Port Agent virtual environment
+  pip:
+    requirements: "{{ port_agent_path }}/requirements.txt"
+    virtualenv: "{{ venv_path }}"
+    virtualenv_python: python3
+    state: latest
+  when: venv_path is defined
+
+- name: Install Port Agent specific dependencies
+  pip:
+    name:
+      - flask
+      - gunicorn
+      - psutil
+      - docker
+      - requests
+      - python-dotenv
+    virtualenv: "{{ venv_path }}"
+    state: latest
+
+- name: Create Port Agent configuration file
+  template:
+    src: port_agent_config.py.j2
+    dest: "{{ port_agent_path }}/config/settings.py"
+    mode: '0644'
+    owner: "{{ service_user | default('root') }}"
+    group: "{{ service_group | default('root') }}"
+
+- name: Create Port Agent environment file
+  template:
+    src: port_agent_env.j2
+    dest: "{{ port_agent_path }}/.env"
+    mode: '0640'
+    owner: "{{ service_user | default('root') }}"
+    group: "{{ service_group | default('root') }}"
+
+- name: Create Port Agent startup script
+  template:
+    src: start_port_agent.sh.j2
+    dest: "{{ port_agent_path }}/start_port_agent.sh"
+    mode: '0755'
+    owner: "{{ service_user | default('root') }}"
+    group: "{{ service_group | default('root') }}"
+
+- name: Create Port Agent Gunicorn configuration
+  template:
+    src: port_agent_gunicorn.conf.py.j2
+    dest: "{{ port_agent_path }}/config/gunicorn.conf.py"
+    mode: '0644'
+    owner: "{{ service_user | default('root') }}"
+    group: "{{ service_group | default('root') }}"
+
+- name: Create Port Agent service file (systemd)
+  template:
+    src: port_agent.service.j2
+    dest: /etc/systemd/system/port_agent.service
+    mode: '0644'
+  when: create_systemd_services | default(true)
+  notify: reload systemd
+
+- name: Create Port Agent log directory
+  file:
+    path: "{{ deploy_root }}/logs"
+    state: directory
+    owner: "{{ service_user | default('root') }}"
+    group: "{{ service_group | default('root') }}"
+    mode: '0755'
+
+- name: Create Port Agent log files
+  file:
+    path: "{{ item }}"
+    state: touch
+    owner: "{{ service_user | default('root') }}"
+    group: "{{ service_group | default('root') }}"
+    mode: '0644'
+  loop:
+    - "{{ deploy_root }}/logs/port_agent.log"
+    - "{{ deploy_root }}/logs/port_agent_error.log"
+    - "{{ deploy_root }}/logs/port_agent_access.log"
+
+- name: Install Port Agent Python package in development mode
+  command: >
+    {{ venv_path }}/bin/pip install -e {{ port_agent_path }}
+  args:
+    chdir: "{{ port_agent_path }}"
+    creates: "{{ venv_path }}/lib/python{{ ansible_python_version.split('.')[0] }}.{{ ansible_python_version.split('.')[1] }}/site-packages/port_agent"
+
+- name: Test Port Agent installation
+  command: >
+    {{ venv_path }}/bin/python -c "from agents.port_agent import port_agent; print('Port Agent import successful')"
+  args:
+    chdir: "{{ project_root }}"
+  register: port_agent_test
+  ignore_errors: yes
+
+- name: Display Port Agent test result
+  debug:
+    var: port_agent_test.stdout_lines
+  when: port_agent_test is defined
+
+- name: Enable and start Port Agent service
+  systemd:
+    name: port_agent
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  when: create_systemd_services | default(true)
+
+- name: Wait for Port Agent to be ready
+  uri:
+    url: "http://localhost:{{ port_agent_port }}/api/ports/"
+    return_content: yes
+  register: port_agent_health
+  until: port_agent_health.status == 200
+  retries: 10
+  delay: 5
+  ignore_errors: yes
+  when: not (skip_verification | default(false))
+
+- name: Display Port Agent health status
+  debug:
+    var: port_agent_health.json
+  when: port_agent_health is defined
+
+- name: Create Port Agent test script
+  template:
+    src: test_port_agent.py.j2
+    dest: "{{ port_agent_path }}/scripts/test_port_agent.py"
+    mode: '0755'
+    owner: "{{ service_user | default('root') }}"
+    group: "{{ service_group | default('root') }}"
+
+- name: Run Port Agent tests
+  command: >
+    {{ venv_path }}/bin/python {{ port_agent_path }}/scripts/test_port_agent.py
+  args:
+    chdir: "{{ port_agent_path }}"
+  register: port_agent_tests
+  ignore_errors: yes
+  when: run_tests | default(false)
+
+- name: Display Port Agent test results
+  debug:
+    var: port_agent_tests.stdout_lines
+  when: port_agent_tests is defined

@@ -1,0 +1,130 @@
+{
+    "version": "{{ nir_version }}",
+    "name": "NIR_Mistral",
+    "description": "NIR Intelligence Platform - Open Science Spectroscopy Analysis",
+    "environment": "{{ environment | default('production') }}",
+    
+    "deployment": {
+        "deploy_root": "{{ nir_deploy_root }}",
+        "project_root": "{{ nir_project_root }}",
+        "venv_path": "{{ venv_path }}",
+        "config_dir": "{{ nir_deploy_root }}/config",
+        "data_dir": "{{ nir_data_dir }}",
+        "logs_dir": "{{ nir_logs_dir }}"
+    },
+    
+    "server": {
+        "django_port": {{ django_port }},
+        "port_agent_port": {{ port_agent_port }},
+        "flower_port": 5555,
+        "celery_port": 5556,
+        "bind_address": "0.0.0.0",
+        "workers": 4,
+        "timeout": 300,
+        "debug": {{ django_debug | lower }},
+        "secret_key": "{{ django_secret_key }}",
+        "allowed_hosts": {{ django_allowed_hosts | to_json }}
+    },
+    
+    "database": {
+        "engine": "{{ db_engine }}",
+        "name": "{{ db_name }}",
+        "user": "",
+        "password": "",
+        "host": "localhost",
+        "port": 5432,
+        "options": {}
+    },
+    
+    "features": {
+        "ilias_integration": {{ enable_ilias_integration | lower }},
+        "federated_learning": {{ enable_federated_learning | lower }},
+        "audio_processing": {{ enable_audio_processing | lower }},
+        "image_processing": {{ enable_image_processing | lower }},
+        "spectrometer_analysis": {{ enable_spectrometer_analysis | lower }},
+        "onboarding": true,
+        "help_system": true,
+        "hswt_styling": true
+    },
+    
+    "agents": {
+        "enabled": [
+            {% if enable_ilias_integration %}"ilias_integration",{% endif %}
+            {% if enable_federated_learning %}"flower",{% endif %}
+            {% if enable_audio_processing %}"audio_processor",{% endif %}
+            {% if enable_image_processing %}"image_processor",{% endif %}
+            {% if enable_spectrometer_analysis %}"shift_detector", "parameter_recommender",{% endif %}
+            "hswt_styling",
+            "onboarding",
+            "metadata_quality",
+            "spectral_analysis",
+            "data_preparation",
+            "calibration",
+            "reporting",
+            "quarto"
+        ],
+        "auto_start": true,
+        "max_workers": 4,
+        "timeout": 300
+    },
+    
+    "api": {
+        "version": "2.0",
+        "title": "NIR_Mistral API",
+        "description": "REST API for NIR Intelligence Platform",
+        "docs_url": "/api/docs/",
+        "redoc_url": "/api/redoc/",
+        "pagination": {
+            "page_size": 20,
+            "max_page_size": 100
+        },
+        "throttling": {
+            "enabled": true,
+            "anon_rate": "100/hour",
+            "user_rate": "1000/hour"
+        }
+    },
+    
+    "security": {
+        "session_cookie_age": 1209600,
+        "session_cookie_secure": {{ not django_debug | lower }},
+        "csrf_cookie_secure": {{ not django_debug | lower }},
+        "session_cookie_httponly": true,
+        "csrf_cookie_httponly": true,
+        "password_min_length": 8,
+        "login_attempts": 5,
+        "lockout_time": 300
+    },
+    
+    "logging": {
+        "level": "INFO",
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        "max_file_size": 10485760,
+        "backup_count": 5,
+        "console_output": {{ django_debug | lower }}
+    },
+    
+    "performance": {
+        "cache_enabled": true,
+        "cache_backend": "django.core.cache.backends.locmem.LocMemCache",
+        "cache_timeout": 300,
+        "compression_enabled": true,
+        "static_files_served": {{ django_debug | lower }}
+    },
+    
+    "internationalization": {
+        "language_code": "en-us",
+        "time_zone": "Europe/Berlin",
+        "use_i18n": true,
+        "use_tz": true,
+        "supported_languages": ["en", "de"]
+    },
+    
+    "metadata": {
+        "author": "HSWT NIR Research Team",
+        "license": "MIT",
+        "homepage": "https://github.com/your-org/nir_mistral",
+        "repository": "https://github.com/your-org/nir_mistral.git",
+        "issues": "https://github.com/your-org/nir_mistral/issues"
+    }
+}

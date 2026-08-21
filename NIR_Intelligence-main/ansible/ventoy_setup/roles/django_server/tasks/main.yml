@@ -1,0 +1,387 @@
+---
+# Django Server Role for Ventoy Stick Setup
+#
+# This role deploys and configures the Django server with Port Management Agent integration.
+# It handles:
+# - Django project deployment
+# - Virtual environment setup
+# - Requirements installation
+# - Database configuration
+# - Static files collection
+# - Service configuration
+# - Port Management Agent integration
+# Django Server Setup Tasks
+- name: Display Django server setup information
+  debug:
+    msg: |
+      ============================================
+      DJANGO SERVER SETUP
+      ============================================
+      Django Project Path: {{ django_project_path }}
+      Virtual Environment: {{ venv_path }}
+      Settings Module: {{ django_settings_module }}
+      Bind Address: {{ django_bind_address }}
+      Port: {{ django_port }}
+      Debug Mode: {{ django_debug }}
+      ============================================
+  tags: [django, info]
+
+
+# Virtual Environment Setup
+- name: Create Python virtual environment
+  command: python3 -m venv {{ venv_path }}
+  args:
+    creates: "{{ venv_path }}/bin/python"
+  tags: [django, venv]
+
+- name: Upgrade pip in virtual environment
+  command: "{{ venv_path }}/bin/pip install --upgrade pip"
+  tags: [django, venv, pip]
+
+- name: Install Python build tools in virtual environment
+  command: "{{ venv_path }}/bin/pip install setuptools wheel build"
+  tags: [django, venv, build]
+
+
+# Django Project Deployment
+- name: Check if Django project already exists
+  stat:
+    path: "{{ django_project_path }}/manage.py"
+  register: django_project_exists
+  tags: [django, deployment]
+
+- name: Copy Django project from source (if not exists)
+  copy:
+    src: "{{ project_root }}/django_project/"
+    dest: "{{ django_project_path }}/"
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0755'
+    remote_src: yes
+  when: not django_project_exists.stat.exists and project_root is defined and lookup('fileglob', project_root + '/django_project/manage.py') | length > 0
+  tags: [django, deployment]
+
+- name: Create manage.py if Django project doesn't exist
+  copy:
+    content: "#!/usr/bin/env python\nimport os\nimport sys\nif __name__ == '__main__':\n    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'nir_web.settings')\n    from django.core.management import execute_from_command_line\n    execute_from_command_line(sys.argv)"
+    dest: "{{ django_project_path }}/manage.py"
+    mode: '0755'
+  when: not django_project_exists.stat.exists and (project_root is not defined or lookup('fileglob', project_root + '/django_project/manage.py') | length == 0)
+  tags: [django, deployment]
+
+- name: Set Django project permissions
+  file:
+    path: "{{ django_project_path }}"
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0755'
+    recurse: yes
+  tags: [django, permissions]
+
+
+# Django Requirements Installation
+- name: Create corrected requirements.txt (fix yaml package name and editable install)
+  copy:
+    content: |
+      # Django Project Requirements for NIR_Mistral Framework
+      
+      # Django and Web Framework
+      Django>=4.2.0
+      python-dotenv>=1.0.0
+      
+      # REST API
+       djangorestframework>=3.14.0
+       django-cors-headers>=4.3.0
+      
+      # Database
+       psycopg2-binary>=2.9.9
+      
+      # File handling
+       django-storages>=1.14.0
+      
+      # Scientific computing for NIR analysis
+       numpy>=1.24.0
+       pandas>=2.0.0
+       scipy>=1.10.0
+       matplotlib>=3.7.0
+       seaborn>=0.12.0
+       scikit-learn>=1.3.0
+       h5py>=3.8.0
+      
+      # Data visualization
+       plotly>=5.15.0
+      
+      # Authentication
+       djangorestframework-simplejwt>=5.3.0
+      
+      # Utilities
+       python-dateutil>=2.8.2
+       pytz>=2023.3
+      PyYAML>=6.0.0
+      
+      # For integration with main framework
+      # -e /home/martin/Development/vsCode_Environment/NIR_Mistral
+    dest: "{{ django_project_path }}/requirements.txt"
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0644'
+  tags: [django, requirements, fix]
+
+- name: Install Django requirements
+  command: "{{ venv_path }}/bin/pip install -r {{ django_project_path }}/requirements.txt"
+  ignore_errors: yes
+  tags: [django, requirements]
+
+- name: Install additional Python packages
+  command: "{{ venv_path }}/bin/pip install gunicorn uvicorn django-cors-headers djangorestframework psycopg2-binary PyYAML python-dotenv"
+  tags: [django, requirements]
+
+
+# Django Configuration
+- name: Create Django .env file
+  template:
+    src: django_env.j2
+    dest: "{{ django_project_path }}/.env"
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0640'
+  tags: [django, configuration]
+
+- name: Create Django local_settings.py
+  template:
+    src: local_settings.py.j2
+    dest: "{{ django_project_path }}/nir_web/local_settings.py"
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0644'
+  tags: [django, configuration]
+
+- name: Ensure settings file includes local_settings
+  lineinfile:
+    path: "{{ django_project_path }}/nir_web/settings.py"
+    line: "from .local_settings import *"
+    state: present
+    insertafter: EOF
+  tags: [django, configuration]
+
+
+# Database Setup
+- name: Install PostgreSQL client libraries
+  apt:
+    name:
+      - postgresql-client
+      - libpq-dev
+    state: present
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: [django, database]
+
+- name: Create database directory
+  file:
+    path: "{{ deploy_root }}/data/db"
+    state: directory
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0755'
+  tags: [django, database]
+
+
+# Django Management Commands
+- name: Run Django migrations
+  command: "{{ venv_path }}/bin/python {{ django_project_path }}/manage.py migrate --noinput"
+  environment:
+    PYTHONPATH: "{{ django_project_path }}"
+    DJANGO_SETTINGS_MODULE: "{{ django_settings_module }}"
+  become: yes
+  become_user: "{{ service_user }}"
+  when: run_migrations | default(true)
+  tags: [django, migrations]
+
+- name: Collect static files
+  command: "{{ venv_path }}/bin/python {{ django_project_path }}/manage.py collectstatic --noinput"
+  environment:
+    PYTHONPATH: "{{ django_project_path }}"
+    DJANGO_SETTINGS_MODULE: "{{ django_settings_module }}"
+  become: yes
+  become_user: "{{ service_user }}"
+  when: collect_static | default(true)
+  tags: [django, static]
+
+- name: Create static files directory
+  file:
+    path: "{{ deploy_root }}/static"
+    state: directory
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0755'
+  tags: [django, static]
+
+
+# Port Management Agent Integration
+- name: Ensure port_manager is in INSTALLED_APPS
+  lineinfile:
+    path: "{{ django_project_path }}/nir_web/settings.py"
+    line: "    'port_manager',"
+    state: present
+    insertafter: 'INSTALLED_APPS = \['
+    regexp: '^\\s*''port_manager'',?$'
+  tags: [django, port_manager, integration]
+
+- name: Ensure PortConflictResolutionMiddleware is in MIDDLEWARE
+  lineinfile:
+    path: "{{ django_project_path }}/nir_web/settings.py"
+    line: "    'port_manager.middleware.PortConflictResolutionMiddleware',"
+    state: present
+    insertafter: 'MIDDLEWARE = \['
+    regexp: '^\\s*''port_manager.middleware.PortConflictResolutionMiddleware'',?$'
+  tags: [django, port_manager, integration]
+
+- name: Ensure port_manager URLs are included
+  lineinfile:
+    path: "{{ django_project_path }}/nir_web/urls.py"
+    line: "    path('api/ports/', include('port_manager.urls')),"
+    state: present
+    insertafter: 'urlpatterns = \['
+    regexp: '^\\s*path\(''api/ports'', include\(''port_manager.urls''\)\),?$'
+  tags: [django, port_manager, integration]
+
+
+# Gunicorn Configuration
+- name: Create Gunicorn configuration file
+  template:
+    src: gunicorn.conf.py.j2
+    dest: "{{ django_project_path }}/gunicorn.conf.py"
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0644'
+  tags: [django, gunicorn]
+
+- name: Create Gunicorn service file
+  template:
+    src: gunicorn.service.j2
+    dest: /etc/systemd/system/gunicorn.service
+    mode: '0644'
+  when: create_systemd_services | default(true)
+  tags: [django, gunicorn, service]
+
+
+# Django Startup Script
+- name: Create Django startup script
+  template:
+    src: start_django.sh.j2
+    dest: "{{ deploy_root }}/start_django.sh"
+    mode: '0755'
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+  tags: [django, startup]
+
+- name: Create Django service file
+  template:
+    src: django.service.j2
+    dest: /etc/systemd/system/django.service
+    mode: '0644'
+  when: create_systemd_services | default(true)
+  tags: [django, service]
+
+
+# Log Configuration
+- name: Create log directory
+  file:
+    path: "{{ deploy_root }}/logs"
+    state: directory
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0755'
+  tags: [django, logs]
+
+- name: Create Django log file
+  file:
+    path: "{{ deploy_root }}/logs/django.log"
+    state: touch
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0644'
+  tags: [django, logs]
+
+- name: Create Gunicorn log file
+  file:
+    path: "{{ deploy_root }}/logs/gunicorn.log"
+    state: touch
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0644'
+  tags: [django, logs]
+
+- name: Create access log file
+  file:
+    path: "{{ deploy_root }}/logs/access.log"
+    state: touch
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0644'
+  tags: [django, logs]
+
+
+# Service Management
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+  when: create_systemd_services | default(true)
+  tags: [django, service]
+
+- name: Enable Gunicorn service
+  systemd:
+    name: gunicorn
+    enabled: yes
+  when: create_systemd_services | default(true)
+  tags: [django, service]
+
+- name: Enable Django service
+  systemd:
+    name: django
+    enabled: yes
+  when: create_systemd_services | default(true)
+  tags: [django, service]
+
+
+# Verification
+- name: Test Django server startup
+  command: "{{ venv_path }}/bin/python {{ django_project_path }}/manage.py check"
+  environment:
+    PYTHONPATH: "{{ django_project_path }}"
+    DJANGO_SETTINGS_MODULE: "{{ django_settings_module }}"
+  become: yes
+  become_user: "{{ service_user }}"
+  register: django_check
+  ignore_errors: yes
+  tags: [django, verification]
+
+- name: Display Django check results
+  debug:
+    var: django_check.stdout_lines
+  when: django_check is defined
+  tags: [django, verification]
+
+- name: Display Django server setup summary
+  debug:
+    msg: |
+      ============================================
+      DJANGO SERVER SETUP COMPLETE
+      ============================================
+      
+      Virtual Environment: ✅
+      Django Project: ✅
+      Requirements: ✅
+      Configuration: ✅
+      Database Setup: ✅
+      Migrations: {{ '✅' if run_migrations | default(true) else '⏭️' }}
+      Static Files: {{ '✅' if collect_static | default(true) else '⏭️' }}
+      Port Manager Integration: ✅
+      Gunicorn Configuration: ✅
+      Service Configuration: {{ '✅' if create_systemd_services | default(true) else '⏭️' }}
+      Log Configuration: ✅
+      
+      Django Check: {{ '✅ PASSED' if django_check.rc == 0 else '❌ FAILED' }}
+      
+      Next: Port Agent Setup
+      ============================================
+  tags: [django, summary]

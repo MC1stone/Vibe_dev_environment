@@ -1,0 +1,145 @@
+# Ventoy Persistence Configuration for NIR_Mistral Framework
+# This file configures persistence settings for the Ventoy stick
+
+# Global persistence settings
+[persistence]
+# Enable persistence
+enabled = true
+
+# Persistence directory
+persist_dir = {{ deploy_root }}/data
+
+# Save configuration files
+save_config = true
+
+# Save log files
+save_logs = true
+
+# Save environment variables
+save_environment = true
+
+# Save service state
+save_service_state = true
+
+# Save port reservations
+save_port_reservations = true
+
+# Persistence file types
+file_types = [
+    "*.log",
+    "*.conf",
+    "*.json",
+    "*.yaml",
+    "*.yml",
+    "*.env",
+    "*.db",
+    "*.sqlite",
+    "*.pid"
+]
+
+# Directories to persist
+directories = [
+    "{{ deploy_root }}/logs",
+    "{{ deploy_root }}/config",
+    "{{ deploy_root }}/data",
+    "{{ deploy_root }}/tmp"
+]
+
+# Files to persist
+files = [
+    "{{ deploy_root }}/VENTOY_README.md",
+    "{{ deploy_root }}/VENTOY_CONFIG_SUMMARY.md",
+    "{{ ventoy_mount_point }}/ventoy/ventoy.json",
+    "{{ ventoy_mount_point }}/ventoy/ventoy_control.json",
+    "{{ ventoy_mount_point }}/ventoy/nir_mistral_boot.conf",
+    "{{ ventoy_mount_point }}/ventoy/ventoy_menu.conf",
+    "{{ ventoy_mount_point }}/ventoy/persistence.conf"
+]
+
+# Exclude patterns (files/directories to NOT persist)
+exclude_patterns = [
+    "*.tmp",
+    "*.bak",
+    "*.old",
+    "*.swp",
+    "*.swo",
+    ".cache",
+    "__pycache__",
+    ".git",
+    "node_modules",
+    "*.pyc",
+    "*.pyo"
+]
+
+# Persistence schedule
+[schedule]
+# Save on shutdown
+save_on_shutdown = true
+
+# Save on reboot
+save_on_reboot = true
+
+# Auto-save interval (minutes)
+auto_save_interval = 5
+
+# Maximum persistence file size (MB)
+max_file_size = 100
+
+# Maximum total persistence size (MB)
+max_total_size = 500
+
+# Compression settings
+[compression]
+# Enable compression
+enabled = true
+
+# Compression level (1-9, 9 is best)
+level = 6
+
+# Compress files larger than (KB)
+min_size = 1024
+
+# Compression format (gzip, bzip2, xz)
+format = gzip
+
+# Backup settings
+[backup]
+# Enable backups
+enabled = true
+
+# Backup directory
+backup_dir = {{ deploy_root }}/backups
+
+# Number of backups to keep
+backup_count = 5
+
+# Backup interval (days)
+backup_interval = 7
+
+# Backup compression
+backup_compress = true
+
+# Service-specific persistence
+[services]
+[services.django]
+persist_logs = true
+persist_config = true
+persist_database = true
+
+[services.port_agent]
+persist_logs = true
+persist_config = true
+persist_database = true
+
+# Network persistence
+[network]
+persist_hostname = true
+persist_network_config = true
+persist_dns_settings = true
+
+# System persistence
+[system]
+persist_environment = true
+persist_limits = true
+persist_firewall = true
+persist_cron = true

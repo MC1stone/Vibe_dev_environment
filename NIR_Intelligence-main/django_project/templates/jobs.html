@@ -1,0 +1,561 @@
+{% extends "base.html" %}
+{% load static %}
+
+
+{% block title %}Analysis Jobs - NIR_Mistral Framework{% endblock %}
+
+{% block extra_css %}
+<style>
+    .job-card {
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        cursor: pointer;
+    }
+    
+    .job-card:hover {
+        border-color: var(--color-primary);
+        box-shadow: 0 8px 25px rgba(122, 185, 41, 0.15);
+        transform: translateY(-4px);
+    }
+    
+    .job-status-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .job-progress {
+        height: 8px;
+        background: var(--color-background);
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 12px 0;
+    }
+    
+    .job-progress-bar {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    
+    .job-agent-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-right: 12px;
+    }
+    
+    .job-timeline {
+        position: relative;
+        padding-left: 20px;
+    }
+    
+    .job-timeline::before {
+        content: '';
+        position: absolute;
+        left: 8px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--color-border);
+    }
+    
+    .job-timeline-item {
+        position: relative;
+        padding-bottom: 16px;
+    }
+    
+    .job-timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -20px;
+        top: 4px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        border: 2px solid white;
+    }
+    
+    .job-timeline-time {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+        margin-left: 20px;
+    }
+    
+    .job-result-preview {
+        background: var(--color-background-light);
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 12px;
+    }
+    
+    .filter-section {
+        background: var(--color-background-light);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+    
+    .status-filter-badge {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin: 4px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .status-filter-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .status-filter-badge.active {
+        border-width: 2px;
+    }
+    
+    .status-filter-badge .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="o-section o-section--primary">
+    <div class="o-container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1 class="c-page-header__title text-white mb-0">
+                    <i class="bi bi-hourglass-split"></i> Analysis Jobs
+                </h1>
+                <p class="c-page-header__subtitle text-white opacity-75 mb-0">
+                    Monitor and manage Crew AI analysis jobs in real-time
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="c-button c-button--white" onclick="refreshJobs()">
+                    <i class="bi bi-arrow-clockwise c-button__icon"></i>
+                    <span class="c-button__text">Refresh</span>
+                </button>
+                <button class="c-button c-button--secondary" onclick="createNewJob()">
+                    <i class="bi bi-plus c-button__icon"></i>
+                    <span class="c-button__text">New Job</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Job Statistics -->
+<section class="o-section">
+    <div class="o-container">
+        <div class="row g-4">
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--primary">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="totalJobs">0</div>
+                    <div class="c-stat-card__label">Total Jobs</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--success">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="completedJobs">0</div>
+                    <div class="c-stat-card__label">Completed</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--info">
+                        <i class="bi bi-play-circle"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="runningJobs">0</div>
+                    <div class="c-stat-card__label">Running</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--warning">
+                        <i class="bi bi-clock"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="pendingJobs">0</div>
+                    <div class="c-stat-card__label">Pending</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Status Filter Section -->
+<section class="o-section o-section--light">
+    <div class="o-container">
+        <h2 class="c-card__title mb-xl">
+            <i class="bi bi-funnel"></i> Filter by Status
+        </h2>
+        
+        <div class="d-flex flex-wrap gap-2" id="statusFilters">
+            <div class="status-filter-badge c-badge--primary active" onclick="filterByStatus('')">
+                <span class="status-dot" style="background: var(--color-primary);"></span>
+                <span>All Jobs</span>
+            </div>
+            <div class="status-filter-badge c-badge--info" onclick="filterByStatus('running')">
+                <span class="status-dot" style="background: var(--color-info);"></span>
+                <span>Running</span>
+            </div>
+            <div class="status-filter-badge c-badge--warning" onclick="filterByStatus('pending')">
+                <span class="status-dot" style="background: var(--color-warning);"></span>
+                <span>Pending</span>
+            </div>
+            <div class="status-filter-badge c-badge--success" onclick="filterByStatus('completed')">
+                <span class="status-dot" style="background: var(--color-success);"></span>
+                <span>Completed</span>
+            </div>
+            <div class="status-filter-badge c-badge--danger" onclick="filterByStatus('failed')">
+                <span class="status-dot" style="background: var(--color-danger);"></span>
+                <span>Failed</span>
+            </div>
+            <div class="status-filter-badge c-badge--secondary" onclick="filterByStatus('cancelled')">
+                <span class="status-dot" style="background: var(--color-secondary);"></span>
+                <span>Cancelled</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Active Jobs Section -->
+<section class="o-section">
+    <div class="o-container">
+        <div class="d-flex justify-content-between align-items-center mb-xl">
+            <h2 class="c-card__title mb-0">
+                <i class="bi bi-lightning-charge"></i> Active Jobs
+            </h2>
+            <span class="c-badge c-badge--primary" id="activeJobsCount">0</span>
+        </div>
+        
+        <div class="row g-4" id="activeJobsGrid">
+            <!-- Active jobs will be loaded here -->
+        </div>
+    </div>
+</section>
+
+<!-- Recent Jobs Section -->
+<section class="o-section o-section--light">
+    <div class="o-container">
+        <div class="d-flex justify-content-between align-items-center mb-xl">
+            <h2 class="c-card__title mb-0">
+                <i class="bi bi-clock-history"></i> Recent Jobs
+            </h2>
+            <div class="d-flex gap-2">
+                <select class="c-form-control c-form-control--sm" id="sortOrder" onchange="sortJobs()">
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="fastest">Fastest First</option>
+                    <option value="slowest">Slowest First</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="c-card">
+            <div class="c-card__body p-0">
+                <div class="table-responsive">
+                    <table class="c-table c-table--hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Job ID</th>
+                                <th>Name</th>
+                                <th>Agent</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Duration</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jobsTable">
+                            <tr>
+                                <td colspan="8" class="text-center py-lg">
+                                    <div class="c-loading-overlay__spinner" style="width: 2rem; height: 2rem; border-width: 0.2rem;"></div>
+                                    <p class="mt-sm text-muted">Loading jobs...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="c-card__footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span id="jobsCount">0 jobs</span>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteSelectedJobs()">
+                            <i class="bi bi-trash"></i> Delete Selected
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="exportJobsList()">
+                            <i class="bi bi-download"></i> Export List
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Job Details Modal -->
+<div class="modal fade" id="jobDetailsModal" tabindex="-1" aria-labelledby="jobDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="jobDetailsModalLabel">
+                    <i class="bi bi-hourglass-split"></i> Job Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="c-card mb-3">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">Job Information</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <dl class="row mb-0">
+                                    <dt class="col-sm-4">Job ID:</dt>
+                                    <dd class="col-sm-8" id="detailJobId"></dd>
+                                    
+                                    <dt class="col-sm-4">Name:</dt>
+                                    <dd class="col-sm-8" id="detailJobName"></dd>
+                                    
+                                    <dt class="col-sm-4">Status:</dt>
+                                    <dd class="col-sm-8" id="detailJobStatus"></dd>
+                                    
+                                    <dt class="col-sm-4">Progress:</dt>
+                                    <dd class="col-sm-8" id="detailJobProgress"></dd>
+                                    
+                                    <dt class="col-sm-4">Agent:</dt>
+                                    <dd class="col-sm-8" id="detailJobAgent"></dd>
+                                    
+                                    <dt class="col-sm-4">Analysis Type:</dt>
+                                    <dd class="col-sm-8" id="detailAnalysisType"></dd>
+                                    
+                                    <dt class="col-sm-4">Sample:</dt>
+                                    <dd class="col-sm-8" id="detailJobSample"></dd>
+                                    
+                                    <dt class="col-sm-4">Created:</dt>
+                                    <dd class="col-sm-8" id="detailJobCreated"></dd>
+                                    
+                                    <dt class="col-sm-4">Completed:</dt>
+                                    <dd class="col-sm-8" id="detailJobCompleted"></dd>
+                                    
+                                    <dt class="col-sm-4">Duration:</dt>
+                                    <dd class="col-sm-8" id="detailJobDuration"></dd>
+                                </dl>
+                            </div>
+                        </div>
+                        
+                        <div class="c-card">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">Description</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <p id="detailJobDescription" class="mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="c-card h-100">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">Job Timeline</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <div class="job-timeline" id="detailJobTimeline">
+                                    <!-- Timeline will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="c-card">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">Results</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <div id="detailJobResults">
+                                    <!-- Results will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="c-card">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">Logs</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <div class="job-result-preview" style="max-height: 200px; overflow-y: auto;">
+                                    <pre id="detailJobLogs" class="mb-0 small"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Close
+                </button>
+                <button type="button" class="btn btn-primary" onclick="retryJob()" id="retryJobBtn">
+                    <i class="bi bi-arrow-clockwise"></i> Retry
+                </button>
+                <button type="button" class="btn btn-danger" onclick="cancelJob()" id="cancelJobBtn">
+                    <i class="bi bi-stop"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="viewJobReport()">
+                    <i class="bi bi-file-earmark-text"></i> View Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Job Modal -->
+<div class="modal fade" id="createJobModal" tabindex="-1" aria-labelledby="createJobModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="createJobModalLabel">
+                    <i class="bi bi-plus"></i> Create New Job
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createJobForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="c-form-label required">Job Name</label>
+                            <input type="text" class="c-form-control" id="jobName" placeholder="e.g., Batch Analysis 001" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="c-form-label required">Analysis Type</label>
+                            <select class="c-form-control" id="jobAnalysisType" required>
+                                <option value="">Select analysis type...</option>
+                                <option value="spectral_analysis">Spectral Analysis</option>
+                                <option value="metadata_quality">Metadata Quality</option>
+                                <option value="calibration">Calibration</option>
+                                <option value="comprehensive">Comprehensive</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="c-form-label required">Agent</label>
+                            <select class="c-form-control" id="jobAgent" required>
+                                <option value="">Select agent...</option>
+                                <option value="SpectralAnalysisAgent">Spectral Analysis Agent</option>
+                                <option value="MetadataQualityAgent">Metadata Quality Agent</option>
+                                <option value="CalibrationAgent">Calibration Agent</option>
+                                <option value="ReportingAgent">Reporting Agent</option>
+                                <option value="FlowerAgent">Flower Federated Learning Agent</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="c-form-label">Priority</label>
+                            <select class="c-form-control" id="jobPriority">
+                                <option value="normal">Normal</option>
+                                <option value="high">High</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="c-form-label">Select Spectra</label>
+                            <div class="row g-2" id="jobSpectraSelection">
+                                <!-- Spectra will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="c-form-label">Description</label>
+                            <textarea class="c-form-control" id="jobDescription" rows="3" placeholder="Brief description of the job..."></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="c-form-check">
+                                <input class="c-checkbox" type="checkbox" id="jobNotifyOnComplete" checked>
+                                <label class="c-checkbox__label" for="jobNotifyOnComplete">
+                                    Notify when complete
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="createJob()">
+                    <i class="bi bi-play"></i> Create Job
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="jobsDeleteConfirmationModal" tabindex="-1" aria-labelledby="jobsDeleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="jobsDeleteConfirmationModalLabel">
+                    <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="jobsDeleteMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/jobs.js' %}"></script>
+{% endblock %}

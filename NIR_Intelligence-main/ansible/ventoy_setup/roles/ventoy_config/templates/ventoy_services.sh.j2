@@ -1,0 +1,404 @@
+#!/bin/bash
+# Ventoy Services Manager for NIR_Mistral Framework
+# This script manages the Django and Port Agent services
+
+set -e
+set -o pipefail
+
+# Configuration
+PROJECT_ROOT="{{ deploy_root }}"
+DJANGO_PROJECT="{{ django_project_path }}"
+PORT_AGENT_PATH="{{ port_agent_path }}"
+VENV_PATH="{{ venv_path }}"
+DJANGO_PORT="{{ django_port }}"
+PORT_AGENT_PORT="{{ port_agent_port }}"
+LOG_DIR="${PROJECT_ROOT}/logs"
+PID_DIR="/tmp/nir_mistral"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Create directories
+mkdir -p "${LOG_DIR}"
+mkdir -p "${PID_DIR}"
+
+# Logging functions
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+log_header() {
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}$1${NC}"
+    echo -e "${BLUE}========================================${NC}"
+}
+
+# Setup environment
+setup_environment() {
+    export PATH="${VENV_PATH}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    export PYTHONPATH="${PROJECT_ROOT}"
+    export DJANGO_SETTINGS_MODULE="{{ django_settings_module }}"
+}
+
+# Check if service is running
+is_service_running() {
+    local service_name=$1
+    local pid_file="${PID_DIR}/${service_name}.pid"
+    
+    if [ -f "${pid_file}" ]; then
+        local pid=$(cat "${pid_file}")
+        if kill -0 ${pid} 2>/dev/null; then
+            return 0
+        fi
+    fi
+    
+    return 1
+}
+
+# Get service PID
+get_service_pid() {
+    local service_name=$1
+    local pid_file="${PID_DIR}/${service_name}.pid"
+    
+    if [ -f "${pid_file}" ]; then
+        cat "${pid_file}"
+    else
+        echo ""
+    fi
+}
+
+# Start Django service
+start_django() {
+    if is_service_running "django"; then
+        local pid=$(get_service_pid "django")
+        log_warn "Django server is already running (PID: ${pid})"
+        return 0
+    fi
+    
+    log_info "Starting Django server on port ${DJANGO_PORT}..."
+    
+    cd "${DJANGO_PROJECT}"
+    setup_environment
+    
+    nohup ${VENV_PATH}/bin/python manage.py runserver 0.0.0.0:${DJANGO_PORT} > ${LOG_DIR}/django.log 2>&1 &
+    
+    local pid=$!
+    echo ${pid} > "${PID_DIR}/django.pid"
+    
+    # Wait for Django to start
+    local retries=10
+    local count=0
+    
+    while ! curl -s "http://localhost:${DJANGO_PORT}/api/health/" > /dev/null 2>&1; do
+        sleep 2
+        count=$((count + 1))
+        if [ ${count} -ge ${retries} ]; then
+            log_error "Django server failed to start"
+            return 1
+        fi
+    done
+    
+    log_info "Django server started successfully (PID: ${pid})"
+    return 0
+}
+
+# Stop Django service
+stop_django() {
+    if ! is_service_running "django"; then
+        log_warn "Django server is not running"
+        return 0
+    fi
+    
+    log_info "Stopping Django server..."
+    
+    local pid=$(get_service_pid "django")
+    kill ${pid} 2>/dev/null || true
+    sleep 1
+    kill -9 ${pid} 2>/dev/null || true
+    rm -f "${PID_DIR}/django.pid"
+    
+    log_info "Django server stopped"
+    return 0
+}
+
+# Restart Django service
+restart_django() {
+    stop_django
+    sleep 1
+    start_django
+}
+
+# Start Port Agent service
+start_port_agent() {
+    if is_service_running "port_agent"; then
+        local pid=$(get_service_pid "port_agent")
+        log_warn "Port Agent is already running (PID: ${pid})"
+        return 0
+    fi
+    
+    log_info "Starting Port Agent on port ${PORT_AGENT_PORT}..."
+    
+    cd "${PORT_AGENT_PATH}"
+    setup_environment
+    
+    # Load environment variables
+    if [ -f "${PORT_AGENT_PATH}/.env" ]; then
+        set -a
+        source "${PORT_AGENT_PATH}/.env"
+        set +a
+    fi
+    
+    # Start with Gunicorn
+    nohup ${VENV_PATH}/bin/gunicorn \
+        --bind 0.0.0.0:${PORT_AGENT_PORT} \
+        --workers {{ port_agent_workers | default(2) }} \
+        --timeout {{ port_agent_timeout | default(60) }} \
+        --max-requests 1000 \
+        --log-level info \
+        --access-logfile ${LOG_DIR}/port_agent_access.log \
+        --error-logfile ${LOG_DIR}/port_agent_error.log \
+        --capture-output \
+        --enable-stdio-inheritance \
+        --pythonpath ${PROJECT_ROOT} \
+        agents.port_agent.server:app \
+        > ${LOG_DIR}/port_agent.log 2>&1 &
+    
+    local pid=$!
+    echo ${pid} > "${PID_DIR}/port_agent.pid"
+    
+    # Wait for Port Agent to start
+    local retries=10
+    local count=0
+    
+    while ! curl -s "http://localhost:${PORT_AGENT_PORT}/api/ports/" > /dev/null 2>&1; do
+        sleep 2
+        count=$((count + 1))
+        if [ ${count} -ge ${retries} ]; then
+            log_error "Port Agent failed to start"
+            return 1
+        fi
+    done
+    
+    log_info "Port Agent started successfully (PID: ${pid})"
+    return 0
+}
+
+# Stop Port Agent service
+stop_port_agent() {
+    if ! is_service_running "port_agent"; then
+        log_warn "Port Agent is not running"
+        return 0
+    fi
+    
+    log_info "Stopping Port Agent..."
+    
+    local pid=$(get_service_pid "port_agent")
+    kill ${pid} 2>/dev/null || true
+    sleep 1
+    kill -9 ${pid} 2>/dev/null || true
+    rm -f "${PID_DIR}/port_agent.pid"
+    
+    log_info "Port Agent stopped"
+    return 0
+}
+
+# Restart Port Agent service
+restart_port_agent() {
+    stop_port_agent
+    sleep 1
+    start_port_agent
+}
+
+# Start all services
+start_all() {
+    log_header "STARTING ALL SERVICES"
+    
+    start_port_agent
+    start_django
+    
+    log_header "ALL SERVICES STARTED"
+    status_all
+}
+
+# Stop all services
+stop_all() {
+    log_header "STOPPING ALL SERVICES"
+    
+    stop_django
+    stop_port_agent
+    
+    log_header "ALL SERVICES STOPPED"
+}
+
+# Restart all services
+restart_all() {
+    log_header "RESTARTING ALL SERVICES"
+    
+    stop_all
+    sleep 2
+    start_all
+}
+
+# Show status of all services
+status_all() {
+    log_header "SERVICE STATUS"
+    
+    echo "Django Server:"
+    if is_service_running "django"; then
+        local pid=$(get_service_pid "django")
+        echo "  Status: ${GREEN}RUNNING${NC} (PID: ${pid})"
+        echo "  URL: http://localhost:${DJANGO_PORT}"
+        echo "  Log: ${LOG_DIR}/django.log"
+        
+        if curl -s "http://localhost:${DJANGO_PORT}/api/health/" > /dev/null 2>&1; then
+            echo "  Health: ${GREEN}HEALTHY${NC}"
+        else
+            echo "  Health: ${RED}UNHEALTHY${NC}"
+        fi
+    else
+        echo "  Status: ${RED}STOPPED${NC}"
+    fi
+    
+    echo
+    echo "Port Agent:"
+    if is_service_running "port_agent"; then
+        local pid=$(get_service_pid "port_agent")
+        echo "  Status: ${GREEN}RUNNING${NC} (PID: ${pid})"
+        echo "  URL: http://localhost:${PORT_AGENT_PORT}"
+        echo "  Log: ${LOG_DIR}/port_agent.log"
+        
+        if curl -s "http://localhost:${PORT_AGENT_PORT}/api/ports/" > /dev/null 2>&1; then
+            echo "  Health: ${GREEN}HEALTHY${NC}"
+        else
+            echo "  Health: ${RED}UNHEALTHY${NC}"
+        fi
+    else
+        echo "  Status: ${RED}STOPPED${NC}"
+    fi
+}
+
+# Show logs for all services
+logs_all() {
+    log_header "SERVICE LOGS"
+    
+    echo "Available log files:"
+    echo "  Django: ${LOG_DIR}/django.log"
+    echo "  Port Agent: ${LOG_DIR}/port_agent.log"
+    echo "  Port Agent Access: ${LOG_DIR}/port_agent_access.log"
+    echo "  Port Agent Error: ${LOG_DIR}/port_agent_error.log"
+    echo
+    
+    # Tail all logs
+    tail -f "${LOG_DIR}/django.log" "${LOG_DIR}/port_agent.log" "${LOG_DIR}/port_agent_access.log" "${LOG_DIR}/port_agent_error.log"
+}
+
+# Show usage
+usage() {
+    log_header "USAGE"
+    echo "Ventoy Services Manager for NIR_Mistral Framework"
+    echo
+    echo "Commands:"
+    echo "  start [service]    - Start service (django, port_agent, or all)"
+    echo "  stop [service]     - Stop service (django, port_agent, or all)"
+    echo "  restart [service]  - Restart service (django, port_agent, or all)"
+    echo "  status            - Show status of all services"
+    echo "  logs              - Show logs for all services"
+    echo "  help              - Show this help message"
+    echo
+    echo "Examples:"
+    echo "  $(basename $0) start all"
+    echo "  $(basename $0) start django"
+    echo "  $(basename $0) stop port_agent"
+    echo "  $(basename $0) restart all"
+    echo "  $(basename $0) status"
+    echo "  $(basename $0) logs"
+}
+
+# Main execution
+main() {
+    case "$1" in
+        start)
+            case "$2" in
+                django)
+                    start_django
+                    ;;
+                port_agent)
+                    start_port_agent
+                    ;;
+                all|"")
+                    start_all
+                    ;;
+                *)
+                    log_error "Unknown service: $2"
+                    usage
+                    exit 1
+                    ;;
+            esac
+            ;;
+        stop)
+            case "$2" in
+                django)
+                    stop_django
+                    ;;
+                port_agent)
+                    stop_port_agent
+                    ;;
+                all|"")
+                    stop_all
+                    ;;
+                *)
+                    log_error "Unknown service: $2"
+                    usage
+                    exit 1
+                    ;;
+            esac
+            ;;
+        restart)
+            case "$2" in
+                django)
+                    restart_django
+                    ;;
+                port_agent)
+                    restart_port_agent
+                    ;;
+                all|"")
+                    restart_all
+                    ;;
+                *)
+                    log_error "Unknown service: $2"
+                    usage
+                    exit 1
+                    ;;
+            esac
+            ;;
+        status)
+            status_all
+            ;;
+        logs)
+            logs_all
+            ;;
+        help|--help|-h|"")
+            usage
+            ;;
+        *)
+            log_error "Unknown command: $1"
+            usage
+            exit 1
+            ;;
+    esac
+}
+
+# Run main function
+main "$@"

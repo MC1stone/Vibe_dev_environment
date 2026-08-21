@@ -1,0 +1,170 @@
+{
+    "ventoy": {
+        "version": "{{ ventoy_version }}",
+        "timestamp": "{{ ansible_date_time.iso8601 }}",
+        "configuration": {
+            "theme": "nir_mistral",
+            "default_selection": "NIR_Mistral Framework",
+            "timeout": 10,
+            "auto_boot": true,
+            "password_protect": false,
+            "password": "",
+            "menu_style": "graphical",
+            "language": "en_US",
+            "resolution": "1920x1080",
+            "persistence": true,
+            "save_settings": true
+        },
+        "nir_mistral": {
+            "name": "NIR_Mistral Framework",
+            "description": "Complete NIR_Mistral Framework with Django Server and Port Agent",
+            "version": "1.0.0",
+            "deploy_root": "{{ deploy_root }}",
+            "django_port": {{ django_port }},
+            "port_agent_port": {{ port_agent_port }},
+            "environment": "{{ environment | default('production') }}",
+            "features": {
+                "django_server": true,
+                "port_agent": true,
+                "auto_start": true,
+                "health_check": true,
+                "logging": true,
+                "monitoring": false
+            },
+            "services": {
+                "django": {
+                    "enabled": true,
+                    "port": {{ django_port }},
+                    "auto_start": true,
+                    "restart_on_failure": true
+                },
+                "port_agent": {
+                    "enabled": true,
+                    "port": {{ port_agent_port }},
+                    "auto_start": true,
+                    "restart_on_failure": true
+                }
+            },
+            "network": {
+                "bind_address": "0.0.0.0",
+                "allowed_hosts": ["localhost", "127.0.0.1", "::1"],
+                "firewall_enabled": {{ firewall_enabled | default(False) | lower }},
+                "open_ports": {{ open_ports | default([8000, 8001, 8080, 5432, 6379, 9200]) }}
+            },
+            "paths": {
+                "project_root": "{{ project_root }}",
+                "deploy_root": "{{ deploy_root }}",
+                "venv_path": "{{ venv_path }}",
+                "django_project": "{{ django_project_path }}",
+                "port_agent": "{{ port_agent_path }}",
+                "logs_dir": "{{ deploy_root }}/logs",
+                "config_dir": "{{ deploy_root }}/config",
+                "data_dir": "{{ deploy_root }}/data"
+            }
+        },
+        "menu": {
+            "items": [
+                {
+                    "id": "nir_mistral",
+                    "name": "NIR_Mistral Framework",
+                    "description": "Start Django Server and Port Agent",
+                    "icon": "/ventoy/themes/nir_mistral/nir_mistral.png",
+                    "boot_type": "script",
+                    "script": "/ventoy/boot_django.sh",
+                    "auto_boot": true,
+                    "default": true
+                },
+                {
+                    "id": "nir_mistral_debug",
+                    "name": "NIR_Mistral Framework (Debug)",
+                    "description": "Start with debug mode enabled",
+                    "icon": "/ventoy/themes/nir_mistral/nir_mistral_debug.png",
+                    "boot_type": "script",
+                    "script": "/ventoy/boot_django.sh --debug",
+                    "auto_boot": false,
+                    "default": false
+                },
+                {
+                    "id": "nir_mistral_status",
+                    "name": "NIR_Mistral Status",
+                    "description": "Check status of running services",
+                    "icon": "/ventoy/themes/nir_mistral/status.png",
+                    "boot_type": "script",
+                    "script": "/ventoy/ventoy_health_check.sh",
+                    "auto_boot": false,
+                    "default": false
+                },
+                {
+                    "id": "separator1",
+                    "name": "---",
+                    "type": "separator"
+                },
+                {
+                    "id": "django_only",
+                    "name": "Django Server Only",
+                    "description": "Start only the Django server",
+                    "icon": "/ventoy/themes/nir_mistral/django.png",
+                    "boot_type": "script",
+                    "script": "/ventoy/ventoy_services.sh start django",
+                    "auto_boot": false,
+                    "default": false
+                },
+                {
+                    "id": "port_agent_only",
+                    "name": "Port Agent Only",
+                    "description": "Start only the Port Agent",
+                    "icon": "/ventoy/themes/nir_mistral/port_agent.png",
+                    "boot_type": "script",
+                    "script": "/ventoy/ventoy_services.sh start port_agent",
+                    "auto_boot": false,
+                    "default": false
+                },
+                {
+                    "id": "stop_services",
+                    "name": "Stop All Services",
+                    "description": "Stop Django and Port Agent services",
+                    "icon": "/ventoy/themes/nir_mistral/stop.png",
+                    "boot_type": "script",
+                    "script": "/ventoy/ventoy_services.sh stop",
+                    "auto_boot": false,
+                    "default": false
+                },
+                {
+                    "id": "restart_services",
+                    "name": "Restart Services",
+                    "description": "Restart Django and Port Agent services",
+                    "icon": "/ventoy/themes/nir_mistral/restart.png",
+                    "boot_type": "script",
+                    "script": "/ventoy/ventoy_services.sh restart",
+                    "auto_boot": false,
+                    "default": false
+                },
+                {
+                    "id": "separator2",
+                    "name": "---",
+                    "type": "separator"
+                },
+                {
+                    "id": "view_logs",
+                    "name": "View Logs",
+                    "description": "View Django and Port Agent logs",
+                    "icon": "/ventoy/themes/nir_mistral/logs.png",
+                    "boot_type": "script",
+                    "script": "/ventoy/ventoy_services.sh logs",
+                    "auto_boot": false,
+                    "default": false
+                },
+                {
+                    "id": "cleanup",
+                    "name": "Cleanup",
+                    "description": "Clean up temporary files and cache",
+                    "icon": "/ventoy/themes/nir_mistral/cleanup.png",
+                    "boot_type": "script",
+                    "script": "/ventoy/ventoy_cleanup.sh",
+                    "auto_boot": false,
+                    "default": false
+                }
+            ]
+        }
+    }
+}

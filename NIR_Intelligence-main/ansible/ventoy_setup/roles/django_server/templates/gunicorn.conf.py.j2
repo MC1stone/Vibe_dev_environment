@@ -1,0 +1,110 @@
+"""
+Gunicorn Configuration for Django Server
+
+This configuration file sets up Gunicorn for the Django server
+with optimal settings for the NIR_Mistral Framework.
+"""
+
+import multiprocessing
+import os
+
+# Server Socket
+bind = "0.0.0.0:{{ django_port }}"
+backlog = 2048
+
+# Worker Processes
+workers = {{ django_workers | default(4) }}
+worker_class = "gthread"
+worker_connections = 1000
+max_requests = 1000
+max_request_jitter = 50
+timeout = {{ django_timeout | default(300) }}
+graceful_timeout = 30
+keepalive = 2
+
+# Worker Lifespan
+worker_lifespan = None
+worker_abort = True
+
+# Security
+limit_request_line = 4094
+limit_request_fields = 100
+limit_request_field_size = 8190
+
+# Debugging
+debug = {{ django_debug | default(False) | lower }}
+spew = False
+
+# Server Mechanics
+preload_app = True
+sendfile = True
+chdir = "{{ django_project_path }}"
+daemon = False
+pidfile = "/tmp/nir_mistral/django_gunicorn.pid"
+umask = 0o022
+user = None
+group = None
+tmp_upload_dir = None
+
+# Process Naming
+proc_name = "django-nir-mistral"
+
+# SSL Configuration (disabled by default)
+# keyfile = None
+# certfile = None
+# ssl_version = None
+# cert_reqs = None
+# ca_certs = None
+# ciphers = None
+
+# StatsD
+statsd_host = None
+statsd_prefix = "django-nir-mistral"
+
+# Logging
+accesslog = "{{ deploy_root }}/logs/access.log"
+access_log_format = "%(h)s %(l)s %(u)s %(t)s \"%(r)s\" %(s)s %(b)s \"%(f)s\" \"%(a)s\""
+errorlog = "{{ deploy_root }}/logs/gunicorn.log"
+loglevel = "info"
+logconfig = None
+logfile = None
+syslog = False
+syslog_prefix = None
+syslog_facility = "user"
+enable_stdio_inheritance = True
+
+# Process Handling
+max_spare_threads = (workers * 2) + 1
+min_spare_threads = workers
+threads = 2
+
+# Server Hooks
+on_starting = None
+on_reload = None
+when_ready = None
+pre_fork = None
+post_fork = None
+post_worker_init = None
+worker_int = None
+worker_exit = None
+nworkers_changed = None
+
+# Custom Settings
+pythonpath = "{{ deploy_root }}"
+env = {
+    "PYTHONPATH": "{{ deploy_root }}",
+    "DJANGO_SETTINGS_MODULE": "{{ django_settings_module }}",
+    "DJANGO_DEBUG": "{{ django_debug | default(False) | lower }}",
+    "DJANGO_PORT": "{{ django_port }}",
+    "PATH": "{{ venv_path }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+}
+
+# Worker tmp directory
+worker_tmp_dir = "/tmp/nir_mistral"
+
+# Maximum file descriptors
+max_requests_jitter = 50
+
+# Connection handling
+max_spare_threads = (workers * 2) + 1
+min_spare_threads = workers

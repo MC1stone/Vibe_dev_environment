@@ -1,0 +1,90 @@
+{
+  "agent_id": "data_preparation_agent",
+  "name": "Data Preparation Agent",
+  "version": "1.0.0",
+  "role": "Data Import and Preprocessing",
+  "description": "Responsible for importing NIR spectroscopy data, cleaning, preprocessing, and preparing it for analysis.",
+  "capabilities": [
+    "data_import",
+    "data_cleaning",
+    "outlier_detection",
+    "normalization",
+    "preprocessing"
+  ],
+  "dependencies": [],
+  "responsibilities": [
+    "Import raw NIR spectroscopy data",
+    "Clean and validate data",
+    "Detect and handle outliers",
+    "Apply normalization techniques",
+    "Prepare data for analysis",
+    "Generate data quality reports"
+  ],
+  "supported_formats": [
+    "CSV",
+    "JSON",
+    "HDF5",
+    "JDX",
+    "SPC",
+    "TXT"
+  ],
+  "preprocessing_methods": [
+    {
+      "name": "SNV",
+      "description": "Standard Normal Variate",
+      "parameters": {}
+    },
+    {
+      "name": "MSC",
+      "description": "Multiplicative Scatter Correction",
+      "parameters": {}
+    },
+    {
+      "name": "Savitzky-Golay",
+      "description": "Savitzky-Golay smoothing",
+      "parameters": {
+        "window_length": 5,
+        "polyorder": 2
+      }
+    },
+    {
+      "name": "Baseline Correction",
+      "description": "Baseline correction",
+      "parameters": {}
+    },
+    {
+      "name": "Detrending",
+      "description": "Detrending",
+      "parameters": {}
+    }
+  ],
+  "quality_metrics": [
+    "data_completeness",
+    "value_range_validation",
+    "outlier_percentage",
+    "signal_to_noise_ratio"
+  ],
+  "output_format": "HDF5",
+  "metadata_requirements": [
+    "spectrum",
+    "wavelength",
+    "instrument",
+    "acquisition_time"
+  ],
+  "optional_metadata": [
+    "operator",
+    "humidity",
+    "temperature",
+    "notes",
+    "location"
+  ],
+  "error_handling": {
+    "missing_data": "warn_and_continue",
+    "invalid_format": "error_and_stop",
+    "corrupted_data": "error_and_stop"
+  },
+  "performance_requirements": {
+    "max_memory_usage": "4GB",
+    "processing_time_limit": "30 minutes per 1000 spectra"
+  }
+}

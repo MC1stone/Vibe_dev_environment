@@ -1,0 +1,156 @@
+{
+    "plugin": {
+        "name": "auto_boot_plugin",
+        "version": "1.0.0",
+        "description": "Auto-boot plugin for NIR_Mistral Framework",
+        "author": "NIR_Mistral Team",
+        "license": "MIT",
+        "timestamp": "{{ ansible_date_time.iso8601 }}"
+    },
+    "configuration": {
+        "enabled": true,
+        "priority": 1,
+        "timeout": 10,
+        "auto_boot": true,
+        "default_selection": "NIR_Mistral Framework",
+        "fallback_selection": "NIR_Mistral Framework",
+        "boot_delay": 5,
+        "max_retries": 3,
+        "retry_delay": 2
+    },
+    "triggers": {
+        "on_boot": true,
+        "on_timeout": true,
+        "on_failure": true,
+        "on_success": false
+    },
+    "actions": {
+        "on_boot": {
+            "type": "script",
+            "script": "/ventoy/ventoy_startup.sh",
+            "arguments": [],
+            "timeout": 30,
+            "async": false,
+            "background": false
+        },
+        "on_timeout": {
+            "type": "script",
+            "script": "/ventoy/ventoy_health_check.sh",
+            "arguments": [],
+            "timeout": 10,
+            "async": false,
+            "background": false
+        },
+        "on_failure": {
+            "type": "script",
+            "script": "/ventoy/ventoy_services.sh restart all",
+            "arguments": [],
+            "timeout": 15,
+            "async": false,
+            "background": false
+        }
+    },
+    "conditions": {
+        "auto_boot": {
+            "type": "and",
+            "conditions": [
+                {
+                    "type": "file_exists",
+                    "path": "/ventoy/ventoy_startup.sh",
+                    "negate": false
+                },
+                {
+                    "type": "file_exists",
+                    "path": "{{ deploy_root }}/start_nir_mistral.sh",
+                    "negate": false
+                },
+                {
+                    "type": "service_running",
+                    "service": "network",
+                    "negate": false
+                }
+            ]
+        },
+        "on_timeout": {
+            "type": "or",
+            "conditions": [
+                {
+                    "type": "service_failed",
+                    "service": "django",
+                    "negate": false
+                },
+                {
+                    "type": "service_failed",
+                    "service": "port_agent",
+                    "negate": false
+                }
+            ]
+        }
+    },
+    "dependencies": {
+        "services": ["network"],
+        "files": [
+            "/ventoy/ventoy_startup.sh",
+            "{{ deploy_root }}/start_nir_mistral.sh",
+            "{{ deploy_root }}/ventoy/ventoy_health_check.sh",
+            "{{ deploy_root }}/ventoy/ventoy_services.sh"
+        ],
+        "directories": [
+            "{{ deploy_root }}",
+            "{{ venv_path }}",
+            "{{ django_project_path }}",
+            "{{ port_agent_path }}"
+        ]
+    },
+    "environment": {
+        "PROJECT_ROOT": "{{ deploy_root }}",
+        "VENV_PATH": "{{ venv_path }}",
+        "DJANGO_PORT": "{{ django_port }}",
+        "PORT_AGENT_PORT": "{{ port_agent_port }}",
+        "DJANGO_SETTINGS_MODULE": "{{ django_settings_module }}",
+        "PYTHONPATH": "{{ deploy_root }}",
+        "PATH": "{{ venv_path }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    },
+    "logging": {
+        "enabled": true,
+        "level": "INFO",
+        "file": "{{ deploy_root }}/logs/auto_boot_plugin.log",
+        "max_size": "1MB",
+        "backup_count": 5
+    },
+    "notifications": {
+        "enabled": false,
+        "on_success": false,
+        "on_failure": true,
+        "on_timeout": true,
+        "method": "log",
+        "message_success": "NIR_Mistral Framework auto-boot successful",
+        "message_failure": "NIR_Mistral Framework auto-boot failed",
+        "message_timeout": "NIR_Mistral Framework auto-boot timed out"
+    },
+    "health_check": {
+        "enabled": true,
+        "interval": 5,
+        "timeout": 3,
+        "endpoints": [
+            "http://localhost:{{ django_port }}/api/health/",
+            "http://localhost:{{ port_agent_port }}/api/ports/"
+        ],
+        "required_successes": 2,
+        "max_failures": 3
+    },
+    "recovery": {
+        "enabled": true,
+        "strategy": "restart",
+        "max_attempts": 3,
+        "attempt_delay": 5,
+        "fallback_script": "/ventoy/ventoy_services.sh restart all"
+    },
+    "validation": {
+        "check_dependencies": true,
+        "check_files": true,
+        "check_services": true,
+        "check_network": true,
+        "timeout": 10
+    }
+}

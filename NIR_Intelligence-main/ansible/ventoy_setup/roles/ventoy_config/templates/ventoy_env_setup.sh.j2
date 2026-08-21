@@ -1,0 +1,438 @@
+#!/bin/bash
+# Ventoy Environment Setup Script for NIR_Mistral Framework
+# This script sets up the environment for running NIR_Mistral services
+
+# Configuration
+PROJECT_ROOT="{{ deploy_root }}"
+VENV_PATH="{{ venv_path }}"
+DJANGO_PROJECT="{{ django_project_path }}"
+PORT_AGENT_PATH="{{ port_agent_path }}"
+DJANGO_PORT="{{ django_port }}"
+PORT_AGENT_PORT="{{ port_agent_port }}"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Logging functions
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+log_header() {
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}$1${NC}"
+    echo -e "${BLUE}========================================${NC}"
+}
+
+# Check if running as root
+check_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        log_warn "This script should be run as root for full functionality"
+        return 1
+    fi
+    return 0
+}
+
+# Setup environment variables
+setup_environment_variables() {
+    log_info "Setting up environment variables..."
+    
+    # Create environment file
+    cat > /etc/profile.d/nir_mistral.sh << 'EOF'
+# NIR_Mistral Framework Environment Variables
+export PROJECT_ROOT="{{ deploy_root }}"
+export VENV_PATH="{{ venv_path }}"
+export DJANGO_PROJECT="{{ django_project_path }}"
+export PORT_AGENT_PATH="{{ port_agent_path }}"
+export DJANGO_PORT="{{ django_port }}"
+export PORT_AGENT_PORT="{{ port_agent_port }}"
+export DJANGO_SETTINGS_MODULE="{{ django_settings_module }}"
+export PYTHONPATH="{{ deploy_root }}"
+export PATH="{{ venv_path }}/bin:$PATH"
+EOF
+    
+    chmod +x /etc/profile.d/nir_mistral.sh
+    
+    # Source the environment file
+    source /etc/profile.d/nir_mistral.sh
+    
+    log_info "Environment variables set in /etc/profile.d/nir_mistral.sh"
+}
+
+# Setup system limits
+setup_system_limits() {
+    log_info "Setting up system limits..."
+    
+    # Create limits configuration
+    cat > /etc/security/limits.d/nir_mistral.conf << 'EOF'
+# NIR_Mistral Framework Limits
+nir_mistral soft nofile 65535
+nir_mistral hard nofile 65535
+nir_mistral soft nproc 65535
+nir_mistral hard nproc 65535
+nir_mistral soft memlock unlimited
+nir_mistral hard memlock unlimited
+EOF
+    
+    # Apply limits to current session
+    ulimit -n 65535
+    ulimit -u 65535
+    
+    log_info "System limits configured"
+}
+
+# Setup firewall rules
+setup_firewall() {
+    if [ "{{ firewall_enabled | default(False) | lower }}" != "true" ]; then
+        log_info "Firewall is disabled in configuration"
+        return
+    fi
+    
+    log_info "Setting up firewall rules..."
+    
+    # Check if ufw is available
+    if command -v ufw &> /dev/null; then
+        # Enable firewall
+        ufw --force enable
+        
+        # Allow SSH
+        ufw allow 22/tcp
+        
+        # Allow NIR_Mistral ports
+        ufw allow {{ django_port }}/tcp
+        ufw allow {{ port_agent_port }}/tcp
+        
+        # Allow other common ports
+        for port in {{ open_ports | default([8000, 8001, 8080, 5432, 6379, 9200]) }}; do
+            ufw allow ${port}/tcp
+        done
+        
+        # Reload firewall
+        ufw reload
+        
+        log_info "Firewall rules configured with UFW"
+    elif command -v firewall-cmd &> /dev/null; then
+        # Firewalld
+        firewall-cmd --permanent --add-port=22/tcp
+        firewall-cmd --permanent --add-port={{ django_port }}/tcp
+        firewall-cmd --permanent --add-port={{ port_agent_port }}/tcp
+        
+        for port in {{ open_ports | default([8000, 8001, 8080, 5432, 6379, 9200]) }}; do
+            firewall-cmd --permanent --add-port=${port}/tcp
+        done
+        
+        firewall-cmd --reload
+        
+        log_info "Firewall rules configured with firewalld"
+    elif command -v iptables &> /dev/null; then
+        # Direct iptables
+        iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+        iptables -A INPUT -p tcp --dport {{ django_port }} -j ACCEPT
+        iptables -A INPUT -p tcp --dport {{ port_agent_port }} -j ACCEPT
+        
+        for port in {{ open_ports | default([8000, 8001, 8080, 5432, 6379, 9200]) }}; do
+            iptables -A INPUT -p tcp --dport ${port} -j ACCEPT
+        done
+        
+        # Save rules
+        if command -v iptables-save &> /dev/null; then
+            iptables-save > /etc/iptables.rules
+        fi
+        
+        log_info "Firewall rules configured with iptables"
+    else
+        log_warn "No firewall tool found. Skipping firewall setup."
+    fi
+}
+
+# Setup user and group
+setup_user_group() {
+    local service_user="{{ service_user | default('nir_mistral') }}"
+    local service_group="{{ service_group | default('nir_mistral') }}"
+    
+    log_info "Setting up user and group..."
+    
+    # Create group
+    if ! getent group "${service_group}" > /dev/null 2>&1; then
+        groupadd "${service_group}"
+        log_info "Created group: ${service_group}"
+    fi
+    
+    # Create user
+    if ! id "${service_user}" &> /dev/null; then
+        useradd -m -g "${service_group}" -s /bin/bash "${service_user}"
+        log_info "Created user: ${service_user}"
+    fi
+    
+    # Set ownership
+    chown -R "${service_user}:${service_group}" "{{ deploy_root }}"
+    
+    log_info "User and group setup complete"
+}
+
+# Setup swap file
+setup_swap() {
+    if [ "{{ create_swap_file | default(True) | lower }}" != "true" ]; then
+        log_info "Swap file creation is disabled in configuration"
+        return
+    fi
+    
+    log_info "Setting up swap file..."
+    
+    local swap_file="/swapfile"
+    local swap_size="{{ swap_file_size | default('2G') }}"
+    
+    # Check if swap is already set up
+    if swapon --show | grep -q "${swap_file}"; then
+        log_info "Swap file already exists"
+        return
+    fi
+    
+    # Create swap file
+    fallocate -l "${swap_size}" "${swap_file}"
+    chmod 600 "${swap_file}"
+    mkswap "${swap_file}"
+    swapon "${swap_file}"
+    
+    # Make swap permanent
+    echo "${swap_file} none swap sw 0 0" >> /etc/fstab
+    
+    # Tune swap settings
+    echo "vm.swappiness=10" >> /etc/sysctl.conf
+    echo "vm.vfs_cache_pressure=50" >> /etc/sysctl.conf
+    sysctl -p
+    
+    log_info "Swap file created: ${swap_size}"
+}
+
+# Setup Docker
+setup_docker() {
+    if [ "{{ docker_enabled | default(False) | lower }}" != "true" ]; then
+        log_info "Docker is disabled in configuration"
+        return
+    fi
+    
+    log_info "Setting up Docker..."
+    
+    # Install Docker if not present
+    if ! command -v docker &> /dev/null; then
+        log_info "Installing Docker..."
+        
+        if command -v apt-get &> /dev/null; then
+            apt-get update
+            apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+            add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+            apt-get update
+            apt-get install -y docker-ce
+        elif command -v yum &> /dev/null; then
+            yum install -y yum-utils device-mapper-persistent-data lvm2
+            yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+            yum install -y docker-ce
+        else
+            log_error "Cannot install Docker. Unsupported package manager."
+            return
+        fi
+    fi
+    
+    # Add user to docker group
+    local service_user="{{ service_user | default('nir_mistral') }}"
+    if [ -n "${service_user}" ] && [ "${service_user}" != "root" ]; then
+        usermod -aG docker "${service_user}"
+    fi
+    
+    # Start Docker service
+    systemctl enable docker
+    systemctl start docker
+    
+    log_info "Docker setup complete"
+}
+
+# Setup systemd services
+setup_systemd_services() {
+    if [ "{{ create_systemd_services | default(True) | lower }}" != "true" ]; then
+        log_info "Systemd services creation is disabled in configuration"
+        return
+    fi
+    
+    log_info "Setting up systemd services..."
+    
+    # Create Django service
+    cat > /etc/systemd/system/django.service << 'EOF'
+[Unit]
+Description=Django Server for NIR_Mistral Framework
+After=network.target
+Requires=network.target
+
+[Service]
+Type=simple
+User={{ service_user | default('root') }}
+Group={{ service_group | default('root') }}
+WorkingDirectory={{ django_project_path }}
+Environment="PYTHONPATH={{ deploy_root }}"
+Environment="DJANGO_SETTINGS_MODULE={{ django_settings_module }}"
+Environment="PATH={{ venv_path }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+ExecStart={{ venv_path }}/bin/python manage.py runserver 0.0.0.0:{{ django_port }}
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=django-nir-mistral
+
+LimitNOFILE=65535
+LimitNPROC=65535
+
+PrivateTmp=true
+ProtectSystem=full
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    # Create Port Agent service
+    cat > /etc/systemd/system/port_agent.service << 'EOF'
+[Unit]
+Description=Port Management Agent for NIR_Mistral Framework
+After=network.target
+Requires=network.target
+
+[Service]
+Type=simple
+User={{ service_user | default('root') }}
+Group={{ service_group | default('root') }}
+WorkingDirectory={{ port_agent_path }}
+Environment="PYTHONPATH={{ deploy_root }}"
+Environment="DJANGO_SETTINGS_MODULE={{ django_settings_module }}"
+Environment="PATH={{ venv_path }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+ExecStart={{ venv_path }}/bin/gunicorn \
+    --bind 0.0.0.0:{{ port_agent_port }} \
+    --workers {{ port_agent_workers | default(2) }} \
+    --timeout {{ port_agent_timeout | default(60) }} \
+    --max-requests 1000 \
+    --log-level info \
+    --access-logfile {{ deploy_root }}/logs/port_agent_access.log \
+    --error-logfile {{ deploy_root }}/logs/port_agent_error.log \
+    --capture-output \
+    --enable-stdio-inheritance \
+    --pythonpath {{ deploy_root }} \
+    agents.port_agent.server:app
+
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=port-agent-nir-mistral
+
+LimitNOFILE=65535
+LimitNPROC=65535
+
+PrivateTmp=true
+ProtectSystem=full
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    # Reload systemd
+    systemctl daemon-reload
+    
+    # Enable services
+    systemctl enable django.service
+    systemctl enable port_agent.service
+    
+    log_info "Systemd services configured"
+}
+
+# Setup cron jobs
+setup_cron_jobs() {
+    log_info "Setting up cron jobs..."
+    
+    local service_user="{{ service_user | default('root') }}"
+    
+    # Create cron file
+    cat > /etc/cron.d/nir_mistral << 'EOF'
+# NIR_Mistral Framework Cron Jobs
+
+# Daily log rotation
+0 3 * * * root find {{ deploy_root }}/logs -name "*.log" -mtime +7 -exec gzip {} \;
+
+# Weekly cleanup
+0 4 * * 0 root {{ deploy_root }}/ventoy/ventoy_cleanup.sh temp
+
+# Daily health check
+0 6 * * * root {{ deploy_root }}/ventoy/ventoy_health_check.sh >> {{ deploy_root }}/logs/health_check.log 2>&1
+EOF
+    
+    log_info "Cron jobs configured"
+}
+
+# Main execution
+main() {
+    log_header "NIR_MISTRAL ENVIRONMENT SETUP"
+    
+    # Check root
+    check_root
+    
+    # Setup environment variables
+    setup_environment_variables
+    
+    # Setup system limits
+    setup_system_limits
+    
+    # Setup user and group
+    setup_user_group
+    
+    # Setup swap
+    setup_swap
+    
+    # Setup firewall
+    setup_firewall
+    
+    # Setup Docker
+    setup_docker
+    
+    # Setup systemd services
+    setup_systemd_services
+    
+    # Setup cron jobs
+    setup_cron_jobs
+    
+    log_header "ENVIRONMENT SETUP COMPLETE"
+    
+    echo "Setup Summary:"
+    echo "  Environment variables: /etc/profile.d/nir_mistral.sh"
+    echo "  System limits: /etc/security/limits.d/nir_mistral.conf"
+    echo "  Systemd services: django.service, port_agent.service"
+    echo "  Cron jobs: /etc/cron.d/nir_mistral"
+    echo "  Swap file: /swapfile ({{ swap_file_size | default('2G') }})"
+    echo "  Firewall: {{ firewall_enabled | default(False) | lower }}"
+    echo "  Docker: {{ docker_enabled | default(False) | lower }}"
+    echo
+    echo "Next steps:"
+    echo "  1. Reboot the system: reboot"
+    echo "  2. Start services: systemctl start django port_agent"
+    echo "  3. Check status: systemctl status django port_agent"
+}
+
+# Run main function
+main "$@"

@@ -1,0 +1,571 @@
+#!/usr/bin/env ansible-playbook
+---
+# NIR_Mistral Ventoy Deployment Playbook
+# 
+# This playbook creates a bootable Ventoy USB stick with the complete NIR_Mistral
+# platform pre-configured and ready to run on any compatible system.
+#
+# Features:
+# - Automatic system detection and configuration
+# - Django web application with HSWT styling
+# - All agent services (ILIAS, Onboarding, Audio, Image, Spectrometer)
+# - Federated learning system
+# - Database setup (SQLite or PostgreSQL)
+# - Pre-configured Ventoy boot menu
+# - Offline-capable deployment
+#
+# Usage:
+#   # Create Ventoy USB stick
+#   ansible-playbook nir_mistral_ventoy.yml -e "ventoy_usb_device=/dev/sdX"
+#
+#   # Test deployment
+#   ansible-playbook nir_mistral_ventoy.yml -e "test_mode=true"
+#
+#   # Custom configuration
+#   ansible-playbook nir_mistral_ventoy.yml -e "django_port=8080" -e "enable_federated=false"
+
+- name: NIR_Mistral Ventoy Deployment - Preparation
+  hosts: localhost
+  connection: local
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    # Ventoy configuration
+    ventoy_version: "1.0.96"
+    ventoy_download_url: "https://github.com/ventoy/Ventoy/releases/download/v{{ ventoy_version }}/ventoy-{{ ventoy_version }}-linux.tar.gz"
+    ventoy_install_dir: "/tmp/ventoy"
+    ventoy_usb_device: "{{ ventoy_usb_device | default(omit) }}"
+    ventoy_iso_dir: "{{ playbook_dir }}/../../../deploy/ventoy_iso"
+    ventoy_config_dir: "{{ playbook_dir }}/../../../deploy/ventoy_config"
+    
+    # NIR_Mistral configuration
+    nir_version: "2.0.0"
+    nir_deploy_root: "/opt/nir_mistral"
+    nir_project_root: "{{ nir_deploy_root }}/project"
+    nir_data_dir: "/var/data/nir_mistral"
+    nir_logs_dir: "/var/log/nir_mistral"
+    
+    # Application settings
+    django_port: 8000
+    django_debug: false
+    django_secret_key: "{{ lookup('password', 'django_secret_key length=50 chars=ascii_letters,digits') }}"
+    django_allowed_hosts: ["localhost", "127.0.0.1", "::1", "*"]
+    
+    # Database settings
+    db_engine: "django.db.backends.sqlite3"
+    db_name: "{{ nir_data_dir }}/nir_mistral.db"
+    
+    # Agent settings
+    enable_ilias_integration: true
+    enable_federated_learning: true
+    enable_audio_processing: true
+    enable_image_processing: true
+    enable_spectrometer_analysis: true
+    
+    # System requirements
+    min_memory_gb: 4
+    min_disk_space_gb: 20
+    min_cpu_cores: 2
+    
+    # Boot configuration
+    ventoy_boot_menu_timeout: 5
+    ventoy_default_boot: "NIR_Mistral"
+    
+  pre_tasks:
+    - name: Check if running as root
+      assert:
+        that: ansible_user == 'root'
+        msg: "This playbook must be run as root for Ventoy installation"
+      when: ventoy_usb_device is defined
+    
+    - name: Display Ventoy deployment information
+      debug:
+        msg: |
+          ============================================
+          NIR_MISTRAL VENTOY DEPLOYMENT
+          ============================================
+          Version: {{ nir_version }}
+          Timestamp: {{ ansible_date_time.iso8601 }}
+          
+          Configuration:
+          - Ventoy Version: {{ ventoy_version }}
+          - Deploy Root: {{ nir_deploy_root }}
+          - Django Port: {{ django_port }}
+          - Database: {{ db_engine }} ({{ db_name }})
+          
+          Features:
+          - ILIAS Integration: {{ enable_ilias_integration }}
+          - Federated Learning: {{ enable_federated_learning }}
+          - Audio Processing: {{ enable_audio_processing }}
+          - Image Processing: {{ enable_image_processing }}
+          - Spectrometer Analysis: {{ enable_spectrometer_analysis }}
+          
+          {{ 'Ventoy USB Device: ' + ventoy_usb_device if ventoy_usb_device is defined else 'Test Mode: No USB device specified' }}
+          ============================================
+    
+    - name: Check system requirements
+      block:
+        - name: Check memory requirements
+          assert:
+            that: ansible_memtotal_mb >= min_memory_gb * 1024
+            msg: "System has only {{ ansible_memtotal_mb }}MB RAM, {{ min_memory_gb }}GB required"
+          
+        - name: Check disk space requirements
+          assert:
+            that: ansible_mounts[0].size_total >= min_disk_space_gb * 1024 * 1024 * 1024
+            msg: "System has only {{ ansible_mounts[0].size_total }} bytes disk space, {{ min_disk_space_gb }}GB required"
+          
+        - name: Check CPU cores
+          assert:
+            that: ansible_processor_count >= min_cpu_cores
+            msg: "System has only {{ ansible_processor_count }} CPU cores, {{ min_cpu_cores }} required"
+      when: ventoy_usb_device is defined
+    
+    - name: Create deployment directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      loop:
+        - "{{ ventoy_install_dir }}"
+        - "{{ ventoy_iso_dir }}"
+        - "{{ ventoy_config_dir }}"
+        - "{{ nir_deploy_root }}"
+        - "{{ nir_project_root }}"
+        - "{{ nir_data_dir }}"
+        - "{{ nir_logs_dir }}"
+        - "{{ nir_deploy_root }}/logs"
+        - "{{ nir_deploy_root }}/config"
+        - "{{ nir_deploy_root }}/data"
+        - "{{ nir_deploy_root }}/tmp"
+
+- name: NIR_Mistral Ventoy Deployment - Ventoy Installation
+  hosts: localhost
+  connection: local
+  become: yes
+  gather_facts: no
+  
+  tasks:
+    - name: Download Ventoy
+      get_url:
+        url: "{{ ventoy_download_url }}"
+        dest: "{{ ventoy_install_dir }}/ventoy.tar.gz"
+        mode: '0644'
+      when: ventoy_usb_device is defined
+      
+    - name: Extract Ventoy
+      unarchive:
+        src: "{{ ventoy_install_dir }}/ventoy.tar.gz"
+        dest: "{{ ventoy_install_dir }}"
+        remote_src: yes
+      when: ventoy_usb_device is defined
+      
+    - name: Install Ventoy to USB device
+      command: >
+        {{ ventoy_install_dir }}/Ventoy2Disk.sh -i {{ ventoy_usb_device }}
+      args:
+        creates: "{{ ventoy_usb_device }}1"
+      when: ventoy_usb_device is defined
+      
+    - name: Verify Ventoy installation
+      command: >
+        {{ ventoy_install_dir }}/Ventoy2Disk.sh -i {{ ventoy_usb_device }}
+      register: ventoy_install_result
+      changed_when: false
+      when: ventoy_usb_device is defined
+      
+    - name: Display Ventoy installation result
+      debug:
+        var: ventoy_install_result.stdout_lines
+      when: ventoy_usb_device is defined
+
+- name: NIR_Mistral Ventoy Deployment - System Preparation
+  hosts: localhost
+  connection: local
+  become: yes
+  gather_facts: no
+  
+  tasks:
+    - name: Install required system packages
+      apt:
+        name: [
+          "python3",
+          "python3-pip",
+          "python3-venv",
+          "python3-dev",
+          "git",
+          "curl",
+          "wget",
+          "build-essential",
+          "libpq-dev",
+          "postgresql-client",
+          "sqlite3",
+          "ffmpeg",
+          "libsm6",
+          "libxext6",
+          "libxrender-dev",
+          "libgl1",
+          "libglib2.0-0",
+          "libgtk-3-0"
+        ]
+        state: present
+        update_cache: yes
+      when: not test_mode | default(false)
+      
+    - name: Install Python dependencies
+      pip:
+        name: [
+          "setuptools",
+          "wheel",
+          "pip"
+        ]
+        state: latest
+        executable: pip3
+      when: not test_mode | default(false)
+
+- name: NIR_Mistral Ventoy Deployment - NIR_Mistral Installation
+  hosts: localhost
+  connection: local
+  become: yes
+  gather_facts: no
+  
+  vars:
+    # Project source (current directory)
+    project_source_dir: "{{ playbook_dir }}/../../.."
+    
+    # Virtual environment
+    venv_path: "{{ nir_deploy_root }}/venv"
+    
+  tasks:
+    - name: Copy NIR_Mistral project to deployment directory
+      copy:
+        src: "{{ project_source_dir }}/"
+        dest: "{{ nir_project_root }}"
+        remote_src: yes
+        owner: root
+        group: root
+        mode: '0755'
+        directory_mode: '0755'
+      
+    - name: Create Python virtual environment
+      command: >
+        python3 -m venv {{ venv_path }}
+      args:
+        creates: "{{ venv_path }}/bin/python"
+      
+    - name: Install Python requirements
+      pip:
+        requirements: "{{ nir_project_root }}/requirements.txt"
+        virtualenv: "{{ venv_path }}"
+        state: present
+      
+    - name: Install additional dependencies for agents
+      pip:
+        name: [
+          "numpy",
+          "scipy",
+          "pandas",
+          "scikit-learn",
+          "librosa",
+          "pydub",
+          "Pillow",
+          "opencv-python",
+          "matplotlib",
+          "seaborn",
+          "jinja2",
+          "python-dateutil",
+          "pytz",
+          "requests",
+          "beautifulsoup4",
+          "lxml",
+          "python3-saml",
+          "flower",
+          "quarto-cli"
+        ]
+        virtualenv: "{{ venv_path }}"
+        state: present
+      
+    - name: Create Django settings file
+      template:
+        src: "templates/django_settings.py.j2"
+        dest: "{{ nir_project_root }}/nir_web/settings.py"
+        mode: '0644'
+      
+    - name: Create Django URLs file
+      template:
+        src: "templates/django_urls.py.j2"
+        dest: "{{ nir_project_root }}/nir_web/urls.py"
+        mode: '0644'
+      
+    - name: Create Django WSGI file
+      template:
+        src: "templates/django_wsgi.py.j2"
+        dest: "{{ nir_project_root }}/nir_web/wsgi.py"
+        mode: '0644'
+      
+    - name: Create ASGI file for Daphne
+      template:
+        src: "templates/django_asgi.py.j2"
+        dest: "{{ nir_project_root }}/nir_web/asgi.py"
+        mode: '0644'
+      
+    - name: Create startup script
+      template:
+        src: "templates/start_nir_mistral.sh.j2"
+        dest: "{{ nir_deploy_root }}/start_nir_mistral.sh"
+        mode: '0755'
+      
+    - name: Create systemd service files
+      template:
+        src: "templates/{{ item.src }}"
+        dest: "/etc/systemd/system/{{ item.dest }}"
+        mode: '0644'
+      loop:
+        - { src: "django.service.j2", dest: "django.service" }
+        - { src: "port_agent.service.j2", dest: "port_agent.service" }
+        - { src: "flower.service.j2", dest: "flower.service" }
+        - { src: "celery.service.j2", dest: "celery.service" }
+        - { src: "celery_beat.service.j2", dest: "celery_beat.service" }
+      notify: reload systemd
+      
+    - name: Create configuration files
+      template:
+        src: "templates/{{ item.src }}"
+        dest: "{{ nir_deploy_root }}/config/{{ item.dest }}"
+        mode: '0644'
+      loop:
+        - { src: "nir_config.json.j2", dest: "nir_config.json" }
+        - { src: "database_config.json.j2", dest: "database_config.json" }
+        - { src: "agent_config.json.j2", dest: "agent_config.json" }
+        - { src: "federated_config.json.j2", dest: "federated_config.json" }
+        - { src: "ilias_config.json.j2", dest: "ilias_config.json" }
+      
+    - name: Create environment file
+      template:
+        src: "templates/nir_environment.sh.j2"
+        dest: "{{ nir_deploy_root }}/nir_environment.sh"
+        mode: '0755'
+      
+    - name: Create README and documentation
+      template:
+        src: "templates/{{ item.src }}"
+        dest: "{{ nir_deploy_root }}/{{ item.dest }}"
+        mode: '0644'
+      loop:
+        - { src: "VENTOY_README.md.j2", dest: "VENTOY_README.md" }
+        - { src: "QUICK_START.md.j2", dest: "QUICK_START.md" }
+        - { src: "TROUBLESHOOTING.md.j2", dest: "TROUBLESHOOTING.md" }
+
+- name: NIR_Mistral Ventoy Deployment - Ventoy Configuration
+  hosts: localhost
+  connection: local
+  become: yes
+  gather_facts: no
+  
+  tasks:
+    - name: Create Ventoy configuration directory on USB
+      file:
+        path: "{{ ventoy_usb_device }}1/ventoy"
+        state: directory
+        mode: '0755'
+      when: ventoy_usb_device is defined
+      
+    - name: Copy Ventoy theme
+      copy:
+        src: "{{ playbook_dir }}/files/ventoy_theme/"
+        dest: "{{ ventoy_usb_device }}1/ventoy/themes/nir_mistral/"
+        mode: '0755'
+      when: ventoy_usb_device is defined
+      
+    - name: Create Ventoy plugins directory
+      file:
+        path: "{{ ventoy_usb_device }}1/ventoy/plugins"
+        state: directory
+        mode: '0755'
+      when: ventoy_usb_device is defined
+      
+    - name: Create Ventoy boot menu configuration
+      template:
+        src: "templates/ventoy.json.j2"
+        dest: "{{ ventoy_usb_device }}1/ventoy/ventoy.json"
+        mode: '0644'
+      when: ventoy_usb_device is defined
+      
+    - name: Create ISO directory on USB
+      file:
+        path: "{{ ventoy_usb_device }}1/iso"
+        state: directory
+        mode: '0755'
+      when: ventoy_usb_device is defined
+      
+    - name: Create NIR_Mistral ISO image
+      command: >
+        mkisofs -J -r -o {{ ventoy_iso_dir }}/nir_mistral.iso {{ nir_deploy_root }}
+      args:
+        creates: "{{ ventoy_iso_dir }}/nir_mistral.iso"
+      when: ventoy_usb_device is defined
+      
+    - name: Copy ISO to Ventoy USB
+      copy:
+        src: "{{ ventoy_iso_dir }}/nir_mistral.iso"
+        dest: "{{ ventoy_usb_device }}1/iso/nir_mistral.iso"
+        mode: '0644'
+      when: ventoy_usb_device is defined
+      
+    - name: Create custom boot menu entries
+      template:
+        src: "templates/grub.cfg.j2"
+        dest: "{{ ventoy_usb_device }}1/ventoy/grub.cfg"
+        mode: '0644'
+      when: ventoy_usb_device is defined
+
+- name: NIR_Mistral Ventoy Deployment - Finalization
+  hosts: localhost
+  connection: local
+  become: yes
+  gather_facts: no
+  
+  tasks:
+    - name: Set execute permissions on scripts
+      file:
+        path: "{{ item }}"
+        mode: '0755'
+        owner: root
+        group: root
+      loop:
+        - "{{ nir_deploy_root }}/start_nir_mistral.sh"
+        - "{{ nir_deploy_root }}/nir_environment.sh"
+      
+    - name: Enable and start services
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      loop:
+        - django
+        - port_agent
+        - flower
+        - celery
+        - celery_beat
+      when: not test_mode | default(false)
+      
+    - name: Create log files
+      file:
+        path: "{{ item }}"
+        state: touch
+        owner: root
+        group: root
+        mode: '0644'
+      loop:
+        - "{{ nir_logs_dir }}/django.log"
+        - "{{ nir_logs_dir }}/port_agent.log"
+        - "{{ nir_logs_dir }}/flower.log"
+        - "{{ nir_logs_dir }}/celery.log"
+        - "{{ nir_logs_dir }}/access.log"
+        - "{{ nir_logs_dir }}/error.log"
+      
+    - name: Create data directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      loop:
+        - "{{ nir_data_dir }}/uploads"
+        - "{{ nir_data_dir }}/spectra"
+        - "{{ nir_data_dir }}/analysis"
+        - "{{ nir_data_dir }}/federated"
+        - "{{ nir_data_dir }}/backups"
+        - "{{ nir_data_dir }}/temp"
+        - "{{ nir_data_dir }}/media"
+        - "{{ nir_data_dir }}/static"
+
+- name: NIR_Mistral Ventoy Deployment - Verification
+  hosts: localhost
+  connection: local
+  become: no
+  gather_facts: no
+  
+  tasks:
+    - name: Test Django server
+      uri:
+        url: "http://localhost:{{ django_port }}/api/health/"
+        return_content: yes
+      register: django_health
+      ignore_errors: yes
+      when: not test_mode | default(false)
+      
+    - name: Test Port Agent
+      uri:
+        url: "http://localhost:{{ port_agent_port }}/api/ports/"
+        return_content: yes
+      register: port_agent_health
+      ignore_errors: yes
+      when: not test_mode | default(false)
+      
+    - name: Test Flower dashboard
+      uri:
+        url: "http://localhost:5555/"
+        return_content: yes
+      register: flower_health
+      ignore_errors: yes
+      when: not test_mode | default(false)
+      
+    - name: Display deployment summary
+      debug:
+        msg: |
+          ============================================
+          NIR_MISTRAL VENTOY DEPLOYMENT COMPLETE
+          ============================================
+          
+          Deployment Information:
+          - Version: {{ nir_version }}
+          - Timestamp: {{ ansible_date_time.iso8601 }}
+          - Deploy Root: {{ nir_deploy_root }}
+          
+          Services:
+          - Django: {{ 'RUNNING' if django_health.status == 200 else 'NOT RUNNING' }} (Port {{ django_port }})
+          - Port Agent: {{ 'RUNNING' if port_agent_health.status == 200 else 'NOT RUNNING' }} (Port {{ port_agent_port }})
+          - Flower: {{ 'RUNNING' if flower_health.status == 200 else 'NOT RUNNING' }} (Port 5555)
+          - Celery: {{ 'ENABLED' if not test_mode else 'NOT STARTED (Test Mode)' }}
+          - Celery Beat: {{ 'ENABLED' if not test_mode else 'NOT STARTED (Test Mode)' }}
+          
+          {{ 'Ventoy USB Device: ' + ventoy_usb_device if ventoy_usb_device is defined else 'Test Mode: No USB device specified' }}
+          
+          Startup Commands:
+          - Manual: {{ nir_deploy_root }}/start_nir_mistral.sh
+          - Services: systemctl start django port_agent flower celery celery_beat
+          - Status: systemctl status django port_agent flower celery celery_beat
+          
+          Access URLs:
+          - Django Admin: http://localhost:{{ django_port }}/admin
+          - API: http://localhost:{{ django_port }}/api/
+          - Port Agent: http://localhost:{{ port_agent_port }}/api/ports/
+          - Flower Dashboard: http://localhost:5555/
+          
+          Important Files:
+          - Configuration: {{ nir_deploy_root }}/config/
+          - Logs: {{ nir_logs_dir }}/
+          - Data: {{ nir_data_dir }}/
+          - Documentation: {{ nir_deploy_root }}/VENTOY_README.md
+          
+          {{ 'Ventoy Boot: Insert USB and boot from it, select NIR_Mistral from menu' if ventoy_usb_device is defined else '' }}
+          
+          ============================================
+          NEXT STEPS:
+          1. Test all API endpoints
+          2. Configure ILIAS integration (if enabled)
+          3. Set up federated learning (if enabled)
+          4. Customize settings in {{ nir_deploy_root }}/config/
+          5. Review documentation in {{ nir_deploy_root }}/
+          ============================================
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes

@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Crew AI Agents - NIR_Mistral Framework{% endblock %}
+
+{% block extra_css %}
+<style>
+    .agent-card {
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .agent-card:hover {
+        border-color: var(--color-primary);
+        box-shadow: 0 8px 25px rgba(122, 185, 41, 0.15);
+        transform: translateY(-4px);
+    }
+    
+    .agent-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        margin-bottom: 12px;
+    }
+    
+    .agent-status-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .agent-capability-tag {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin: 4px;
+        background: var(--color-background);
+        color: var(--color-text);
+    }
+    
+    .crewai-agent-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: var(--color-primary);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .agent-stats {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--color-border);
+    }
+    
+    .agent-stat {
+        text-align: center;
+        flex: 1;
+    }
+    
+    .agent-stat-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--color-primary);
+    }
+    
+    .agent-stat-label {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+        margin-top: 4px;
+    }
+    
+    .filter-section {
+        background: var(--color-background-light);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+    
+    .search-input-wrapper {
+        position: relative;
+    }
+    
+    .search-input-wrapper i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--color-text-muted);
+    }
+    
+    .search-input-wrapper input {
+        padding-left: 36px;
+    }
+    
+    .agent-type-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        margin-right: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="o-section o-section--primary">
+    <div class="o-container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1 class="c-page-header__title text-white mb-0">
+                    <i class="bi bi-robot"></i> Crew AI Agents
+                </h1>
+                <p class="c-page-header__subtitle text-white opacity-75 mb-0">
+                    Manage and monitor intelligent analysis agents for NIR spectroscopy
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="c-button c-button--white" onclick="loadAgents()">
+                    <i class="bi bi-arrow-clockwise c-button__icon"></i>
+                    <span class="c-button__text">Refresh</span>
+                </button>
+                <button class="c-button c-button--secondary" onclick="exportAgentsList()">
+                    <i class="bi bi-download c-button__icon"></i>
+                    <span class="c-button__text">Export List</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Agent Statistics -->
+<section class="o-section">
+    <div class="o-container">
+        <div class="row g-4">
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--primary">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="totalAgents">0</div>
+                    <div class="c-stat-card__label">Total Agents</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--success">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="availableAgents">0</div>
+                    <div class="c-stat-card__label">Available</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--info">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="runningAgents">0</div>
+                    <div class="c-stat-card__label">Running</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="errorAgents">0</div>
+                    <div class="c-stat-card__label">Errors</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Filter and Search Section -->
+<section class="o-section o-section--light">
+    <div class="o-container">
+        <div class="filter-section">
+            <h3 class="c-card__title mb-3">
+                <i class="bi bi-funnel"></i> Filter & Search Agents
+            </h3>
+            
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="search-input-wrapper">
+                        <i class="bi bi-search"></i>
+                        <input type="text" class="c-form-control" id="agentSearch" 
+                               placeholder="Search agents by name or description..." 
+                               onkeyup="filterAgents()">
+                    </div>
+                </div>
+                
+                <div class="col-md-2">
+                    <select class="c-form-control" id="statusFilter" onchange="filterAgents()">
+                        <option value="">All Statuses</option>
+                        <option value="available">Available</option>
+                        <option value="running">Running</option>
+                        <option value="disabled">Disabled</option>
+                        <option value="error">Error</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <select class="c-form-control" id="typeFilter" onchange="filterAgents()">
+                        <option value="">All Types</option>
+                        <option value="spectral">Spectral Analysis</option>
+                        <option value="metadata">Metadata Quality</option>
+                        <option value="calibration">Calibration</option>
+                        <option value="reporting">Reporting</option>
+                        <option value="federated">Federated Learning</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <select class="c-form-control" id="capabilityFilter" onchange="filterAgents()">
+                        <option value="">All Capabilities</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <button class="c-button c-button--primary w-100" onclick="loadAgents()">
+                        <i class="bi bi-search c-button__icon"></i>
+                        <span class="c-button__text">Search</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Crew AI Agents Section -->
+<section class="o-section">
+    <div class="o-container">
+        <div class="d-flex justify-content-between align-items-center mb-xl">
+            <h2 class="c-card__title mb-0">
+                <i class="bi bi-stars"></i> Crew AI Agents
+            </h2>
+            <span class="c-badge c-badge--primary" id="crewaiAgentsCount">0</span>
+        </div>
+        
+        <div class="row g-4" id="crewaiAgentsGrid">
+            <!-- Crew AI agents will be loaded here -->
+        </div>
+    </div>
+</section>
+
+<!-- All Agents Section -->
+<section class="o-section o-section--light">
+    <div class="o-container">
+        <div class="d-flex justify-content-between align-items-center mb-xl">
+            <h2 class="c-card__title mb-0">
+                <i class="bi bi-list"></i> All Available Agents
+            </h2>
+            <span class="c-badge c-badge--secondary" id="allAgentsCount">0</span>
+        </div>
+        
+        <div class="c-card">
+            <div class="c-card__body p-0">
+                <div class="table-responsive">
+                    <table class="c-table c-table--hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Version</th>
+                                <th>Status</th>
+                                <th>Success Rate</th>
+                                <th>Capabilities</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agentsTable">
+                            <tr>
+                                <td colspan="7" class="text-center py-lg">
+                                    <div class="c-loading-overlay__spinner" style="width: 2rem; height: 2rem; border-width: 0.2rem;"></div>
+                                    <p class="mt-sm text-muted">Loading agents...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="c-card__footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span id="agentsCount">0 agents</span>
+                    <div class="d-flex gap-2">
+                        <button class="c-button c-button--outline-primary c-button--sm" onclick="loadAgents()">
+                            <i class="bi bi-arrow-clockwise c-button__icon"></i>
+                            <span class="c-button__text">Refresh</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Agent Details Modal -->
+<div class="modal fade" id="agentDetailsModal" tabindex="-1" aria-labelledby="agentDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="agentDetailsModalLabel">
+                    <i class="bi bi-robot"></i> Agent Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="agentDetailsContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Close
+                </button>
+                <button type="button" class="btn btn-primary" id="executeAgentBtn">
+                    <i class="bi bi-play"></i> Execute Agent
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Execute Agent Modal -->
+<div class="modal fade" id="executeAgentModal" tabindex="-1" aria-labelledby="executeAgentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="executeAgentModalLabel">
+                    <i class="bi bi-play-circle"></i> Execute Agent
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="executeAgentForm">
+                    <input type="hidden" id="executeAgentName" name="agent_name">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="c-form-label required">Job Name</label>
+                            <input type="text" class="c-form-control" id="jobName" name="name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="c-form-label">Analysis Type</label>
+                            <select class="c-form-control" id="jobAnalysisType" name="analysis_type">
+                                <option value="spectral_analysis">Spectral Analysis</option>
+                                <option value="metadata_quality">Metadata Quality</option>
+                                <option value="calibration">Calibration</option>
+                                <option value="comprehensive">Comprehensive</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="c-form-label">Description</label>
+                            <textarea class="c-form-control" id="jobDescription" name="description" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="c-form-label">Select Spectra</label>
+                            <div class="row g-2" id="spectraSelection">
+                                <!-- Spectra will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <div class="col-12" id="parametersContainer">
+                            <label class="c-form-label">Agent Parameters</label>
+                            <div class="row g-3" id="agentParameters">
+                                <!-- Parameters will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="submitAgentExecution()">
+                    <i class="bi bi-play"></i> Execute Agent
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Configuration Modal -->
+<div class="modal fade" id="agentConfigModal" tabindex="-1" aria-labelledby="agentConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="agentConfigModalLabel">
+                    <i class="bi bi-gear"></i> Agent Configuration
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="agentConfigForm">
+                    <input type="hidden" id="configAgentName">
+                    
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="c-form-label">Agent Settings</label>
+                            <div id="agentConfigSettings">
+                                <!-- Settings will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveAgentConfig()">
+                    <i class="bi bi-check"></i> Save Configuration
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="{% static 'js/agents.js' %}"></script>
+{% endblock %}
+{% endblock %}

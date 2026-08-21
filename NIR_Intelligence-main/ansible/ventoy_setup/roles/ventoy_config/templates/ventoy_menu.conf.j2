@@ -1,0 +1,266 @@
+# Ventoy Menu Configuration for NIR_Mistral Framework
+# This file configures the Ventoy boot menu
+
+# Global menu settings
+menu_title = "NIR_Mistral Framework - Ventoy Stick"
+menu_subtitle = "Select an option to start"
+menu_timeout = 10
+menu_default = "NIR_Mistral Framework"
+menu_password = ""
+menu_password_protect = false
+menu_auto_boot = true
+menu_save_last = true
+
+# Menu appearance
+menu_width = 80
+menu_height = 20
+menu_font = "DejaVu Sans Mono"
+menu_font_size = 14
+menu_background = "/ventoy/themes/nir_mistral/background.png"
+menu_theme = "nir_mistral"
+
+# Menu items
+menu_items = [
+    {
+        "id": "nir_mistral",
+        "name": "NIR_Mistral Framework",
+        "description": "Start Django Server and Port Agent (Recommended)",
+        "icon": "/ventoy/themes/nir_mistral/nir_mistral.png",
+        "boot_type": "script",
+        "script": "/ventoy/boot_django.sh",
+        "auto_boot": true,
+        "default": true,
+        "hidden": false,
+        "disabled": false,
+        "sort": 1
+    },
+    {
+        "id": "nir_mistral_debug",
+        "name": "NIR_Mistral Framework (Debug Mode)",
+        "description": "Start with debug mode enabled for development",
+        "icon": "/ventoy/themes/nir_mistral/nir_mistral_debug.png",
+        "boot_type": "script",
+        "script": "/ventoy/boot_django.sh --debug",
+        "auto_boot": false,
+        "default": false,
+        "hidden": false,
+        "disabled": false,
+        "sort": 2
+    },
+    {
+        "id": "separator1",
+        "name": "---",
+        "type": "separator",
+        "sort": 3
+    },
+    {
+        "id": "django_only",
+        "name": "Django Server Only",
+        "description": "Start only the Django server",
+        "icon": "/ventoy/themes/nir_mistral/django.png",
+        "boot_type": "script",
+        "script": "/ventoy/ventoy_services.sh start django",
+        "auto_boot": false,
+        "default": false,
+        "hidden": false,
+        "disabled": false,
+        "sort": 4
+    },
+    {
+        "id": "port_agent_only",
+        "name": "Port Agent Only",
+        "description": "Start only the Port Management Agent",
+        "icon": "/ventoy/themes/nir_mistral/port_agent.png",
+        "boot_type": "script",
+        "script": "/ventoy/ventoy_services.sh start port_agent",
+        "auto_boot": false,
+        "default": false,
+        "hidden": false,
+        "disabled": false,
+        "sort": 5
+    },
+    {
+        "id": "separator2",
+        "name": "---",
+        "type": "separator",
+        "sort": 6
+    },
+    {
+        "id": "start_all",
+        "name": "Start All Services",
+        "description": "Start both Django and Port Agent services",
+        "icon": "/ventoy/themes/nir_mistral/start.png",
+        "boot_type": "script",
+        "script": "/ventoy/ventoy_services.sh start all",
+        "auto_boot": false,
+        "default": false,
+        "hidden": false,
+        "disabled": false,
+        "sort": 7
+    },
+    {
+        "id": "stop_all",
+        "name": "Stop All Services",
+        "description": "Stop both Django and Port Agent services",
+        "icon": "/ventoy/themes/nir_mistral/stop.png",
+        "boot_type": "script",
+        "script": "/ventoy/ventoy_services.sh stop all",
+        "auto_boot": false,
+        "default": false,
+        "hidden": false,
+        "disabled": false,
+        "sort": 8
+    },
+    {
+        "id": "restart_all",
+        "name": "Restart All Services",
+        "description": "Restart both Django and Port Agent services",
+        "icon": "/ventoy/themes/nir_mistral/restart.png",
+        "boot_type": "script",
+        "script": "/ventoy/ventoy_services.sh restart all",
+        "auto_boot": false,
+        "default": false,
+        "hidden": false,
+        "disabled": false,
+        "sort": 9
+    },
+    {
+        "id": "separator3",
+        "name": "---",
+        "type": "separator",
+        "sort": 10
+    },
+    {
+        "id": "status",
+        "name": "Check Service Status",
+        "description": "Check the health and status of all services",
+        "icon": "/ventoy/themes/nir_mistral/status.png",
+        "boot_type": "script",
+        "script": "/ventoy/ventoy_health_check.sh",
+        "auto_boot": false,
+        "default": false,
+        "hidden": false,
+        "disabled": false,
+        "sort": 11
+    },
+    {
+        "id": "logs",
+        "name": "View Service Logs",
+        "description": "View logs for Django and Port Agent services",
+        "icon": "/ventoy/themes/nir_mistral/logs.png",
+        "boot_type": "script",
+        "script": "/ventoy/ventoy_services.sh logs",
+        "auto_boot": false,
+        "default": false,
+        "hidden": false,
+        "disabled": false,
+        "sort": 12
+    },
+    {
+        "id": "cleanup",
+        "name": "Cleanup Temporary Files",
+        "description": "Clean up temporary files and cache",
+        "icon": "/ventoy/themes/nir_mistral/cleanup.png",
+        "boot_type": "script",
+        "script": "/ventoy/ventoy_cleanup.sh",
+        "auto_boot": false,
+        "default": false,
+        "hidden": false,
+        "disabled": false,
+        "sort": 13
+    },
+    {
+        "id": "separator4",
+        "name": "---",
+        "type": "separator",
+        "sort": 14
+    },
+    {
+        "id": "environment_setup",
+        "name": "Environment Setup",
+        "description": "Set up system environment for NIR_Mistral",
+        "icon": "/ventoy/themes/nir_mistral/setup.png",
+        "boot_type": "script",
+        "script": "/ventoy/ventoy_env_setup.sh",
+        "auto_boot": false,
+        "default": false,
+        "hidden": false,
+        "disabled": false,
+        "sort": 15
+    },
+    {
+        "id": "documentation",
+        "name": "View Documentation",
+        "description": "View NIR_Mistral Framework documentation",
+        "icon": "/ventoy/themes/nir_mistral/docs.png",
+        "boot_type": "script",
+        "script": "cat {{ deploy_root }}/VENTOY_README.md | less",
+        "auto_boot": false,
+        "default": false,
+        "hidden": false,
+        "disabled": false,
+        "sort": 16
+    }
+]
+
+# Menu hotkeys
+hotkeys = {
+    "n": "nir_mistral",
+    "d": "django_only",
+    "p": "port_agent_only",
+    "s": "status",
+    "l": "logs",
+    "c": "cleanup",
+    "h": "help"
+}
+
+# Help text
+help_text = """
+NIR_Mistral Framework - Ventoy Stick
+
+This Ventoy stick contains a complete NIR_Mistral Framework deployment with:
+- Django Server (Port {{ django_port }})
+- Port Management Agent (Port {{ port_agent_port }})
+
+Main Options:
+  NIR_Mistral Framework - Start all services (Default)
+  Django Server Only - Start only Django
+  Port Agent Only - Start only Port Agent
+
+Management:
+  Start All Services - Start both services
+  Stop All Services - Stop both services
+  Restart All Services - Restart both services
+  Check Service Status - Check health of services
+  View Service Logs - View service logs
+  Cleanup Temporary Files - Clean up temp files
+
+Utilities:
+  Environment Setup - Set up system environment
+  View Documentation - View framework documentation
+
+Press the highlighted letter to select an option.
+Press ESC to exit.
+"""
+
+# Menu colors
+colors = {
+    "background": "#1a1a2e",
+    "foreground": "#ffffff",
+    "title_foreground": "#0f3460",
+    "title_background": "#e94560",
+    "selected_background": "#e94560",
+    "selected_foreground": "#ffffff",
+    "hotkey_foreground": "#ff6b6b",
+    "border": "#0f3460",
+    "scrollbar": "#16213e"
+}
+
+# Menu behavior
+behavior = {
+    "loop": true,
+    "wrap": true,
+    "escape_exit": true,
+    "enter_select": true,
+    "timeout_exit": false
+}

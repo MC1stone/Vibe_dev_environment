@@ -1,0 +1,28 @@
+---
+# NIR Intelligence Platform - Crew AI Main Playbook
+# This playbook runs all Crew AI implementation tests and setup
+
+- name: Crew AI Implementation Setup and Testing
+  hosts: crewai_test
+  gather_facts: no
+  connection: local
+  
+  tasks:
+    - name: Include Crew AI implementation test
+      include_tasks: test_crewai_implementation.yml
+      when: crewai_test is defined
+
+- name: Crew AI Deployment (Optional)
+  hosts: crewai_production
+  gather_facts: no
+  connection: local
+  
+  tasks:
+    - name: Display deployment message
+      debug:
+        msg: "Crew AI deployment to production servers would go here"
+      
+    - name: Include deployment tasks
+      include_tasks: deploy_crewai.yml
+      when: crewai_production is defined
+      ignore_errors: yes

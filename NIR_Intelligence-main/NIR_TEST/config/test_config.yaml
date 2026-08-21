@@ -1,0 +1,112 @@
+# NIR_TEST Environment Configuration
+# NIR_Mistral DeveloperAgent Framework Test Environment
+# Version: 1.0.0
+# Date: 2026-08-03
+
+# Environment Settings
+environment:
+  name: "NIR_TEST"
+  type: "test"
+  description: "Test environment for NIR_Mistral framework"
+  version: "1.0.0"
+  created: "2026-08-03"
+
+# Path Configuration
+paths:
+  root: "/home/martin/Development/vsCode_Environment/NIR_Mistral/NIR_TEST"
+  data: "/home/martin/Development/vsCode_Environment/NIR_Mistral/NIR_TEST/data"
+  raw_data: "/home/martin/Development/vsCode_Environment/NIR_Mistral/NIR_TEST/data/raw"
+  processed_data: "/home/martin/Development/vsCode_Environment/NIR_Mistral/NIR_TEST/data/processed"
+  results: "/home/martin/Development/vsCode_Environment/NIR_Mistral/NIR_TEST/data/results"
+  config: "/home/martin/Development/vsCode_Environment/NIR_Mistral/NIR_TEST/config"
+  scripts: "/home/martin/Development/vsCode_Environment/NIR_Mistral/NIR_TEST/scripts"
+  output: "/home/martin/Development/vsCode_Environment/NIR_Mistral/NIR_TEST/output"
+  logs: "/home/martin/Development/vsCode_Environment/NIR_Mistral/NIR_TEST/logs"
+  agents: "/home/martin/Development/vsCode_Environment/NIR_Mistral/NIR_TEST/agents"
+  models: "/home/martin/Development/vsCode_Environment/NIR_Mistral/NIR_TEST/models"
+
+# Data Processing Settings
+data_processing:
+  default_format: "txt"
+  supported_formats: ["txt", "csv", "json", "h5"]
+  delimiter: ","
+  decimal_separator: "."
+  wavelength_column: 0
+  value_column: 1
+  skip_header_lines: 6
+  
+# NIR Spectroscopy Settings
+nir_settings:
+  wavelength_range: [700, 2500]
+  resolution: 2
+  units: "nm"
+  spectral_type: "absorbance"  # or "reflectance", "transmittance"
+  
+# Test Data Configuration
+test_data:
+  samples:
+    - id: "001"
+      name: "Wheat Flour"
+      file: "nir_spectrum_001.txt"
+      type: "absorbance"
+      expected_properties:
+        protein: 12.0
+        moisture: 14.0
+        fat: 1.5
+    
+    - id: "002"
+      name: "Corn Meal"
+      file: "nir_spectrum_002.txt"
+      type: "reflectance"
+      expected_properties:
+        starch: 72.0
+        moisture: 10.0
+        protein: 8.0
+
+# Agent Configuration
+agents:
+  test_agent:
+    name: "NIR_Test_Agent"
+    description: "Test agent for NIR spectroscopy analysis"
+    version: "1.0.0"
+    capabilities:
+      - "spectral_analysis"
+      - "data_processing"
+      - "quality_control"
+    
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  log_file: "/home/martin/Development/vsCode_Environment/NIR_Mistral/NIR_TEST/logs/nir_test.log"
+  max_file_size: "10MB"
+  backup_count: 5
+
+# Performance Settings
+performance:
+  max_memory_usage: "2GB"
+  max_cpu_usage: 80
+  timeout: 3600
+  
+# Quality Control
+quality_control:
+  enabled: true
+  checks:
+    - "data_integrity"
+    - "wavelength_range"
+    - "signal_to_noise"
+    - "baseline_correction"
+  
+# Test Execution
+test_execution:
+  run_automatically: false
+  generate_reports: true
+  save_results: true
+  cleanup: false
+
+# Integration Settings
+integration:
+  framework_path: "/home/martin/Development/vsCode_Environment/NIR_Mistral"
+  use_dev_framework: true
+  python_path: "python3"
+  virtual_env: "venv"

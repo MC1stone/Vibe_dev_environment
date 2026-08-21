@@ -1,0 +1,98 @@
+# NIR_MISTRAL Prometheus Configuration
+# Monitoring configuration for the NIR_MISTRAL application
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Rule files
+rule_files:
+  # - "alert.rules"
+  # - "recording.rules"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Django application
+  - job_name: 'django'
+    static_configs:
+      - targets: ['web:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # PostgreSQL database
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    metrics_path: '/metrics'
+    # Note: You need to install postgres_exporter for this to work
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    metrics_path: '/metrics'
+    # Note: You need to install redis_exporter for this to work
+
+  # Weaviate
+  - job_name: 'weaviate'
+    static_configs:
+      - targets: ['weaviate:8080']
+    metrics_path: '/v1/.well-known/metrics'
+
+  # Ollama
+  - job_name: 'ollama'
+    static_configs:
+      - targets: ['ollama:11434']
+    metrics_path: '/metrics'
+    # Note: Ollama doesn't expose metrics by default, this is for future use
+
+  # Faiss service
+  - job_name: 'faiss'
+    static_configs:
+      - targets: ['faiss:8081']
+    metrics_path: '/health'
+
+  # Flower server
+  - job_name: 'flower'
+    static_configs:
+      - targets: ['flower_server:5556']
+    metrics_path: '/health'
+
+  # Celery
+  - job_name: 'celery'
+    static_configs:
+      - targets: ['celery_worker:5555']
+    metrics_path: '/metrics'
+    # Note: You need to configure Celery to expose metrics
+
+  # Node exporter for system metrics (optional)
+  # - job_name: 'node'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']
+
+# Remote write configuration (for sending metrics to external systems)
+# remote_write:
+#   - url: "https://your-remote-write-endpoint/api/v1/write"
+#     basic_auth:
+#       username: "username"
+#       password: "password"
+
+# Remote read configuration
+# remote_read:
+#   - url: "https://your-remote-read-endpoint/api/v1/read"
+#     basic_auth:
+#       username: "username"
+#       password: "password"

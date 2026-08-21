@@ -1,0 +1,72 @@
+---
+title: "Comprehensive NIR Analysis Report"
+author: "NIR Intelligence Platform"
+format: html
+date: "`r Sys.Date()`"
+---
+
+# Comprehensive NIR Analysis Report
+
+## Executive Summary
+
+Sample ID: `r params$sample_id`
+
+This comprehensive report combines spectral analysis and metadata quality assessment to provide a complete evaluation of your NIR data.
+
+## Spectral Analysis Results
+
+### Quality Assessment
+- **Quality Score**: `r params$spectral_quality_score` (`r params$spectral_quality_grade`)
+- **Wavelength Range**: `r params$wavelength_range[1]` - `r params$wavelength_range[2]` nm
+- **Data Points**: `r params$data_points`
+
+### Detected Issues
+`r ifelse(length(params$spectral_issues) > 0, paste("- ", params$spectral_issues, collapse = "\n- "), "No spectral issues detected")`
+
+## Metadata Quality Results
+
+### Overall Quality
+- **Score**: `r params$metadata_quality_score` (`r params$metadata_quality_grade`)
+- **Completeness**: `r params$metadata_completeness_score`%
+- **Accuracy**: `r params$metadata_accuracy_score`%
+- **Consistency**: `r params$metadata_consistency_score`%
+
+### Standards Compliance
+`r for (standard in names(params$metadata_standards)) {
+  cat("- **", standard, "**: ", round(params$metadata_standards[[standard]], 1), "%\n")
+}`
+
+## Combined Recommendations
+
+### Spectral Recommendations
+`r ifelse(length(params$spectral_recommendations) > 0, paste("- ", params$spectral_recommendations, collapse = "\n- "), "No spectral recommendations")`
+
+### Metadata Recommendations
+`r ifelse(length(params$metadata_recommendations) > 0, paste("- ", params$metadata_recommendations, collapse = "\n- "), "No metadata recommendations")`
+
+## Data Visualization
+
+### Spectral Data
+```{r}
+if (exists("params$wavelengths") && exists("params$intensities")) {
+  plot(params$wavelengths, params$intensities, type = "l", 
+       xlab = "Wavelength (nm)", ylab = "Intensity", 
+       main = "Spectral Data", col = "blue")
+}
+```
+
+### Quality Metrics
+```{r}
+# Create quality metrics table
+quality_data <- data.frame(
+  Metric = c("Spectral Quality", "Metadata Quality", "Completeness", "Accuracy", "Consistency"),
+  Score = c(params$spectral_quality_score, params$metadata_quality_score, 
+            params$metadata_completeness_score, params$metadata_accuracy_score, params$metadata_consistency_score),
+  Grade = c(params$spectral_quality_grade, params$metadata_quality_grade, 
+            ifelse(params$metadata_completeness_score >= 75, "Good", "Needs Improvement"),
+            ifelse(params$metadata_accuracy_score >= 75, "Good", "Needs Improvement"),
+            ifelse(params$metadata_consistency_score >= 75, "Good", "Needs Improvement"))
+)
+
+print(xtable(quality_data), type = "html")
+```

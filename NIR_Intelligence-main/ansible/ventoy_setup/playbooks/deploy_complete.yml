@@ -1,0 +1,198 @@
+#!/usr/bin/env ansible-playbook
+# Complete NIR_Mistral Deployment Playbook for Ventoy
+# This playbook provides a unified deployment experience
+
+- name: Complete NIR_Mistral Ventoy Deployment
+  hosts: ventoy_stick
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    # Project configuration
+    project_name: "nir_mistral"
+    project_version: "1.0.0"
+    deploy_root: "/opt/{{ project_name }}"
+    source_root: "/home/martin/Development/vsCode_Environment/NIR_Mistral"
+    
+    # Service ports
+    django_port: 8000
+    port_agent_port: 8001
+    weaviate_port: 8081
+    postgres_port: 5432
+    prometheus_port: 9090
+    grafana_port: 3000
+    
+    # System configuration
+    service_user: "nir_mistral"
+    service_group: "nir_mistral"
+    python_version: "3.11"
+    
+  pre_tasks:
+    - name: Display deployment banner
+      debug:
+        msg: |
+          ============================================
+          NIR_MISTRAL COMPLETE DEPLOYMENT
+          ============================================
+          Version: {{ project_version }}
+          Target: {{ inventory_hostname }}
+          Timestamp: {{ ansible_date_time.iso8601 }}
+          ============================================
+
+- import_playbook: ../site.yml
+
+- name: Additional Configuration - Databases and Monitoring
+  hosts: ventoy_stick
+  become: yes
+  
+  tasks:
+    - name: Install and configure PostgreSQL
+      block:
+        - name: Install PostgreSQL
+          apt:
+            name: [postgresql, postgresql-contrib, postgresql-client]
+            state: present
+            update_cache: yes
+          when: ansible_os_family == 'Debian'
+          
+        - name: Install PostgreSQL (RedHat)
+          yum:
+            name: [postgresql-server, postgresql-contrib]
+            state: present
+          when: ansible_os_family == 'RedHat'
+          
+        - name: Ensure PostgreSQL is running
+          service:
+            name: postgresql
+            state: started
+            enabled: yes
+            
+        - name: Create NIR_Mistral database user
+          postgresql_user:
+            name: "nir_user"
+            password: "nir_password_2026"
+            role_attr_flags: "CREATEDB,SUPERUSER"
+            state: present
+            
+        - name: Create NIR_Mistral database
+          postgresql_db:
+            name: "nir_metadata"
+            owner: "nir_user"
+            encoding: "UTF-8"
+            state: present
+            
+    - name: Install and configure Weaviate
+      block:
+        - name: Download Weaviate
+          get_url:
+            url: "https://github.com/weaviate/weaviate/releases/download/v1.23.0/weaviate-v1.23.0-linux-amd64.tar.gz"
+            dest: "/tmp/weaviate.tar.gz"
+            
+        - name: Extract Weaviate
+          unarchive:
+            src: "/tmp/weaviate.tar.gz"
+            dest: "/opt/"
+            remote_src: yes
+            
+        - name: Create Weaviate service
+          template:
+            src: templates/weaviate.service.j2
+            dest: /etc/systemd/system/weaviate.service
+            mode: '0644'
+            
+        - name: Start Weaviate service
+          systemd:
+            name: weaviate
+            state: started
+            enabled: yes
+            daemon_reload: yes
+            
+    - name: Install Monitoring Stack
+      block:
+        - name: Install Prometheus
+          apt:
+            name: prometheus
+            state: present
+          when: ansible_os_family == 'Debian'
+            
+        - name: Install Grafana
+          apt:
+            name: grafana
+            state: present
+          when: ansible_os_family == 'Debian'
+          
+        - name: Configure Prometheus for NIR_Mistral
+          template:
+            src: templates/prometheus.yml.j2
+            dest: /etc/prometheus/prometheus.yml
+            mode: '0644'
+            
+        - name: Start monitoring services
+          systemd:
+            name: "{{ item }}"
+            state: started
+            enabled: yes
+          loop: [prometheus, grafana-server]
+          when: ansible_os_family == 'Debian'
+
+- name: Final Verification and Health Checks
+  hosts: ventoy_stick
+  become: no
+  
+  tasks:
+    - name: Verify all services are running
+      block:
+        - name: Check Django server
+          uri:
+            url: "http://localhost:{{ django_port }}/api/health/"
+            return_content: yes
+          register: django_health
+          ignore_errors: yes
+          
+        - name: Check Port Agent
+          uri:
+            url: "http://localhost:{{ port_agent_port }}/api/ports/"
+            return_content: yes
+          register: port_agent_health
+          ignore_errors: yes
+          
+        - name: Check Weaviate
+          uri:
+            url: "http://localhost:{{ weaviate_port }}/v1/.well-known/ready"
+            return_content: yes
+          register: weaviate_health
+          ignore_errors: yes
+          
+        - name: Check PostgreSQL
+          postgresql_query:
+            db: "nir_metadata"
+            login_user: "nir_user"
+            login_password: "nir_password_2026"
+            query: "SELECT 1"
+          register: postgres_health
+          ignore_errors: yes
+          
+    - name: Display final deployment summary
+      debug:
+        msg: |
+          ============================================
+          DEPLOYMENT VERIFICATION SUMMARY
+          ============================================
+          Django Server: {{ '✅ HEALTHY' if django_health.status == 200 else '❌ DOWN' }}
+          Port Agent: {{ '✅ HEALTHY' if port_agent_health.status == 200 else '❌ DOWN' }}
+          Weaviate: {{ '✅ HEALTHY' if weaviate_health.status == 200 else '❌ DOWN' }}
+          PostgreSQL: {{ '✅ HEALTHY' if postgres_health is success else '❌ DOWN' }}
+          
+          Access Points:
+          - Django: http://{{ ansible_host }}:{{ django_port }}
+          - Port Agent: http://{{ ansible_host }}:{{ port_agent_port }}
+          - Weaviate: http://{{ ansible_host }}:{{ weaviate_port }}
+          - Prometheus: http://{{ ansible_host }}:{{ prometheus_port }}
+          - Grafana: http://{{ ansible_host }}:{{ grafana_port }}
+          
+          Deployment Directory: {{ deploy_root }}
+          Logs Directory: {{ deploy_root }}/logs
+          
+          ============================================
+          DEPLOYMENT COMPLETE ✅
+          ============================================

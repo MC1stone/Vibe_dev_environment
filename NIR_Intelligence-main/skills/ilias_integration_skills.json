@@ -1,0 +1,372 @@
+{
+  "skill_id": "ilias_integration_skills",
+  "name": "ILIAS Integration Skills",
+  "version": "1.0.0",
+  "description": "Specialized skills for integrating the NIR Intelligence Platform with ILIAS e-learning system and facilitating user communication.",
+  "agent_association": "ilias_agent",
+  "skills": [
+    {
+      "skill_name": "api_integration",
+      "description": "Integrate with ILIAS APIs for seamless data exchange",
+      "capabilities": [
+        "rest_api_communication",
+        "soap_api_communication",
+        "lti_integration",
+        "authentication_handling",
+        "error_recovery"
+      ],
+      "methods": [
+        {
+          "name": "REST_API_Communication",
+          "description": "Communicate with ILIAS REST API",
+          "parameters": {
+            "base_url": "https://ilias.example.com/api/",
+            "auth_method": "OAuth2",
+            "timeout": 30
+          }
+        },
+        {
+          "name": "SOAP_API_Communication",
+          "description": "Communicate with ILIAS SOAP API",
+          "parameters": {
+            "wsdl_url": "https://ilias.example.com/soap/wsdl",
+            "client_cert": "/path/to/cert.pem"
+          }
+        },
+        {
+          "name": "LTI_Integration",
+          "description": "Implement LTI 1.3 for tool interoperability",
+          "parameters": {
+            "lti_version": "1.3",
+            "launch_url": "/nir/lti/launch",
+            "deep_linking": true
+          }
+        }
+      ],
+      "authentication_methods": [
+        {
+          "name": "OAuth2",
+          "flow": "client_credentials",
+          "token_endpoint": "/oauth2/token",
+          "scope": "read write"
+        },
+        {
+          "name": "SAML",
+          "version": "2.0",
+          "identity_provider": "https://ilias.example.com/saml/idp",
+          "service_provider": "/nir/saml/metadata"
+        }
+      ],
+      "error_handling": {
+        "retry_strategy": "exponential_backoff",
+        "max_retries": 3,
+        "fallback": "cache_last_known_state"
+      }
+    },
+    {
+      "skill_name": "user_synchronization",
+      "description": "Synchronize user data between Django and ILIAS",
+      "capabilities": [
+        "user_creation",
+        "user_update",
+        "user_deactivation",
+        "role_mapping",
+        "password_synchronization"
+      ],
+      "synchronization_strategies": [
+        {
+          "name": "Full_Sync",
+          "description": "Complete synchronization of all users",
+          "frequency": "daily",
+          "batch_size": 100
+        },
+        {
+          "name": "Incremental_Sync",
+          "description": "Synchronize only changed users",
+          "frequency": "hourly",
+          "trigger": "on_user_change"
+        }
+      ],
+      "field_mapping": {
+        "django_to_ilias": {
+          "username": "login",
+          "email": "email",
+          "first_name": "firstname",
+          "last_name": "lastname",
+          "is_active": "active"
+        },
+        "role_mapping": {
+          "student": "learner",
+          "researcher": "tutor",
+          "professor": "tutor",
+          "admin": "administrator"
+        }
+      },
+      "conflict_resolution": {
+        "username_conflict": "append_suffix",
+        "email_conflict": "use_ilias_email",
+        "role_conflict": "use_higher_privilege"
+      }
+    },
+    {
+      "skill_name": "course_management",
+      "description": "Create and manage NIR courses in ILIAS",
+      "capabilities": [
+        "course_creation",
+        "course_enrollment",
+        "content_management",
+        "grade_synchronization",
+        "course_archiving"
+      ],
+      "course_templates": [
+        {
+          "name": "NIR_Introduction",
+          "description": "Template for introductory NIR courses",
+          "structure": [
+            "Introduction",
+            "Theory",
+            "Practical_Exercises",
+            "Assessment",
+            "Resources"
+          ]
+        },
+        {
+          "name": "NIR_Advanced",
+          "description": "Template for advanced NIR analysis courses",
+          "structure": [
+            "Advanced_Theory",
+            "Case_Studies",
+            "Hands-on_Labs",
+            "Research_Projects",
+            "Final_Assessment"
+          ]
+        }
+      ],
+      "enrollment_methods": [
+        "manual",
+        "automatic",
+        "self_enrollment",
+        "group_based"
+      ],
+      "content_types": [
+        {
+          "name": "SCORM",
+          "description": "SCORM packages for interactive content",
+          "supported_versions": ["1.2", "2004"]
+        },
+        {
+          "name": "Video",
+          "description": "Video lectures and tutorials",
+          "supported_formats": ["mp4", "webm"],
+          "max_size": "2GB"
+        },
+        {
+          "name": "Document",
+          "description": "Course documents and readings",
+          "supported_formats": ["pdf", "docx", "pptx"]
+        }
+      ]
+    },
+    {
+      "skill_name": "communication_platform",
+      "description": "Enable communication channels between users",
+      "capabilities": [
+        "real_time_messaging",
+        "forum_management",
+        "notification_system",
+        "file_sharing",
+        "video_conferencing"
+      ],
+      "messaging_features": {
+        "private_messages": true,
+        "group_chats": true,
+        "message_history": "unlimited",
+        "read_receipts": true,
+        "typing_indicators": true
+      },
+      "forum_management": {
+        "course_forums": true,
+        "general_forums": true,
+        "moderation_tools": ["post_approval", "user_banning", "content_filtering"],
+        "gamification": ["likes", "badges", "reputation_points"]
+      },
+      "notification_system": {
+        "channels": ["email", "in_app", "push"],
+        "preferences": ["immediate", "daily_digest", "weekly_digest"],
+        "templates": ["course_updates", "new_messages", "assignment_reminders"]
+      }
+    },
+    {
+      "skill_name": "learning_analytics",
+      "description": "Track and analyze learning activities",
+      "capabilities": [
+        "activity_tracking",
+        "performance_analysis",
+        "engagement_metrics",
+        "predictive_analytics",
+        "report_generation"
+      ],
+      "tracked_activities": [
+        "course_access",
+        "content_viewing",
+        "quiz_attempts",
+        "forum_participation",
+        "assignment_submissions",
+        "time_spent"
+      ],
+      "metrics": [
+        {
+          "name": "Completion_Rate",
+          "description": "Percentage of course completed",
+          "calculation": "completed_items / total_items"
+        },
+        {
+          "name": "Engagement_Score",
+          "description": "Overall user engagement",
+          "calculation": "weighted_sum(activities)"
+        },
+        {
+          "name": "Performance_Index",
+          "description": "Learning performance indicator",
+          "calculation": "average(quiz_scores) * completion_rate"
+        }
+      ],
+      "reporting": {
+        "formats": ["PDF", "CSV", "Interactive_Dashboard"],
+        "schedules": ["daily", "weekly", "monthly"],
+        "recipients": ["administrators", "instructors", "students"]
+      },
+      "integration": {
+        "django_models": ["UserActivity", "LearningProgress", "CourseCompletion"],
+        "visualization": "Plotly_Dash"
+      }
+    },
+    {
+      "skill_name": "collaborative_learning",
+      "description": "Facilitate group learning and collaboration",
+      "capabilities": [
+        "group_formation",
+        "project_management",
+        "peer_review",
+        "knowledge_sharing",
+        "gamification"
+      ],
+      "group_management": {
+        "max_size": 5,
+        "formation_methods": ["manual", "automatic", "self_selection"],
+        "roles": ["leader", "member", "observer"]
+      },
+      "project_tools": {
+        "shared_workspace": true,
+        "version_control": "git",
+        "task_management": "kanban_board",
+        "document_collaboration": "real_time_editing"
+      },
+      "peer_review": {
+        "rubrics": ["accuracy", "completeness", "clarity", "originality"],
+        "scoring": "5_point_scale",
+        "anonymous": false,
+        "feedback": "structured"
+      },
+      "knowledge_sharing": {
+        "wiki": true,
+        "faq": true,
+        "best_practices": true,
+        "user_contributions": true
+      }
+    },
+    {
+      "skill_name": "single_sign_on",
+      "description": "Implement SSO between Django and ILIAS",
+      "capabilities": [
+        "authentication_flow",
+        "session_management",
+        "token_validation",
+        "user_provisioning",
+        "error_handling"
+      ],
+      "sso_protocols": [
+        {
+          "name": "SAML_2.0",
+          "description": "SAML-based single sign-on",
+          "configuration": {
+            "identity_provider": "https://ilias.example.com/saml/idp",
+            "service_provider": "/nir/saml/metadata",
+            "certificate": "/path/to/sp-cert.pem"
+          }
+        },
+        {
+          "name": "OAuth2",
+          "description": "OAuth2-based authentication",
+          "configuration": {
+            "authorize_url": "https://ilias.example.com/oauth2/authorize",
+            "token_url": "https://ilias.example.com/oauth2/token",
+            "client_id": "nir_platform",
+            "client_secret": "secure_secret",
+            "redirect_uri": "/nir/oauth2/callback",
+            "scope": "openid profile email"
+          }
+        }
+      ],
+      "session_management": {
+        "timeout": 3600,
+        "renewal": "automatic",
+        "concurrent_sessions": 3
+      },
+      "user_provisioning": {
+        "just_in_time": true,
+        "attribute_mapping": {
+          "email": "email",
+          "firstname": "given_name",
+          "lastname": "family_name",
+          "role": "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+        }
+      }
+    }
+  ],
+  "performance_indicators": [
+    "api_success_rate",
+    "user_synchronization_time",
+    "course_enrollment_time",
+    "message_delivery_time",
+    "system_availability"
+  ],
+  "security_requirements": {
+    "data_encryption": "TLS_1.2+",
+    "authentication": "multi_factor",
+    "audit_logging": true,
+    "compliance": ["GDPR", "FERPA", "COPPA"]
+  },
+  "dependencies": {
+    "required_libraries": [
+      "requests",
+      "zeep",
+      "django-saml2",
+      "social-auth-app-django",
+      "python3-saml",
+      "lti"
+    ],
+    "optional_libraries": [
+      "celery",
+      "redis",
+      "django-channels",
+      "django-notifications"
+    ]
+  },
+  "error_handling": {
+    "critical_errors": [
+      "authentication_failure",
+      "api_unavailable",
+      "data_corruption"
+    ],
+    "recovery_strategies": [
+      "retry_with_backoff",
+      "fallback_to_cache",
+      "manual_intervention"
+    ],
+    "notification": {
+      "admin_alerts": "immediate",
+      "user_notifications": "delayed_with_explanation"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "{{ docker.log_max_size }}",
+    "max-file": "{{ docker.log_max_file }}"
+  },
+  "storage-driver": "{{ docker.storage_driver }}",
+  "storage-opts": [
+    "size={{ docker.storage_size | default('10G') }}"
+  ],
+  "default-ulimits": {{ docker.default_ulimits | to_json }},
+  "userns-remap": {{ docker.userns_remap | lower }},
+  "iptables": {{ docker.iptables | lower }},
+  "ip-masq": {{ docker.ip_masq | lower }},
+  "max-concurrent-downloads": {{ docker.max_concurrent_downloads }},
+  "max-download-attempts": {{ docker.max_download_attempts }},
+  "live-restore": true,
+  "userland-proxy": false,
+  "no-new-privileges": true,
+  "oom-score-adj": -500,
+  "init": true,
+  "init-path": "/usr/bin/docker-init",
+  "runc": {
+    "log": "",
+    "log-level": "warning"
+  }
+}

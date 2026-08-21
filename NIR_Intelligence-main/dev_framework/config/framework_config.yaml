@@ -1,0 +1,127 @@
+# DeveloperAgent Framework Configuration
+
+# Framework settings
+framework:
+  name: "DeveloperAgent Framework"
+  version: "1.0.0"
+  description: "Framework for accelerating NIR Intelligence Platform development"
+  
+# Agent generation settings
+generation:
+  templates_dir: "dev_framework/templates"
+  default_template: "default"
+  auto_import: true
+  
+  # Template configurations
+  templates:
+    default:
+      description: "Generic agent template"
+      base_class: "BaseAgent"
+      required_methods: ["execute"]
+      dependencies: []
+      
+    data:
+      description: "Data processing agent template"
+      base_class: "BaseAgent"
+      required_methods: ["execute", "_load_data", "_validate_data", "_preprocess_data"]
+      dependencies: ["pandas", "numpy"]
+      
+    ml:
+      description: "Machine learning agent template"
+      base_class: "BaseAgent"
+      required_methods: ["execute", "_train_model", "_evaluate_model", "_save_model"]
+      dependencies: ["tensorflow", "keras", "scikit-learn", "numpy"]
+      
+    db:
+      description: "Database agent template"
+      base_class: "BaseAgent"
+      required_methods: ["execute", "_connect", "_query", "_disconnect"]
+      dependencies: ["sqlalchemy", "psycopg2"]
+      
+    api:
+      description: "API/web service agent template"
+      base_class: "BaseAgent"
+      required_methods: ["execute", "_start_server", "_handle_request"]
+      dependencies: ["fastapi", "uvicorn", "requests"]
+      
+    analysis:
+      description: "Statistical analysis agent template"
+      base_class: "BaseAgent"
+      required_methods: ["execute", "_perform_pca", "_perform_pls", "_perform_cluster"]
+      dependencies: ["pandas", "numpy", "scipy", "scikit-learn"]
+
+# Validation settings
+validation:
+  strict: false
+  check_mandatory_files: true
+  check_dependencies: true
+  check_code_quality: true
+  
+  # Validation rules
+  rules:
+    required_methods: ["execute"]
+    required_attributes: ["name", "version", "dependencies", "errors"]
+    base_class: "BaseAgent"
+    max_line_length: 120
+    max_function_length: 50
+
+# Quality settings
+quality:
+  enabled: true
+  tools:
+    black:
+      enabled: true
+      line_length: 120
+      
+    flake8:
+      enabled: true
+      max_line_length: 120
+      ignore: ["E203", "W503"]
+      
+    isort:
+      enabled: true
+      profile: "black"
+      
+    mypy:
+      enabled: true
+      python_version: "3.12"
+      ignore_missing_imports: true
+      
+    pylint:
+      enabled: false
+      
+  auto_fix: true
+  fixable_tools: ["black", "isort"]
+
+# Testing settings
+testing:
+  enabled: true
+  default_test_types: ["unit", "integration", "e2e"]
+  coverage:
+    enabled: true
+    threshold: 80
+    report_dir: "htmlcov"
+    
+  pytest:
+    timeout: 300
+    verbose: false
+
+# Server settings
+server:
+  host: "localhost"
+  port: 8001
+  hot_reload: true
+  debug: true
+
+# Documentation settings
+docs:
+  enabled: true
+  output_dir: "docs"
+  generate_for_all_agents: true
+  include_source_code: true
+
+# Logging settings
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/dev_framework.log"

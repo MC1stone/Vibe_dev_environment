@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+{% load static %}
+
+
+{% block title %}Spectra Management - NIR_Mistral Framework{% endblock %}
+
+{% block extra_css %}
+<style>
+    .spectrum-card {
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        cursor: pointer;
+    }
+    
+    .spectrum-card:hover {
+        border-color: var(--color-primary);
+        box-shadow: 0 8px 25px rgba(122, 185, 41, 0.15);
+        transform: translateY(-4px);
+    }
+    
+    .spectrum-preview {
+        height: 150px;
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .spectrum-chart {
+        width: 100%;
+        height: 100%;
+    }
+    
+    .quality-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .quality-excellent { background: var(--color-success); color: white; }
+    .quality-good { background: #28a745; color: white; }
+    .quality-fair { background: #ffc107; color: #212529; }
+    .quality-poor { background: var(--color-danger); color: white; }
+    .quality-unknown { background: var(--color-secondary); color: white; }
+    
+    .spectrum-meta {
+        font-size: 0.85rem;
+        color: var(--color-text-muted);
+    }
+    
+    .spectrum-actions {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .spectrum-card:hover .spectrum-actions {
+        opacity: 1;
+    }
+    
+    .drop-zone {
+        border: 2px dashed var(--color-border);
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .drop-zone:hover, .drop-zone.drag-over {
+        border-color: var(--color-primary);
+        background-color: rgba(122, 185, 41, 0.05);
+    }
+    
+    .file-preview {
+        background: var(--color-background-light);
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 12px;
+        display: none;
+    }
+    
+    .spectrum-type-tag {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin: 4px;
+        background: var(--color-background);
+        color: var(--color-text);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="o-section o-section--primary">
+    <div class="o-container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1 class="c-page-header__title text-white mb-0">
+                    <i class="bi bi-graph-up"></i> Spectra Management
+                </h1>
+                <p class="c-page-header__subtitle text-white opacity-75 mb-0">
+                    Upload, view, and analyze NIR spectroscopy data with Crew AI
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="c-button c-button--white" onclick="refreshSpectra()">
+                    <i class="bi bi-arrow-clockwise c-button__icon"></i>
+                    <span class="c-button__text">Refresh</span>
+                </button>
+                <button class="c-button c-button--secondary" data-bs-toggle="modal" data-bs-target="#uploadSpectrumModal">
+                    <i class="bi bi-upload c-button__icon"></i>
+                    <span class="c-button__text">Upload Spectrum</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Statistics Section -->
+<section class="o-section">
+    <div class="o-container">
+        <div class="row g-4">
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--primary">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="totalSpectra">0</div>
+                    <div class="c-stat-card__label">Total Spectra</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--success">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="validSpectra">0</div>
+                    <div class="c-stat-card__label">Valid Spectra</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="invalidSpectra">0</div>
+                    <div class="c-stat-card__label">Invalid Spectra</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--info">
+                        <i class="bi bi-database"></i>
+                    </div>
+                    <div class="c-stat-card__number" id="totalStorage">0 MB</div>
+                    <div class="c-stat-card__label">Total Storage</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Quick Actions Section -->
+<section class="o-section o-section--light">
+    <div class="o-container">
+        <h2 class="c-card__title mb-xl">
+            <i class="bi bi-lightning-charge"></i> Quick Actions
+        </h2>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="c-card h-100">
+                    <div class="c-card__body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-upload text-primary" style="font-size: 3rem;"></i>
+                        </div>
+                        <h3 class="h5 mb-2">Upload Spectrum</h3>
+                        <p class="text-muted small mb-3">Upload new NIR spectroscopy data for analysis</p>
+                        <button class="c-button c-button--outline-primary" data-bs-toggle="modal" data-bs-target="#uploadSpectrumModal">
+                            <i class="bi bi-upload c-button__icon"></i>
+                            <span class="c-button__text">Upload Now</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="c-card h-100">
+                    <div class="c-card__body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-play-circle text-primary" style="font-size: 3rem;"></i>
+                        </div>
+                        <h3 class="h5 mb-2">Quick Analysis</h3>
+                        <p class="text-muted small mb-3">Run quick analysis on selected spectra</p>
+                        <button class="c-button c-button--outline-primary" onclick="quickAnalyzeSelected()">
+                            <i class="bi bi-play-circle c-button__icon"></i>
+                            <span class="c-button__text">Analyze Now</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="c-card h-100">
+                    <div class="c-card__body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-folder text-primary" style="font-size: 3rem;"></i>
+                        </div>
+                        <h3 class="h5 mb-2">Browse Library</h3>
+                        <p class="text-muted small mb-3">View all uploaded spectra</p>
+                        <button class="c-button c-button--outline-primary" onclick="scrollToSpectra()">
+                            <i class="bi bi-list c-button__icon"></i>
+                            <span class="c-button__text">Browse All</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Spectra Gallery Section -->
+<section class="o-section">
+    <div class="o-container">
+        <div class="d-flex justify-content-between align-items-center mb-xl">
+            <h2 class="c-card__title mb-0">
+                <i class="bi bi-images"></i> Spectra Gallery
+            </h2>
+            <div class="d-flex gap-2">
+                <select class="c-form-control c-form-control--sm" id="spectrumFilter" onchange="filterSpectra()">
+                    <option value="">All Spectra</option>
+                    <option value="valid">Valid Only</option>
+                    <option value="invalid">Invalid Only</option>
+                    <option value="recent">Recent First</option>
+                </select>
+                <select class="c-form-control c-form-control--sm" id="typeFilter" onchange="filterSpectra()">
+                    <option value="">All Types</option>
+                    <!-- Will be populated dynamically -->
+                </select>
+            </div>
+        </div>
+        
+        <div class="row g-4" id="spectraGallery">
+            <!-- Spectra will be loaded here -->
+        </div>
+    </div>
+</section>
+
+<!-- Spectra Table Section -->
+<section class="o-section o-section--light">
+    <div class="o-container">
+        <div class="d-flex justify-content-between align-items-center mb-xl">
+            <h2 class="c-card__title mb-0">
+                <i class="bi bi-table"></i> Spectra Data Table
+            </h2>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-danger btn-sm" onclick="deleteSelectedSpectra()">
+                    <i class="bi bi-trash"></i> Delete Selected
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="exportSpectraList()">
+                    <i class="bi bi-download"></i> Export List
+                </button>
+            </div>
+        </div>
+        
+        <div class="c-card">
+            <div class="c-card__body p-0">
+                <div class="table-responsive">
+                    <table class="c-table c-table--hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>
+                                    <input type="checkbox" id="selectAllSpectra" onchange="toggleSelectAll()">
+                                </th>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Quality</th>
+                                <th>Data Points</th>
+                                <th>Uploaded</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spectraTable">
+                            <tr>
+                                <td colspan="7" class="text-center py-lg">
+                                    <div class="c-loading-overlay__spinner" style="width: 2rem; height: 2rem; border-width: 0.2rem;"></div>
+                                    <p class="mt-sm text-muted">Loading spectra...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="c-card__footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span id="spectraCount">0 spectra</span>
+                    <div class="d-flex gap-2">
+                        <button class="c-button c-button--outline-primary c-button--sm" onclick="loadMoreSpectra()">
+                            <i class="bi bi-plus c-button__icon"></i>
+                            <span class="c-button__text">Load More</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Upload Spectrum Modal -->
+<div class="modal fade" id="uploadSpectrumModal" tabindex="-1" aria-labelledby="uploadSpectrumModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadSpectrumModalLabel">
+                    <i class="bi bi-upload"></i> Upload Spectrum
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadSpectrumForm">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="drop-zone" id="dropZone">
+                                <i class="bi bi-cloud-arrow-up" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 1rem;"></i>
+                                <p class="mb-0">Drag & drop spectrum files here or click to browse</p>
+                                <p class="text-muted small mb-0">Supports: .csv, .txt, .json, .h5, .hdf5</p>
+                                <input type="file" id="fileInput" accept=".csv,.txt,.json,.h5,.hdf5" style="display: none;" multiple>
+                            </div>
+                            
+                            <div class="file-preview" id="filePreview"></div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="c-form-label required">Sample Name</label>
+                            <input type="text" class="c-form-control" id="sampleName" placeholder="e.g., Wheat Sample A" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="c-form-label required">Sample ID</label>
+                            <input type="text" class="c-form-control" id="sampleId" placeholder="Unique identifier" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="c-form-label">Spectral Type</label>
+                            <select class="c-form-control" id="spectralType">
+                                <option value="">Auto Detect</option>
+                                <option value="nir">NIR</option>
+                                <option value="ir">IR</option>
+                                <option value="uv-vis">UV-Vis</option>
+                                <option value="raman">Raman</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="c-form-label">Instrument Type</label>
+                            <select class="c-form-control" id="instrumentType">
+                                <option value="">Select instrument...</option>
+                                <option value="diy_spectrometer">DIY Spectrometer</option>
+                                <option value="commercial_nir">Commercial NIR</option>
+                                <option value="ftir">FTIR</option>
+                                <option value="portable">Portable Device</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="c-form-label">Description</label>
+                            <textarea class="c-form-control" id="spectrumDescription" rows="3" placeholder="Brief description of the sample..."></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="c-form-label">Metadata</label>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <input type="text" class="c-form-control" id="metadataOperator" placeholder="Operator">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="date" class="c-form-control" id="metadataDate">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="c-form-control" id="metadataLocation" placeholder="Location">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="c-form-check">
+                                <input class="c-checkbox" type="checkbox" id="autoAnalyze" checked>
+                                <label class="c-checkbox__label" for="autoAnalyze">
+                                    Auto-analyze after upload
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="uploadSpectrum()">
+                    <i class="bi bi-upload"></i> Upload Spectrum
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Spectrum Details Modal -->
+<div class="modal fade" id="spectrumDetailsModal" tabindex="-1" aria-labelledby="spectrumDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="spectrumDetailsModalLabel">
+                    <i class="bi bi-file-earmark-text"></i> Spectrum Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="c-card h-100">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">Spectrum Preview</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <div class="spectrum-preview" style="height: 250px;">
+                                    <canvas id="spectrumDetailsChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="c-card h-100">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">Spectrum Information</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <dl class="row mb-0">
+                                    <dt class="col-sm-4">Name:</dt>
+                                    <dd class="col-sm-8" id="detailName"></dd>
+                                    
+                                    <dt class="col-sm-4">Sample ID:</dt>
+                                    <dd class="col-sm-8" id="detailSampleId"></dd>
+                                    
+                                    <dt class="col-sm-4">Type:</dt>
+                                    <dd class="col-sm-8" id="detailType"></dd>
+                                    
+                                    <dt class="col-sm-4">Quality:</dt>
+                                    <dd class="col-sm-8" id="detailQuality"></dd>
+                                    
+                                    <dt class="col-sm-4">Data Points:</dt>
+                                    <dd class="col-sm-8" id="detailDataPoints"></dd>
+                                    
+                                    <dt class="col-sm-4">Wavelength Range:</dt>
+                                    <dd class="col-sm-8" id="detailWavelengthRange"></dd>
+                                    
+                                    <dt class="col-sm-4">Uploaded:</dt>
+                                    <dd class="col-sm-8" id="detailUploaded"></dd>
+                                    
+                                    <dt class="col-sm-4">Instrument:</dt>
+                                    <dd class="col-sm-8" id="detailInstrument"></dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="c-card">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">Metadata</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <dl class="row mb-0" id="detailMetadata">
+                                    <!-- Metadata will be loaded here -->
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="c-card">
+                            <div class="c-card__header">
+                                <h6 class="mb-0">Description</h6>
+                            </div>
+                            <div class="c-card__body">
+                                <p id="detailDescription" class="mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Close
+                </button>
+                <button type="button" class="btn btn-primary" onclick="analyzeCurrentSpectrum()">
+                    <i class="bi bi-play-circle"></i> Analyze Spectrum
+                </button>
+                <button type="button" class="btn btn-primary" onclick="downloadSpectrum()">
+                    <i class="bi bi-download"></i> Download
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="spectraDeleteConfirmationModal" tabindex="-1" aria-labelledby="spectraDeleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="spectraDeleteConfirmationModalLabel">
+                    <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="spectraDeleteMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/spectra.js' %}"></script>
+{% endblock %}

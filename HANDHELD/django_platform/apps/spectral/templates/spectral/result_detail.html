@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ result.title }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; background: #f8fafc; color: #111827; }
+        .panel { background: white; border-radius: 12px; padding: 24px; max-width: 900px; margin: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        .status { display: inline-block; padding: 6px 10px; border-radius: 999px; font-weight: bold; }
+        .ready { background: #dcfce7; color: #166534; }
+        .pending { background: #fef3c7; color: #92400e; }
+        .failed { background: #fee2e2; color: #991b1b; }
+        .meta { margin-top: 16px; color: #475569; }
+        img { max-width: 100%; border-radius: 12px; margin-top: 20px; }
+        a { color: #1d4ed8; }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <h1>{{ result.title }}</h1>
+        <span class="status {{ result.status }}">{{ result.status }}</span>
+        <p>{{ result.summary|default:"No summary available." }}</p>
+
+        {% if result.image_url %}
+            <img src="{{ result.image_url }}" alt="{{ result.title }}">
+        {% endif %}
+
+        <div class="meta">
+            <p><strong>Session:</strong> {{ result.session.name }}</p>
+            <p><strong>Created:</strong> {{ result.created_at }}</p>
+            <p><strong>Metrics:</strong> {{ result.metrics }}</p>
+        </div>
+
+        <p><a href="/spectral/results/dashboard/">Back to dashboard</a></p>
+    </div>
+</body>
+</html>

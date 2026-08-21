@@ -1,0 +1,609 @@
+---
+title: "Comprehensive NIR Spectral Analysis Report"
+author: "NIR Intelligence Platform"
+format: 
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+    code-summary: "Show Python Code"
+    fig-width: 10
+    fig-height: 6
+    css: styles.css
+date: "`r Sys.Date()`"
+params:
+  sample_id: ""
+  request_id: ""
+  timestamp: ""
+  overall_quality_score: 0
+  processing_time: 0
+  spectral_analysis: null
+  metadata_quality: null
+  calibration_results: null
+  recommendations: []
+  warnings: []
+  errors: []
+  include_source_code: true
+  include_visualizations: true
+  include_analysis_results: true
+---
+
+```{r setup, include=FALSE}
+# Load required libraries
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(jsonlite)
+
+# Set global options
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Custom function to check if parameter exists
+param_exists <- function(param_name) {
+  !is.null(params[[param_name]]) && !identical(params[[param_name]], "")
+}
+```
+
+# Comprehensive NIR Spectral Analysis Report
+
+## Executive Summary
+
+This report presents the comprehensive analysis of NIR spectral data for sample **`r params$sample_id`** (Request ID: `r params$request_id`), conducted on `r params$timestamp`. The analysis includes spectral quality assessment, metadata validation, calibration evaluation, and actionable recommendations.
+
+**Overall Quality Score: `r round(params$overall_quality_score, 2)` / 100**
+
+**Processing Time: `r round(params$processing_time, 2)` seconds**
+
+```{r summary-metrics, echo=FALSE}
+# Display key metrics in a table
+metrics <- data.frame(
+  Metric = c("Overall Quality Score", "Processing Time (s)", "Recommendations", "Warnings", "Errors"),
+  Value = c(
+    round(params$overall_quality_score, 2),
+    round(params$processing_time, 2),
+    length(params$recommendations),
+    length(params$warnings),
+    length(params$errors)
+  )
+)
+
+knitr::kable(metrics, caption = "Analysis Summary Metrics")
+```
+
+## Sample Information
+
+- **Sample ID:** `r params$sample_id`
+- **Request ID:** `r params$request_id`
+- **Analysis Timestamp:** `r params$timestamp`
+- **Processing Time:** `r round(params$processing_time, 2)` seconds
+
+## Spectral Analysis Results
+
+### Quality Assessment
+
+```{r spectral-quality, echo=FALSE}
+if (param_exists("spectral_analysis")) {
+  spectral <- params$spectral_analysis
+  
+  quality_info <- data.frame(
+    Aspect = c("Quality Grade", "Quality Score", "Data Points", "Wavelength Range"),
+    Value = c(
+      spectral$quality_grade,
+      round(spectral$quality_score, 2),
+      spectral$data_points,
+      paste0("[", spectral$wavelength_range[1], ", ", spectral$wavelength_range[2], "] nm")
+    )
+  )
+  
+  knitr::kable(quality_info, caption = "Spectral Quality Metrics")
+}
+```
+
+### Signal Quality Metrics
+
+```{r signal-metrics, echo=FALSE}
+if (param_exists("spectral_analysis")) {
+  spectral <- params$spectral_analysis
+  
+  signal_metrics <- data.frame(
+    Metric = c("Noise Level", "Signal-to-Noise Ratio", "Baseline Quality", "Peak Detection"),
+    Value = c(
+      round(spectral$noise_level, 4),
+      round(spectral$signal_to_noise_ratio, 2),
+      spectral$baseline_quality,
+      ifelse(is.null(spectral$peaks_detected), "N/A", length(spectral$peaks_detected))
+    )
+  )
+  
+  knitr::kable(signal_metrics, caption = "Signal Quality Metrics")
+}
+```
+
+### Detected Issues
+
+```{r spectral-issues, echo=FALSE}
+if (param_exists("spectral_analysis") && length(params$spectral_analysis$issues_detected) > 0) {
+  cat("**Detected Spectral Issues:**\n\n")
+  for (issue in params$spectral_analysis$issues_detected) {
+    cat("- ", issue, "\n")
+  }
+} else {
+  cat("No spectral issues detected.\n")
+}
+```
+
+### Parameter Recommendations
+
+```{r parameter-recommendations, echo=FALSE}
+if (param_exists("spectral_analysis") && param_exists("spectral_analysis$parameter_recommendations")) {
+  recommendations <- params$spectral_analysis$parameter_recommendations
+  
+  if (length(recommendations) > 0) {
+    cat("**Parameter Recommendations:**\n\n")
+    for (rec in recommendations) {
+      if (is.list(rec)) {
+        cat(sprintf("- **%s:** Current: %s, Recommended: %s\n  - Reason: %s\n  - Impact: %s\n",
+                    rec$parameter_name, rec$current_value, rec$recommended_value, rec$reasoning, rec$impact))
+      } else if (is.character(rec)) {
+        cat("- ", rec, "\n")
+      }
+    }
+  } else {
+    cat("No parameter recommendations.\n")
+  }
+} else {
+  cat("No parameter recommendations available.\n")
+}
+```
+
+## Metadata Quality Assessment
+
+### Overall Metadata Quality
+
+```{r metadata-quality, echo=FALSE}
+if (param_exists("metadata_quality")) {
+  metadata <- params$metadata_quality
+  
+  quality_info <- data.frame(
+    Aspect = c("Completeness Score", "Standards Compliance", "Overall Quality Grade"),
+    Value = c(
+      round(metadata$completeness_score, 2),
+      round(metadata$standards_compliance, 2),
+      metadata$quality_grade
+    )
+  )
+  
+  knitr::kable(quality_info, caption = "Metadata Quality Metrics")
+}
+```
+
+### Standards Compliance
+
+```{r standards-compliance, echo=FALSE}
+if (param_exists("metadata_quality") && param_exists("metadata_quality$standards_checked")) {
+  standards <- params$metadata_quality$standards_checked
+  
+  if (length(standards) > 0) {
+    cat("**Standards Checked:**\n\n")
+    for (standard in standards) {
+      cat("- ", standard, "\n")
+    }
+  }
+}
+```
+
+### Missing Fields and Enhancements
+
+```{r missing-fields, echo=FALSE}
+if (param_exists("metadata_quality")) {
+  metadata <- params$metadata_quality
+  
+  if (length(metadata$missing_required_fields) > 0) {
+    cat("**Missing Required Fields:**\n\n")
+    for (field in metadata$missing_required_fields) {
+      cat("- ", field, "\n")
+    }
+    cat("\n")
+  }
+  
+  if (length(metadata$missing_optional_fields) > 0) {
+    cat("**Missing Optional Fields:**\n\n")
+    for (field in metadata$missing_optional_fields) {
+      cat("- ", field, "\n")
+    }
+    cat("\n")
+  }
+  
+  if (length(metadata$enhancement_suggestions) > 0) {
+    cat("**Enhancement Suggestions:**\n\n")
+    for (suggestion in metadata$enhancement_suggestions) {
+      cat("- ", suggestion, "\n")
+    }
+  }
+}
+```
+
+## Visualizations
+
+### Spectral Data Plot
+
+```{r spectral-plot, echo=FALSE, fig.cap="Spectral Data Visualization", fig.alt="Spectral data plot showing intensity vs wavelength"}
+if (param_exists("spectral_analysis") && 
+    param_exists("spectral_analysis$wavelengths") && 
+    param_exists("spectral_analysis$intensities")) {
+  
+  spectral <- params$spectral_analysis
+  
+  # Create data frame
+  spectral_df <- data.frame(
+    Wavelength = spectral$wavelengths,
+    Intensity = spectral$intensities
+  )
+  
+  # Plot spectral data
+  ggplot(spectral_df, aes(x = Wavelength, y = Intensity)) +
+    geom_line(color = "#1f77b4", linewidth = 0.8) +
+    geom_point(color = "#ff7f0e", size = 1) +
+    labs(title = "NIR Spectral Data", 
+         subtitle = paste("Sample:", params$sample_id), 
+         x = "Wavelength (nm)", 
+         y = "Intensity") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+}
+```
+
+### Quality Metrics Visualization
+
+```{r quality-metrics-plot, echo=FALSE, fig.cap="Quality Metrics Comparison", fig.alt="Bar chart showing various quality metrics"}
+if (param_exists("spectral_analysis") && param_exists("metadata_quality")) {
+  spectral <- params$spectral_analysis
+  metadata <- params$metadata_quality
+  
+  # Prepare metrics
+  metrics <- data.frame(
+    Category = c("Spectral Quality", "Metadata Completeness", "Standards Compliance", "Overall Quality"),
+    Score = c(
+      spectral$quality_score,
+      metadata$completeness_score * 100,
+      metadata$standards_compliance * 100,
+      params$overall_quality_score
+    )
+  )
+  
+  # Plot
+  ggplot(metrics, aes(x = Category, y = Score, fill = Category)) +
+    geom_bar(stat = "identity", width = 0.6) +
+    geom_text(aes(label = round(Score, 1)), vjust = -0.5, size = 3.5) +
+    labs(title = "Quality Metrics Comparison", 
+         x = "Metric", 
+         y = "Score") +
+    scale_y_continuous(limits = c(0, 100)) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+```
+
+## Analysis Source Code
+
+The following Python code was used to perform the spectral analysis:
+
+```{python analysis-code, echo=TRUE, eval=FALSE}
+# NIR Spectral Analysis Code
+# Generated by NIR Intelligence Platform
+
+import numpy as np
+import pandas as pd
+from scipy import signal as scipy_signal
+from typing import Dict, List, Any, Optional
+from dataclasses import dataclass
+from enum import Enum
+
+class QualityGrade(Enum):
+    EXCELLENT = "A"
+    GOOD = "B"
+    FAIR = "C"
+    POOR = "D"
+    UNACCEPTABLE = "F"
+
+@dataclass
+class SpectralAnalysisResult:
+    quality_score: float
+    quality_grade: QualityGrade
+    wavelengths: List[float]
+    intensities: List[float]
+    data_points: int
+    wavelength_range: List[float]
+    noise_level: float
+    signal_to_noise_ratio: float
+    baseline_quality: str
+    peaks_detected: List[float]
+    issues_detected: List[str]
+    parameter_recommendations: List[Dict[str, Any]]
+    preprocessing_steps: List[str]
+    quality_metrics: Dict[str, float]
+
+class SpectralAnalyzer:
+    def __init__(self):
+        self.quality_thresholds = {
+            "excellent": 90,
+            "good": 80,
+            "fair": 70,
+            "poor": 60
+        }
+    
+    def calculate_quality_score(self, wavelengths: List[float], intensities: List[float]) -> float:
+        """Calculate overall quality score from spectral data"""
+        # Calculate various quality metrics
+        noise_level = self._calculate_noise_level(intensities)
+        snr = self._calculate_signal_to_noise(intensities)
+        baseline_quality = self._assess_baseline(intensities)
+        
+        # Weighted score calculation
+        score = 0.0
+        weights = {"noise": 0.3, "snr": 0.3, "baseline": 0.2, "data_points": 0.2}
+        
+        # Normalize and weight each metric
+        score += (1 - noise_level) * weights["noise"] * 100
+        score += min(snr / 100, 1.0) * weights["snr"] * 100
+        score += self._quality_to_score(baseline_quality) * weights["baseline"] * 100
+        score += min(len(wavelengths) / 1000, 1.0) * weights["data_points"] * 100
+        
+        return min(max(score, 0), 100)
+    
+    def _calculate_noise_level(self, intensities: List[float]) -> float:
+        """Calculate noise level from intensity data"""
+        if len(intensities) < 10:
+            return 1.0  # High noise for insufficient data
+        
+        # Calculate standard deviation as noise estimate
+        noise_std = np.std(intensities)
+        signal_mean = np.mean(intensities)
+        
+        if signal_mean == 0:
+            return 1.0
+        
+        return min(noise_std / signal_mean, 1.0)
+    
+    def _calculate_signal_to_noise(self, intensities: List[float]) -> float:
+        """Calculate signal-to-noise ratio"""
+        if len(intensities) < 10:
+            return 0.0
+        
+        signal_mean = np.mean(intensities)
+        noise_std = np.std(intensities)
+        
+        if noise_std == 0:
+            return 100.0
+        
+        return signal_mean / noise_std
+    
+    def _assess_baseline(self, intensities: List[float]) -> str:
+        """Assess baseline quality"""
+        # Simple baseline assessment based on first and last 10% of data
+        n = len(intensities)
+        if n < 20:
+            return "Poor"
+        
+        first_part = np.mean(intensities[:n//10])
+        last_part = np.mean(intensities[-n//10:])
+        middle_part = np.mean(intensities[n//10:9*n//10])
+        
+        # Check if baseline is relatively flat
+        baseline_variation = abs(first_part - last_part) / max(abs(middle_part), 1)
+        
+        if baseline_variation < 0.1:
+            return "Excellent"
+        elif baseline_variation < 0.2:
+            return "Good"
+        elif baseline_variation < 0.3:
+            return "Fair"
+        else:
+            return "Poor"
+    
+    def _quality_to_score(self, quality: str) -> float:
+        """Convert quality string to numerical score"""
+        quality_map = {"Excellent": 1.0, "Good": 0.8, "Fair": 0.6, "Poor": 0.4, "Unacceptable": 0.2}
+        return quality_map.get(quality, 0.5)
+
+# Example usage
+if __name__ == "__main__":
+    analyzer = SpectralAnalyzer()
+    
+    # This would be replaced with actual spectral data
+    wavelengths = [400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000]
+    intensities = [0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.75, 0.6, 0.4, 0.2]
+    
+    quality_score = analyzer.calculate_quality_score(wavelengths, intensities)
+    print(f"Quality Score: {quality_score:.2f}")
+```
+
+## Data Preprocessing Code
+
+```{python preprocessing-code, echo=TRUE, eval=FALSE}
+# Data Preprocessing Code
+# Used for cleaning and preparing spectral data
+
+import numpy as np
+import pandas as pd
+from scipy import signal as scipy_signal
+from typing import Dict, List, Any, Optional, Tuple
+
+class DataPreprocessor:
+    """Comprehensive data preprocessing for NIR spectral analysis"""
+    
+    def __init__(self):
+        self.preprocessing_methods = [
+            "SNV", "MSC", "Savitzky-Golay", "BaselineCorrection", "Detrending"
+        ]
+    
+    def apply_snv(self, intensities: List[float]) -> List[float]:
+        """Apply Standard Normal Variate (SNV) correction"""
+        intensities_array = np.array(intensities)
+        mean_val = np.mean(intensities_array)
+        std_val = np.std(intensities_array)
+        
+        if std_val == 0:
+            return intensities
+        
+        return ((intensities_array - mean_val) / std_val).tolist()
+    
+    def apply_msc(self, intensities: List[float], reference: Optional[List[float]] = None) -> List[float]:
+        """Apply Multiplicative Scatter Correction (MSC)"""
+        if reference is None:
+            reference = intensities
+        
+        intensities_array = np.array(intensities)
+        reference_array = np.array(reference)
+        
+        # Simple MSC implementation
+        mean_ref = np.mean(reference_array)
+        mean_int = np.mean(intensities_array)
+        
+        if mean_ref == 0 or mean_int == 0:
+            return intensities
+        
+        # Scale and offset correction
+        scaled = intensities_array * (mean_ref / mean_int)
+        return scaled.tolist()
+    
+    def apply_savitzky_golay(self, intensities: List[float], window_size: int = 5, polyorder: int = 2) -> List[float]:
+        """Apply Savitzky-Golay smoothing"""
+        try:
+            intensities_array = np.array(intensities)
+            smoothed = scipy_signal.savgol_filter(intensities_array, window_size, polyorder)
+            return smoothed.tolist()
+        except Exception:
+            return intensities
+    
+    def apply_baseline_correction(self, intensities: List[float]) -> List[float]:
+        """Apply baseline correction using polynomial fitting"""
+        intensities_array = np.array(intensities)
+        x = np.arange(len(intensities_array))
+        
+        # Fit a polynomial to the baseline
+        try:
+            coefficients = np.polyfit(x, intensities_array, 2)
+            baseline = np.polyval(coefficients, x)
+            corrected = intensities_array - baseline
+            return corrected.tolist()
+        except Exception:
+            return intensities
+    
+    def preprocess_data(self, wavelengths: List[float], intensities: List[float], 
+                       methods: List[str] = None) -> Tuple[List[float], List[str]]:
+        """Apply multiple preprocessing methods"""
+        if methods is None:
+            methods = self.preprocessing_methods
+        
+        processed_intensities = intensities.copy()
+        applied_methods = []
+        
+        for method in methods:
+            try:
+                if method == "SNV":
+                    processed_intensities = self.apply_snv(processed_intensities)
+                    applied_methods.append("SNV")
+                elif method == "MSC":
+                    processed_intensities = self.apply_msc(processed_intensities)
+                    applied_methods.append("MSC")
+                elif method == "Savitzky-Golay":
+                    processed_intensities = self.apply_savitzky_golay(processed_intensities)
+                    applied_methods.append("Savitzky-Golay")
+                elif method == "BaselineCorrection":
+                    processed_intensities = self.apply_baseline_correction(processed_intensities)
+                    applied_methods.append("BaselineCorrection")
+                elif method == "Detrending":
+                    processed_intensities = self._apply_detrending(processed_intensities)
+                    applied_methods.append("Detrending")
+            except Exception:
+                continue
+        
+        return processed_intensities, applied_methods
+    
+    def _apply_detrending(self, intensities: List[float]) -> List[float]:
+        """Apply detrending to remove linear trends"""
+        intensities_array = np.array(intensities)
+        x = np.arange(len(intensities_array))
+        
+        # Fit a line and remove it
+        coefficients = np.polyfit(x, intensities_array, 1)
+        trend = np.polyval(coefficients, x)
+        detrended = intensities_array - trend
+        return detrended.tolist()
+
+# Example preprocessing
+if __name__ == "__main__":
+    preprocessor = DataPreprocessor()
+    
+    # Sample data
+    wavelengths = [400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000]
+    intensities = [0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.75, 0.6, 0.4, 0.2]
+    
+    # Apply preprocessing
+    processed, methods = preprocessor.preprocess_data(wavelengths, intensities)
+    print(f"Applied preprocessing methods: {methods}")
+```
+
+## Recommendations and Next Steps
+
+### Summary of Recommendations
+
+```{r recommendations-summary, echo=FALSE}
+if (length(params$recommendations) > 0) {
+  cat("Based on the analysis, the following recommendations are provided:\n\n")
+  for (i in seq_along(params$recommendations)) {
+    cat(sprintf("%d. %s\n", i, params$recommendations[i]))
+  }
+} else {
+  cat("No specific recommendations. The spectral data appears to be of good quality.\n")
+}
+```
+
+### Warnings and Issues
+
+```{r warnings-summary, echo=FALSE}
+if (length(params$warnings) > 0) {
+  cat("**Warnings:**\n\n")
+  for (warning in params$warnings) {
+    cat("- ", warning, "\n")
+  }
+  cat("\n")
+}
+
+if (length(params$errors) > 0) {
+  cat("**Errors:**\n\n")
+  for (error in params$errors) {
+    cat("- ", error, "\n")
+  }
+}
+```
+
+## Technical Details
+
+### Analysis Configuration
+
+- **Analysis Mode:** Comprehensive
+- **Privacy Level:** Local Only
+- **Report Format:** HTML
+- **Include Calibration:** Yes
+- **Include Federated Learning:** No
+
+### System Information
+
+- **NIR Intelligence Platform Version:** 1.0.0
+- **Report Generated:** `r Sys.time()`
+- **Analysis Engine:** CrewAI with specialized NIR agents
+- **Visualization Tools:** ggplot2, knitr
+
+### Data Standards Compliance
+
+This report follows open science principles and adheres to established NIR spectroscopy standards including:
+- ASTM E1655 (Standard Practices for Infrared Multivariate Quantitative Analysis)
+- ISO 12099 (Near Infrared Spectrometry)
+- EURACHEM guidelines for analytical chemistry
+
+---
+
+*This report was automatically generated by the NIR Intelligence Platform. For questions or support, please refer to the platform documentation.*

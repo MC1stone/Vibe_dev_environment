@@ -1,0 +1,49 @@
+[Unit]
+Description=Gunicorn Server for Django Server - NIR_Mistral Framework
+After=network.target
+Requires=network.target
+
+[Service]
+Type=simple
+User={{ service_user | default('root') }}
+Group={{ service_group | default('root') }}
+WorkingDirectory={{ django_project_path }}
+Environment="PYTHONPATH={{ deploy_root }}"
+Environment="DJANGO_SETTINGS_MODULE={{ django_settings_module }}"
+Environment="PATH={{ venv_path }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+ExecStart={{ venv_path }}/bin/gunicorn \
+    --bind 0.0.0.0:{{ django_port }} \
+    --workers {{ django_workers | default(4) }} \
+    --timeout {{ django_timeout | default(300) }} \
+    --max-requests 1000 \
+    --max-request-jitter 50 \
+    --log-level info \
+    --access-logfile {{ deploy_root }}/logs/access.log \
+    --error-logfile {{ deploy_root }}/logs/gunicorn.log \
+    --capture-output \
+    --enable-stdio-inheritance \
+    --pythonpath {{ deploy_root }} \
+    --config {{ django_project_path }}/gunicorn.conf.py \
+    nir_web.wsgi:application
+
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+
+# Standard output is logged to journalctl
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=gunicorn-nir-mistral
+
+# Increase limits
+LimitNOFILE=65535
+LimitNPROC=65535
+
+# Security
+PrivateTmp=true
+ProtectSystem=full
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

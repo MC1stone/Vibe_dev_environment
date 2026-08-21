@@ -1,0 +1,309 @@
+# NIR Intelligence Platform - Agent Configuration
+version: 1.0
+date: 2026-07-30
+
+# Global Settings
+project_name: "NIR Intelligence Platform"
+environment: "development"
+log_level: "INFO"
+max_iterations: 100
+iteration_timeout: 300  # seconds
+
+# Agent Configurations
+agents:
+  uvx_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      python_version: "3.12"
+      virtual_env: true
+      package_manager: "uv"
+      requirements_file: "requirements.txt"
+
+  docker_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      docker_compose_file: "docker-compose.yml"
+      network_name: "nir_network"
+      services:
+        - "weaviate"
+        - "postgresql"
+        - "faiss"
+        - "mcp_server"
+      timeout: 300
+      skip_if_unavailable: false  # Set to true to skip if Docker not available
+      debug: true               # Enable debug logging
+
+  data_preparation_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      input_directory: "data/raw"
+      output_directory: "data/processed"
+      default_format: "HDF5"
+      batch_size: 1000
+      preprocessing_methods:
+        - "SNV"
+        - "MSC"
+        - "Savitzky-Golay"
+
+  metadata_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      required_fields: ["spectrum", "wavelength", "instrument", "acquisition_time"]
+      optional_fields: ["operator", "humidity", "temperature", "notes", "location"]
+      validation_strictness: "high"
+
+  sensor_quality_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      drift_threshold: 0.01
+      noise_threshold: 0.05
+      reference_spectrum: "mean"
+      checks: ["drift", "offset", "noise", "reference_validity"]
+
+  statistical_analysis_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      methods: ["PCA", "PLS", "PCR", "ANOVA", "ClusterAnalysis"]
+      default_components: 10
+      validation_method: "cross_validation"
+      cv_folds: 5
+
+  neural_network_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      models: ["CNN", "MLP", "Autoencoder"]
+      default_architecture:
+        CNN:
+          layers: [64, 128, 64]
+          kernel_size: 3
+          activation: "relu"
+        MLP:
+          layers: [128, 64, 32]
+          activation: "relu"
+        Autoencoder:
+          encoding_layers: [256, 128, 64]
+          bottleneck: 32
+      training:
+        batch_size: 32
+        epochs: 100
+        validation_split: 0.2
+        early_stopping: true
+        patience: 10
+
+  calibration_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      methods: ["PLS", "PCR", "SVM", "RandomForest", "XGBoost", "CNN"]
+      optimization:
+        method: "Bayesian"
+        n_iter: 50
+        cv: 5
+      performance_thresholds:
+        r2: 0.80
+        rmse: 0.1
+
+  weaviate_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      host: "localhost"
+      port: 8080
+      scheme: "http"
+      class_name: "NIRSpectrum"
+      vectorizer: "text2vec-transformers"
+      model: "sentence-transformers/all-MiniLM-L6-v2"
+
+  faiss_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      index_type: "IVF100,Flat"
+      metric_type: "L2"
+      nprobe: 10
+      gpu: false
+
+  postgresql_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      host: "localhost"
+      port: 5432
+      database: "nir_metadata"
+      user: "nir_user"
+      password: "secure_password"
+      schema: "public"
+
+  django_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      project_name: "nir_web"
+      apps: ["core", "api", "visualization", "user_management"]
+      port: 8000
+      debug: true
+      allowed_hosts: ["localhost", "127.0.0.1"]
+
+  mcp_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      host: "localhost"
+      port: 8081
+      protocols: ["http", "websocket"]
+      tool_integration: ["external_tools", "legacy_systems"]
+
+  quarto_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      output_format: "html"
+      include_source: true
+      include_charts: true
+      include_reasoning: true
+      template: "scientific"
+
+  flower_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      server_address: "localhost"
+      port: 5555
+      dashboard: true
+      monitoring: true
+      aggregation_strategy: "FedAvg"
+
+  ilias_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      ilias_url: "https://ilias.example.com"
+      api_version: "v1"
+      rest_api:
+        base_url: "/api/"
+        client_id: "nir_platform"
+        client_secret: "secure_secret"
+        timeout: 30
+      soap_api:
+        wsdl_url: "/soap/wsdl"
+        client_cert: "/path/to/cert.pem"
+      lti:
+        version: "1.3"
+        launch_url: "/nir/lti/launch"
+        deep_linking: true
+      sso:
+        protocol: "SAML_2.0"
+        idp_url: "https://ilias.example.com/saml/idp"
+        sp_metadata_url: "/nir/saml/metadata"
+        certificate: "/path/to/sp-cert.pem"
+      synchronization:
+        users: true
+        courses: true
+        content: true
+        frequency: "daily"
+      course_mapping:
+        NIR_101: "Introduction to NIR Spectroscopy"
+        NIR_201: "Advanced NIR Data Analysis"
+        NIR_PLATFORM: "NIR Platform Training"
+
+  ansible_agent:
+    enabled: true
+    version: "1.0.0"
+    params:
+      ansible_version: "2.14.0"
+      playbook_directory: "ansible/playbooks"
+      inventory_file: "ansible/inventory.ini"
+      vault_password_file: ".ansible_vault_pass"
+      deployment_modes:
+        server:
+          playbook: "server_deployment.yml"
+          requirements:
+            cpu: 4
+            ram: 8
+            storage: 100
+        client:
+          playbook: "client_deployment.yml"
+          requirements:
+            cpu: 2
+            ram: 4
+            storage: 50
+        federated_client:
+          playbook: "federated_client_deployment.yml"
+          requirements:
+            cpu: 1
+            ram: 2
+            storage: 10
+      update_settings:
+        check_frequency: "daily"
+        auto_update: true
+        maintenance_window: "02:00-04:00"
+        backup_retention: 3
+      tools_orchestration:
+        docker: true
+        postgresql: true
+        weaviate: true
+        faiss: true
+        django: true
+        quarto: true
+        flower: true
+        ilias: true
+        mcp_server: true
+
+# Dependency Management
+dependencies:
+  - "agents.uvx_agent.UVXAgent"
+  - "agents.docker_agent.DockerAgent"
+  - "agents.ansible_agent.AnsibleAgent"
+  - "agents.data_preparation_agent.DataPreparationAgent"
+  - "agents.metadata_agent.MetadataAgent"
+  - "agents.sensor_quality_agent.SensorQualityAgent"
+  - "agents.statistical_analysis_agent.StatisticalAnalysisAgent"
+  - "agents.neural_network_agent.NeuralNetworkAgent"
+  - "agents.calibration_agent.CalibrationAgent"
+  - "agents.weaviate_agent.WeaviateAgent"
+  - "agents.faiss_agent.FaissAgent"
+  - "agents.postgresql_agent.PostgreSQLAgent"
+  - "agents.django_agent.DjangoAgent"
+  - "agents.mcp_agent.MCPAgent"
+  - "agents.ilias_agent.ILIASAgent"
+  - "agents.quarto_agent.QuartoAgent"
+  - "agents.flower_agent.FlowerAgent"
+
+# Execution Order
+execution_order:
+  - "uvx_agent"
+  - "docker_agent"
+  - "ansible_agent"
+  - "data_preparation_agent"
+  - "metadata_agent"
+  - "sensor_quality_agent"
+  - ["statistical_analysis_agent", "neural_network_agent"]
+  - "calibration_agent"
+  - ["weaviate_agent", "faiss_agent", "postgresql_agent"]
+  - "django_agent"
+  - "mcp_agent"
+  - "ilias_agent"
+  - "quarto_agent"
+  - "flower_agent"
+
+# Quality Control
+quality_control:
+  require_all_agents_review: true
+  allow_release_with_errors: false
+  allow_release_with_open_requests: false
+  minimum_r2_score: 0.80
+
+# Logging
+logging:
+  file: "logs/nir_platform.log"
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  max_size: 10485760  # 10MB
+  backup_count: 5

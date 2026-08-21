@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Login - NIR_Mistral Framework{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-container {
+        max-width: 450px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    .login-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+    }
+    
+    .login-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .login-logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1rem;
+        background: linear-gradient(135deg, #7ab929, #5a8f21);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .login-title {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 0.5rem;
+    }
+    
+    .login-subtitle {
+        color: #718096;
+        font-size: 1rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #4a5568;
+    }
+    
+    .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    .form-input:focus {
+        outline: none;
+        border-color: #7ab929;
+        box-shadow: 0 0 0 3px rgba(122, 185, 41, 0.1);
+    }
+    
+    .btn-login {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background: linear-gradient(135deg, #7ab929, #5a8f21);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .btn-login:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(122, 185, 41, 0.3);
+    }
+    
+    .login-footer {
+        text-align: center;
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    .login-footer a {
+        color: #7ab929;
+        text-decoration: none;
+    }
+    
+    .login-footer a:hover {
+        text-decoration: underline;
+    }
+    
+    .social-login {
+        margin: 1.5rem 0;
+        text-align: center;
+    }
+    
+    .social-login .divider {
+        display: flex;
+        align-items: center;
+        margin: 1rem 0;
+    }
+    
+    .social-login .divider::before,
+    .social-login .divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .social-login .divider span {
+        padding: 0 1rem;
+        color: #718096;
+        font-size: 0.875rem;
+    }
+    
+    .integration-options {
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    .integration-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f7fafc;
+    }
+    
+    .integration-option:last-child {
+        border-bottom: none;
+    }
+    
+    .integration-label {
+        display: flex;
+        align-items: center;
+        font-size: 0.9rem;
+        color: #4a5568;
+    }
+    
+    .integration-label i {
+        margin-right: 0.5rem;
+        color: #7ab929;
+    }
+    
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+    }
+    
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #e2e8f0;
+        transition: .4s;
+        border-radius: 24px;
+    }
+    
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    
+    input:checked + .toggle-slider {
+        background-color: #7ab929;
+    }
+    
+    input:checked + .toggle-slider:before {
+        transform: translateX(20px);
+    }
+    
+    .alert {
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .alert-error {
+        background-color: #fef2f2;
+        border: 1px solid #feb2b2;
+        color: #c53030;
+    }
+    
+    .alert-success {
+        background-color: #f0fff4;
+        border: 1px solid #9ae6b4;
+        color: #48bb78;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <!-- Header -->
+        <div class="login-header">
+            <div class="login-logo">
+                <svg viewBox="0 0 210 28" xmlns="http://www.w3.org/2000/svg" width="60" height="28">
+                    <g fill="#ffffff">
+                        <path d="M41.672 10.861 40.436 3.89l-1.302 6.971h-2.396l-1.546-8.917h1.894l1.018 7.447 1.353-7.447h1.996l1.302 7.447 1.146-7.447h1.792l-1.56 8.917zM48.792 3.323v2.319h2.809v1.365h-2.809v2.462h3.453v1.391h-5.348V1.943h5.323l-.207 1.38zM53.73 10.86h1.907V1.943H53.73zM59.424 6.956v3.904H57.53V1.943h1.894v3.518h2.951V1.943h1.894v8.917h-1.894V6.956zM68.081 3.323v2.319h2.808v1.365h-2.808v2.462h3.453v1.391h-5.348V1.943h5.322l-.206 1.38z"/>
+                    </g>
+                </svg>
+            </div>
+            <h1 class="login-title">Welcome to NIR_Mistral</h1>
+            <p class="login-subtitle">Advanced NIR Spectroscopy Analysis Platform</p>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags %}{{ message.tags }}{% else %}info{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Login Form -->
+        <form method="post" action="{% url 'login' %}" class="login-form">
+            {% csrf_token %}
+            
+            {{ form.non_field_errors }}
+            
+            <div class="form-group">
+                <label for="id_username" class="form-label">Username or Email</label>
+                {{ form.username }}
+                {{ form.username.errors }}
+            </div>
+            
+            <div class="form-group">
+                <label for="id_password" class="form-label">Password</label>
+                {{ form.password }}
+                {{ form.password.errors }}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">
+                    {{ form.remember }}
+                    <span style="font-weight: normal; color: #718096;">Remember me</span>
+                </label>
+            </div>
+            
+            <button type="submit" class="btn-login">
+                <i class="bi bi-box-arrow-in-right"></i> Sign In
+            </button>
+        </form>
+
+        <!-- Social Login / Integration Options -->
+        {% if flowerai_enabled or ilias_enabled or federated_learning_enabled %}
+        <div class="integration-options">
+            <div class="social-login">
+                <div class="divider">
+                    <span>Integration Options</span>
+                </div>
+            </div>
+            
+            {% if federated_learning_enabled %}
+            <div class="integration-option">
+                <div class="integration-label">
+                    <i class="bi bi-cpu"></i>
+                    <span>Federated Learning</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="federated-toggle" checked disabled>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            {% endif %}
+            
+            {% if flowerai_enabled %}
+            <div class="integration-option">
+                <div class="integration-label">
+                    <i class="bi bi-flower2"></i>
+                    <span>FlowerAI Integration</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="flowerai-toggle" checked disabled>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            {% endif %}
+            
+            {% if ilias_enabled %}
+            <div class="integration-option">
+                <div class="integration-label">
+                    <i class="bi bi-mortarboard"></i>
+                    <span>ILIAS Platform</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="ilias-toggle" checked disabled>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="login-footer">
+            <p>Don't have an account? <a href="{% url 'register' %}">Sign up</a></p>
+            <p><a href="/password-reset/">Forgot password?</a></p>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for integration toggles -->
+<script>
+// Initialize toggles (these will be enabled after login for user preferences)
+document.addEventListener('DOMContentLoaded', function() {
+    // Add hover effects to integration options
+    const options = document.querySelectorAll('.integration-option');
+    options.forEach(option => {
+        option.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f7fafc';
+        });
+        option.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = 'transparent';
+        });
+    });
+});
+</script>
+{% endblock %}

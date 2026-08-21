@@ -1,0 +1,33 @@
+# Ansible Galaxy Requirements for NIR_Mistral DeveloperAgent Framework
+# This file can be used with: ansible-galaxy install -r galaxy_requirements.yml
+
+---
+# Core collections for framework deployment
+collections:
+  - name: community.general
+    version: ">=8.0.0"
+    
+  - name: community.docker
+    version: ">=4.0.0"
+    
+  - name: ansible.posix
+    version: ">=1.5.0"
+
+# Python and development tools
+  - name: community.python
+    version: ">=1.0.0"
+
+# Database support
+  - name: community.postgresql
+    version: ">=3.0.0"
+
+# Web server and API support  
+  - name: nginxinc.nginx
+    version: ">=0.25.0"
+
+# Monitoring and logging
+  - name: prometheus.prometheus
+    version: ">=4.0.0"
+    
+  - name: grafana.grafana
+    version: ">=3.0.0"

@@ -1,0 +1,591 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}NIR Mistral Dashboard - Advanced Spectral Analysis{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Dashboard Specific Styles */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .dashboard-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .stat-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-lg);
+        box-shadow: var(--glass-shadow);
+        border: 1px solid var(--glass-border);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-spectral);
+    }
+    
+    .stat-card__icon {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--border-radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--font-size-xxl);
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .stat-card__value {
+        font-size: var(--font-size-xxl);
+        font-weight: 700;
+        margin-bottom: var(--spacing-xs);
+    }
+    
+    .stat-card__label {
+        font-size: var(--font-size-sm);
+        color: var(--color-gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Color variants for stat cards */
+    .stat-card--primary .stat-card__icon { background: rgba(122, 185, 41, 0.1); color: var(--color-primary); }
+    .stat-card--secondary .stat-card__icon { background: rgba(139, 92, 246, 0.1); color: var(--nir-purple); }
+    .stat-card--success .stat-card__icon { background: rgba(16, 185, 129, 0.1); color: var(--nir-emerald); }
+    .stat-card--warning .stat-card__icon { background: rgba(245, 158, 11, 0.1); color: var(--nir-orange); }
+    .stat-card--danger .stat-card__icon { background: rgba(239, 68, 68, 0.1); color: var(--nir-red); }
+    .stat-card--info .stat-card__icon { background: rgba(6, 182, 212, 0.1); color: var(--nir-cyan); }
+    
+    .stat-card--primary .stat-card__value { color: var(--color-primary); }
+    .stat-card--secondary .stat-card__value { color: var(--nir-purple); }
+    .stat-card--success .stat-card__value { color: var(--nir-emerald); }
+    .stat-card--warning .stat-card__value { color: var(--nir-orange); }
+    .stat-card--danger .stat-card__value { color: var(--nir-red); }
+    .stat-card--info .stat-card__value { color: var(--nir-cyan); }
+    
+    /* Quick Actions */
+    .quick-actions {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        box-shadow: var(--glass-shadow);
+        border: 1px solid var(--glass-border);
+    }
+    
+    .quick-actions__title {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        margin-bottom: var(--spacing-lg);
+        color: var(--color-gray-800);
+    }
+    
+    .quick-actions__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-md);
+    }
+    
+    .quick-action-card {
+        background: white;
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-lg);
+        text-align: center;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: 2px solid transparent;
+    }
+    
+    .quick-action-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        border-color: var(--color-primary-light);
+    }
+    
+    .quick-action-card__icon {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--border-radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto var(--spacing-sm);
+        font-size: var(--font-size-xxl);
+    }
+    
+    .quick-action-card__title {
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        color: var(--color-gray-800);
+        margin-bottom: var(--spacing-xs);
+    }
+    
+    .quick-action-card__description {
+        font-size: var(--font-size-xs);
+        color: var(--color-gray-500);
+    }
+    
+    /* Color variants for quick action cards */
+    .quick-action-card--primary .quick-action-card__icon { background: rgba(122, 185, 41, 0.1); color: var(--color-primary); }
+    .quick-action-card--secondary .quick-action-card__icon { background: rgba(139, 92, 246, 0.1); color: var(--nir-purple); }
+    .quick-action-card--success .quick-action-card__icon { background: rgba(16, 185, 129, 0.1); color: var(--nir-emerald); }
+    .quick-action-card--warning .quick-action-card__icon { background: rgba(245, 158, 11, 0.1); color: var(--nir-orange); }
+    .quick-action-card--danger .quick-action-card__icon { background: rgba(239, 68, 68, 0.1); color: var(--nir-red); }
+    .quick-action-card--info .quick-action-card__icon { background: rgba(6, 182, 212, 0.1); color: var(--nir-cyan); }
+    
+    /* Recent Activity */
+    .recent-activity {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-xl);
+        box-shadow: var(--glass-shadow);
+        border: 1px solid var(--glass-border);
+    }
+    
+    .recent-activity__title {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        margin-bottom: var(--spacing-lg);
+        color: var(--color-gray-800);
+    }
+    
+    .activity-list {
+        list-style: none;
+    }
+    
+    .activity-item {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md) 0;
+        border-bottom: 1px solid var(--color-gray-100);
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .activity-item:first-child {
+        padding-top: 0;
+    }
+    
+    .activity-item__icon {
+        width: 32px;
+        height: 32px;
+        border-radius: var(--border-radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--font-size-sm);
+        flex-shrink: 0;
+    }
+    
+    .activity-item__content {
+        flex: 1;
+    }
+    
+    .activity-item__title {
+        font-weight: 600;
+        color: var(--color-gray-800);
+        margin-bottom: var(--spacing-xs);
+    }
+    
+    .activity-item__time {
+        font-size: var(--font-size-xs);
+        color: var(--color-gray-500);
+    }
+    
+    /* Color variants for activity icons */
+    .activity-item--primary .activity-item__icon { background: rgba(122, 185, 41, 0.1); color: var(--color-primary); }
+    .activity-item--secondary .activity-item__icon { background: rgba(139, 92, 246, 0.1); color: var(--nir-purple); }
+    .activity-item--success .activity-item__icon { background: rgba(16, 185, 129, 0.1); color: var(--nir-emerald); }
+    .activity-item--warning .activity-item__icon { background: rgba(245, 158, 11, 0.1); color: var(--nir-orange); }
+    .activity-item--danger .activity-item__icon { background: rgba(239, 68, 68, 0.1); color: var(--nir-red); }
+    
+    /* Welcome Section */
+    .welcome-section {
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .welcome-section__title {
+        font-size: var(--font-size-xxl);
+        font-weight: 700;
+        color: var(--color-gray-800);
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .welcome-section__subtitle {
+        font-size: var(--font-size-lg);
+        color: var(--color-gray-600);
+    }
+    
+    /* Section Headers */
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .section-header__title {
+        font-size: var(--font-size-xl);
+        font-weight: 600;
+        color: var(--color-gray-800);
+    }
+    
+    .section-header__action {
+        font-size: var(--font-size-sm);
+        color: var(--color-primary);
+        text-decoration: none;
+        font-weight: 600;
+    }
+    
+    .section-header__action:hover {
+        color: var(--color-primary-dark);
+        text-decoration: underline;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .dashboard-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .quick-actions__grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .dashboard-stats {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Welcome Section -->
+<div class="welcome-section">
+    <h1 class="welcome-section__title">
+        <span class="text-gradient">Welcome to NIR Mistral</span>
+    </h1>
+    <p class="welcome-section__subtitle">
+        Advanced NIR Spectroscopy Analysis Platform for research and industrial applications
+    </p>
+</div>
+
+<!-- Dashboard Stats -->
+<div class="dashboard-stats">
+    <div class="stat-card stat-card--primary">
+        <div class="stat-card__icon">
+            <i class="bi bi-graph-up"></i>
+        </div>
+        <div class="stat-card__value">42</div>
+        <div class="stat-card__label">Total Analyses</div>
+    </div>
+    
+    <div class="stat-card stat-card--success">
+        <div class="stat-card__icon">
+            <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="stat-card__value">28</div>
+        <div class="stat-card__label">Successful</div>
+    </div>
+    
+    <div class="stat-card stat-card--warning">
+        <div class="stat-card__icon">
+            <i class="bi bi-exclamation-triangle"></i>
+        </div>
+        <div class="stat-card__value">8</div>
+        <div class="stat-card__label">Needs Review</div>
+    </div>
+    
+    <div class="stat-card stat-card--danger">
+        <div class="stat-card__icon">
+            <i class="bi bi-x-circle"></i>
+        </div>
+        <div class="stat-card__value">6</div>
+        <div class="stat-card__label">Failed</div>
+    </div>
+    
+    <div class="stat-card stat-card--info">
+        <div class="stat-card__icon">
+            <i class="bi bi-people"></i>
+        </div>
+        <div class="stat-card__value">12</div>
+        <div class="stat-card__label">Active Users</div>
+    </div>
+    
+    <div class="stat-card stat-card--secondary">
+        <div class="stat-card__icon">
+            <i class="bi bi-cpu"></i>
+        </div>
+        <div class="stat-card__value">4</div>
+        <div class="stat-card__label">AI Agents</div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions">
+    <div class="section-header">
+        <h2 class="section-header__title">Quick Actions</h2>
+    </div>
+    <div class="quick-actions__grid">
+        <a href="/spectra/" class="quick-action-card quick-action-card--primary">
+            <div class="quick-action-card__icon">
+                <i class="bi bi-file-earmark-plus"></i>
+            </div>
+            <div class="quick-action-card__title">Upload Spectrum</div>
+            <div class="quick-action-card__description">Add new spectral data for analysis</div>
+        </a>
+        
+        <a href="/analysis/" class="quick-action-card quick-action-card--success">
+            <div class="quick-action-card__icon">
+                <i class="bi bi-robot"></i>
+            </div>
+            <div class="quick-action-card__title">Run Analysis</div>
+            <div class="quick-action-card__description">Analyze existing spectral data</div>
+        </a>
+        
+        <a href="/jobs/" class="quick-action-card quick-action-card--info">
+            <div class="quick-action-card__icon">
+                <i class="bi bi-list-task"></i>
+            </div>
+            <div class="quick-action-card__title">View Jobs</div>
+            <div class="quick-action-card__description">Monitor analysis job status</div>
+        </a>
+        
+        <a href="/agents/" class="quick-action-card quick-action-card--warning">
+            <div class="quick-action-card__icon">
+                <i class="bi bi-people"></i>
+            </div>
+            <div class="quick-action-card__title">Manage Agents</div>
+            <div class="quick-action-card__description">Configure AI analysis agents</div>
+        </a>
+    </div>
+</div>
+
+<!-- Dashboard Grid -->
+<div class="dashboard-grid">
+    <!-- Recent Activity -->
+    <div class="recent-activity">
+        <div class="section-header">
+            <h2 class="section-header__title">Recent Activity</h2>
+            <a href="/jobs/" class="section-header__action">View All</a>
+        </div>
+        <ul class="activity-list">
+            <li class="activity-item activity-item--success">
+                <div class="activity-item__icon">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="activity-item__content">
+                    <div class="activity-item__title">Analysis Completed</div>
+                    <div class="activity-item__time">2 minutes ago</div>
+                </div>
+            </li>
+            <li class="activity-item activity-item--primary">
+                <div class="activity-item__icon">
+                    <i class="bi bi-file-earmark-plus"></i>
+                </div>
+                <div class="activity-item__content">
+                    <div class="activity-item__title">New Spectrum Uploaded</div>
+                    <div class="activity-item__time">15 minutes ago</div>
+                </div>
+            </li>
+            <li class="activity-item activity-item--info">
+                <div class="activity-item__icon">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <div class="activity-item__content">
+                    <div class="activity-item__title">Agent Training Started</div>
+                    <div class="activity-item__time">1 hour ago</div>
+                </div>
+            </li>
+            <li class="activity-item activity-item--warning">
+                <div class="activity-item__icon">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+                <div class="activity-item__content">
+                    <div class="activity-item__title">Low Quality Detected</div>
+                    <div class="activity-item__time">3 hours ago</div>
+                </div>
+            </li>
+        </ul>
+    </div>
+    
+    <!-- System Status -->
+    <div class="recent-activity">
+        <div class="section-header">
+            <h2 class="section-header__title">System Status</h2>
+        </div>
+        <div class="stat-card stat-card--success">
+            <div class="stat-card__icon">
+                <i class="bi bi-check-circle"></i>
+            </div>
+            <div class="stat-card__value">100%</div>
+            <div class="stat-card__label">All Systems Operational</div>
+        </div>
+        
+        <div style="margin-top: var(--spacing-md);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-sm);">
+                <span style="font-weight: 600; color: var(--color-gray-700);">Spectral Analysis Agent</span>
+                <span class="c-status c-status--success">
+                    <span class="c-status__indicator"></span>
+                    Active
+                </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-sm);">
+                <span style="font-weight: 600; color: var(--color-gray-700);">Metadata Quality Agent</span>
+                <span class="c-status c-status--success">
+                    <span class="c-status__indicator"></span>
+                    Active
+                </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-sm);">
+                <span style="font-weight: 600; color: var(--color-gray-700);">Reporting Agent</span>
+                <span class="c-status c-status--success">
+                    <span class="c-status__indicator"></span>
+                    Active
+                </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 600; color: var(--color-gray-700);">Federated Learning Agent</span>
+                <span class="c-status c-status--success">
+                    <span class="c-status__indicator"></span>
+                    Active
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- NIR Color Scale -->
+    <div class="recent-activity">
+        <div class="section-header">
+            <h2 class="section-header__title">NIR Wavelength Range</h2>
+        </div>
+        <div style="text-align: center; margin-bottom: var(--spacing-md);">
+            <div style="font-weight: 600; color: var(--color-gray-700); margin-bottom: var(--spacing-sm);">
+                Spectral Coverage: 700-2500 nm
+            </div>
+        </div>
+        <div class="nir-color-scale"></div>
+        <div style="display: flex; justify-content: space-between; margin-top: var(--spacing-sm); font-size: var(--font-size-xs); color: var(--color-gray-500);">
+            <span>700 nm</span>
+            <span>1100 nm</span>
+            <span>1500 nm</span>
+            <span>1900 nm</span>
+            <span>2500 nm</span>
+        </div>
+    </div>
+</div>
+
+<!-- Hero Section for Dashboard -->
+<div class="c-hero" style="margin-top: var(--spacing-xl);">
+    <div style="position: relative; z-index: 1;">
+        <h2 class="c-hero__title">Ready to Analyze?</h2>
+        <p class="c-hero__subtitle">
+            Upload your spectral data and let our AI agents provide comprehensive analysis and recommendations
+        </p>
+        <div style="margin-top: var(--spacing-lg); display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
+            <a href="/spectra/" class="c-button c-button--primary c-button--lg">
+                <i class="bi bi-upload"></i>
+                <span class="c-button__text">Upload Spectrum</span>
+            </a>
+            <a href="/analysis/" class="c-button c-button--outline-primary c-button--lg">
+                <i class="bi bi-robot"></i>
+                <span class="c-button__text">Start Analysis</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Dashboard JavaScript
+console.log('NIR Mistral Dashboard loaded');
+
+// Add smooth animations on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate stat cards
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach((card, index) => {
+        setTimeout(() => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 100);
+        }, index * 100);
+    });
+    
+    // Animate quick action cards
+    const quickActionCards = document.querySelectorAll('.quick-action-card');
+    quickActionCards.forEach((card, index) => {
+        setTimeout(() => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 100);
+        }, 300 + index * 100);
+    });
+});
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `c-toast c-toast--${type}`;
+    toast.innerHTML = `
+        <i class="bi bi-info-circle c-toast__icon"></i>
+        <div class="c-toast__message">${message}</div>
+    `;
+    toastContainer.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideInRight 0.3s ease-out reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+</script>
+{% endblock %}

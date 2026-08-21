@@ -1,0 +1,167 @@
+# Port Management Agent Configuration
+# This configuration file defines the settings for the Enhanced Port Management Agent
+
+version: 1.0
+date: 2026-08-03
+description: Configuration for NIR_Mistral Port Management Agent
+
+# Global Settings
+port_agent:
+  enabled: true
+  version: "1.0.0"
+  default_host: "127.0.0.1"
+  
+  # Port scanning settings
+  port_scanning:
+    enabled: true
+    cache_timeout: 30.0  # seconds
+    system_commands:
+      linux: ["ss", "-tuln"]
+      macos: ["lsof", "-i", "-P", "-n"]
+      windows: ["netstat", "-ano"]
+    
+  # Port reservation settings
+  port_reservation:
+    enabled: true
+    max_attempts: 100
+    random_search: true  # Use random search to avoid clustering
+    
+  # Port ranges for different service types
+  port_ranges:
+    django:
+      start: 8000
+      end: 8050
+      description: "Django Services"
+      
+    weaviate:
+      start: 8080
+      end: 8090
+      description: "Weaviate/HTTP Services"
+      
+    database:
+      start: 5432
+      end: 5450
+      description: "Database Services"
+      
+    monitoring:
+      start: 9000
+      end: 9100
+      description: "Monitoring Services"
+      
+    api:
+      start: 8500
+      end: 8600
+      description: "API Services"
+      
+    general:
+      start: 10000
+      end: 11000
+      description: "General Services"
+      
+    extended:
+      start: 12000
+      end: 15000
+      description: "Extended Range"
+
+# Docker-specific settings
+docker:
+  enabled: true
+  check_available: true
+  timeout: 10  # seconds for Docker commands
+  
+  # Default port range for Docker host port assignment
+  default_host_port_range:
+    start: 8000
+    end: 9000
+
+# Framework integration settings
+framework_integration:
+  enabled: true
+  
+  # Agents that need port management
+  managed_agents:
+    - django_agent
+    - weaviate_agent
+    - postgresql_agent
+    - mcp_agent
+    - flower_agent
+    - faiss_agent
+    
+  # Auto-resolve conflicts on startup
+  auto_resolve_conflicts: true
+  
+  # Update agent configuration with resolved ports
+  update_config: true
+  
+  # Configuration file paths
+  config_paths:
+    - "/home/martin/Development/vsCode_Environment/NIR_Mistral/config/agent_config.yaml"
+    - "/etc/nir_mistral/agent_config.yaml"
+
+# Logging settings
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/port_agent.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5
+
+# Security settings
+security:
+  # Only allow binding to these hosts
+  allowed_hosts:
+    - "localhost"
+    - "127.0.0.1"
+    - "0.0.0.0"
+    - "::1"
+  
+  # Port validation
+  validate_ports: true
+  min_port: 1
+  max_port: 65535
+  
+  # Reserved ports that should not be assigned
+  reserved_ports:
+    - 22    # SSH
+    - 80    # HTTP
+    - 443   # HTTPS
+    - 3306  # MySQL
+    - 5432  # PostgreSQL (but can be overridden)
+
+# Performance settings
+performance:
+  # Maximum number of ports to scan at once
+  max_scan_range: 1000
+  
+  # Timeout for port availability checks
+  port_check_timeout: 1.0  # seconds
+  
+  # Maximum number of reserved ports
+  max_reserved_ports: 1000
+
+# Error handling settings
+error_handling:
+  # Retry failed operations
+  retry_enabled: true
+  max_retries: 3
+  retry_delay: 1.0  # seconds
+  
+  # Graceful degradation
+  fallback_to_default: true
+  
+  # Error reporting
+  log_errors: true
+  raise_exceptions: false
+
+# Testing settings (for development)
+testing:
+  enabled: false
+  test_port_range:
+    start: 50000
+    end: 51000
+  
+  # Test Docker integration
+  test_docker: false
+  
+  # Test framework integration
+  test_framework: false

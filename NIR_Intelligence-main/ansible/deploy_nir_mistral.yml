@@ -1,0 +1,197 @@
+---
+# NIR Mistral Deployment Playbook for Ventoy Stick
+# This playbook deploys the NIR Mistral platform from a Ventoy bootable USB
+# Usage: ansible-playbook -i localhost, deploy_nir_mistral.yml --ask-become-pass
+
+- name: NIR Mistral Local Deployment from Ventoy
+  hosts: localhost
+  become: yes
+  vars:
+    # Installation directories
+    install_dir: "/opt/nir_mistral"
+    venv_dir: "/opt/nir_mistral/venv"
+    data_dir: "/opt/nir_mistral/data"
+    log_dir: "/var/log/nir_mistral"
+    
+    # User for running the application
+    app_user: "nir_user"
+    app_group: "nir_group"
+    
+    # Port configuration
+    app_port: 8000
+    
+    # Git repository (if deploying from source)
+    repo_url: "file:///home/martin/Development/vsCode_Environment/NIR_Mistral"
+    
+    # Local deployment flag
+    local_deployment: true
+    
+  tasks:
+    - name: Create NIR Mistral group
+      group:
+        name: "{{ app_group }}"
+        system: yes
+        state: present
+
+    - name: Create NIR Mistral user
+      user:
+        name: "{{ app_user }}"
+        group: "{{ app_group }}"
+        system: yes
+        shell: /bin/bash
+        home: "{{ install_dir }}"
+        create_home: yes
+      
+    - name: Create installation directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+      loop:
+        - "{{ install_dir }}"
+        - "{{ install_dir }}/django_project"
+        - "{{ data_dir }}"
+        - "{{ log_dir }}"
+        - "{{ install_dir }}/static"
+        - "{{ install_dir }}/media"
+    
+    - name: Install system dependencies
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+          - git
+          - curl
+          - nginx
+          - supervisor
+          - sqlite3
+          - build-essential
+          - libpq-dev
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+    
+    - name: Install Python dependencies
+      pip:
+        requirements: "{{ install_dir }}/requirements.txt"
+        virtualenv: "{{ venv_dir }}"
+        virtualenv_python: python3
+      become_user: "{{ app_user }}"
+    
+    - name: Copy NIR Mistral application files
+      copy:
+        src: "/home/martin/Development/vsCode_Environment/NIR_Mistral/"
+        dest: "{{ install_dir }}/"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        remote_src: yes
+      when: local_deployment | default(true)
+      
+    - name: Set execute permissions on scripts
+      file:
+        path: "{{ install_dir }}/{{ item }}"
+        mode: '0755'
+      loop:
+        - start_bg.sh
+        - quickstart.sh
+        - stop_nir_server.sh
+        - manage.py
+    
+    - name: Collect static files
+      command: "{{ venv_dir }}/bin/python {{ install_dir }}/django_project/manage.py collectstatic"
+      become_user: "{{ app_user }}"
+      environment:
+        PYTHONPATH: "{{ install_dir }}"
+    
+    - name: Create database
+      command: "{{ venv_dir }}/bin/python {{ install_dir }}/django_project/manage.py migrate"
+      become_user: "{{ app_user }}"
+      environment:
+        PYTHONPATH: "{{ install_dir }}"
+    
+    - name: Create superuser (non-interactive)
+      command: >
+        {{ venv_dir }}/bin/python {{ install_dir }}/django_project/manage.py 
+        createsuperuser --noinput --username admin --email admin@nir-mistral.local
+      become_user: "{{ app_user }}"
+      environment:
+        PYTHONPATH: "{{ install_dir }}"
+        DJANGO_SUPERUSER_PASSWORD: "admin123"
+      ignore_errors: yes
+    
+    - name: Create systemd service for NIR Mistral
+      template:
+        src: nir_mistral.service.j2
+        dest: /etc/systemd/system/nir_mistral.service
+      
+    - name: Enable and start NIR Mistral service
+      systemd:
+        name: nir_mistral
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      
+    - name: Configure Nginx as reverse proxy
+      template:
+        src: nginx_nir_mistral.conf.j2
+        dest: /etc/nginx/sites-available/nir_mistral
+      
+    - name: Enable Nginx site
+      file:
+        src: /etc/nginx/sites-available/nir_mistral
+        dest: /etc/nginx/sites-enabled/nir_mistral
+        state: link
+      notify: restart nginx
+      
+    - name: Test Nginx configuration
+      command: nginx -t
+      register: nginx_test
+      ignore_errors: yes
+      
+    - name: Restart Nginx if configuration is valid
+      service:
+        name: nginx
+        state: restarted
+      when: nginx_test.rc == 0
+      
+    - name: Create log rotation configuration
+      template:
+        src: logrotate_nir_mistral.j2
+        dest: /etc/logrotate.d/nir_mistral
+      
+    - name: Display deployment summary
+      debug:
+        msg: |
+          ✅ NIR Mistral Deployment Complete!
+          
+          📁 Installation Directory: {{ install_dir }}
+          👤 Application User: {{ app_user }}
+          🌐 Access URL: http://{{ ansible_default_ipv4.address }}:{{ app_port }}
+          📝 Log Directory: {{ log_dir }}
+          💾 Data Directory: {{ data_dir }}
+          
+          🚀 Service Management:
+             - Start: sudo systemctl start nir_mistral
+             - Stop: sudo systemctl stop nir_mistral
+             - Status: sudo systemctl status nir_mistral
+             - Logs: journalctl -u nir_mistral -f
+          
+          🌐 Web Access:
+             - Dashboard: http://{{ ansible_default_ipv4.address }}/dashboard/
+             - Admin: http://{{ ansible_default_ipv4.address }}/admin/
+             - API: http://{{ ansible_default_ipv4.address }}/api/
+          
+          📝 Notes:
+             - Default admin credentials: admin/admin123
+             - Change password after first login
+             - ILIAS and Quarto features not yet implemented
+             - Local NIR data analysis is fully functional
+  
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted

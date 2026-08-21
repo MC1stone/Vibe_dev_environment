@@ -1,0 +1,19 @@
+---
+# Port Agent Handlers
+# This file contains handlers for the Port Agent role
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart port_agent
+  systemd:
+    name: port_agent
+    state: restarted
+  when: create_systemd_services | default(true)
+
+- name: reload port_agent
+  systemd:
+    name: port_agent
+    state: reloaded
+  when: create_systemd_services | default(true)

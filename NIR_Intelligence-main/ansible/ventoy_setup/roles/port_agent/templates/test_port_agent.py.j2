@@ -1,0 +1,401 @@
+#!/usr/bin/env python3
+"""
+Port Agent Test Script
+
+This script tests the Port Management Agent functionality
+to ensure it's working correctly on the Ventoy stick.
+"""
+
+import sys
+import os
+import json
+import time
+import requests
+import subprocess
+from pathlib import Path
+
+# Add project root to path
+project_root = Path("{{ deploy_root }}")
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# Configuration
+PORT_AGENT_PORT = {{ port_agent_port }}
+BASE_URL = f"http://localhost:{PORT_AGENT_PORT}"
+TIMEOUT = 10
+
+# Colors for output
+class Colors:
+    RED = '\033[91m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    MAGENTA = '\033[95m'
+    CYAN = '\033[96m'
+    WHITE = '\033[97m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
+
+class TestResult:
+    def __init__(self):
+        self.passed = 0
+        self.failed = 0
+        self.errors = []
+        self.start_time = time.time()
+    
+    def add_pass(self, test_name):
+        self.passed += 1
+        print(f"{Colors.GREEN}✓ PASS{Colors.END}: {test_name}")
+    
+    def add_fail(self, test_name, error):
+        self.failed += 1
+        self.errors.append((test_name, error))
+        print(f"{Colors.RED}✗ FAIL{Colors.END}: {test_name}")
+        print(f"  Error: {error}")
+    
+    def summary(self):
+        elapsed = time.time() - self.start_time
+        print(f"\n{Colors.BLUE}{'='*50}{Colors.END}")
+        print(f"{Colors.BOLD}TEST SUMMARY{Colors.END}")
+        print(f"{Colors.BLUE}{'='*50}{Colors.END}")
+        print(f"Total tests: {self.passed + self.failed}")
+        print(f"{Colors.GREEN}Passed: {self.passed}{Colors.END}")
+        print(f"{Colors.RED}Failed: {self.failed}{Colors.END}")
+        print(f"Time: {elapsed:.2f} seconds")
+        
+        if self.errors:
+            print(f"\n{Colors.RED}ERRORS:{Colors.END}")
+            for test_name, error in self.errors:
+                print(f"  {Colors.RED}• {test_name}: {error}{Colors.END}")
+        
+        print(f"{Colors.BLUE}{'='*50}{Colors.END}")
+        
+        return self.failed == 0
+
+def make_request(method, endpoint, data=None, params=None):
+    """Make HTTP request to Port Agent"""
+    url = f"{BASE_URL}{endpoint}"
+    
+    try:
+        if method.upper() == "GET":
+            response = requests.get(url, params=params, timeout=TIMEOUT)
+        elif method.upper() == "POST":
+            response = requests.post(url, json=data, timeout=TIMEOUT)
+        elif method.upper() == "PUT":
+            response = requests.put(url, json=data, timeout=TIMEOUT)
+        elif method.upper() == "DELETE":
+            response = requests.delete(url, timeout=TIMEOUT)
+        else:
+            return None, f"Unsupported method: {method}"
+        
+        return response, None
+    except requests.exceptions.RequestException as e:
+        return None, str(e)
+
+def test_connection():
+    """Test basic connection to Port Agent"""
+    response, error = make_request("GET", "/api/ports/")
+    
+    if error:
+        return False, f"Connection failed: {error}"
+    
+    if response.status_code != 200:
+        return False, f"HTTP {response.status_code}: {response.text}"
+    
+    try:
+        data = response.json()
+        if not data.get("success", False):
+            return False, f"Port Agent returned error: {data.get('error', 'Unknown error')}"
+        
+        return True, "Port Agent is running and responding"
+    except json.JSONDecodeError:
+        return False, "Invalid JSON response"
+
+def test_health_check():
+    """Test health check endpoint"""
+    response, error = make_request("GET", "/api/ports/")
+    
+    if error:
+        return False, error
+    
+    if response.status_code != 200:
+        return False, f"HTTP {response.status_code}"
+    
+    try:
+        data = response.json()
+        required_keys = ["success", "message"]
+        for key in required_keys:
+            if key not in data:
+                return False, f"Missing required key: {key}"
+        
+        return True, "Health check endpoint working"
+    except json.JSONDecodeError:
+        return False, "Invalid JSON response"
+
+def test_port_scan():
+    """Test port scanning functionality"""
+    response, error = make_request("GET", "/api/ports/scan/", params={"start": 9000, "end": 9010})
+    
+    if error:
+        return False, error
+    
+    if response.status_code != 200:
+        return False, f"HTTP {response.status_code}"
+    
+    try:
+        data = response.json()
+        if not data.get("success", False):
+            return False, f"Port scan failed: {data.get('error', 'Unknown error')}"
+        
+        if "ports" not in data:
+            return False, "Missing ports data"
+        
+        return True, f"Port scan successful: found {len(data['ports'])} ports"
+    except json.JSONDecodeError:
+        return False, "Invalid JSON response"
+
+def test_port_check():
+    """Test specific port checking"""
+    # Test with a known port (Django port)
+    response, error = make_request("GET", f"/api/ports/check/{{ django_port }}/")
+    
+    if error:
+        return False, error
+    
+    if response.status_code != 200:
+        return False, f"HTTP {response.status_code}"
+    
+    try:
+        data = response.json()
+        if not data.get("success", False):
+            return False, f"Port check failed: {data.get('error', 'Unknown error')}"
+        
+        if "port" not in data or "available" not in data:
+            return False, "Missing port or available data"
+        
+        return True, f"Port check successful: port {{ django_port }} available={data['available']}"
+    except json.JSONDecodeError:
+        return False, "Invalid JSON response"
+
+def test_port_assign():
+    """Test port assignment functionality"""
+    response, error = make_request("POST", "/api/ports/assign/", data={
+        "start": 9500,
+        "end": 9600,
+        "service_name": "test_service",
+        "host": "127.0.0.1"
+    })
+    
+    if error:
+        return False, error
+    
+    if response.status_code != 200:
+        return False, f"HTTP {response.status_code}"
+    
+    try:
+        data = response.json()
+        if not data.get("success", False):
+            return False, f"Port assignment failed: {data.get('error', 'Unknown error')}"
+        
+        if "port" not in data:
+            return False, "Missing port in response"
+        
+        assigned_port = data["port"]
+        return True, f"Port assignment successful: assigned port {assigned_port}"
+    except json.JSONDecodeError:
+        return False, "Invalid JSON response"
+
+def test_port_reserve():
+    """Test specific port reservation"""
+    # Use a high port number that's likely free
+    test_port = 9999
+    
+    response, error = make_request("POST", "/api/ports/reserve/", data={
+        "port": test_port,
+        "service_name": "test_reservation",
+        "host": "127.0.0.1"
+    })
+    
+    if error:
+        return False, error
+    
+    if response.status_code != 200:
+        return False, f"HTTP {response.status_code}"
+    
+    try:
+        data = response.json()
+        if not data.get("success", False):
+            return False, f"Port reservation failed: {data.get('error', 'Unknown error')}"
+        
+        if "port" not in data:
+            return False, "Missing port in response"
+        
+        if data["port"] != test_port:
+            return False, f"Expected port {test_port}, got {data['port']}"
+        
+        return True, f"Port reservation successful: reserved port {test_port}"
+    except json.JSONDecodeError:
+        return False, "Invalid JSON response"
+
+def test_port_release():
+    """Test port release functionality"""
+    # First reserve a port
+    test_port = 9998
+    
+    # Reserve the port
+    reserve_response, reserve_error = make_request("POST", "/api/ports/reserve/", data={
+        "port": test_port,
+        "service_name": "test_release",
+        "host": "127.0.0.1"
+    })
+    
+    if reserve_error:
+        return False, f"Failed to reserve port for release test: {reserve_error}"
+    
+    if reserve_response.status_code != 200:
+        return False, f"Failed to reserve port: HTTP {reserve_response.status_code}"
+    
+    # Now release it
+    release_response, release_error = make_request("POST", "/api/ports/release/", data={
+        "port": test_port,
+        "host": "127.0.0.1"
+    })
+    
+    if release_error:
+        return False, release_error
+    
+    if release_response.status_code != 200:
+        return False, f"HTTP {release_response.status_code}"
+    
+    try:
+        data = release_response.json()
+        if not data.get("success", False):
+            return False, f"Port release failed: {data.get('error', 'Unknown error')}"
+        
+        return True, f"Port release successful: released port {test_port}"
+    except json.JSONDecodeError:
+        return False, "Invalid JSON response"
+
+def test_port_status():
+    """Test port status functionality"""
+    response, error = make_request("GET", "/api/ports/status/")
+    
+    if error:
+        return False, error
+    
+    if response.status_code != 200:
+        return False, f"HTTP {response.status_code}"
+    
+    try:
+        data = response.json()
+        if not data.get("success", False):
+            return False, f"Port status failed: {data.get('error', 'Unknown error')}"
+        
+        if "reserved_ports" not in data:
+            return False, "Missing reserved_ports in response"
+        
+        return True, f"Port status successful: {len(data['reserved_ports'])} reserved ports"
+    except json.JSONDecodeError:
+        return False, "Invalid JSON response"
+
+def test_conflict_detection():
+    """Test port conflict detection"""
+    response, error = make_request("GET", "/api/ports/conflicts/")
+    
+    if error:
+        return False, error
+    
+    if response.status_code != 200:
+        return False, f"HTTP {response.status_code}"
+    
+    try:
+        data = response.json()
+        if not data.get("success", False):
+            return False, f"Conflict detection failed: {data.get('error', 'Unknown error')}"
+        
+        if "conflicts" not in data:
+            return False, "Missing conflicts in response"
+        
+        return True, f"Conflict detection successful: found {len(data['conflicts'])} conflicts"
+    except json.JSONDecodeError:
+        return False, "Invalid JSON response"
+
+def test_find_free_port():
+    """Test finding a free port"""
+    response, error = make_request("GET", "/api/ports/find/", params={
+        "start": 9700,
+        "end": 9800,
+        "host": "127.0.0.1"
+    })
+    
+    if error:
+        return False, error
+    
+    if response.status_code != 200:
+        return False, f"HTTP {response.status_code}"
+    
+    try:
+        data = response.json()
+        if not data.get("success", False):
+            return False, f"Find free port failed: {data.get('error', 'Unknown error')}"
+        
+        if "port" not in data:
+            return False, "Missing port in response"
+        
+        return True, f"Find free port successful: found port {data['port']}"
+    except json.JSONDecodeError:
+        return False, "Invalid JSON response"
+
+def run_tests():
+    """Run all tests"""
+    results = TestResult()
+    
+    print(f"{Colors.BLUE}{'='*50}{Colors.END}")
+    print(f"{Colors.BOLD}PORT AGENT TEST SUITE{Colors.END}")
+    print(f"{Colors.BLUE}{'='*50}{Colors.END}")
+    print(f"Testing Port Agent at: {BASE_URL}")
+    print()
+    
+    # Test connection first
+    if not test_connection()[0]:
+        print(f"{Colors.RED}ERROR: Cannot connect to Port Agent{Colors.END}")
+        print(f"Make sure the Port Agent is running: {Colors.YELLOW}{{ deploy_root }}/start_port_agent.sh start{Colors.END}")
+        return False
+    
+    # Run all tests
+    tests = [
+        ("Health Check", test_health_check),
+        ("Port Scan", test_port_scan),
+        ("Port Check", test_port_check),
+        ("Port Assign", test_port_assign),
+        ("Port Reserve", test_port_reserve),
+        ("Port Release", test_port_release),
+        ("Port Status", test_port_status),
+        ("Conflict Detection", test_conflict_detection),
+        ("Find Free Port", test_find_free_port),
+    ]
+    
+    for test_name, test_func in tests:
+        try:
+            success, message = test_func()
+            if success:
+                results.add_pass(f"{test_name}: {message}")
+            else:
+                results.add_fail(test_name, message)
+        except Exception as e:
+            results.add_fail(test_name, str(e))
+    
+    # Print summary
+    success = results.summary()
+    
+    if success:
+        print(f"\n{Colors.GREEN}All tests passed! ✓{Colors.END}")
+    else:
+        print(f"\n{Colors.RED}Some tests failed! ✗{Colors.END}")
+    
+    return success
+
+if __name__ == "__main__":
+    success = run_tests()
+    sys.exit(0 if success else 1)

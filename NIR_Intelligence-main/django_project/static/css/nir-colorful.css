@@ -1,0 +1,984 @@
+/*
+ * NIR Mistral - Colorful User-Friendly UI Enhancement
+ * 
+ * This CSS enhances the HSWT design system with vibrant, colorful elements
+ * for a more engaging and user-friendly NIR Analysis Platform experience.
+ */
+
+/* ==========================================================================
+   Colorful Theme Variables - Vibrant NIR Spectroscopy Palette
+   ========================================================================== */
+:root {
+    /* NIR Spectroscopy Color Palette */
+    --nir-purple: #8b5cf6;        /* Spectral purple */
+    --nir-blue: #3b82f6;         /* Analysis blue */
+    --nir-cyan: #06b6d4;         /* Data cyan */
+    --nir-emerald: #10b981;      /* Success emerald */
+    --nir-orange: #f59e0b;       /* Warning orange */
+    --nir-red: #ef4444;          /* Error red */
+    --nir-pink: #ec4899;         /* Highlight pink */
+    
+    /* Gradient Backgrounds */
+    --gradient-primary: linear-gradient(135deg, var(--color-primary) 0%, var(--nir-emerald) 100%);
+    --gradient-secondary: linear-gradient(135deg, var(--nir-purple) 0%, var(--nir-blue) 100%);
+    --gradient-spectral: linear-gradient(90deg, var(--nir-purple), var(--nir-blue), var(--nir-cyan), var(--nir-emerald), var(--color-primary));
+    
+    /* Glass Effect */
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    --glass-border: rgba(255, 255, 255, 0.3);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    
+    /* Animation */
+    --animation-float: 0 6s ease-in-out infinite;
+    --animation-pulse: 0 2s ease-in-out infinite;
+    --animation-glow: 0 3s ease-in-out infinite;
+}
+
+/* ==========================================================================
+   Colorful Base Styles
+   ========================================================================== */
+
+/* Colorful Body Background */
+body {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #dbeafe 100%);
+    min-height: 100vh;
+}
+
+/* Colorful Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-gray-100);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gradient-primary);
+    border-radius: var(--border-radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gradient-secondary);
+}
+
+/* ==========================================================================
+   Colorful Header Enhancement
+   ========================================================================== */
+
+.c-header {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.c-header__inner {
+    background: transparent;
+}
+
+.c-logo svg {
+    filter: drop-shadow(0 0 8px rgba(122, 185, 41, 0.5));
+    transition: transform 0.3s ease;
+}
+
+.c-logo svg:hover {
+    transform: scale(1.05);
+}
+
+.c-logo__text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+/* Colorful Navigation */
+.c-nav-main__action {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.c-nav-main__action::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: var(--gradient-primary);
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+}
+
+.c-nav-main__action:hover::after {
+    width: 100%;
+}
+
+.c-nav-main__action--active {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.c-nav-main__action--active::after {
+    width: 100%;
+    background: var(--nir-cyan);
+}
+
+/* ==========================================================================
+   Colorful Hero Section for Dashboard
+   ========================================================================== */
+
+.c-hero {
+    background: var(--gradient-spectral);
+    border-radius: var(--border-radius-xl);
+    padding: var(--spacing-xxl);
+    margin-bottom: var(--spacing-xl);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.c-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: rotate 20s linear infinite;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.c-hero__title {
+    font-size: var(--font-size-xxxl);
+    font-weight: 800;
+    margin-bottom: var(--spacing-md);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    background: linear-gradient(90deg, #ffffff, #e0e0e0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.c-hero__subtitle {
+    font-size: var(--font-size-xl);
+    opacity: 0.95;
+    max-width: 600px;
+}
+
+/* ==========================================================================
+   Colorful Cards
+   ========================================================================== */
+
+.c-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--glass-shadow);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.c-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: var(--gradient-primary);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.c-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+}
+
+.c-card:hover::before {
+    transform: scaleX(1);
+}
+
+/* Colorful Card Variants */
+.c-card--primary {
+    border-top-color: var(--color-primary);
+}
+
+.c-card--secondary {
+    border-top-color: var(--nir-purple);
+}
+
+.c-card--success {
+    border-top-color: var(--nir-emerald);
+}
+
+.c-card--warning {
+    border-top-color: var(--nir-orange);
+}
+
+.c-card--danger {
+    border-top-color: var(--nir-red);
+}
+
+.c-card--info {
+    border-top-color: var(--nir-cyan);
+}
+
+/* ==========================================================================
+   Colorful Buttons
+   ========================================================================== */
+
+.c-button {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.c-button--primary {
+    background: var(--gradient-primary);
+    border: none;
+    box-shadow: 0 4px 12px rgba(122, 185, 41, 0.3);
+}
+
+.c-button--primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(122, 185, 41, 0.4);
+}
+
+.c-button--primary:active {
+    transform: translateY(0);
+}
+
+.c-button--secondary {
+    background: var(--gradient-secondary);
+    border: none;
+}
+
+.c-button--outline-primary {
+    border: 2px solid var(--color-primary);
+    color: var(--color-primary);
+}
+
+.c-button--outline-primary:hover {
+    background: var(--color-primary);
+    color: white;
+}
+
+/* Animated Buttons */
+.c-button--animated {
+    position: relative;
+}
+
+.c-button--animated::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.c-button--animated:hover::before {
+    left: 100%;
+}
+
+/* ==========================================================================
+   Colorful Data Visualization
+   ========================================================================== */
+
+.c-chart-container {
+    background: var(--glass-bg);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--glass-shadow);
+    position: relative;
+}
+
+.c-chart-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-spectral);
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+}
+
+/* Spectral Color Gradient for Charts */
+.spectral-gradient {
+    background: var(--gradient-spectral);
+    height: 4px;
+    border-radius: 2px;
+}
+
+/* ==========================================================================
+   Colorful Status Indicators
+   ========================================================================== */
+
+.c-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.c-status--success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--nir-emerald);
+}
+
+.c-status--warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--nir-orange);
+}
+
+.c-status--danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--nir-red);
+}
+
+.c-status--info {
+    background: rgba(6, 182, 212, 0.1);
+    color: var(--nir-cyan);
+}
+
+.c-status--primary {
+    background: rgba(122, 185, 41, 0.1);
+    color: var(--color-primary);
+}
+
+.c-status__indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.c-status--success .c-status__indicator { background: var(--nir-emerald); }
+.c-status--warning .c-status__indicator { background: var(--nir-orange); }
+.c-status--danger .c-status__indicator { background: var(--nir-red); }
+.c-status--info .c-status__indicator { background: var(--nir-cyan); }
+.c-status--primary .c-status__indicator { background: var(--color-primary); }
+
+/* ==========================================================================
+   Colorful Progress Bars
+   ========================================================================== */
+
+.c-progress {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: var(--border-radius-full);
+    height: 8px;
+    overflow: hidden;
+}
+
+.c-progress__bar {
+    height: 100%;
+    border-radius: var(--border-radius-full);
+    transition: width 0.6s ease;
+    position: relative;
+}
+
+.c-progress__bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.c-progress__bar--primary { background: var(--gradient-primary); }
+.c-progress__bar--success { background: var(--nir-emerald); }
+.c-progress__bar--warning { background: var(--nir-orange); }
+.c-progress__bar--danger { background: var(--nir-red); }
+.c-progress__bar--info { background: var(--nir-cyan); }
+
+/* ==========================================================================
+   Colorful Form Elements
+   ========================================================================== */
+
+.c-form__field {
+    position: relative;
+    margin-bottom: var(--spacing-md);
+}
+
+.c-form__input,
+.c-form__select,
+.c-form__textarea {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 2px solid var(--color-gray-300);
+    border-radius: var(--border-radius-md);
+    transition: all 0.3s ease;
+    background: var(--glass-bg);
+}
+
+.c-form__input:focus,
+.c-form__select:focus,
+.c-form__textarea:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(122, 185, 41, 0.1);
+    outline: none;
+}
+
+.c-form__input:hover,
+.c-form__select:hover,
+.c-form__textarea:hover {
+    border-color: var(--color-primary-light);
+}
+
+.c-form__label {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    font-weight: 600;
+    color: var(--color-gray-700);
+}
+
+/* Colorful Input Variants */
+.c-form__input--success { border-color: var(--nir-emerald); }
+.c-form__input--warning { border-color: var(--nir-orange); }
+.c-form__input--danger { border-color: var(--nir-red); }
+
+/* ==========================================================================
+   Colorful Tables
+   ========================================================================== */
+
+.c-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--glass-bg);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--glass-shadow);
+}
+
+.c-table thead {
+    background: var(--gradient-primary);
+    color: white;
+}
+
+.c-table th {
+    padding: var(--spacing-md);
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: var(--font-size-sm);
+}
+
+.c-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.c-table tbody tr:hover {
+    background: rgba(122, 185, 41, 0.05);
+}
+
+.c-table td {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.c-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Colorful Row Highlighting */
+.c-table tbody tr:nth-child(even) {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.c-table tbody tr:nth-child(even):hover {
+    background: rgba(122, 185, 41, 0.08);
+}
+
+/* ==========================================================================
+   Colorful Alerts and Notifications
+   ========================================================================== */
+
+.c-alert {
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-md);
+    margin-bottom: var(--spacing-md);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.c-alert--success {
+    background: rgba(16, 185, 129, 0.1);
+    border-left: 4px solid var(--nir-emerald);
+    color: var(--nir-emerald);
+}
+
+.c-alert--warning {
+    background: rgba(245, 158, 11, 0.1);
+    border-left: 4px solid var(--nir-orange);
+    color: var(--nir-orange);
+}
+
+.c-alert--danger {
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 4px solid var(--nir-red);
+    color: var(--nir-red);
+}
+
+.c-alert--info {
+    background: rgba(6, 182, 212, 0.1);
+    border-left: 4px solid var(--nir-cyan);
+    color: var(--nir-cyan);
+}
+
+.c-alert__icon {
+    flex-shrink: 0;
+    font-size: var(--font-size-xl);
+}
+
+.c-alert__content {
+    flex: 1;
+}
+
+.c-alert__title {
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+}
+
+/* ==========================================================================
+   Colorful Loading States
+   ========================================================================== */
+
+.c-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+}
+
+.c-loading-overlay__spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Colorful Spinner Variants */
+.c-loading-overlay__spinner--primary { border-top-color: var(--color-primary); }
+.c-loading-overlay__spinner--secondary { border-top-color: var(--nir-purple); }
+.c-loading-overlay__spinner--success { border-top-color: var(--nir-emerald); }
+
+/* ==========================================================================
+   Colorful Tooltips
+   ========================================================================== */
+
+.c-tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.c-tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--color-gray-900);
+    color: white;
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 1000;
+}
+
+.c-tooltip:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Colorful Tooltip Variants */
+.c-tooltip--primary::after { background: var(--color-primary); }
+.c-tooltip--success::after { background: var(--nir-emerald); }
+.c-tooltip--warning::after { background: var(--nir-orange); }
+.c-tooltip--danger::after { background: var(--nir-red); }
+
+/* ==========================================================================
+   Colorful Badges
+   ========================================================================== */
+
+.c-badge {
+    display: inline-block;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.c-badge--primary {
+    background: var(--gradient-primary);
+    color: white;
+}
+
+.c-badge--secondary {
+    background: var(--gradient-secondary);
+    color: white;
+}
+
+.c-badge--success {
+    background: var(--nir-emerald);
+    color: white;
+}
+
+.c-badge--warning {
+    background: var(--nir-orange);
+    color: white;
+}
+
+.c-badge--danger {
+    background: var(--nir-red);
+    color: white;
+}
+
+.c-badge--info {
+    background: var(--nir-cyan);
+    color: white;
+}
+
+/* ==========================================================================
+   Colorful Footer Enhancement
+   ========================================================================== */
+
+.c-footer {
+    background: var(--color-gray-900);
+    color: rgba(255, 255, 255, 0.8);
+    position: relative;
+    overflow: hidden;
+}
+
+.c-footer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-spectral);
+}
+
+.c-footer__title {
+    color: white;
+    font-weight: 700;
+}
+
+.c-footer__social a {
+    background: var(--gradient-primary);
+    border: none;
+    color: white;
+}
+
+.c-footer__social a:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(122, 185, 41, 0.3);
+}
+
+.c-footer__heading {
+    color: white;
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+}
+
+.c-footer__list li {
+    margin-bottom: var(--spacing-xs);
+}
+
+.c-footer__list a {
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.2s ease;
+}
+
+.c-footer__list a:hover {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+/* ==========================================================================
+   Colorful Toast Notifications
+   ========================================================================== */
+
+.c-toast-container {
+    position: fixed;
+    top: var(--spacing-lg);
+    right: var(--spacing-lg);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.c-toast {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-md);
+    box-shadow: var(--glass-shadow);
+    animation: slideInRight 0.3s ease-out;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.c-toast--success { border-left: 4px solid var(--nir-emerald); }
+.c-toast--warning { border-left: 4px solid var(--nir-orange); }
+.c-toast--danger { border-left: 4px solid var(--nir-red); }
+.c-toast--info { border-left: 4px solid var(--nir-cyan); }
+
+.c-toast__icon {
+    flex-shrink: 0;
+    font-size: var(--font-size-xl);
+}
+
+.c-toast__message {
+    flex: 1;
+    font-size: var(--font-size-sm);
+}
+
+/* ==========================================================================
+   Spectral Analysis Specific Styles
+   ========================================================================== */
+
+/* Spectrum Visualization */
+.spectrum-chart {
+    background: var(--glass-bg);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--glass-shadow);
+}
+
+.spectrum-line {
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* NIR Color Scale for Spectrum */
+.nir-color-scale {
+    background: linear-gradient(90deg, 
+        #8b5cf6, #3b82f6, #06b6d4, #10b981, #7ab929, #f59e0b, #ef4444);
+    height: 20px;
+    border-radius: 10px;
+    margin: var(--spacing-md) 0;
+}
+
+/* Analysis Result Cards */
+.analysis-result-card {
+    background: var(--glass-bg);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    box-shadow: var(--glass-shadow);
+    border-left: 4px solid;
+}
+
+.analysis-result-card--excellent { border-left-color: var(--nir-emerald); }
+.analysis-result-card--good { border-left-color: var(--color-primary); }
+.analysis-result-card--fair { border-left-color: var(--nir-orange); }
+.analysis-result-card--poor { border-left-color: var(--nir-red); }
+
+.analysis-result-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.analysis-result-card__title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-gray-800);
+}
+
+.analysis-result-card__score {
+    font-size: var(--font-size-xxl);
+    font-weight: 700;
+}
+
+.analysis-result-card__score--excellent { color: var(--nir-emerald); }
+.analysis-result-card__score--good { color: var(--color-primary); }
+.analysis-result-card__score--fair { color: var(--nir-orange); }
+.analysis-result-card__score--poor { color: var(--nir-red); }
+
+/* ==========================================================================
+   Responsive Adjustments
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .c-hero__title {
+        font-size: var(--font-size-xxl);
+    }
+    
+    .c-hero__subtitle {
+        font-size: var(--font-size-lg);
+    }
+    
+    .c-header__navigation {
+        display: none; /* Hide on mobile, show hamburger menu */
+    }
+    
+    .c-toast-container {
+        left: var(--spacing-md);
+        right: var(--spacing-md);
+        top: var(--spacing-md);
+    }
+}
+
+/* ==========================================================================
+   Utility Classes for Colorful UI
+   ========================================================================== */
+
+.text-primary { color: var(--color-primary); }
+.text-secondary { color: var(--nir-purple); }
+.text-success { color: var(--nir-emerald); }
+.text-warning { color: var(--nir-orange); }
+.text-danger { color: var(--nir-red); }
+.text-info { color: var(--nir-cyan); }
+
+.bg-primary { background: var(--color-primary); }
+.bg-secondary { background: var(--nir-purple); }
+.bg-success { background: var(--nir-emerald); }
+.bg-warning { background: var(--nir-orange); }
+.bg-danger { background: var(--nir-red); }
+.bg-info { background: var(--nir-cyan); }
+
+/* Gradient Text */
+.text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.text-gradient-spectral {
+    background: var(--gradient-spectral);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Gradient Backgrounds */
+.bg-gradient-primary { background: var(--gradient-primary); }
+.bg-gradient-secondary { background: var(--gradient-secondary); }
+.bg-gradient-spectral { background: var(--gradient-spectral); }
+
+/* Animation Classes */
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-pulse { animation: pulse 2s ease-in-out infinite; }
+.animate-glow { animation: glow 3s ease-in-out infinite; }
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(122, 185, 41, 0.3); }
+    50% { box-shadow: 0 0 30px rgba(122, 185, 41, 0.6); }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+    .c-header,
+    .c-footer,
+    .c-toast-container,
+    .c-loading-overlay {
+        display: none !important;
+    }
+    
+    body {
+        background: white;
+    }
+    
+    .c-card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}

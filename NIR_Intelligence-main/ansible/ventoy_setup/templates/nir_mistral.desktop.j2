@@ -1,0 +1,29 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=NIR_Mistral Framework
+Comment=Start the NIR_Mistral Django Server and Port Agent
+Exec={{ deploy_root }}/start_nir_mistral.sh
+Icon=/usr/share/icons/nir_mistral.png
+Terminal=true
+Categories=Development;System;Utility;
+StartupNotify=true
+StartupWMClass=NIR_Mistral
+
+[Desktop Action Start]
+Name=Start Services
+Exec={{ deploy_root }}/start_nir_mistral.sh start
+
+[Desktop Action Stop]
+Name=Stop Services
+Exec={{ deploy_root }}/start_nir_mistral.sh stop
+
+[Desktop Action Status]
+Name=Check Status
+Exec=gnome-terminal -- bash -c "{{ deploy_root }}/start_nir_mistral.sh status; read -p 'Press Enter to close...'"
+
+[Desktop Action Logs]
+Name=View Logs
+Exec=gnome-terminal -- bash -c "tail -f {{ deploy_root }}/logs/*.log; read -p 'Press Enter to close...'"
+
+Actions=Start;Stop;Status;Logs;

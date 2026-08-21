@@ -1,0 +1,18 @@
+[Unit]
+Description=NIR Mistral Spectral Analysis Platform
+After=network.target
+
+[Service]
+User={{ app_user }}
+Group={{ app_group }}
+WorkingDirectory={{ install_dir }}/django_project
+Environment="PATH={{ venv_dir }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONPATH={{ install_dir }}"
+ExecStart={{ venv_dir }}/bin/python {{ install_dir }}/django_project/manage.py runserver 0.0.0.0:{{ app_port }}
+Restart=always
+RestartSec=5
+StandardOutput=file:{{ log_dir }}/nir_mistral.out
+StandardError=file:{{ log_dir }}/nir_mistral.err
+
+[Install]
+WantedBy=multi-user.target

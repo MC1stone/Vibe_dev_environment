@@ -1,0 +1,35 @@
+{
+  "name": "AudioProcessorAgent",
+  "version": "1.0.0",
+  "description": "AudioProcessor for NIR Intelligence Platform",
+  "type": "data",
+  "dependencies": [
+    "pandas",
+    "numpy"
+  ],
+  "required_methods": [
+    "execute",
+    "_load_data",
+    "_validate_data",
+    "_preprocess_data"
+  ],
+  "configuration": {
+    "enabled": true,
+    "params": {
+      "input_directory": "data/raw",
+      "output_directory": "data/processed",
+      "default_format": "HDF5",
+      "batch_size": 1000
+    }
+  },
+  "quality_control": {
+    "min_performance": 0.8,
+    "max_errors": 0,
+    "timeout_seconds": 300
+  },
+  "documentation": {
+    "author": "NIR Development Team",
+    "created": "2026",
+    "updated": "2026"
+  }
+}

@@ -1,0 +1,1352 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Documentation - NIR_Mistral Framework{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="page-header">
+                    <h1 class="page-title"><i class="bi bi-book"></i> Documentation</h1>
+                    <p class="page-subtitle">Comprehensive documentation for the NIR_Mistral DeveloperAgent Framework</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Sidebar Navigation -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="bi bi-list"></i> Table of Contents</h5>
+                    </div>
+                    <div class="card-body">
+                        <nav class="nav flex-column doc-nav">
+                            <a class="nav-link active" href="#getting-started" onclick="showSection('getting-started')">
+                                <i class="bi bi-rocket"></i> Getting Started
+                            </a>
+                            <a class="nav-link" href="#installation" onclick="showSection('installation')">
+                                <i class="bi bi-download"></i> Installation
+                            </a>
+                            <a class="nav-link" href="#framework-overview" onclick="showSection('framework-overview')">
+                                <i class="bi bi-diagram-3"></i> Framework Overview
+                            </a>
+                            <a class="nav-link" href="#agents" onclick="showSection('agents')">
+                                <i class="bi bi-robot"></i> Agents
+                            </a>
+                            <a class="nav-link" href="#spectra-management" onclick="showSection('spectra-management')">
+                                <i class="bi bi-graph-up"></i> Spectra Management
+                            </a>
+                            <a class="nav-link" href="#analysis" onclick="showSection('analysis')">
+                                <i class="bi bi-calculator"></i> Analysis
+                            </a>
+                            <a class="nav-link" href="#api-reference" onclick="showSection('api-reference')">
+                                <i class="bi bi-code-slash"></i> API Reference
+                            </a>
+                            <a class="nav-link" href="#troubleshooting" onclick="showSection('troubleshooting')">
+                                <i class="bi bi-question-circle"></i> Troubleshooting
+                            </a>
+                            <a class="nav-link" href="#faq" onclick="showSection('faq')">
+                                <i class="bi bi-chat-dots"></i> FAQ
+                            </a>
+                            <a class="nav-link" href="#crewai" onclick="showSection('crewai')">
+                                <i class="bi bi-people-fill"></i> Crew AI Integration
+                            </a>
+                            <a class="nav-link" href="#federated-learning" onclick="showSection('federated-learning')">
+                                <i class="bi bi-cloud-arrow-up"></i> Federated Learning
+                            </a>
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="bi bi-lightning-charge"></i> Quick Links</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="https://github.com/martin/Development/vsCode_Environment/NIR_Mistral" 
+                               class="btn btn-outline-primary btn-sm" target="_blank">
+                                <i class="bi bi-github"></i> GitHub Repository
+                            </a>
+                            <a href="/api/" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-code-slash"></i> API Documentation
+                            </a>
+                            <a href="/admin/" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-person-workspace"></i> Admin Panel
+                            </a>
+                            <button class="btn btn-outline-primary btn-sm" onclick="downloadDocs()" type="button">
+                                <i class="bi bi-download"></i> Download Docs
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Version Info -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="bi bi-info-circle"></i> Version Info</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-6">Framework Version:</dt>
+                            <dd class="col-6" id="docFrameworkVersion">Loading...</dd>
+                            
+                            <dt class="col-6">Last Updated:</dt>
+                            <dd class="col-6" id="docLastUpdated">Loading...</dd>
+                            
+                            <dt class="col-6">Documentation Version:</dt>
+                            <dd class="col-6" id="docVersion">1.0.0</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-body">
+                        <!-- Getting Started Section -->
+                        <div id="getting-started" class="doc-section">
+                            <h2><i class="bi bi-rocket"></i> Getting Started</h2>
+                            <p class="lead">Welcome to the NIR_Mistral DeveloperAgent Framework! This guide will help you get started with using the framework for NIR spectroscopy analysis.</p>
+                            
+                            <h3>Prerequisites</h3>
+                            <ul>
+                                <li>Python 3.8+</li>
+                                <li>Django 4.2+</li>
+                                <li>PostgreSQL or SQLite</li>
+                                <li>Modern web browser</li>
+                            </ul>
+                            
+                            <h3>Quick Start</h3>
+                            <ol>
+                                <li>Install the framework using the <a href="#installation">installation guide</a></li>
+                                <li>Set up your database and run migrations</li>
+                                <li>Create a superuser account</li>
+                                <li>Start the development server</li>
+                                <li>Access the web interface at <code>http://localhost:8000</code></li>
+                            </ol>
+                            
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> 
+                                <strong>Tip:</strong> Check out the <a href="#framework-overview">Framework Overview</a> to understand the architecture.
+                            </div>
+                        </div>
+
+                        <!-- Installation Section -->
+                        <div id="installation" class="doc-section" style="display: none;">
+                            <h2><i class="bi bi-download"></i> Installation</h2>
+                            
+                            <h3>Method 1: Manual Installation</h3>
+                            <div class="card bg-light mb-3">
+                                <div class="card-body">
+                                    <pre><code># Clone the repository
+git clone https://github.com/martin/Development/vsCode_Environment/NIR_Mistral.git
+cd NIR_Mistral
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run migrations
+cd django_project
+python manage.py migrate
+
+# Create superuser
+python manage.py createsuperuser
+
+# Start development server
+python manage.py runserver</code></pre>
+                                </div>
+                            </div>
+                            
+                            <h3>Method 2: Docker Installation</h3>
+                            <div class="card bg-light mb-3">
+                                <div class="card-body">
+                                    <pre><code># Build and run with Docker
+docker-compose up -d
+
+# Access the application at http://localhost:8000</code></pre>
+                                </div>
+                            </div>
+                            
+                            <h3>Method 3: Ansible Deployment (Recommended for Production)</h3>
+                            <p>For production deployments, especially on Venty Stick devices, use the Ansible playbooks:</p>
+                            <pre><code># Navigate to ansible directory
+cd ansible
+
+# Install Ansible requirements
+ansible-galaxy install -r galaxy_requirements.yml
+
+# Run the setup playbook
+ansible-playbook -i inventory/hosts.yml playbooks/setup_venty_stick.yml</code></pre>
+                        </div>
+
+                        <!-- Framework Overview Section -->
+                        <div id="framework-overview" class="doc-section" style="display: none;">
+                            <h2><i class="bi bi-diagram-3"></i> Framework Overview</h2>
+                            
+                            <h3>Architecture</h3>
+                            <p>The NIR_Mistral DeveloperAgent Framework is built on a modular architecture with the following components:</p>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-primary text-white">
+                                            <h5 class="mb-0"><i class="bi bi-cpu"></i> Core Framework</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <ul>
+                                                <li><strong>Agent System:</strong> Manages and executes analysis agents</li>
+                                                <li><strong>Data Processing:</strong> Handles NIR spectroscopy data</li>
+                                                <li><strong>Job Management:</strong> Tracks analysis jobs and results</li>
+                                                <li><strong>Quality Control:</strong> Validates data quality</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-success text-white">
+                                            <h5 class="mb-0"><i class="bi bi-globe"></i> Web Interface</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <ul>
+                                                <li><strong>Dashboard:</strong> Overview of system status and recent activity</li>
+                                                <li><strong>Spectra Management:</strong> Upload, view, and manage NIR spectra</li>
+                                                <li><strong>Analysis:</strong> Run analysis using framework agents</li>
+                                                <li><strong>Jobs:</strong> Monitor and manage analysis jobs</li>
+                                                <li><strong>Agents:</strong> View and manage available agents</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h3>Data Flow</h3>
+                            <p>The typical data flow in the framework is:</p>
+                            <ol>
+                                <li><strong>Data Upload:</strong> Users upload NIR spectroscopy data in various formats</li>
+                                <li><strong>Data Processing:</strong> Data is parsed and stored in the database</li>
+                                <li><strong>Quality Control:</strong> Data quality is validated automatically</li>
+                                <li><strong>Analysis:</strong> Users select agents and parameters for analysis</li>
+                                <li><strong>Job Execution:</strong> Analysis jobs are executed by the framework</li>
+                                <li><strong>Results Storage:</strong> Results are stored and made available for viewing</li>
+                            </ol>
+                        </div>
+
+                        <!-- Agents Section -->
+                        <div id="agents" class="doc-section" style="display: none;">
+                            <h2><i class="bi bi-robot"></i> Agents</h2>
+                            
+                            <h3>What are Agents?</h3>
+                            <p>Agents in the NIR_Mistral framework are specialized modules that perform specific analysis tasks on NIR spectroscopy data. Each agent is designed to handle a particular type of analysis or data processing.</p>
+                            
+                            <h3>Available Agents</h3>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Agent Name</th>
+                                            <th>Version</th>
+                                            <th>Description</th>
+                                            <th>Analysis Type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="agentsTableBody">
+                                        <tr>
+                                            <td colspan="4" class="text-center">
+                                                <div class="spinner-border text-primary" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                                <p class="mt-2">Loading agents...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <h3>Creating Custom Agents</h3>
+                            <p>You can create custom agents by following these steps:</p>
+                            <ol>
+                                <li>Create a new Python file in the <code>agents/</code> directory</li>
+                                <li>Implement the <code>BaseAgent</code> interface</li>
+                                <li>Define your analysis methods</li>
+                                <li>Register your agent with the framework</li>
+                            </ol>
+                            
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5>Example Agent Structure</h5>
+                                    <pre><code>from dev_framework.agents import BaseAgent
+
+class MyCustomAgent(BaseAgent):
+    def __init__(self):
+        super().__init__(
+            name="MyCustomAgent",
+            version="1.0.0",
+            description="My custom analysis agent"
+        )
+    
+    def analyze(self, spectrum, parameters=None):
+        # Your analysis logic here
+        result = {
+            'mean_absorbance': spectrum.get_mean_absorbance(),
+            'peaks': spectrum.find_peaks()
+        }
+        return result</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Spectra Management Section -->
+                        <div id="spectra-management" class="doc-section" style="display: none;">
+                            <h2><i class="bi bi-graph-up"></i> Spectra Management</h2>
+                            
+                            <h3>Supported File Formats</h3>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-filetype-txt"></i> TXT Files</h5>
+                                            <p class="card-text">Plain text files with wavelength and absorbance columns. Supports various delimiters (comma, tab, space).</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-filetype-csv"></i> CSV Files</h5>
+                                            <p class="card-text">Comma-separated values format. First row should contain headers (wavelength, value).</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-filetype-json"></i> JSON Files</h5>
+                                            <p class="card-text">JSON format with wavelength and value arrays. Supports additional metadata.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h3>Uploading Spectra</h3>
+                            <ol>
+                                <li>Navigate to the <strong>Spectra</strong> page</li>
+                                <li>Click the <strong>Upload Spectrum</strong> button</li>
+                                <li>Fill in the spectrum information (name, ID, type)</li>
+                                <li>Select the spectrum file from your computer</li>
+                                <li>Optionally add metadata and description</li>
+                                <li>Click <strong>Upload</strong> to save the spectrum</li>
+                            </ol>
+                            
+                            <h3>Spectrum Metadata</h3>
+                            <p>Each spectrum can include metadata such as:</p>
+                            <ul>
+                                <li>Sample information (name, ID, type)</li>
+                                <li>Instrument details</li>
+                                <li>Measurement conditions (temperature, humidity, etc.)</li>
+                                <li>Custom properties</li>
+                            </ul>
+                        </div>
+
+                        <!-- Analysis Section -->
+                        <div id="analysis" class="doc-section" style="display: none;">
+                            <h2><i class="bi bi-calculator"></i> Analysis</h2>
+                            
+                            <h3>Analysis Types</h3>
+                            <div class="row">
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-graph-up"></i> Peak Detection</h5>
+                                            <p class="card-text">Identifies and analyzes spectral peaks using various algorithms (local maxima, derivatives).</p>
+                                            <h6>Parameters:</h6>
+                                            <ul>
+                                                <li>Method: local_maxima, first_derivative, second_derivative</li>
+                                                <li>Threshold: Minimum peak height</li>
+                                                <li>Minimum distance: Minimum distance between peaks</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-check-circle"></i> Quality Control</h5>
+                                            <p class="card-text">Validates data quality and integrity with comprehensive checks.</p>
+                                            <h6>Checks:</h6>
+                                            <ul>
+                                                <li>Wavelength range validation</li>
+                                                <li>Resolution verification</li>
+                                                <li>Data integrity (NaN/Inf detection)</li>
+                                                <li>Signal-to-noise ratio</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-bar-chart"></i> Statistical Analysis</h5>
+                                            <p class="card-text">Computes statistical metrics for the spectrum.</p>
+                                            <h6>Metrics:</h6>
+                                            <ul>
+                                                <li>Mean, median, standard deviation</li>
+                                                <li>Minimum, maximum, range</li>
+                                                <li>Skewness, kurtosis</li>
+                                                <li>Derivative analysis</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-people"></i> Comparative Analysis</h5>
+                                            <p class="card-text">Compares multiple spectra using various methods.</p>
+                                            <h6>Methods:</h6>
+                                            <ul>
+                                                <li>Overlay plot</li>
+                                                <li>Difference spectrum</li>
+                                                <li>Correlation analysis</li>
+                                                <li>Statistical comparison</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h3>Running an Analysis</h3>
+                            <ol>
+                                <li>Navigate to the <strong>Analysis</strong> page</li>
+                                <li>Select an analysis type from the available methods</li>
+                                <li>Choose a spectrum to analyze</li>
+                                <li>Select an agent to perform the analysis</li>
+                                <li>Configure analysis-specific parameters</li>
+                                <li>Click <strong>Start Analysis</strong> to begin</li>
+                                <li>Monitor progress in the <strong>Active Jobs</strong> section</li>
+                                <li>View results when the analysis completes</li>
+                            </ol>
+                        </div>
+
+                        <!-- API Reference Section -->
+                        <div id="api-reference" class="doc-section" style="display: none;">
+                            <h2><i class="bi bi-code-slash"></i> API Reference</h2>
+                            
+                            <h3>Authentication</h3>
+                            <p>The API uses JWT (JSON Web Token) authentication. Include the token in the Authorization header:</p>
+                            <pre><code>Authorization: Bearer &lt;your-token&gt;</code></pre>
+                            
+                            <h4>Token Endpoints</h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Endpoint</th>
+                                            <th>Method</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><code>/api/token/</code></td>
+                                            <td>POST</td>
+                                            <td>Obtain JWT token</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/token/refresh/</code></td>
+                                            <td>POST</td>
+                                            <td>Refresh JWT token</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <h3>Endpoints</h3>
+                            
+                            <h4>Agents</h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Endpoint</th>
+                                            <th>Method</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><code>/api/agents/</code></td>
+                                            <td>GET</td>
+                                            <td>List all available agents</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/agents/{name}/</code></td>
+                                            <td>GET</td>
+                                            <td>Get agent details</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/agents/{name}/execute/</code></td>
+                                            <td>POST</td>
+                                            <td>Execute an agent</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <h4>Spectra</h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Endpoint</th>
+                                            <th>Method</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><code>/api/spectra/</code></td>
+                                            <td>GET</td>
+                                            <td>List all spectra</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/spectra/</code></td>
+                                            <td>POST</td>
+                                            <td>Upload a new spectrum</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/spectra/{id}/</code></td>
+                                            <td>GET</td>
+                                            <td>Get spectrum details</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/spectra/{id}/</code></td>
+                                            <td>DELETE</td>
+                                            <td>Delete a spectrum</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/spectra/{id}/analyze/</code></td>
+                                            <td>POST</td>
+                                            <td>Analyze a spectrum</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <h4>Jobs</h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Endpoint</th>
+                                            <th>Method</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><code>/api/jobs/</code></td>
+                                            <td>GET</td>
+                                            <td>List all jobs</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/jobs/</code></td>
+                                            <td>POST</td>
+                                            <td>Create a new job</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/jobs/{id}/</code></td>
+                                            <td>GET</td>
+                                            <td>Get job details</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/jobs/{id}/cancel/</code></td>
+                                            <td>POST</td>
+                                            <td>Cancel a job</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/jobs/{id}/</code></td>
+                                            <td>DELETE</td>
+                                            <td>Delete a job</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Troubleshooting Section -->
+                        <div id="troubleshooting" class="doc-section" style="display: none;">
+                            <h2><i class="bi bi-question-circle"></i> Troubleshooting</h2>
+                            
+                            <h3>Common Issues</h3>
+                            
+                            <div class="accordion" id="troubleshootingAccordion">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                                                data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                            Cannot connect to database
+                                        </button>
+                                    </h2>
+                                    <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#troubleshootingAccordion">
+                                        <div class="accordion-body">
+                                            <p><strong>Solution:</strong> Check your database connection settings in <code>settings.py</code>.</p>
+                                            <ul>
+                                                <li>Verify database server is running</li>
+                                                <li>Check connection credentials</li>
+                                                <li>Test connection manually using database client</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                            File upload fails
+                                        </button>
+                                    </h2>
+                                    <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                        <div class="accordion-body">
+                                            <p><strong>Solution:</strong> Check file format and size limits.</p>
+                                            <ul>
+                                                <li>Ensure file is in supported format (TXT, CSV, JSON)</li>
+                                                <li>Check file size doesn't exceed maximum limit</li>
+                                                <li>Verify file contains required columns (wavelength, value)</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                            Analysis jobs stuck in pending state
+                                        </button>
+                                    </h2>
+                                    <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                        <div class="accordion-body">
+                                            <p><strong>Solution:</strong> Check worker processes and queue system.</p>
+                                            <ul>
+                                                <li>Verify Celery worker is running</li>
+                                                <li>Check Redis server connection</li>
+                                                <li>Restart worker processes</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h3>Error Codes</h3>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Code</th>
+                                            <th>Description</th>
+                                            <th>Solution</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><code>400</code></td>
+                                            <td>Bad Request</td>
+                                            <td>Check request parameters and format</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>401</code></td>
+                                            <td>Unauthorized</td>
+                                            <td>Verify authentication token</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>403</code></td>
+                                            <td>Forbidden</td>
+                                            <td>Check user permissions</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>404</code></td>
+                                            <td>Not Found</td>
+                                            <td>Verify endpoint URL</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>500</code></td>
+                                            <td>Internal Server Error</td>
+                                            <td>Check server logs for details</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Crew AI Integration Section -->
+                        <div id="crewai" class="doc-section" style="display: none;">
+                            <h2><i class="bi bi-people-fill"></i> Crew AI Integration</h2>
+                            
+                            <h3>Overview</h3>
+                            <p>The NIR_Mistral framework integrates <strong>Crew AI</strong> to provide intelligent, automated analysis workflows. Crew AI enables the orchestration of multiple specialized agents working together to perform comprehensive NIR spectral analysis.</p>
+                            
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> 
+                                <strong>Crew AI Features:</strong> Multi-agent orchestration, task delegation, result aggregation, and intelligent workflow management.
+                            </div>
+                            
+                            <div id="crewaiStatus">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading Crew AI status...</span>
+                                </div>
+                                <p class="mt-2">Loading Crew AI status...</p>
+                            </div>
+                            
+                            <h3>Available Crew AI Agents</h3>
+                            <p>The framework includes the following specialized Crew AI agents:</p>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-graph-up"></i> SpectralAnalysisAgent</h5>
+                                            <p class="card-text">Performs comprehensive spectral analysis including quality assessment, peak detection, and statistical analysis.</p>
+                                            <h6>Capabilities:</h6>
+                                            <ul>
+                                                <li>Quality scoring and grading</li>
+                                                <li>Wavelength range validation</li>
+                                                <li>Noise level detection</li>
+                                                <li>Signal-to-noise ratio calculation</li>
+                                                <li>Shift detection</li>
+                                                <li>Data point analysis</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-check-circle"></i> MetadataQualityAgent</h5>
+                                            <p class="card-text">Assesses the quality and completeness of spectrum metadata using comprehensive validation rules.</p>
+                                            <h6>Capabilities:</h6>
+                                            <ul>
+                                                <li>Completeness scoring</li>
+                                                <li>Accuracy validation</li>
+                                                <li>Consistency checking</li>
+                                                <li>Required field detection</li>
+                                                <li>Enhancement recommendations</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-file-earmark-text"></i> ReportingAgent</h5>
+                                            <p class="card-text">Generates comprehensive reports in multiple formats (HTML, PDF, DOCX, Markdown, Quarto) with customizable templates.</p>
+                                            <h6>Capabilities:</h6>
+                                            <ul>
+                                                <li>Multi-format report generation</li>
+                                                <li>Quarto template support</li>
+                                                <li>HTML preview generation</li>
+                                                <li>Custom template creation</li>
+                                                <li>Report caching and management</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-calculator"></i> CalibrationAgent</h5>
+                                            <p class="card-text">Handles spectrometer calibration, wavelength correction, and instrument validation for accurate measurements.</p>
+                                            <h6>Capabilities:</h6>
+                                            <ul>
+                                                <li>Wavelength calibration</li>
+                                                <li>Intensity correction</li>
+                                                <li>Instrument validation</li>
+                                                <li>Calibration curve generation</li>
+                                                <li>Reference material analysis</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-flower"></i> FlowerAgent</h5>
+                                            <p class="card-text">Implements federated learning capabilities for collaborative model training while preserving data privacy.</p>
+                                            <h6>Capabilities:</h6>
+                                            <ul>
+                                                <li>Federated learning workflows</li>
+                                                <li>Privacy-preserving data contribution</li>
+                                                <li>Model aggregation</li>
+                                                <li>Local vs. public data controls</li>
+                                                <li>Consent management</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h3>Crew AI API Endpoints</h3>
+                            <p>The following API endpoints are available for Crew AI integration:</p>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Endpoint</th>
+                                            <th>Method</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><code>/api/crewai/analysis/start/</code></td>
+                                            <td>POST</td>
+                                            <td>Start a new spectral analysis with Crew AI</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/crewai/analysis/status/</code></td>
+                                            <td>GET</td>
+                                            <td>Get status of a specific analysis</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/crewai/analysis/history/</code></td>
+                                            <td>GET</td>
+                                            <td>Get analysis history</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/crewai/analysis/batch/</code></td>
+                                            <td>POST</td>
+                                            <td>Perform batch analysis on multiple samples</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/crewai/reports/preview/</code></td>
+                                            <td>GET</td>
+                                            <td>Get preview of a generated report</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/crewai/reports/list/</code></td>
+                                            <td>GET</td>
+                                            <td>List all generated reports</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/crewai/status/</code></td>
+                                            <td>GET</td>
+                                            <td>Get Crew AI system status</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/crewai/cleanup/</code></td>
+                                            <td>POST</td>
+                                            <td>Clean up old analysis resources</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/crewai/federated/contribute/</code></td>
+                                            <td>POST</td>
+                                            <td>Contribute data to federated learning</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <h3>Using Crew AI in Analysis</h3>
+                            <p>To use Crew AI for spectral analysis:</p>
+                            <ol>
+                                <li>Navigate to the <strong>Analysis</strong> page</li>
+                                <li>Select <strong>Crew AI Analysis</strong> as the analysis method</li>
+                                <li>Choose the analysis mode (Standard, Comprehensive, Quick, or Batch)</li>
+                                <li>Select the desired agents for your analysis</li>
+                                <li>Configure analysis parameters and privacy settings</li>
+                                <li>Upload your spectral data or select from existing spectra</li>
+                                <li>Click <strong>Start Crew AI Analysis</strong></li>
+                                <li>Monitor progress in real-time</li>
+                                <li>View comprehensive results and generated reports</li>
+                            </ol>
+                            
+                            <h3>Analysis Modes</h3>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-gear"></i> Standard Mode</h5>
+                                            <p class="card-text">Balanced analysis with all core agents (Spectral, Metadata, Reporting, Calibration).</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-stars"></i> Comprehensive Mode</h5>
+                                            <p class="card-text">Full analysis with all agents including advanced features and detailed reporting.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-lightning-charge"></i> Quick Mode</h5>
+                                            <p class="card-text">Fast analysis with essential agents only, optimized for speed.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-collection"></i> Batch Mode</h5>
+                                            <p class="card-text">Process multiple spectra simultaneously with optimized resource usage.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h3>Privacy Levels</h3>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-shield-fill-check"></i> Local Only</h5>
+                                            <p class="card-text">Data remains on your local system only. No external sharing.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-shield-fill-plus"></i> Public Federated</h5>
+                                            <p class="card-text">Data can be shared with federated learning network for collaborative model improvement.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-shield-fill-exclamation"></i> Private Federated</h5>
+                                            <p class="card-text">Data is used for federated learning but with enhanced privacy protections.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h3>Report Types</h3>
+                            <p>The framework supports the following report types:</p>
+                            <ul>
+                                <li><strong>Spectral Analysis:</strong> Focused on spectral data analysis and quality metrics</li>
+                                <li><strong>Metadata Quality:</strong> Detailed assessment of metadata completeness and accuracy</li>
+                                <li><strong>Comprehensive:</strong> Complete analysis including spectral, metadata, and calibration results</li>
+                                <li><strong>Comparison:</strong> Comparative analysis of multiple spectra</li>
+                                <li><strong>Calibration:</strong> Calibration-specific analysis and recommendations</li>
+                            </ul>
+                            
+                            <h3>Example API Usage</h3>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5>Starting a Crew AI Analysis</h5>
+                                    <pre><code>POST /api/crewai/analysis/start/
+Content-Type: application/json
+
+{
+    "sample_id": "my_sample_001",
+    "spectral_data": {
+        "wavelengths": [700, 710, 720, 730, 740],
+        "intensities": [0.1, 0.2, 0.3, 0.4, 0.5]
+    },
+    "metadata": {
+        "instrument_type": "DIY Spectrometer",
+        "measurement_date": "2026-08-05T10:00:00Z",
+        "sample_name": "Test Sample"
+    },
+    "analysis_mode": "comprehensive",
+    "privacy_level": "local_only",
+    "report_type": "comprehensive",
+    "report_format": "html",
+    "include_calibration": true,
+    "include_federated_learning": false
+}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Federated Learning Section -->
+                        <div id="federated-learning" class="doc-section" style="display: none;">
+                            <h2><i class="bi bi-cloud-arrow-up"></i> Federated Learning</h2>
+                            
+                            <h3>Overview</h3>
+                            <p><strong>Federated Learning</strong> enables collaborative model training across multiple devices and locations without sharing raw data. This preserves privacy while allowing the development of more robust and accurate models.</p>
+                            
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle"></i> 
+                                <strong>Privacy First:</strong> Your data remains on your device. Only model updates are shared, never the raw data.
+                            </div>
+                            
+                            <h3>How Federated Learning Works</h3>
+                            <ol>
+                                <li><strong>Local Training:</strong> Each participant trains a model on their local data</li>
+                                <li><strong>Model Updates:</strong> Only model parameters (not data) are shared with the central server</li>
+                                <li><strong>Aggregation:</strong> The central server aggregates updates from multiple participants</li>
+                                <li><strong>Improved Model:</strong> An enhanced global model is created and distributed back to participants</li>
+                                <li><strong>Iterative Process:</strong> The cycle continues, improving the model with each round</li>
+                            </ol>
+                            
+                            <h3>Benefits of Federated Learning</h3>
+                            <div class="row">
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-shield-fill-check"></i> Data Privacy</h5>
+                                            <p class="card-text">Raw data never leaves your device. Only model updates are shared, ensuring complete privacy.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-people-fill"></i> Collaborative Improvement</h5>
+                                            <p class="card-text">Benefit from the collective knowledge of the entire network while maintaining data privacy.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-cpu"></i> Scalable Learning</h5>
+                                            <p class="card-text">The model improves as more participants join, scaling with the network size.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><i class="bi bi-globe"></i> Distributed Computing</h5>
+                                            <p class="card-text">Leverage computing resources across multiple devices for faster model training.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h3>Privacy Controls</h3>
+                            <p>The framework provides granular privacy controls for federated learning:</p>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Privacy Level</th>
+                                            <th>Description</th>
+                                            <th>Data Sharing</th>
+                                            <th>Model Sharing</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Local Only</strong></td>
+                                            <td>Data stays completely local</td>
+                                            <td><i class="bi bi-x-circle-fill text-danger"></i> No</td>
+                                            <td><i class="bi bi-x-circle-fill text-danger"></i> No</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Private Federated</strong></td>
+                                            <td>Enhanced privacy with federated learning</td>
+                                            <td><i class="bi bi-x-circle-fill text-danger"></i> No</td>
+                                            <td><i class="bi bi-check-circle-fill text-success"></i> Yes</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Public Federated</strong></td>
+                                            <td>Standard federated learning participation</td>
+                                            <td><i class="bi bi-x-circle-fill text-danger"></i> No</td>
+                                            <td><i class="bi bi-check-circle-fill text-success"></i> Yes</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <h3>Contributing to Federated Learning</h3>
+                            <p>To contribute your data to federated learning:</p>
+                            <ol>
+                                <li>Navigate to the <strong>Settings</strong> page</li>
+                                <li>Go to the <strong>Federated Learning</strong> section</li>
+                                <li>Review the privacy policy and terms of service</li>
+                                <li>Select your preferred privacy level</li>
+                                <li>Enable federated learning participation</li>
+                                <li>Provide explicit consent for data contribution</li>
+                                <li>Your data will be used for local training, and only model updates will be shared</li>
+                            </ol>
+                            
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i> 
+                                <strong>Important:</strong> You must provide explicit consent before participating in federated learning. You can withdraw consent at any time.
+                            </div>
+                            
+                            <h3>Federated Learning API</h3>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5>Contributing Data to Federated Learning</h5>
+                                    <pre><code>POST /api/crewai/federated/contribute/
+Content-Type: application/json
+Authorization: Bearer &lt;your-token&gt;
+
+{
+    "sample_id": "federated_sample_001",
+    "spectral_data": {
+        "wavelengths": [700, 710, 720, 730, 740],
+        "intensities": [0.1, 0.2, 0.3, 0.4, 0.5]
+    },
+    "metadata": {
+        "instrument_type": "DIY Spectrometer",
+        "measurement_date": "2026-08-05T10:00:00Z"
+    },
+    "analysis_results": {
+        "quality_score": 0.95,
+        "peaks_detected": [720, 740]
+    },
+    "privacy_level": "public_federated",
+    "consent_given": true
+}</code></pre>
+                                </div>
+                            </div>
+                            
+                            <h3>Monitoring Federated Learning</h3>
+                            <p>You can monitor your federated learning participation through:</p>
+                            <ul>
+                                <li><strong>Dashboard:</strong> View overall federated learning statistics</li>
+                                <li><strong>Contribution History:</strong> Track your data contributions and their impact</li>
+                                <li><strong>Model Performance:</strong> Monitor the performance of federated models</li>
+                                <li><strong>Privacy Settings:</strong> Manage your privacy preferences and consent</li>
+                            </ul>
+                        </div>
+                        
+                        <!-- FAQ Section -->
+                        <div id="faq" class="doc-section" style="display: none;">
+                            <h2><i class="bi bi-chat-dots"></i> Frequently Asked Questions</h2>
+                            
+                            <div class="accordion" id="faqAccordion">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                                                data-bs-target="#faqOne" aria-expanded="true" aria-controls="faqOne">
+                                            What is the NIR_Mistral DeveloperAgent Framework?
+                                        </button>
+                                    </h2>
+                                    <div id="faqOne" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                                        <div class="accordion-body">
+                                            <p>The NIR_Mistral DeveloperAgent Framework is a comprehensive system for NIR (Near-Infrared) spectroscopy analysis. It provides tools for data management, analysis, and visualization using specialized agents that can be customized for different analysis tasks.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                data-bs-target="#faqTwo" aria-expanded="false" aria-controls="faqTwo">
+                                            How do I create a custom agent?
+                                        </button>
+                                    </h2>
+                                    <div id="faqTwo" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                        <div class="accordion-body">
+                                            <p>To create a custom agent, create a new Python file in the <code>agents/</code> directory and implement the <code>BaseAgent</code> interface. Define your analysis methods and register the agent with the framework. See the <a href="#agents">Agents section</a> for more details.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                data-bs-target="#faqThree" aria-expanded="false" aria-controls="faqThree">
+                                            What file formats are supported for spectra?
+                                        </button>
+                                    </h2>
+                                    <div id="faqThree" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                        <div class="accordion-body">
+                                            <p>The framework supports TXT, CSV, and JSON file formats for NIR spectroscopy data. Each format should contain wavelength and absorbance/value columns. See the <a href="#spectra-management">Spectra Management section</a> for details.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                data-bs-target="#faqFour" aria-expanded="false" aria-controls="faqFour">
+                                            How do I deploy the framework to a Venty Stick?
+                                        </button>
+                                    </h2>
+                                    <div id="faqFour" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                        <div class="accordion-body">
+                                            <p>For Venty Stick deployment, use the Ansible playbooks provided in the <code>ansible/</code> directory. Run the setup playbook with the appropriate inventory file. See the <a href="#installation">Installation section</a> for detailed instructions.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFrameworkInfo();
+            loadAgents();
+            loadCrewAIStatus();
+            
+            // Show the first section by default
+            showSection('getting-started');
+        });
+
+        function loadFrameworkInfo() {
+            axios.get('/api/health/')
+                .then(function(response) {
+                    const health = response.data;
+                    document.getElementById('docFrameworkVersion').textContent = health.version || 'Unknown';
+                    document.getElementById('docLastUpdated').textContent = new Date().toLocaleDateString();
+                })
+                .catch(function(error) {
+                    console.error('Error loading framework info:', error);
+                });
+        }
+
+        function loadAgents() {
+            axios.get('/api/agents/')
+                .then(function(response) {
+                    const agents = response.data.results || [];
+                    const tableBody = document.getElementById('agentsTableBody');
+                    
+                    if (agents.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="4" class="text-center">No agents available</td></tr>';
+                        return;
+                    }
+                    
+                    tableBody.innerHTML = agents.map(agent => `
+                        <tr>
+                            <td>${agent.name || 'N/A'}</td>
+                            <td>${agent.version || 'N/A'}</td>
+                            <td>${agent.description || 'No description'}</td>
+                            <td>${agent.analysis_types ? agent.analysis_types.join(', ') : 'N/A'}</td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(function(error) {
+                    console.error('Error loading agents:', error);
+                });
+        }
+        
+        function loadCrewAIStatus() {
+            axios.get('/api/crewai/status/')
+                .then(function(response) {
+                    const status = response.data;
+                    if (status.available) {
+                        document.getElementById('crewaiStatus').innerHTML = `
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle"></i> 
+                                <strong>Crew AI Status:</strong> Available and running
+                                <ul class="mt-2">
+                                    <li>CrewAI Enabled: ${status.crewai_enabled ? 'Yes' : 'No'}</li>
+                                    <li>Federated Learning: ${status.federated_learning_enabled ? 'Enabled' : 'Disabled'}</li>
+                                    <li>Analysis History: ${status.analysis_history_count} analyses</li>
+                                    <li>Max Batch Size: ${status.max_batch_size}</li>
+                                </ul>
+                            </div>
+                        `;
+                    } else {
+                        document.getElementById('crewaiStatus').innerHTML = `
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i> 
+                                <strong>Crew AI Status:</strong> Not available
+                            </div>
+                        `;
+                    }
+                })
+                .catch(function(error) {
+                    // If service is unavailable, show as not available
+                    document.getElementById('crewaiStatus').innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> 
+                            <strong>Crew AI Status:</strong> Service not available
+                        </div>
+                    `;
+                    console.debug('Crew AI status check failed:', error.message);
+                });
+        }
+
+        function showSection(sectionId) {
+            // Hide all sections
+            const sections = document.querySelectorAll('.doc-section');
+            sections.forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Remove active class from all nav links
+            const navLinks = document.querySelectorAll('.doc-nav .nav-link');
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Show the selected section
+            const selectedSection = document.getElementById(sectionId);
+            if (selectedSection) {
+                selectedSection.style.display = 'block';
+            }
+            
+            // Add active class to the selected nav link
+            const selectedLink = document.querySelector(`.doc-nav .nav-link[href="#${sectionId}"]`);
+            if (selectedLink) {
+                selectedLink.classList.add('active');
+            }
+            
+            // Scroll to top of content
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function downloadDocs() {
+            showSuccess('Documentation download functionality coming soon!');
+        }
+
+        function showSuccess(message) {
+            showToast('Success!', message, 'success');
+        }
+
+        function showToast(title, message, type) {
+            const toastContainer = document.getElementById('toastContainer') || 
+                createToastContainer();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.role = 'alert';
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <strong>${title}</strong> ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" 
+                            data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 5000 });
+            bsToast.show();
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'position-fixed bottom-0 end-0 p-3';
+            container.style.zIndex = '11';
+            document.body.appendChild(container);
+            return container;
+        }
+    </script>
+{% endblock %}

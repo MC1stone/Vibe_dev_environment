@@ -1,0 +1,36 @@
+upstream nir_mistral {
+    server 127.0.0.1:{{ app_port }};
+    keepalive 32;
+}
+
+server {
+    listen 80;
+    server_name {{ ansible_default_ipv4.address }};
+    
+    client_max_body_size 100M;
+    
+    location /static/ {
+        alias {{ install_dir }}/django_project/static/;
+        expires 30d;
+    }
+    
+    location /media/ {
+        alias {{ install_dir }}/django_project/media/;
+        expires 30d;
+    }
+    
+    location / {
+        proxy_pass http://nir_mistral;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
+    
+    # Error pages
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+    }
+}

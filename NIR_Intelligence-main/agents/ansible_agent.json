@@ -1,0 +1,313 @@
+{
+  "agent_id": "ansible_agent",
+  "name": "AnsibleAgent",
+  "version": "1.0.0",
+  "role": "Infrastructure Automation and System Deployment",
+  "description": "Responsible for implementing server and client versions of the NIR Intelligence Platform using Ansible, enabling easy self-hosted deployment and automatic system updates.",
+  "capabilities": [
+    "infrastructure_provisioning",
+    "configuration_management",
+    "deployment_automation",
+    "system_updates",
+    "federated_client_setup",
+    "self_hosted_server_setup",
+    "tools_orchestration",
+    "version_management"
+  ],
+  "dependencies": ["docker_agent", "uvx_agent"],
+  "responsibilities": [
+    "Create Ansible playbooks for platform deployment",
+    "Implement server version for self-hosted installations",
+    "Develop client version for local/user installations",
+    "Enable federated client setup for remote server access",
+    "Automate system updates and version management",
+    "Orchestrate tool integration and dependencies",
+    "Ensure consistent configuration across environments",
+    "Provide rollback capabilities for failed deployments",
+    "Monitor system health and performance"
+  ],
+  "deployment_modes": [
+    {
+      "name": "Self-Hosted Server",
+      "description": "Complete server installation with all components",
+      "components": [
+        "docker_containers",
+        "database_services",
+        "web_interface",
+        "api_services",
+        "analysis_engines",
+        "monitoring_tools"
+      ],
+      "requirements": {
+        "cpu": "4+ cores",
+        "ram": "8GB+",
+        "storage": "100GB+",
+        "os": ["Ubuntu 22.04", "CentOS 8", "Debian 11"]
+      },
+      "estimated_deployment_time": "30 minutes"
+    },
+    {
+      "name": "Self-Hosted Client",
+      "description": "Local installation with reduced requirements",
+      "components": [
+        "core_analysis_tools",
+        "local_database",
+        "basic_web_interface",
+        "client_api"
+      ],
+      "requirements": {
+        "cpu": "2+ cores",
+        "ram": "4GB+",
+        "storage": "50GB+",
+        "os": ["Ubuntu 22.04", "CentOS 8", "Debian 11", "Windows 10/11", "macOS 12+"]
+      },
+      "estimated_deployment_time": "15 minutes"
+    },
+    {
+      "name": "Federated Client",
+      "description": "Lightweight client connecting to remote server",
+      "components": [
+        "client_application",
+        "api_connector",
+        "local_cache",
+        "user_interface"
+      ],
+      "requirements": {
+        "cpu": "1+ core",
+        "ram": "2GB+",
+        "storage": "10GB+",
+        "os": ["Ubuntu 22.04", "CentOS 8", "Debian 11", "Windows 10/11", "macOS 12+"]
+      },
+      "estimated_deployment_time": "5 minutes"
+    }
+  ],
+  "ansible_components": {
+    "playbooks": [
+      {
+        "name": "server_deployment.yml",
+        "description": "Deploy complete server environment",
+        "tags": ["docker", "database", "web", "api", "monitoring"]
+      },
+      {
+        "name": "client_deployment.yml",
+        "description": "Deploy client application",
+        "tags": ["client", "ui", "api_connector"]
+      },
+      {
+        "name": "update_system.yml",
+        "description": "System update and version management",
+        "tags": ["update", "version", "backup"]
+      },
+      {
+        "name": "tools_orchestration.yml",
+        "description": "Integrate and configure all tools",
+        "tags": ["tools", "integration", "configuration"]
+      },
+      {
+        "name": "health_check.yml",
+        "description": "System health monitoring and reporting",
+        "tags": ["health", "monitoring", "reporting"]
+      }
+    ],
+    "roles": [
+      {
+        "name": "docker_setup",
+        "description": "Configure Docker environment"
+      },
+      {
+        "name": "database_setup",
+        "description": "Configure database services"
+      },
+      {
+        "name": "web_interface",
+        "description": "Deploy web interface"
+      },
+      {
+        "name": "api_services",
+        "description": "Configure API services"
+      },
+      {
+        "name": "client_config",
+        "description": "Client application configuration"
+      }
+    ],
+    "inventory": {
+      "groups": [
+        "servers",
+        "clients",
+        "databases",
+        "monitoring",
+        "development",
+        "production"
+      ],
+      "variables": {
+        "common": ["ansible_user", "ansible_ssh_private_key_file"],
+        "server_specific": ["docker_version", "database_password", "admin_email"],
+        "client_specific": ["server_url", "api_key", "local_cache_size"]
+      }
+    }
+  },
+  "update_management": {
+    "version_check": {
+      "frequency": "daily",
+      "sources": [
+        "github_releases",
+        "docker_hub",
+        "pypi",
+        "custom_repository"
+      ],
+      "notification": ["email", "slack", "in_app"]
+    },
+    "update_process": {
+      "pre_update": [
+        "backup_configuration",
+        "backup_database",
+        "notify_users",
+        "check_dependencies"
+      ],
+      "update_steps": [
+        "download_packages",
+        "stop_services",
+        "install_updates",
+        "migrate_database",
+        "start_services",
+        "verify_installation"
+      ],
+      "post_update": [
+        "health_check",
+        "notify_success",
+        "log_update",
+        "cleanup"
+      ]
+    },
+    "rollback": {
+      "enabled": true,
+      "strategy": "automatic_on_failure",
+      "backup_retention": 3,
+      "max_rollback_time": "1 hour"
+    },
+    "update_scheduling": {
+      "automatic": {
+        "enabled": true,
+        "window": "maintenance_window",
+        "max_attempts": 3
+      },
+      "manual": {
+        "enabled": true,
+        "require_confirmation": true
+      }
+    }
+  },
+  "tools_orchestration": {
+    "supported_tools": [
+      "docker",
+      "postgresql",
+      "weaviate",
+      "faiss",
+      "django",
+      "quarto",
+      "flower",
+      "ilias_integration",
+      "mcp_server"
+    ],
+    "integration_methods": [
+      "docker_compose",
+      "systemd_services",
+      "environment_variables",
+      "configuration_files",
+      "api_endpoints"
+    ],
+    "dependency_management": {
+      "resolution": "automatic",
+      "conflict_handling": "version_pinning",
+      "testing": "pre_integration"
+    }
+  },
+  "performance_requirements": {
+    "deployment_time": {
+      "server": "< 30 minutes",
+      "client": "< 15 minutes",
+      "federated_client": "< 5 minutes"
+    },
+    "update_time": {
+      "minor": "< 10 minutes",
+      "major": "< 30 minutes",
+      "security": "< 15 minutes"
+    },
+    "resource_usage": {
+      "cpu": "< 50% during deployment",
+      "memory": "< 2GB overhead",
+      "network": "< 100MB transfer"
+    },
+    "success_rate": "99%+"
+  },
+  "security": {
+    "authentication": "ssh_key_based",
+    "encryption": "aes_256",
+    "secrets_management": "ansible_vault",
+    "audit_logging": true,
+    "compliance": ["CIS_benchmarks", "NIST_standards"]
+  },
+  "error_handling": {
+    "retry_policy": {
+      "max_attempts": 3,
+      "backoff": "exponential",
+      "timeout": 300
+    },
+    "fallback_strategies": {
+      "deployment_failure": "rollback_to_previous_version",
+      "update_failure": "restore_from_backup",
+      "connection_failure": "retry_with_increased_timeout"
+    },
+    "notification": {
+      "critical_errors": ["admin_email", "slack_alert", "sms"],
+      "warnings": ["admin_email", "in_app_notification"],
+      "info": ["in_app_notification", "log_only"]
+    }
+  },
+  "monitoring": {
+    "health_checks": [
+      "service_availability",
+      "resource_usage",
+      "response_time",
+      "dependency_status"
+    ],
+    "alerting": {
+      "thresholds": {
+        "cpu": 80,
+        "memory": 85,
+        "disk": 90,
+        "response_time": 5000
+      },
+      "channels": ["email", "slack", "pagerduty"],
+      "escalation": "3_levels"
+    },
+    "reporting": {
+      "frequency": "daily",
+      "formats": ["PDF", "JSON", "dashboard"],
+      "recipients": ["administrators", "devops_team"]
+    }
+  },
+  "dependencies": {
+    "required_software": [
+      "ansible>=2.14.0",
+      "docker>=20.10.0",
+      "docker-compose>=1.29.0",
+      "python>=3.8.0",
+      "git>=2.30.0"
+    ],
+    "python_libraries": [
+      "ansible-runner>=2.0.0",
+      "docker>=6.0.0",
+      "requests>=2.28.0",
+      "pyyaml>=6.0.0",
+      "jinja2>=3.1.0"
+    ],
+    "system_requirements": [
+      "ssh_access",
+      "sudo_privileges",
+      "internet_connectivity",
+      "sufficient_disk_space"
+    ]
+  }
+}

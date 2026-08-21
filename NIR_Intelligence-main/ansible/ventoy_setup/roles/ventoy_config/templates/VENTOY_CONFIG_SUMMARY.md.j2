@@ -1,0 +1,629 @@
+# NIR_Mistral Framework - Ventoy Configuration Summary
+
+## 🚀 Deployment Summary
+
+This document provides a comprehensive summary of the NIR_Mistral Framework deployment on your Ventoy stick.
+
+## 📋 Configuration Overview
+
+### Deployment Details
+- **Timestamp**: {{ ansible_date_time.iso8601 }}
+- **Target System**: {{ inventory_hostname | default('ventoy_stick') }}
+- **Environment**: {{ environment | default('production') }}
+- **Project Name**: {{ project_name | default('nir_mistral') }}
+
+### Path Configuration
+```
+Project Root:     {{ project_root }}
+Deploy Root:     {{ deploy_root }}
+Virtual Env:     {{ venv_path }}
+Django Project:  {{ django_project_path }}
+Port Agent:      {{ port_agent_path }}
+Ventoy Mount:    {{ ventoy_mount_point }}
+Ventoy ISO:      {{ ventoy_iso_path }}
+```
+
+### Port Configuration
+- **Django Server**: {{ django_port }}
+- **Port Agent**: {{ port_agent_port }}
+- **Open Ports**: {{ open_ports | default([8000, 8001, 8080, 5432, 6379, 9200]) | join(', ') }}
+
+### Service Configuration
+- **Service User**: {{ service_user | default('nir_mistral') }}
+- **Service Group**: {{ service_group | default('nir_mistral') }}
+- **Systemd Services**: {{ create_systemd_services | default(True) | lower }}
+- **Firewall Enabled**: {{ firewall_enabled | default(False) | lower }}
+- **Docker Enabled**: {{ docker_enabled | default(False) | lower }}
+
+## 🏗️ System Preparation
+
+### Dependencies Installed
+- ✅ Python 3 and pip
+- ✅ Virtual environment
+- ✅ Development tools (if development mode)
+- ✅ System utilities
+- ✅ Network tools (curl, net-tools)
+- ✅ Process management tools
+
+### System Configuration
+- ✅ Swap file: {{ swap_file_size | default('2G') }} ({{ create_swap_file | default(True) | lower }})
+- ✅ System limits: /etc/security/limits.d/nir_mistral.conf
+- ✅ Environment variables: /etc/profile.d/nir_mistral.sh
+- ✅ Firewall rules ({{ firewall_enabled | default(False) | lower }})
+- ✅ Docker ({{ docker_enabled | default(False) | lower }})
+
+## 🐍 Django Server Setup
+
+### Django Configuration
+- **Settings Module**: {{ django_settings_module }}
+- **Debug Mode**: {{ django_debug | default(False) | lower }}
+- **Bind Address**: {{ django_bind_address | default('0.0.0.0') }}
+- **Workers**: {{ django_workers | default(4) }}
+- **Timeout**: {{ django_timeout | default(300) }} seconds
+
+### Django Features
+- ✅ Port management integration
+- ✅ REST API endpoints
+- ✅ Management commands
+- ✅ Middleware integration
+- ✅ Health check endpoints
+
+### Django Files
+```
+{{ django_project_path }}/
+├── manage.py
+├── nir_web/
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+└── port_manager/
+    ├── middleware.py
+    ├── views.py
+    ├── urls.py
+    └── management/
+        └── commands/
+            ├── check_ports.py
+            └── reserve_port.py
+```
+
+## 🎯 Port Agent Setup
+
+### Port Agent Configuration
+- **Port**: {{ port_agent_port }}
+- **Workers**: {{ port_agent_workers | default(2) }}
+- **Timeout**: {{ port_agent_timeout | default(60) }} seconds
+- **Debug Mode**: {{ django_debug | default(False) | lower }}
+
+### Port Agent Features
+- ✅ Thread-safe port management
+- ✅ Cross-platform support
+- ✅ Docker integration
+- ✅ Framework conflict resolution
+- ✅ REST API endpoints
+- ✅ Comprehensive error handling
+
+### Port Agent Files
+```
+{{ port_agent_path }}/
+├── agent.py
+├── server.py
+├── port_manager.py
+├── docker_port_manager.py
+├── integration.py
+├── exceptions.py
+├── config/
+│   └── settings.py
+└── .env
+```
+
+## 💾 Ventoy Configuration
+
+### Ventoy Details
+- **Version**: {{ ventoy_version }}
+- **Mount Point**: {{ ventoy_mount_point }}
+- **ISO Path**: {{ ventoy_iso_path }}
+
+### Ventoy Files
+```
+{{ ventoy_mount_point }}/
+├── ventoy/
+│   ├── ventoy.json
+│   ├── ventoy_control.json
+│   ├── nir_mistral_boot.conf
+│   ├── ventoy_menu.conf
+│   ├── persistence.conf
+│   ├── themes/
+│   │   └── nir_mistral/
+│   │       └── theme.json
+│   ├── ventoy_startup.sh
+│   ├── boot_django.sh
+│   ├── ventoy_services.sh
+│   ├── ventoy_env_setup.sh
+│   ├── ventoy_health_check.sh
+│   └── ventoy_cleanup.sh
+└── nir_mistral_live.iso
+```
+
+### Ventoy Menu Items
+1. **NIR_Mistral Framework** - Start Django Server and Port Agent (Default)
+2. **NIR_Mistral Framework (Debug)** - Start with debug mode
+3. **NIR_Mistral Status** - Check service health
+4. **Django Server Only** - Start only Django
+5. **Port Agent Only** - Start only Port Agent
+6. **Stop All Services** - Stop all services
+7. **Restart Services** - Restart all services
+8. **View Logs** - View service logs
+9. **Cleanup** - Clean up temporary files
+
+## 🚀 Startup Scripts
+
+### Main Startup Script
+**Location**: `{{ deploy_root }}/start_nir_mistral.sh`
+
+**Usage**:
+```bash
+# Start all services
+{{ deploy_root }}/start_nir_mistral.sh start
+
+# Stop all services
+{{ deploy_root }}/start_nir_mistral.sh stop
+
+# Restart services
+{{ deploy_root }}/start_nir_mistral.sh restart
+
+# Check status
+{{ deploy_root }}/start_nir_mistral.sh status
+
+# View logs
+{{ deploy_root }}/start_nir_mistral.sh logs
+```
+
+### Ventoy Startup Script
+**Location**: `{{ ventoy_mount_point }}/ventoy/ventoy_startup.sh`
+
+**Purpose**: Main startup script for Ventoy boot
+
+### Service Manager
+**Location**: `{{ ventoy_mount_point }}/ventoy/ventoy_services.sh`
+
+**Usage**:
+```bash
+# Start specific service
+{{ ventoy_mount_point }}/ventoy/ventoy_services.sh start django
+{{ ventoy_mount_point }}/ventoy/ventoy_services.sh start port_agent
+{{ ventoy_mount_point }}/ventoy/ventoy_services.sh start all
+
+# Stop specific service
+{{ ventoy_mount_point }}/ventoy/ventoy_services.sh stop django
+{{ ventoy_mount_point }}/ventoy/ventoy_services.sh stop all
+
+# Check status
+{{ ventoy_mount_point }}/ventoy/ventoy_services.sh status
+
+# View logs
+{{ ventoy_mount_point }}/ventoy/ventoy_services.sh logs
+```
+
+## 🔧 Systemd Services
+
+### Django Service
+**File**: `/etc/systemd/system/django.service`
+
+**Commands**:
+```bash
+# Start service
+sudo systemctl start django
+
+# Stop service
+sudo systemctl stop django
+
+# Enable auto-start
+sudo systemctl enable django
+
+# Check status
+sudo systemctl status django
+
+# View logs
+journalctl -u django -f
+```
+
+### Port Agent Service
+**File**: `/etc/systemd/system/port_agent.service`
+
+**Commands**:
+```bash
+# Start service
+sudo systemctl start port_agent
+
+# Stop service
+sudo systemctl stop port_agent
+
+# Enable auto-start
+sudo systemctl enable port_agent
+
+# Check status
+sudo systemctl status port_agent
+
+# View logs
+journalctl -u port_agent -f
+```
+
+## 🌐 API Endpoints
+
+### Django Server (Port {{ django_port }})
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health/` | Health check |
+| GET | `/api/ports/` | Port management overview |
+| GET | `/api/ports/status/` | Detailed port status |
+| GET | `/api/ports/scan/` | Scan ports in range |
+| GET | `/api/ports/check/<port>/` | Check specific port |
+| POST | `/api/ports/reserve/` | Reserve a port |
+| POST | `/api/ports/release/` | Release a port |
+| GET | `/api/ports/conflicts/` | Get port conflicts |
+
+### Port Agent (Port {{ port_agent_port }})
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/ports/` | Port management status |
+| GET | `/api/ports/scan/` | Scan port range |
+| GET | `/api/ports/check/<port>/` | Check port availability |
+| POST | `/api/ports/assign/` | Assign a free port |
+| POST | `/api/ports/reserve/` | Reserve specific port |
+| POST | `/api/ports/release/` | Release reserved port |
+| GET | `/api/ports/conflicts/` | Detect port conflicts |
+| POST | `/api/ports/resolve/` | Resolve port conflicts |
+| GET | `/api/docker/available/` | Check Docker availability |
+| GET | `/api/docker/version/` | Get Docker version |
+| GET | `/api/docker/containers/` | List running containers |
+| GET | `/api/docker/mappings/` | Get port mappings |
+
+## 📁 File Structure
+
+```
+{{ deploy_root }}/
+├── django_project/           # Django application
+│   ├── manage.py
+│   ├── nir_web/
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   └── wsgi.py
+│   └── port_manager/         # Port management Django app
+│       ├── __init__.py
+│       ├── middleware.py
+│       ├── views.py
+│       ├── urls.py
+│       └── management/
+│           └── commands/
+│               ├── __init__.py
+│               ├── check_ports.py
+│               └── reserve_port.py
+│
+├── agents/
+│   └── port_agent/           # Port Management Agent
+│       ├── __init__.py
+│       ├── agent.py
+│       ├── server.py
+│       ├── port_manager.py
+│       ├── docker_port_manager.py
+│       ├── integration.py
+│       ├── exceptions.py
+│       └── config/
+│           └── settings.py
+│
+├── venv/                    # Python virtual environment
+│   └── bin/
+│       ├── python
+│       ├── pip
+│       └── activate
+│
+├── logs/                    # Log files
+│   ├── django.log
+│   ├── port_agent.log
+│   ├── port_agent_access.log
+│   └── port_agent_error.log
+│
+├── config/                  # Configuration files
+│   ├── django_settings.py
+│   └── port_agent_settings.py
+│
+├── data/                    # Data files
+│
+├── ventoy/                  # Ventoy configuration
+│   ├── ventoy.json
+│   ├── ventoy_control.json
+│   ├── nir_mistral_boot.conf
+│   ├── ventoy_menu.conf
+│   ├── persistence.conf
+│   ├── themes/
+│   │   └── nir_mistral/
+│   │       └── theme.json
+│   ├── ventoy_startup.sh
+│   ├── boot_django.sh
+│   ├── ventoy_services.sh
+│   ├── ventoy_env_setup.sh
+│   ├── ventoy_health_check.sh
+│   └── ventoy_cleanup.sh
+│
+└── start_nir_mistral.sh     # Main startup script
+```
+
+## 🧪 Testing
+
+### Test Commands
+
+```bash
+# Test Django server
+curl http://localhost:{{ django_port }}/api/health/
+
+# Test Port Agent
+curl http://localhost:{{ port_agent_port }}/api/ports/
+
+# Test port scanning
+curl "http://localhost:{{ port_agent_port }}/api/ports/scan/?start=9000&end=9100"
+
+# Test port assignment
+curl -X POST http://localhost:{{ port_agent_port }}/api/ports/assign/ \
+  -H "Content-Type: application/json" \
+  -d '{"start": 9000, "end": 9100, "service_name": "test_service"}'
+
+# Run Port Agent tests
+{{ port_agent_path }}/scripts/test_port_agent.py
+```
+
+### Management Commands
+
+```bash
+# Activate virtual environment
+source {{ venv_path }}/bin/activate
+
+# Check ports
+cd {{ django_project_path }}
+python manage.py check_ports
+
+# Check ports with conflict resolution
+python manage.py check_ports --resolve
+
+# Reserve port for agent
+python manage.py reserve_port django_agent
+
+# List reserved ports
+python manage.py reserve_port --list
+
+# Release a port
+python manage.py reserve_port --release django_agent
+```
+
+## 🛠️ Troubleshooting
+
+### Common Issues and Solutions
+
+#### Services Won't Start
+1. **Check logs**:
+   ```bash
+   tail -f {{ deploy_root }}/logs/*.log
+   journalctl -u django -xe
+   journalctl -u port_agent -xe
+   ```
+
+2. **Check dependencies**:
+   ```bash
+   python3 --version
+   pip3 --version
+   {{ venv_path }}/bin/python --version
+   ```
+
+3. **Check ports**:
+   ```bash
+   sudo lsof -i :{{ django_port }}
+   sudo lsof -i :{{ port_agent_port }}
+   sudo netstat -tlnp | grep -E "{{ django_port }}|{{ port_agent_port }}"
+   ```
+
+#### Port Conflicts
+1. **Find conflicting processes**:
+   ```bash
+   sudo lsof -i :{{ django_port }}
+   sudo kill -9 <PID>
+   ```
+
+2. **Use Port Agent to resolve**:
+   ```bash
+   curl -X POST http://localhost:{{ port_agent_port }}/api/ports/resolve/ \
+     -H "Content-Type: application/json" \
+     -d '{"auto_assign": true}'
+   ```
+
+#### Dependency Issues
+1. **Reinstall dependencies**:
+   ```bash
+   source {{ venv_path }}/bin/activate
+   pip install -r {{ django_project_path }}/requirements.txt
+   pip install -r {{ port_agent_path }}/requirements.txt
+   ```
+
+2. **Check Python packages**:
+   ```bash
+   pip list
+   pip check
+   ```
+
+## 📊 Monitoring
+
+### Log Files
+- **Django**: `{{ deploy_root }}/logs/django.log`
+- **Port Agent**: `{{ deploy_root }}/logs/port_agent.log`
+- **Access Logs**: `{{ deploy_root }}/logs/port_agent_access.log`
+- **Error Logs**: `{{ deploy_root }}/logs/port_agent_error.log`
+
+### System Logs
+```bash
+# Django service logs
+journalctl -u django -f
+
+# Port Agent service logs
+journalctl -u port_agent -f
+
+# System logs
+journalctl -f
+```
+
+### Health Checks
+```bash
+# Django health
+curl http://localhost:{{ django_port }}/api/health/
+
+# Port Agent health
+curl http://localhost:{{ port_agent_port }}/api/ports/
+
+# Full system health check
+{{ ventoy_mount_point }}/ventoy/ventoy_health_check.sh
+```
+
+## 🔄 Update Process
+
+### Update NIR_Mistral Framework
+
+1. **Pull latest changes**:
+   ```bash
+   cd {{ project_root }}
+   git pull origin main
+   ```
+
+2. **Update dependencies**:
+   ```bash
+   source {{ venv_path }}/bin/activate
+   pip install -r {{ django_project_path }}/requirements.txt
+   pip install -r {{ port_agent_path }}/requirements.txt
+   ```
+
+3. **Restart services**:
+   ```bash
+   sudo systemctl restart django
+   sudo systemctl restart port_agent
+   ```
+
+4. **Verify update**:
+   ```bash
+   curl http://localhost:{{ django_port }}/api/health/
+   curl http://localhost:{{ port_agent_port }}/api/ports/
+   ```
+
+## 📚 Documentation
+
+### Related Documentation
+- **Main README**: `{{ project_root }}/README.md`
+- **Start Guide**: `{{ project_root }}/START_PORT_MANAGER_SERVER.md`
+- **Port Agent Docs**: `{{ project_root }}/agents/port_agent/README.md`
+- **Django Docs**: `{{ django_project_path }}/README.md`
+
+### Useful Commands
+
+```bash
+# Start all services
+{{ deploy_root }}/start_nir_mistral.sh start
+
+# Stop all services
+{{ deploy_root }}/start_nir_mistral.sh stop
+
+# Check status
+{{ deploy_root }}/start_nir_mistral.sh status
+
+# View logs
+{{ deploy_root }}/start_nir_mistral.sh logs
+
+# Health check
+{{ ventoy_mount_point }}/ventoy/ventoy_health_check.sh
+
+# Cleanup
+{{ ventoy_mount_point }}/ventoy/ventoy_cleanup.sh
+
+# Environment setup
+{{ ventoy_mount_point }}/ventoy/ventoy_env_setup.sh
+```
+
+## 🎯 Use Cases
+
+### Development Environment
+```bash
+# Start with debug mode
+{{ deploy_root }}/start_nir_mistral.sh start --debug
+
+# Run tests
+source {{ venv_path }}/bin/activate
+cd {{ django_project_path }}
+python manage.py test
+
+# Check port conflicts
+python manage.py check_ports --resolve
+```
+
+### Production Deployment
+```bash
+# Enable services
+sudo systemctl enable django
+sudo systemctl enable port_agent
+
+# Start services
+sudo systemctl start django
+sudo systemctl start port_agent
+
+# Check status
+sudo systemctl status django port_agent
+```
+
+### Port Management
+```bash
+# Reserve a port
+curl -X POST http://localhost:{{ port_agent_port }}/api/ports/reserve/ \
+  -H "Content-Type: application/json" \
+  -d '{"port": 8080, "service_name": "my_service"}'
+
+# Release a port
+curl -X POST http://localhost:{{ port_agent_port }}/api/ports/release/ \
+  -H "Content-Type: application/json" \
+  -d '{"port": 8080}'
+
+# Find a free port
+curl "http://localhost:{{ port_agent_port }}/api/ports/find/?start=9000&end=9100"
+```
+
+## 🏁 Conclusion
+
+Your Ventoy stick is now fully configured with the **NIR_Mistral Framework**! 🎉
+
+### Key Features Deployed:
+- ✅ **Django Server** with Port Management integration
+- ✅ **Port Agent** for comprehensive port management
+- ✅ **REST API** endpoints for both services
+- ✅ **Systemd Services** for automatic startup
+- ✅ **Ventoy Integration** with custom menu and themes
+- ✅ **Health Monitoring** and cleanup scripts
+- ✅ **Cross-platform** support
+- ✅ **Docker Integration** ({{ docker_enabled | default(False) | lower }})
+
+### Next Steps:
+1. **Boot from Ventoy stick**
+2. **Select NIR_Mistral Framework** from the menu
+3. **Services will start automatically**
+4. **Test the API endpoints**
+5. **Integrate with your applications**
+
+### Quick Start:
+```bash
+# From Ventoy menu, select "NIR_Mistral Framework"
+# Or manually:
+{{ ventoy_mount_point }}/ventoy/ventoy_startup.sh
+
+# Test services:
+curl http://localhost:{{ django_port }}/api/health/
+curl http://localhost:{{ port_agent_port }}/api/ports/
+```
+
+---
+
+*Generated by Ansible Ventoy Setup*
+*Deployment Timestamp: {{ ansible_date_time.iso8601 }}*
+*Environment: {{ environment | default('production') }}*

@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# PostgreSQL initialization script for NIR_MISTRAL
+# This script creates the database and user if they don't exist
+
+set -e
+
+PSQL="psql -v ON_ERROR_STOP=1"
+
+# Connect to the default postgres database as the postgres superuser
+echo "Creating database user and database..."
+
+# Create the database user
+$PSQL --username "$POSTGRES_USER" --dbname "postgres" <<-EOSQL
+    DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_user WHERE usename = 'nir_user') THEN
+            CREATE USER nir_user WITH PASSWORD 'Kooky0-Hatching1-Mullets2-Ninetieth7-Shimmer6-Crayon4-Flashily2';
+        END IF;
+    END
+    \$\$;
+EOSQL
+
+# Create the database (must be done outside of a function)
+if $PSQL --username "$POSTGRES_USER" --dbname "postgres" -tAc "SELECT 1 FROM pg_database WHERE datname = 'nir_mistral'" | grep -q 1; then
+    echo "Database nir_mistral already exists"
+else
+    $PSQL --username "$POSTGRES_USER" --dbname "postgres" <<-EOSQL
+        CREATE DATABASE nir_mistral;
+EOSQL
+    echo "Database nir_mistral created"
+fi
+
+# Grant permissions
+$PSQL --username "$POSTGRES_USER" --dbname "postgres" <<-EOSQL
+    GRANT ALL PRIVILEGES ON DATABASE nir_mistral TO nir_user;
+    ALTER DATABASE nir_mistral OWNER TO nir_user;
+EOSQL
+
+echo "Database initialization complete!"

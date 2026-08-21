@@ -1,0 +1,320 @@
+# NIR_MISTRAL Production Docker Compose Configuration
+# This file provides a production-ready setup with all required services
+# Usage: docker-compose -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  # Django Web Application (Production)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: nir_mistral_web
+    restart: unless-stopped
+    command: gunicorn django_project.nir_web.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 300
+    volumes:
+      - .:/app
+      - ./static:/app/static
+      - ./media:/app/media
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+      - DJANGO_SETTINGS_MODULE=nir_web.settings
+      - DJANGO_DEBUG=False
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-change-me-in-production}
+      - DJANGO_ALLOWED_HOSTS=*
+      - DATABASE_URL=postgres://nir_user:${POSTGRES_PASSWORD}@postgres:5432/nir_mistral
+      - WEAVIATE_URL=http://weaviate:8080
+      - OLLAMA_URL=http://ollama:11434
+      - REDIS_URL=redis://redis:6379/0
+      - QUARTO_ENABLED=True
+      - QUARTO_PATH=/usr/bin/quarto
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      weaviate:
+        condition: service_started
+      ollama:
+        condition: service_started
+    networks:
+      - nir_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Celery Worker for Async Tasks
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: nir_mistral_celery
+    restart: unless-stopped
+    command: celery -A django_project.nir_web worker --loglevel=info --concurrency=2
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - DJANGO_SETTINGS_MODULE=nir_web.settings
+      - DATABASE_URL=postgres://nir_user:${POSTGRES_PASSWORD}@postgres:5432/nir_mistral
+      - WEAVIATE_URL=http://weaviate:8080
+      - OLLAMA_URL=http://ollama:11434
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      - postgres
+      - redis
+      - web
+    networks:
+      - nir_network
+
+  # Celery Beat for Scheduled Tasks
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: nir_mistral_celery_beat
+    restart: unless-stopped
+    command: celery -A django_project.nir_web beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app
+      - DJANGO_SETTINGS_MODULE=nir_web.settings
+      - DATABASE_URL=postgres://nir_user:${POSTGRES_PASSWORD}@postgres:5432/nir_mistral
+    depends_on:
+      - postgres
+      - redis
+      - web
+    networks:
+      - nir_network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: nir_mistral_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: nir_mistral
+      POSTGRES_USER: nir_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nir_password_2026}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - nir_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nir_user -d nir_mistral"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Weaviate Vector Database
+  weaviate:
+    image: cr.weaviate.io/semitechnologies/weaviate:1.23.0
+    container_name: nir_mistral_weaviate
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none'
+      CLUSTER_HOSTNAME: 'node1'
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    networks:
+      - nir_network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Faiss Similarity Search Service
+  faiss:
+    image: python:3.10-slim
+    container_name: nir_mistral_faiss
+    restart: unless-stopped
+    command: python /app/services/faiss_server.py
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./services:/app/services
+      - ./data/faiss_index:/app/index
+    working_dir: /app
+    environment:
+      - FAISS_INDEX_PATH=/app/index
+      - FAISS_PORT=8081
+    networks:
+      - nir_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8081/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # Ollama with Mistral Model
+  ollama:
+    image: ollama/ollama:latest
+    container_name: nir_mistral_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+      - OLLAMA_KEEP_ALIVE=24h
+    networks:
+      - nir_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for Caching and Task Queue
+  redis:
+    image: redis:7-alpine
+    container_name: nir_mistral_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - nir_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Quarto for Report Generation
+  quarto:
+    image: quartobio/quarto-cli:1.3.0
+    container_name: nir_mistral_quarto
+    restart: unless-stopped
+    volumes:
+      - ./reports:/app/reports
+      - ./data:/app/data
+      - ./django_project/templates/reports:/app/templates
+    working_dir: /app
+    networks:
+      - nir_network
+    healthcheck:
+      test: ["CMD", "quarto", "--version"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+  # Flower Federated Learning Server
+  flower_server:
+    image: python:3.10-slim
+    container_name: nir_mistral_flower
+    restart: unless-stopped
+    command: python /app/services/flower_server.py
+    ports:
+      - "5555:5555"
+      - "5556:5556"
+    volumes:
+      - ./services:/app/services
+      - ./data:/app/data
+    working_dir: /app
+    environment:
+      - FLOWER_SERVER_HOST=0.0.0.0
+      - FLOWER_SERVER_PORT=5555
+    networks:
+      - nir_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5555/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # Nginx Reverse Proxy (Optional for production)
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: nir_mistral_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf
+      - ./static:/var/www/static
+      - ./media:/var/www/media
+      - ./certs:/etc/nginx/certs
+    depends_on:
+      - web
+    networks:
+      - nir_network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Monitoring with Prometheus and Grafana
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: nir_mistral_prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - nir_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: nir_mistral_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+    networks:
+      - nir_network
+
+# Networks
+networks:
+  nir_network:
+    driver: bridge
+
+# Volumes
+volumes:
+  postgres_data:
+    driver: local
+  weaviate_data:
+    driver: local
+  ollama_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

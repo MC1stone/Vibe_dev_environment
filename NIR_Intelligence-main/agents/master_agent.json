@@ -1,0 +1,60 @@
+{
+  "agent_id": "master_implementation_agent",
+  "name": "Master Implementation Agent",
+  "version": "1.0.0",
+  "role": "Orchestration and Quality Control",
+  "description": "Central coordinator for the NIR Intelligence Platform, responsible for overall project planning, agent coordination, conflict resolution, and final approval.",
+  "capabilities": [
+    "project_planning",
+    "agent_orchestration",
+    "quality_control",
+    "conflict_resolution",
+    "final_approval"
+  ],
+  "dependencies": [],
+  "responsibilities": [
+    "Read and interpret TASK.md, task_definition.yaml, and system_manifest.json",
+    "Coordinate all subagents",
+    "Monitor iteration progress",
+    "Enforce quality standards",
+    "Resolve conflicts between agents",
+    "Approve final implementation"
+  ],
+  "execution_order": [
+    "uvx_agent",
+    "docker_agent",
+    "data_preparation_agent",
+    "metadata_agent",
+    "sensor_quality_agent",
+    ["statistical_analysis_agent", "neural_network_agent"],
+    "calibration_agent",
+    ["weaviate_agent", "faiss_agent", "postgresql_agent"],
+    "django_agent",
+    "mcp_agent",
+    "quarto_agent",
+    "flower_agent"
+  ],
+  "quality_control_rules": {
+    "require_all_agents_review": true,
+    "allow_release_with_errors": false,
+    "allow_release_with_open_requests": false,
+    "minimum_r2_score": 0.80
+  },
+  "iteration_settings": {
+    "max_iterations": 100,
+    "stop_conditions": {
+      "open_errors": 0,
+      "open_critical_warnings": 0,
+      "open_change_requests": 0
+    }
+  },
+  "communication_protocol": {
+    "status_updates": "continuous",
+    "error_reporting": "immediate",
+    "progress_reporting": "per_iteration"
+  },
+  "version_control": {
+    "require_version_check": true,
+    "dependency_management": "automatic"
+  }
+}

@@ -1,0 +1,57 @@
+[Unit]
+Description=Port Management Agent for NIR_Mistral Framework
+After=network.target
+Requires=network.target
+
+[Service]
+Type=simple
+User={{ service_user | default('root') }}
+Group={{ service_group | default('root') }}
+WorkingDirectory={{ port_agent_path }}
+Environment="PYTHONPATH={{ deploy_root }}"
+Environment="PATH={{ venv_path }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+ExecStart={{ venv_path }}/bin/python -c "
+from agents.port_agent.agent import port_agent
+from agents.port_agent.server import create_app
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('{{ deploy_root }}/logs/port_agent.log'),
+        logging.StreamHandler()
+    ]
+)
+
+# Initialize and start
+result = port_agent.initialize()
+print(f'Port Agent initialized: {result}')
+
+# Create Flask app and run
+app = create_app()
+app.run(host='0.0.0.0', port={{ port_agent_port }}, debug=False)
+"
+
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+
+# Standard output is logged to journalctl
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=port-agent-nir-mistral
+
+# Increase limits
+LimitNOFILE=65535
+LimitNPROC=65535
+
+# Security
+PrivateTmp=true
+ProtectSystem=full
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

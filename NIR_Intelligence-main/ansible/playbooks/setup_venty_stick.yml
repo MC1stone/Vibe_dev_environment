@@ -1,0 +1,617 @@
+#!/usr/bin/env ansible-playbook
+---
+# Main Playbook: Setup Venty Stick for NIR_Mistral DeveloperAgent Framework
+# 
+# This playbook sets up a complete Venty stick with:
+# - System preparation and optimization for USB storage
+# - Python environment and dependencies
+# - Docker and container runtime
+# - DeveloperAgent Framework deployment
+# - Database services (PostgreSQL, Weaviate, FAISS)
+# - Monitoring and logging
+# - Security hardening
+#
+# Usage:
+#   ansible-playbook -i inventory/hosts.yml playbooks/setup_venty_stick.yml
+#
+# For Venty stick only:
+#   ansible-playbook -i inventory/hosts.yml playbooks/setup_venty_stick.yml --limit venty_stick
+
+- name: Setup Venty Stick for NIR_Mistral DeveloperAgent Framework
+  hosts: venty_stick
+  become: true
+  gather_facts: true
+  
+  vars:
+    setup_phase: "venty_stick_setup"
+    timestamp: "{{ ansible_date_time.iso8601 }}"
+  
+  pre_tasks:
+    - name: Display setup information
+      ansible.builtin.debug:
+        msg: |
+          ============================================
+          NIR_Mistral DeveloperAgent Framework Setup
+          ============================================
+          Target: Venty Stick
+          Timestamp: {{ timestamp }}
+          Playbook: setup_venty_stick.yml
+          ============================================
+      
+    - name: Verify Ansible version
+      ansible.builtin.assert:
+        that: ansible_version.full is version_compare('8.0.0', '>=')
+        msg: "Ansible 8.0.0 or higher is required"
+
+---
+# Phase 1: System Preparation
+- name: Phase 1 - System Preparation for Venty Stick
+  hosts: venty_stick
+  become: true
+  
+  tasks:
+    - name: Update apt package index
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == 'Debian'
+      
+    - name: Install base packages
+      ansible.builtin.apt:
+        name: "{{ common_packages + development_tools }}"
+        state: present
+      when: ansible_os_family == 'Debian'
+      
+    - name: Set timezone
+      ansible.builtin.timezone:
+        name: "{{ timezone }}"
+      
+    - name: Configure hostname
+      ansible.builtin.hostname:
+        name: "{{ network.hostname }}"
+      when: network.hostname is defined
+      
+    - name: Configure static IP (if enabled)
+      ansible.builtin.template:
+        src: templates/network_interfaces.j2
+        dest: /etc/network/interfaces
+        owner: root
+        group: root
+        mode: '0644'
+      when: network.static_ip and ansible_os_family == 'Debian'
+      notify: restart networking
+      
+    - name: Create swap file for USB performance
+      ansible.builtin.command: |
+        fallocate -l {{ performance.swap_size }} /swapfile
+        chmod 600 /swapfile
+        mkswap /swapfile
+        swapon /swapfile
+        echo '/swapfile none swap sw 0 0' >> /etc/fstab
+      args:
+        creates: /swapfile
+      when: performance.swap_enabled
+      
+    - name: Tune swappiness for USB storage
+      ansible.builtin.sysctl:
+        name: vm.swappiness
+        value: "{{ venty_optimizations.swappiness }}"
+        state: present
+        reload: yes
+      when: venty_optimizations.swappiness is defined
+      
+    - name: Tune VFS cache pressure
+      ansible.builtin.sysctl:
+        name: vm.vfs_cache_pressure
+        value: "{{ venty_optimizations.vfs_cache_pressure }}"
+        state: present
+        reload: yes
+      when: venty_optimizations.vfs_cache_pressure is defined
+
+  handlers:
+    - name: restart networking
+      ansible.builtin.service:
+        name: networking
+        state: restarted
+      when: ansible_os_family == 'Debian'
+
+---
+# Phase 2: Python Environment Setup
+- name: Phase 2 - Python Environment Setup
+  hosts: venty_stick
+  become: true
+  
+  tasks:
+    - name: Install Python and pip
+      ansible.builtin.apt:
+        name:
+          - python{{ python_version }}
+          - python{{ python_version }}-dev
+          - python{{ python_version }}-venv
+          - python3-pip
+          - python3-setuptools
+          - python3-wheel
+        state: present
+      when: ansible_os_family == 'Debian'
+      
+    - name: Upgrade pip
+      ansible.builtin.pip:
+        name: pip
+        state: latest
+        executable: pip3
+      
+    - name: Install Python dependencies
+      ansible.builtin.pip:
+        name: "{{ item }}"
+        state: present
+        executable: pip3
+      loop: "{{ lookup('file', 'ansible/requirements.txt').split('\n') }}"
+      when: item and not item.startswith('#')
+      
+    - name: Create project directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0755'
+      loop:
+        - "{{ storage.base_dir }}"
+        - "{{ storage.data_dir }}"
+        - "{{ storage.logs_dir }}"
+        - "{{ storage.configs_dir }}"
+        - "{{ storage.backups_dir }}"
+        - "{{ log_dir }}"
+      
+    - name: Create Python virtual environment
+      ansible.builtin.command: |
+        python{{ python_version }} -m venv {{ python_venv_path }}
+      args:
+        creates: "{{ python_venv_path }}"
+      
+    - name: Install framework in virtual environment
+      ansible.builtin.pip:
+        requirements: requirements.txt
+        virtualenv: "{{ python_venv_path }}"
+        state: present
+      
+    - name: Install development dependencies
+      ansible.builtin.pip:
+        requirements: dev_requirements.txt
+        virtualenv: "{{ python_venv_path }}"
+        state: present
+      ignore_errors: yes
+
+---
+# Phase 3: Docker Setup
+- name: Phase 3 - Docker Setup for Venty Stick
+  hosts: venty_stick
+  become: true
+  
+  tasks:
+    - name: Install Docker dependencies
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+      when: ansible_os_family == 'Debian' and docker.enabled
+      
+    - name: Add Docker GPG key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg
+        state: present
+      when: ansible_os_family == 'Debian' and docker.enabled
+      
+    - name: Add Docker repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch={{ ansible_architecture }}] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable"
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian' and docker.enabled
+      
+    - name: Install Docker Engine
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+      when: ansible_os_family == 'Debian' and docker.enabled
+      
+    - name: Configure Docker daemon for USB storage
+      ansible.builtin.template:
+        src: templates/docker_daemon.json.j2
+        dest: /etc/docker/daemon.json
+        owner: root
+        group: root
+        mode: '0644'
+      when: docker.enabled
+      notify: restart docker
+      
+    - name: Create Docker network
+      community.docker.docker_network:
+        name: "{{ docker.network_name }}"
+        driver: bridge
+        state: present
+      when: docker.enabled
+      
+    - name: Add admin user to docker group
+      ansible.builtin.user:
+        name: "{{ admin_user }}"
+        groups: docker
+        append: yes
+      when: docker.enabled
+
+  handlers:
+    - name: restart docker
+      ansible.builtin.service:
+        name: docker
+        state: restarted
+        daemon_reload: yes
+
+---
+# Phase 4: Security Hardening
+- name: Phase 4 - Security Hardening for Venty Stick
+  hosts: venty_stick
+  become: true
+  
+  tasks:
+    - name: Configure SSH security
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+        backup: yes
+      loop:
+        - { regexp: '^Port', line: 'Port {{ security.ssh.port }}' }
+        - { regexp: '^PermitRootLogin', line: 'PermitRootLogin {{ security.ssh.permit_root_login | lower }}' }
+        - { regexp: '^PasswordAuthentication', line: 'PasswordAuthentication {{ security.ssh.password_authentication | lower }}' }
+        - { regexp: '^MaxAuthTries', line: 'MaxAuthTries {{ security.ssh.max_auth_tries }}' }
+        - { regexp: '^LoginGraceTime', line: 'LoginGraceTime {{ security.ssh.login_grace_time }}' }
+      notify: restart sshd
+      
+    - name: Configure UFW firewall
+      community.general.ufw:
+        state: enabled
+        policy: "{{ security.firewall.default_policy }}"
+      when: security.firewall.enabled
+      
+    - name: Allow firewall ports
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop: "{{ security.firewall.allowed_ports }}"
+      when: security.firewall.enabled
+      
+    - name: Install and configure fail2ban
+      ansible.builtin.apt:
+        name: fail2ban
+        state: present
+      when: security.fail2ban.enabled and ansible_os_family == 'Debian'
+      
+    - name: Configure fail2ban
+      ansible.builtin.template:
+        src: templates/fail2ban.local.j2
+        dest: /etc/fail2ban/jail.local
+        owner: root
+        group: root
+        mode: '0644'
+      when: security.fail2ban.enabled
+      notify: restart fail2ban
+      
+    - name: Create admin user
+      ansible.builtin.user:
+        name: "{{ admin_user }}"
+        comment: "NIR Framework Admin"
+        shell: /bin/bash
+        home: /home/{{ admin_user }}
+        create_home: yes
+        state: present
+      
+    - name: Create admin group
+      ansible.builtin.group:
+        name: "{{ admin_group }}"
+        state: present
+
+  handlers:
+    - name: restart sshd
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
+        
+    - name: restart fail2ban
+      ansible.builtin.service:
+        name: fail2ban
+        state: restarted
+
+---
+# Phase 5: Deploy DeveloperAgent Framework
+- name: Phase 5 - Deploy DeveloperAgent Framework
+  hosts: venty_stick
+  become: true
+  
+  tasks:
+    - name: Copy framework code to Venty stick
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: "{{ item.mode | default('0644') }}"
+        directory_mode: "{{ item.dir_mode | default('0755') }}"
+      loop:
+        - { src: 'dev_framework/', dest: '{{ storage.base_dir }}/dev_framework/' }
+        - { src: 'agents/', dest: '{{ storage.base_dir }}/agents/' }
+        - { src: 'config/', dest: '{{ storage.base_dir }}/config/' }
+        - { src: 'tests/', dest: '{{ storage.base_dir }}/tests/' }
+        - { src: 'data/', dest: '{{ storage.base_dir }}/data/' }
+        - { src: 'scripts/', dest: '{{ storage.base_dir }}/scripts/' }
+        - { src: 'ansible/', dest: '{{ storage.base_dir }}/ansible/' }
+        - { src: 'requirements.txt', dest: '{{ storage.base_dir }}/requirements.txt' }
+        - { src: 'dev_requirements.txt', dest: '{{ storage.base_dir }}/dev_requirements.txt' }
+        - { src: '.flake8', dest: '{{ storage.base_dir }}/.flake8' }
+        - { src: '.isort.cfg', dest: '{{ storage.base_dir }}/.isort.cfg' }
+        - { src: 'mypy.ini', dest: '{{ storage.base_dir }}/mypy.ini' }
+        - { src: 'pytest.ini', dest: '{{ storage.base_dir }}/pytest.ini' }
+      
+    - name: Copy configuration files
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0644'
+      loop:
+        - { src: 'templates/framework_config.yml.j2', dest: '{{ storage.configs_dir }}/framework_config.yml' }
+        - { src: 'templates/agent_config.yml.j2', dest: '{{ storage.configs_dir }}/agent_config.yml' }
+      
+    - name: Set up framework environment file
+      ansible.builtin.template:
+        src: templates/framework.env.j2
+        dest: "{{ storage.base_dir }}/.env"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0640'
+      
+    - name: Create framework service
+      ansible.builtin.template:
+        src: templates/framework.service.j2
+        dest: /etc/systemd/system/nir_framework.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify: reload systemd
+      
+    - name: Create framework startup script
+      ansible.builtin.template:
+        src: templates/start_framework.sh.j2
+        dest: "{{ storage.base_dir }}/start_framework.sh"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0755'
+      
+    - name: Create framework stop script
+      ansible.builtin.template:
+        src: templates/stop_framework.sh.j2
+        dest: "{{ storage.base_dir }}/stop_framework.sh"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0755'
+
+  handlers:
+    - name: reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: yes
+
+---
+# Phase 6: Database Services Setup
+- name: Phase 6 - Database Services Setup
+  hosts: venty_stick
+  become: true
+  
+  tasks:
+    - name: Create database directories
+      ansible.builtin.file:
+        path: "{{ item.storage }}"
+        state: directory
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0755'
+      loop: "{{ databases | dict2items }}"
+      when: item.value.enabled
+      
+    - name: Deploy PostgreSQL with Docker
+      community.docker.docker_container:
+        name: nir_postgresql
+        image: postgres:{{ databases.postgresql.version }}
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "{{ databases.postgresql.port }}:5432"
+        volumes:
+          - "{{ databases.postgresql.storage }}:/var/lib/postgresql/data"
+        env:
+          POSTGRES_USER: "nir_user"
+          POSTGRES_PASSWORD: "nir_password_2026"
+          POSTGRES_DB: "nir_mistral"
+        networks:
+          - name: "{{ docker.network_name }}"
+      when: databases.postgresql.enabled and docker.enabled
+      
+    - name: Deploy Weaviate with Docker
+      community.docker.docker_container:
+        name: nir_weaviate
+        image: semitechnologies/weaviate:{{ databases.weaviate.version }}
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "{{ databases.weaviate.port }}:8080"
+          - "50051:50051"
+        volumes:
+          - "{{ databases.weaviate.storage }}:/var/lib/weaviate"
+        env:
+          QUERY_DEFAULTS_LIMIT: 25
+          AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+          PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+          DEFAULT_VECTORIZER_MODULE: "text2vec-transformers"
+          ENABLE_MODULES: "text2vec-transformers,generative-transformers"
+          TRANSFORMERS_INFERENCE_API: "http://localhost:8080"
+        networks:
+          - name: "{{ docker.network_name }}"
+      when: databases.weaviate.enabled and docker.enabled
+
+---
+# Phase 7: Monitoring Setup
+- name: Phase 7 - Monitoring Setup
+  hosts: venty_stick
+  become: true
+  
+  tasks:
+    - name: Deploy Prometheus with Docker
+      community.docker.docker_container:
+        name: nir_prometheus
+        image: prom/prometheus:latest
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "{{ monitoring.prometheus.port }}:9090"
+        volumes:
+          - "{{ monitoring.prometheus.storage }}:/prometheus"
+          - "{{ storage.configs_dir }}/prometheus.yml:/etc/prometheus/prometheus.yml"
+        command:
+          - '--config.file=/etc/prometheus/prometheus.yml'
+          - '--storage.tsdb.path=/prometheus'
+          - '--storage.tsdb.retention.time={{ monitoring.prometheus.retention }}'
+        networks:
+          - name: "{{ docker.network_name }}"
+      when: monitoring.prometheus.enabled and docker.enabled
+      
+    - name: Deploy Grafana with Docker
+      community.docker.docker_container:
+        name: nir_grafana
+        image: grafana/grafana:latest
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "{{ monitoring.grafana.port }}:3000"
+        volumes:
+          - "{{ monitoring.grafana.storage }}:/var/lib/grafana"
+        env:
+          GF_SECURITY_ADMIN_PASSWORD: "{{ monitoring.grafana.admin_password }}"
+          GF_USERS_ALLOW_SIGN_UP: "false"
+        networks:
+          - name: "{{ docker.network_name }}"
+      when: monitoring.grafana.enabled and docker.enabled
+
+---
+# Phase 8: Final Configuration and Verification
+- name: Phase 8 - Final Configuration and Verification
+  hosts: venty_stick
+  become: true
+  
+  tasks:
+    - name: Set up log rotation
+      ansible.builtin.template:
+        src: templates/logrotate.conf.j2
+        dest: /etc/logrotate.d/nir_framework
+        owner: root
+        group: root
+        mode: '0644'
+      
+    - name: Create framework log directory
+      ansible.builtin.file:
+        path: "{{ log_dir }}"
+        state: directory
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0755'
+      
+    - name: Set permissions on project directories
+      ansible.builtin.file:
+        path: "{{ storage.base_dir }}"
+        state: directory
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0755'
+        recurse: yes
+      
+    - name: Create framework environment profile
+      ansible.builtin.template:
+        src: templates/framework_profile.sh.j2
+        dest: /etc/profile.d/nir_framework.sh
+        owner: root
+        group: root
+        mode: '0644'
+      
+    - name: Verify framework installation
+      ansible.builtin.command: |
+        cd {{ storage.base_dir }} && 
+        {{ python_venv_path }}/bin/python -m dev_framework info
+      register: framework_info
+      changed_when: false
+      
+    - name: Display framework information
+      ansible.builtin.debug:
+        var: framework_info.stdout_lines
+      
+    - name: Verify validation passes
+      ansible.builtin.command: |
+        cd {{ storage.base_dir }} && 
+        {{ python_venv_path }}/bin/python -m dev_framework validate
+      register: validation_result
+      changed_when: false
+      ignore_errors: yes
+      
+    - name: Display validation results
+      ansible.builtin.debug:
+        var: validation_result.stdout_lines | select("match", "Validation passed") | list
+      
+    - name: Create setup completion marker
+      ansible.builtin.file:
+        path: "{{ storage.base_dir }}/SETUP_COMPLETED"
+        state: touch
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0644'
+      
+    - name: Display completion message
+      ansible.builtin.debug:
+        msg: |
+          ============================================
+          ✅ VENTY STICK SETUP COMPLETED SUCCESSFULLY
+          ============================================
+          Framework: DeveloperAgent v{{ framework_version }}
+          Project: {{ project_name }}
+          Timestamp: {{ timestamp }}
+          
+          Access Information:
+          - Framework: http://{{ ansible_host }}:{{ framework.port }}
+          - API: http://{{ ansible_host }}:{{ services.api.port }}
+          - PostgreSQL: {{ ansible_host }}:{{ databases.postgresql.port }}
+          - Weaviate: http://{{ ansible_host }}:{{ databases.weaviate.port }}
+          - Prometheus: http://{{ ansible_host }}:{{ monitoring.prometheus.port }}
+          - Grafana: http://{{ ansible_host }}:{{ monitoring.grafana.port }}
+          
+          Commands:
+          - Start: sudo systemctl start nir_framework
+          - Stop: sudo systemctl stop nir_framework
+          - Status: sudo systemctl status nir_framework
+          - Logs: tail -f {{ log_dir }}/framework.log
+          
+          Framework Commands:
+          - cd {{ storage.base_dir }} && source {{ python_venv_path }}/bin/activate
+          - python -m dev_framework info
+          - python -m dev_framework validate
+          - python -m dev_framework generate agent NewAgent
+          
+          ============================================
+          Setup completed in {{ ansible_date_time.iso8601 | regex_replace('T.*', '') }} minutes
+          ============================================

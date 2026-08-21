@@ -1,0 +1,45 @@
+[
+  {
+    "id": "mqtt-in",
+    "type": "mqtt in",
+    "z": "",
+    "name": "spectral-input",
+    "topic": "spectral/#",
+    "qos": "2",
+    "datatype": "auto-detect",
+    "broker": "mqtt-broker",
+    "x": 120,
+    "y": 180,
+    "wires": [["debug-msg"]]
+  },
+  {
+    "id": "debug-msg",
+    "type": "debug",
+    "z": "",
+    "name": "debug-output",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 380,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "mqtt-broker",
+    "type": "mqtt-broker",
+    "name": "Mosquitto",
+    "broker": "mqtt",
+    "port": "1883",
+    "clientid": "nodered-client",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true
+  }
+]

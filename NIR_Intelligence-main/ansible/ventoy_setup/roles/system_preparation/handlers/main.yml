@@ -1,0 +1,34 @@
+---
+# System Preparation Handlers
+# This file contains handlers for the system preparation role
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart ufw
+  service:
+    name: ufw
+    state: restarted
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: restart firewalld
+  service:
+    name: firewalld
+    state: restarted
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: restart docker
+  service:
+    name: docker
+    state: restarted
+  when: install_docker | default(false)
+
+- name: reload sysctl
+  command: sysctl -p
+
+- name: restart networking
+  service:
+    name: networking
+    state: restarted
+  when: ansible_facts['os_family'] == 'Debian'

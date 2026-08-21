@@ -1,0 +1,125 @@
+#!/usr/bin/env ansible-playbook
+---
+# Playbook: Backup DeveloperAgent Framework
+# 
+# This playbook creates backups of the framework, databases, and configurations
+#
+# Usage:
+#   ansible-playbook -i inventory/hosts.yml playbooks/backup_framework.yml
+#   ansible-playbook -i inventory/hosts.yml playbooks/backup_framework.yml --limit venty_stick
+
+- name: Backup DeveloperAgent Framework
+  hosts: framework_servers
+  become: true
+  gather_facts: false
+  
+  vars:
+    backup_timestamp: "{{ ansible_date_time.iso8601 | regex_replace('[T:.]', '-') | regex_replace('Z$', '') }}"
+    backup_name: "nir_framework_backup_{{ backup_timestamp }}"
+  
+  tasks:
+    - name: Display backup information
+      ansible.builtin.debug:
+        msg: |
+          ============================================
+          NIR_Mistral Framework Backup
+          ============================================
+          Timestamp: {{ ansible_date_time.iso8601 }}
+          Backup Name: {{ backup_name }}
+          Target: {{ inventory_hostname }}
+          ============================================
+
+    - name: Create backup directory
+      ansible.builtin.file:
+        path: "{{ storage.backups_dir }}/{{ backup_name }}"
+        state: directory
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0755'
+
+    - name: Backup framework code
+      ansible.builtin.archive:
+        path: "{{ storage.base_dir }}"
+        dest: "{{ storage.backups_dir }}/{{ backup_name }}/framework_code.tar.gz"
+        format: gz
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0644'
+        exclude:
+          - "{{ storage.backups_dir }}"
+          - "{{ storage.data_dir }}"
+          - "{{ log_dir }}"
+          - "*.pyc"
+          - "__pycache__"
+          - ".git"
+          - "*.log"
+
+    - name: Backup configuration files
+      ansible.builtin.archive:
+        path: "{{ storage.configs_dir }}"
+        dest: "{{ storage.backups_dir }}/{{ backup_name }}/configs.tar.gz"
+        format: gz
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0644'
+
+    - name: Backup database data (PostgreSQL)
+      ansible.builtin.command: |
+        docker exec nir_postgresql pg_dump -U nir_user -d nir_mistral > {{ storage.backups_dir }}/{{ backup_name }}/postgresql_backup.sql
+      args:
+        creates: "{{ storage.backups_dir }}/{{ backup_name }}/postgresql_backup.sql"
+      when: databases.postgresql.enabled and docker.enabled
+      ignore_errors: yes
+
+    - name: Backup Weaviate data
+      ansible.builtin.command: |
+        docker exec nir_weaviate /bin/sh -c 'tar czf - /var/lib/weaviate' > {{ storage.backups_dir }}/{{ backup_name }}/weaviate_backup.tar.gz
+      args:
+        creates: "{{ storage.backups_dir }}/{{ backup_name }}/weaviate_backup.tar.gz"
+      when: databases.weaviate.enabled and docker.enabled
+      ignore_errors: yes
+
+    - name: Create backup manifest
+      ansible.builtin.template:
+        src: templates/backup_manifest.txt.j2
+        dest: "{{ storage.backups_dir }}/{{ backup_name }}/BACKUP_MANIFEST.txt"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0644'
+
+    - name: Create compressed backup archive
+      ansible.builtin.archive:
+        path: "{{ storage.backups_dir }}/{{ backup_name }}"
+        dest: "{{ storage.backups_dir }}/{{ backup_name }}.tar.gz"
+        format: gz
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0644'
+        remove: yes
+
+    - name: Clean up old backups (keep last {{ backup.retention }} days)
+      ansible.builtin.file:
+        path: "{{ storage.backups_dir }}/{{ item }}"
+        state: absent
+      loop: "{{ lookup('fileglob', storage.backups_dir + '/nir_framework_backup_*', wantlist=True) | sort | reverse | slice(backup.retention) }}"
+      when: backup.retention is defined
+      ignore_errors: yes
+
+    - name: Display backup summary
+      ansible.builtin.debug:
+        msg: |
+          ============================================
+          ✅ FRAMEWORK BACKUP COMPLETED
+          ============================================
+          Backup Name: {{ backup_name }}
+          Backup Location: {{ storage.backups_dir }}/{{ backup_name }}.tar.gz
+          Backup Size: {{ lookup('file', storage.backups_dir + '/' + backup_name + '.tar.gz').size | default('Unknown') }}
+          
+          Backup Contents:
+          - Framework code
+          - Configuration files
+          - Database backups (if enabled)
+          - Manifest file
+          
+          Retention: {{ backup.retention }} days
+          ============================================

@@ -1,0 +1,51 @@
+# Django Environment Configuration
+# This file contains environment variables for the Django server
+
+# Django Configuration
+DJANGO_SETTINGS_MODULE={{ django_settings_module }}
+DJANGO_SECRET_KEY={{ django_secret_key }}
+DJANGO_DEBUG={{ django_debug | default(False) | lower }}
+DJANGO_ALLOWED_HOSTS="{{ django_allowed_hosts | default("['localhost', '127.0.0.1', '::1']") }}"
+
+# Server Configuration
+DJANGO_HOST={{ django_bind_address | default('0.0.0.0') }}
+DJANGO_PORT={{ django_port }}
+
+# Database Configuration (SQLite by default)
+DATABASE_URL=sqlite:///{{ deploy_root }}/data/db.sqlite3
+
+# Static Files
+STATIC_ROOT={{ deploy_root }}/static
+STATIC_URL=/static/
+
+# Media Files
+MEDIA_ROOT={{ deploy_root }}/media
+MEDIA_URL=/media/
+
+# Path Configuration
+PROJECT_ROOT={{ deploy_root }}
+DJANGO_PROJECT={{ django_project_path }}
+VENV_PATH={{ venv_path }}
+PYTHONPATH={{ deploy_root }}
+
+# Port Agent Configuration
+PORT_AGENT_ENABLED=True
+PORT_AGENT_PORT={{ port_agent_port }}
+PORT_AGENT_URL=http://localhost:{{ port_agent_port }}
+
+# Logging Configuration
+LOG_LEVEL=INFO
+LOG_FILE={{ deploy_root }}/logs/django.log
+
+# Security Configuration
+CSRF_TRUSTED_ORIGINS=http://localhost:{{ django_port }},http://127.0.0.1:{{ django_port }}
+
+# Performance Configuration
+DJANGO_WORKERS={{ django_workers | default(4) }}
+DJANGO_TIMEOUT={{ django_timeout | default(300) }}
+
+# Development Configuration
+DEVELOPMENT_MODE={{ django_debug | default(False) | lower }}
+
+# Path Configuration for Python
+PATH={{ venv_path }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

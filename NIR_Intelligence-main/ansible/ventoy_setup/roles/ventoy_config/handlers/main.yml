@@ -1,0 +1,15 @@
+---
+# Ventoy Configuration Handlers
+# This file contains handlers for the Ventoy configuration role
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart ventoy services
+  command: /ventoy/ventoy_services.sh restart all
+  when: ventoy_mount_point is defined
+
+- name: reload ventoy configuration
+  command: sync
+  when: ventoy_mount_point is defined

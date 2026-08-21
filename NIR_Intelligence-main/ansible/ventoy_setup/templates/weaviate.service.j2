@@ -1,0 +1,18 @@
+[Unit]
+Description=Weaviate Vector Database
+After=network.target
+
+[Service]
+User={{ service_user }}
+Group={{ service_group }}
+WorkingDirectory=/opt/weaviate
+Environment=GOMAXPROCS=1
+Environment=GOMEMLIMIT=4G
+ExecStart=/opt/weaviate/weaviate server --host 0.0.0.0 --port {{ weaviate_port }} --scheme http
+Restart=always
+RestartSec=5
+StandardOutput=file:/opt/{{ project_name }}/logs/weaviate.log
+StandardError=file:/opt/{{ project_name }}/logs/weaviate_error.log
+
+[Install]
+WantedBy=multi-user.target

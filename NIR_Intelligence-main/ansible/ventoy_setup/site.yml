@@ -1,0 +1,241 @@
+# Main Ansible Playbook for Ventoy Stick Setup
+#
+# This playbook sets up a complete Django + Port Agent environment on a Ventoy stick.
+# It handles system preparation, dependency installation, Django deployment, and
+# Port Agent configuration.
+#
+# Usage:
+#   # Full deployment
+#   ansible-playbook site.yml
+#
+#   # Target specific hosts
+#   ansible-playbook site.yml -l ventoy_stick
+#   ansible-playbook site.yml -l django_servers
+#   ansible-playbook site.yml -l port_agent_servers
+#
+#   # Development vs Production
+#   ansible-playbook site.yml -e "environment=development"
+#   ansible-playbook site.yml -e "environment=production"
+#
+#   # Skip specific parts
+#   ansible-playbook site.yml -e "skip_dependencies=True"
+#   ansible-playbook site.yml -e "skip_django=True"
+#   ansible-playbook site.yml -e "skip_port_agent=True"
+
+- name: Ventoy Stick Setup - Complete Deployment
+  hosts: ventoy_stick
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    # Deployment timestamp
+    deployment_timestamp: "{{ ansible_date_time.iso8601 }}"
+    
+    # System info
+    system_info:
+      hostname: "{{ ansible_hostname }}"
+      os: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+      python_version: "{{ ansible_python_version }}"
+      memory: "{{ ansible_memtotal_mb }}MB"
+      cpu: "{{ ansible_processor }}"
+    
+    # Django settings (defaults for ventoy_stick)
+    django_bind_address: "0.0.0.0"
+    django_settings_module: "nir_web.settings"
+    django_port: 8000
+    django_debug: false
+    django_workers: 4
+    django_timeout: 300
+    run_migrations: true
+    collect_static: true
+    
+    # Port Agent settings (defaults for ventoy_stick)
+    port_agent_port: 8001
+    port_agent_bind_address: "0.0.0.0"
+    port_agent_workers: 2
+    port_agent_timeout: 60
+  
+  pre_tasks:
+    - name: Display deployment information
+      debug:
+        msg: |
+          ============================================
+          NIR_MISTRAL VENTOY STICK SETUP
+          ============================================
+          Timestamp: {{ deployment_timestamp }}
+          Target: {{ inventory_hostname }}
+          Environment: {{ environment | default('production') }}
+          
+          System Info:
+          - Hostname: {{ system_info.hostname }}
+          - OS: {{ system_info.os }}
+          - Python: {{ system_info.python_version }}
+          - Memory: {{ system_info.memory }}
+          - CPU: {{ system_info.cpu }}
+          
+          Deployment Settings:
+          - Project Root: {{ deploy_root }}
+          - Django Port: {{ django_port }}
+          - Port Agent Port: {{ port_agent_port }}
+          - Debug Mode: {{ django_debug }}
+          ============================================
+    
+    - name: Create deployment directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      loop:
+        - "{{ deploy_root }}"
+        - "{{ deploy_root }}/logs"
+        - "{{ deploy_root }}/config"
+        - "{{ deploy_root }}/data"
+        - "{{ deploy_root }}/tmp"
+        - "{{ venv_path }}"
+        - "{{ django_project_path }}"
+        - "{{ port_agent_path }}"
+        - "{{ ventoy_iso_path }}"
+      when: deploy_everything | default(true)
+
+  roles:
+    - role: system_preparation
+      when: install_dependencies | default(true)
+    
+    - role: django_server
+      when: not (skip_django | default(false))
+    
+    - role: port_agent
+      when: not (skip_port_agent | default(false))
+    
+    - role: ventoy_config
+      when: not (skip_ventoy | default(false))
+
+  tasks:
+    - name: Create startup script for Django + Port Agent
+      template:
+        src: templates/start_nir_mistral.sh.j2
+        dest: "{{ deploy_root }}/start_nir_mistral.sh"
+        mode: '0755'
+        owner: root
+        group: root
+      when: deploy_everything | default(true)
+    
+    - name: Create systemd service for Django (if enabled)
+      template:
+        src: templates/django.service.j2
+        dest: /etc/systemd/system/django.service
+        mode: '0644'
+      when: create_systemd_services | default(true)
+      notify: reload systemd
+    
+    - name: Create systemd service for Port Agent (if enabled)
+      template:
+        src: templates/port_agent.service.j2
+        dest: /etc/systemd/system/port_agent.service
+        mode: '0644'
+      when: create_systemd_services | default(true)
+      notify: reload systemd
+    
+    - name: Enable and start Django service
+      systemd:
+        name: django
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      when: create_systemd_services | default(true)
+    
+    - name: Enable and start Port Agent service
+      systemd:
+        name: port_agent
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      when: create_systemd_services | default(true)
+    
+    - name: Create desktop shortcut for Ventoy (if GUI available)
+      template:
+        src: templates/nir_mistral.desktop.j2
+        dest: /usr/share/applications/nir_mistral.desktop
+        mode: '0644'
+      when: ansible_facts['os_family'] == 'Debian' or ansible_facts['os_family'] == 'RedHat'
+    
+    - name: Create README with usage instructions
+      template:
+        src: templates/VENTOY_README.md.j2
+        dest: "{{ deploy_root }}/VENTOY_README.md"
+        mode: '0644'
+      when: deploy_everything | default(true)
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
+
+- name: Verification - Test Deployment
+  hosts: ventoy_stick
+  become: no
+  
+  tasks:
+    - name: Verify Django server is running
+      uri:
+        url: "http://localhost:{{ django_port }}/api/health/"
+        return_content: yes
+      register: django_health
+      ignore_errors: yes
+      when: not (skip_verification | default(false))
+    
+    - name: Display Django health check result
+      debug:
+        var: django_health.json
+      when: django_health is defined
+    
+    - name: Verify Port Agent is running
+      uri:
+        url: "http://localhost:{{ port_agent_port }}/api/ports/"
+        return_content: yes
+      register: port_agent_health
+      ignore_errors: yes
+      when: not (skip_verification | default(false))
+    
+    - name: Display Port Agent health check result
+      debug:
+        var: port_agent_health.json
+      when: port_agent_health is defined
+    
+    - name: Display deployment summary
+      debug:
+        msg: |
+          ============================================
+          DEPLOYMENT COMPLETE
+          ============================================
+          
+          Django Server:
+          - Status: {{ 'RUNNING' if django_health.status == 200 else 'NOT RUNNING' }}
+          - URL: http://localhost:{{ django_port }}
+          - Health: {{ django_health.json | default('Unknown') }}
+          
+          Port Agent:
+          - Status: {{ 'RUNNING' if port_agent_health.status == 200 else 'NOT RUNNING' }}
+          - URL: http://localhost:{{ port_agent_port }}
+          - Health: {{ port_agent_health.json | default('Unknown') }}
+          
+          Startup Commands:
+          - Manual: {{ deploy_root }}/start_nir_mistral.sh
+          - Service: systemctl start django
+          - Service: systemctl start port_agent
+          
+          Logs:
+          - Django: {{ deploy_root }}/logs/django.log
+          - Port Agent: {{ deploy_root }}/logs/port_agent.log
+          - System: /var/log/syslog
+          
+          ============================================
+          NEXT STEPS:
+          1. Test the API endpoints
+          2. Check the logs for any errors
+          3. Configure your agents to use the Port Agent
+          4. Set up monitoring if needed
+          ============================================
+      when: not (skip_verification | default(false))

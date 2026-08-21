@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NIR Spectral Analysis Report</title>
+  <style>
+    :root {
+      --hswt-green: #6FA32F;
+      --hswt-green-dark: #5A8224;
+      --hswt-green-light: #A8C680;
+      --hswt-gray: #F5F5F5;
+      --hswt-gray-dark: #333333;
+      --hswt-gray-text: #555555;
+      --hswt-white: #FFFFFF;
+      --hswt-border: #E0E0E0;
+      --hswt-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      --hswt-radius: 8px;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--hswt-white);
+      color: var(--hswt-gray-dark);
+      margin: 0;
+      padding: 24px;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--hswt-green);
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    
+    .logo {
+      width: 60px;
+      height: 60px;
+      background: var(--hswt-green);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--hswt-white);
+      font-weight: bold;
+      font-size: 24px;
+    }
+    
+    .header-title {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--hswt-gray-dark);
+    }
+    
+    .header-subtitle {
+      margin: 4px 0 0 0;
+      font-size: 14px;
+      color: var(--hswt-gray-text);
+    }
+    
+    .header-right {
+      text-align: right;
+    }
+    
+    .header-date {
+      font-size: 14px;
+      color: var(--hswt-gray-text);
+    }
+    
+    .section {
+      margin-bottom: 32px;
+    }
+    
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--hswt-green);
+      border-left: 4px solid var(--hswt-green);
+      padding-left: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .section-subtitle {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--hswt-gray-dark);
+      margin-bottom: 12px;
+    }
+    
+    .card {
+      background: var(--hswt-white);
+      border: 1px solid var(--hswt-border);
+      border-radius: var(--hswt-radius);
+      padding: 20px;
+      box-shadow: var(--hswt-shadow);
+    }
+    
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    
+    .metric-card {
+      background: var(--hswt-white);
+      border: 1px solid var(--hswt-border);
+      border-radius: var(--hswt-radius);
+      padding: 20px;
+      box-shadow: var(--hswt-shadow);
+    }
+    
+    .metric-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--hswt-gray-text);
+      margin-bottom: 8px;
+    }
+    
+    .metric-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--hswt-gray-dark);
+    }
+    
+    .metric-unit {
+      font-size: 14px;
+      color: var(--hswt-gray-text);
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .status-success {
+      background: #E8F5E8;
+      color: var(--hswt-green-dark);
+    }
+    
+    .status-warning {
+      background: #FFF3CD;
+      color: #856404;
+    }
+    
+    .status-error {
+      background: #F8D7DA;
+      color: #721C24;
+    }
+    
+    .status-unknown {
+      background: #E2E3E5;
+      color: var(--hswt-gray-text);
+    }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+    
+    .data-table th {
+      background: var(--hswt-green);
+      color: var(--hswt-white);
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+    
+    .data-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--hswt-border);
+    }
+    
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .data-table tr:hover {
+      background: var(--hswt-gray);
+    }
+    
+    .chart-placeholder {
+      background: var(--hswt-gray);
+      border: 1px dashed var(--hswt-border);
+      border-radius: var(--hswt-radius);
+      padding: 40px;
+      text-align: center;
+      color: var(--hswt-gray-text);
+      margin-top: 16px;
+    }
+    
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--hswt-border);
+      font-size: 12px;
+      color: var(--hswt-gray-text);
+      text-align: center;
+    }
+    
+    .alert {
+      padding: 16px;
+      border-radius: var(--hswt-radius);
+      margin-bottom: 20px;
+    }
+    
+    .alert-info {
+      background: #E7F3FF;
+      border-left: 4px solid #2E6BB8;
+      color: #2E6BB8;
+    }
+    
+    .alert-warning {
+      background: #FFF3CD;
+      border-left: 4px solid #FFC107;
+      color: #856404;
+    }
+    
+    .alert-error {
+      background: #F8D7DA;
+      border-left: 4px solid #DC3545;
+      color: #721C24;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <div class="logo">HSWT</div>
+        <div>
+          <h1 class="header-title">NIR Spectral Analysis Report</h1>
+          <p class="header-subtitle">NIR Intelligence Platform • Hochschule Weihenstephan-Triesdorf</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="header-date">20.08.2026, 15:49</div>
+      </div>
+    </div>
+
+    <!-- Main Alert -->
+    <div class="alert alert-info">
+      <strong>Hinweis:</strong> Aktuell liegen keine Spektraldaten für diese Probe vor. Bitte überprüfen Sie die Datenquelle oder wählen Sie eine andere Probe aus.
+    </div>
+
+    <!-- Sample Information -->
+    <div class="section">
+      <h2 class="section-title">Probeninformationen</h2>
+      <div class="card">
+        <div class="metric-card">
+          <div class="metric-label">Proben-ID</div>
+          <div class="metric-value">unknown</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analysis Summary -->
+    <div class="section">
+      <h2 class="section-title">Analysezusammenfassung</h2>
+      <div class="card-grid">
+        <div class="metric-card">
+          <div class="metric-label">Qualitätsbewertung</div>
+          <div class="metric-value">0 <span class="metric-unit">/ 100</span></div>
+          <div style="margin-top: 8px;">
+            <span class="status-badge status-unknown">Unbekannt</span>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Erkannte Probleme</div>
+          <div class="metric-value">Keine</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Datenpunkte</div>
+          <div class="metric-value">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spectral Quality Assessment -->
+    <div class="section">
+      <h2 class="section-title">Spektrale Qualitätsbewertung</h2>
+      <div class="card">
+        <h3 class="section-subtitle">Wellenlängenbereich</h3>
+        <div class="chart-placeholder">
+          <p>Keine Spektraldaten verfügbar</p>
+          <p style="font-size: 12px; margin-top: 8px; color: #999;">Wellenlängenbereich: 0 - 0 nm</p>
+        </div>
+
+        <h3 class="section-subtitle" style="margin-top: 24px;">Qualitätsmetriken</h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Metrik</th>
+              <th>Wert</th>
+              <th>Bewertung</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Rauschpegel</td>
+              <td>0</td>
+              <td><span class="status-badge status-success">Optimal</span></td>
+            </tr>
+            <tr>
+              <td>Signal-Rausch-Verhältnis</td>
+              <td>0</td>
+              <td><span class="status-badge status-unknown">Unbekannt</span></td>
+            </tr>
+            <tr>
+              <td>Wellenlängenverschiebung</td>
+              <td>Keine</td>
+              <td><span class="status-badge status-success">Keine</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Issues and Recommendations -->
+    <div class="section">
+      <h2 class="section-title">Probleme und Empfehlungen</h2>
+      <div class="card-grid">
+        <div class="card">
+          <h3 class="section-subtitle">Erkannte Probleme</h3>
+          <div class="alert alert-info">
+            Keine Probleme erkannt.
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="section-subtitle">Parameter-Empfehlungen</h3>
+          <div class="alert alert-info">
+            Keine Empfehlungen verfügbar.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preprocessing -->
+    <div class="section">
+      <h2 class="section-title">Angewendete Vorverarbeitung</h2>
+      <div class="card">
+        <div class="alert alert-info">
+          Keine Vorverarbeitung angewendet.
+        </div>
+      </div>
+    </div>
+
+    <!-- Raw Data Preview -->
+    <div class="section">
+      <h2 class="section-title">Rohdaten-Vorschau</h2>
+      <div class="card">
+        <div class="chart-placeholder">
+          <p>Keine Spektraldaten verfügbar</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>© 2026 Hochschule Weihenstephan-Triesdorf • NIR Intelligence Platform</p>
+      <p style="margin-top: 8px;">Generiert am 20.08.2026, 15:49 Uhr</p>
+    </div>
+  </div>
+</body>
+</html>

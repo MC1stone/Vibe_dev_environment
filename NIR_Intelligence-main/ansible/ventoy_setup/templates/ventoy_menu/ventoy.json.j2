@@ -1,0 +1,62 @@
+{
+  "ventoy_version": "1.0.96",
+  "theme": {
+    "display_mode": "GUI",
+    "theme_color": "{{ color_primary }}",
+    "menu_background": "{{ color_background }}",
+    "selection_background": "{{ color_primary }}",
+    "selection_foreground": "#ffffff",
+    "text_color": "{{ color_text }}",
+    "subtext_color": "{{ color_text_light }}",
+    "font": "Noto Sans,14",
+    "font_title": "Noto Sans,20,B",
+    "menu_width": "800",
+    "menu_height": "600",
+    "menu_position": "center",
+    "menu_margin_top": "100",
+    "menu_margin_bottom": "50",
+    "menu_margin_left": "50",
+    "menu_margin_right": "50"
+  },
+  "menu": {
+    "title": "{{ menu_title }}",
+    "timeout": {{ menu_timeout }},
+    "default": "{{ menu_default }}",
+    "auto_boot": false,
+    "password": "",
+    "entries": [
+      {% for option in implementation_options %}
+      {
+        "id": "{{ option.id }}",
+        "name": "{{ option.icon }} {{ option.name }}",
+        "description": "{{ option.description }}",
+        "boot_option": "{{ option.boot_option }}",
+        "enabled": true,
+        "hidden": false
+      }{%- if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+  },
+  "plugins": {
+    "auto_boot": {
+      "enabled": false,
+      "timeout": 5,
+      "default_entry": "{{ menu_default }}"
+    },
+    "persistence": {
+      "enabled": true,
+      "save_changes": true,
+      "persistence_file": "/ventoy/persistence.dat"
+    },
+    "theme": {
+      "enabled": true,
+      "theme_file": "/ventoy/ventoy/ventoy_theme.json"
+    }
+  },
+  "advanced": {
+    "log_level": "INFO",
+    "debug_mode": false,
+    "custom_boot": true,
+    "custom_boot_enabled": true
+  }
+}

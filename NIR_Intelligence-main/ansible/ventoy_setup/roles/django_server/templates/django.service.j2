@@ -1,0 +1,35 @@
+[Unit]
+Description=Django Server for NIR_Mistral Framework
+After=network.target
+Requires=network.target
+
+[Service]
+Type=simple
+User={{ service_user | default('root') }}
+Group={{ service_group | default('root') }}
+WorkingDirectory={{ django_project_path }}
+Environment="PYTHONPATH={{ deploy_root }}"
+Environment="DJANGO_SETTINGS_MODULE={{ django_settings_module }}"
+Environment="PATH={{ venv_path }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+ExecStart={{ venv_path }}/bin/python manage.py runserver 0.0.0.0:{{ django_port }}
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+
+# Standard output is logged to journalctl
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=django-nir-mistral
+
+# Increase limits
+LimitNOFILE=65535
+LimitNPROC=65535
+
+# Security
+PrivateTmp=true
+ProtectSystem=full
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

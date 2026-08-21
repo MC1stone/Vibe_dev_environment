@@ -1,0 +1,517 @@
+---
+# NIR Intelligence Platform - Crew AI Implementation Test Playbook
+# This playbook tests the complete Crew AI implementation
+
+- name: Test Crew AI Implementation
+  hosts: localhost
+  connection: local
+  become: yes
+  become_method: sudo
+  
+  vars:
+    # Project variables
+    project_root: "/home/martin/Development/vsCode_Environment/NIR_Mistral"
+    python_path: "/usr/bin/python3"
+    venv_path: "{{ project_root }}/django_project/venv"
+    
+    # Test variables
+    test_output_dir: "{{ project_root }}/test_output"
+    test_report_dir: "{{ test_output_dir }}/reports"
+    test_log_dir: "{{ test_output_dir }}/logs"
+    
+    # Test data
+    test_sample_id: "ansible_test_sample_001"
+    test_spectral_data:
+      sample_id: "{{ test_sample_id }}"
+      wavelengths: [700, 710, 720, 730, 740, 750, 760, 770, 780, 790]
+      intensities: [1000, 1050, 1020, 1080, 1040, 1060, 1030, 1070, 1050, 1090]
+      measurement_date: "2026-08-05T10:00:00Z"
+      instrument_type: "DIY Spectrometer"
+      integration_time: 100
+    
+    test_metadata:
+      sample_id: "{{ test_sample_id }}"
+      title: "Ansible Test Sample"
+      description: "Test sample for Ansible Crew AI verification"
+      instrument_type: "DIY Spectrometer"
+      instrument_model: "NIR-Mistral v1.0"
+      wavelength_range: "700-2500"
+      spectral_resolution: "10"
+      integration_time: "100"
+      detector_type: "InGaAs"
+      light_source: "Tungsten Halogen"
+      measurement_date: "2026-08-05T10:00:00Z"
+      measurement_time: "10:00:00"
+      operator: "Ansible Test User"
+      organization: "NIR Intelligence Platform"
+      location: "Test Laboratory"
+      coordinates: "52.5200, 13.4050"
+      sample_description: "Test sample for Ansible verification"
+      sample_preparation: "Standard preparation method"
+      measurement_conditions: "Room temperature, 50% humidity"
+      calibration_info: "Calibrated with standard reference"
+      data_quality: "High"
+      processing_history: "Raw data"
+
+  tasks:
+    - name: Create test directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_output_dir }}"
+        - "{{ test_report_dir }}"
+        - "{{ test_log_dir }}"
+
+    - name: Check Python environment
+      command: "{{ python_path }} --version"
+      register: python_version
+      changed_when: false
+
+    - name: Verify Python version is 3.8+
+      assert:
+        that: python_version.stdout is version('3.8', '>=')
+        msg: "Python 3.8 or higher is required"
+
+    - name: Check if virtual environment exists
+      stat:
+        path: "{{ venv_path }}"
+      register: venv_stat
+
+    - name: Create virtual environment if it doesn't exist
+      command: "{{ python_path }} -m venv {{ venv_path }}"
+      when: not venv_stat.stat.exists
+
+    - name: Install required packages
+      pip:
+        requirements: "{{ project_root }}/requirements.txt"
+        virtualenv: "{{ venv_path }}"
+        virtualenv_python: "{{ python_path }}"
+
+    - name: Install Crew AI specific dependencies
+      pip:
+        name:
+          - numpy
+          - pandas
+          - scipy
+          - scikit-learn
+          - pyyaml
+        virtualenv: "{{ venv_path }}"
+        virtualenv_python: "{{ python_path }}"
+
+    - name: Set PYTHONPATH for project
+      set_fact:
+        ansible_python_interpreter: "{{ venv_path }}/bin/python"
+
+    - name: Test Spectral Analysis Agent
+      block:
+        - name: Run spectral analysis test
+          command: >
+            {{ venv_path }}/bin/python -c "
+            import sys
+            sys.path.insert(0, '{{ project_root }}')
+            from agents.spectral_analysis_agent import SpectralAnalysisAgent
+            import numpy as np
+            
+            # Create agent
+            agent = SpectralAnalysisAgent()
+            
+            # Create test data
+            spectral_data = {{ test_spectral_data | to_json }}
+            
+            # Test execution
+            context = {'spectral_data': spectral_data}
+            output = agent.execute(context)
+            
+            # Check results
+            if output.status.name == 'COMPLETED':
+                print('SUCCESS: Spectral Analysis Agent test passed')
+                print(f'Quality Score: {output.data.get(\"analysis_summary\", {}).get(\"quality_score\", 0)}')
+                print(f'Quality Grade: {output.data.get(\"analysis_summary\", {}).get(\"quality_grade\", \"N/A\")}')
+                sys.exit(0)
+            else:
+                print('FAILED: Spectral Analysis Agent test failed')
+                print(f'Status: {output.status.name}')
+                print(f'Errors: {output.errors}')
+                sys.exit(1)
+            "
+          args:
+            chdir: "{{ project_root }}"
+          register: spectral_test
+          changed_when: false
+          
+        - name: Check spectral analysis test result
+          assert:
+            that: spectral_test.rc == 0
+            msg: "Spectral Analysis Agent test failed"
+          
+        - name: Display spectral analysis test output
+          debug:
+            var: spectral_test.stdout_lines
+
+    - name: Test Metadata Quality Agent
+      block:
+        - name: Run metadata quality test
+          command: >
+            {{ venv_path }}/bin/python -c "
+            import sys
+            sys.path.insert(0, '{{ project_root }}')
+            from agents.metadata_quality_agent import MetadataQualityAgent
+            
+            # Create agent
+            agent = MetadataQualityAgent()
+            
+            # Create test metadata
+            metadata = {{ test_metadata | to_json }}
+            
+            # Test execution
+            context = {'metadata': metadata, 'sample_id': '{{ test_sample_id }}'}
+            output = agent.execute(context)
+            
+            # Check results
+            if output.status.name == 'COMPLETED':
+                print('SUCCESS: Metadata Quality Agent test passed')
+                print(f'Overall Quality Score: {output.data.get(\"summary\", {}).get(\"overall_quality_score\", 0)}')
+                print(f'Quality Grade: {output.data.get(\"summary\", {}).get(\"overall_quality_grade\", \"N/A\")}')
+                print(f'Completeness: {output.data.get(\"summary\", {}).get(\"completeness_score\", 0)}%')
+                sys.exit(0)
+            else:
+                print('FAILED: Metadata Quality Agent test failed')
+                print(f'Status: {output.status.name}')
+                print(f'Errors: {output.errors}')
+                sys.exit(1)
+            "
+          args:
+            chdir: "{{ project_root }}"
+          register: metadata_test
+          changed_when: false
+          
+        - name: Check metadata quality test result
+          assert:
+            that: metadata_test.rc == 0
+            msg: "Metadata Quality Agent test failed"
+          
+        - name: Display metadata quality test output
+          debug:
+            var: metadata_test.stdout_lines
+
+    - name: Test Reporting Agent
+      block:
+        - name: Run reporting agent test
+          command: >
+            {{ venv_path }}/bin/python -c "
+            import sys
+            import tempfile
+            from pathlib import Path
+            sys.path.insert(0, '{{ project_root }}')
+            from agents.reporting_agent import ReportingAgent, ReportType, ReportFormat
+            
+            # Create temporary directories
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_path = Path(temp_dir)
+                agent = ReportingAgent(
+                    templates_dir=temp_path / 'templates',
+                    output_dir=temp_path / 'output',
+                    temp_dir=temp_path / 'temp'
+                )
+                
+                # Create test data
+                report_data = {
+                    'spectral_analysis': {
+                        'sample_id': '{{ test_sample_id }}',
+                        'quality_score': 85.5,
+                        'quality_grade': 'good',
+                        'wavelength_range': [700, 2500],
+                        'data_points': 200,
+                        'noise_level': 25.3,
+                        'signal_to_noise_ratio': 45.2,
+                        'shift_detected': None,
+                        'issues_detected': ['NOISE_HIGH'],
+                        'preprocessing_steps': ['smoothing'],
+                        'recommendations': ['Increase integration time']
+                    },
+                    'parameter_recommendations': [
+                        {
+                            'parameter': 'integration_time',
+                            'reason': 'Low SNR',
+                            'recommended_value': 'increase by 50%',
+                            'impact': 'high',
+                            'confidence': 0.9
+                        }
+                    ],
+                    'processed_data': {
+                        'wavelengths': [700, 710, 720],
+                        'intensities': [100, 120, 110],
+                        'preprocessing_applied': ['smoothing']
+                    }
+                }
+                
+                # Test report generation
+                report = agent.generate_report(
+                    report_type=ReportType.SPECTRAL_ANALYSIS,
+                    data=report_data,
+                    format=ReportFormat.HTML,
+                    sample_id='{{ test_sample_id }}'
+                )
+                
+                # Check results
+                if report.status.name == 'COMPLETED' and report.file_path:
+                    import os
+                    if os.path.exists(report.file_path):
+                        print('SUCCESS: Reporting Agent test passed')
+                        print(f'Report file: {report.file_path}')
+                        with open(report.file_path, 'r') as f:
+                            content = f.read()
+                        print(f'Report size: {len(content)} characters')
+                        sys.exit(0)
+                    else:
+                        print('FAILED: Report file not created')
+                        sys.exit(1)
+                else:
+                    print('FAILED: Reporting Agent test failed')
+                    print(f'Status: {report.status.name if hasattr(report.status, \"name\") else report.status}')
+                    print(f'Error: {report.error_message}')
+                    sys.exit(1)
+            "
+          args:
+            chdir: "{{ project_root }}"
+          register: reporting_test
+          changed_when: false
+          
+        - name: Check reporting agent test result
+          assert:
+            that: reporting_test.rc == 0
+            msg: "Reporting Agent test failed"
+          
+        - name: Display reporting agent test output
+          debug:
+            var: reporting_test.stdout_lines
+
+    - name: Test NIR Analysis Crew
+      block:
+        - name: Run NIR Analysis Crew test
+          command: >
+            {{ venv_path }}/bin/python -c "
+            import sys
+            sys.path.insert(0, '{{ project_root }}')
+            from agents.nir_analysis_crew import analyze_spectral_data
+            
+            # Create test data
+            spectral_data = {{ test_spectral_data | to_json }}
+            metadata = {{ test_metadata | to_json }}
+            
+            # Test analysis
+            result = analyze_spectral_data(
+                sample_id='{{ test_sample_id }}',
+                spectral_data=spectral_data,
+                metadata=metadata,
+                analysis_mode='standard',
+                privacy_level='local_only',
+                report_type='comprehensive',
+                report_format='html',
+                include_calibration=True,
+                include_federated_learning=False,
+                user_id='ansible_test_user'
+            )
+            
+            # Check results
+            if len(result.errors) == 0:
+                print('SUCCESS: NIR Analysis Crew test passed')
+                print(f'Request ID: {result.request_id}')
+                print(f'Overall Quality Score: {result.overall_quality_score:.1f}')
+                print(f'Spectral Quality: {result.spectral_analysis.quality_grade.value if result.spectral_analysis else \"N/A\"}')
+                print(f'Metadata Quality: {result.metadata_quality.overall_quality_grade.value if result.metadata_quality else \"N/A\"}')
+                print(f'Processing Time: {result.processing_time:.2f}s')
+                print(f'Reports Generated: {len(result.generated_reports)}')
+                print(f'Recommendations: {len(result.recommendations)}')
+                sys.exit(0)
+            else:
+                print('FAILED: NIR Analysis Crew test failed')
+                print(f'Errors: {result.errors}')
+                sys.exit(1)
+            "
+          args:
+            chdir: "{{ project_root }}"
+          register: crew_test
+          changed_when: false
+          
+        - name: Check NIR Analysis Crew test result
+          assert:
+            that: crew_test.rc == 0
+            msg: "NIR Analysis Crew test failed"
+          
+        - name: Display NIR Analysis Crew test output
+          debug:
+            var: crew_test.stdout_lines
+
+    - name: Test Django API Integration
+      block:
+        - name: Check if Django is installed
+          command: "{{ venv_path }}/bin/python -c 'import django; print(django.VERSION)'"
+          register: django_version
+          changed_when: false
+          ignore_errors: yes
+          
+        - name: Display Django version
+          debug:
+            var: django_version.stdout
+          when: django_version.rc == 0
+          
+        - name: Test Crew AI API imports
+          command: >
+            {{ venv_path }}/bin/python -c "
+            import sys
+            sys.path.insert(0, '{{ project_root }}')
+            sys.path.insert(0, '{{ project_root }}/django_project')
+            
+            try:
+                from api.crewai_views import start_analysis, get_crew_status
+                print('SUCCESS: Crew AI API views can be imported')
+                sys.exit(0)
+            except Exception as e:
+                print(f'FAILED: Crew AI API import failed: {e}')
+                sys.exit(1)
+            "
+          args:
+            chdir: "{{ project_root }}"
+          register: api_import_test
+          changed_when: false
+          
+        - name: Check API import test result
+          assert:
+            that: api_import_test.rc == 0
+            msg: "Crew AI API import test failed"
+          
+        - name: Display API import test output
+          debug:
+            var: api_import_test.stdout_lines
+
+    - name: Create comprehensive test report
+      block:
+        - name: Run comprehensive Crew AI test
+          command: >
+            {{ venv_path }}/bin/python {{ project_root }}/test_crewai_implementation.py
+          args:
+            chdir: "{{ project_root }}"
+          register: comprehensive_test
+          changed_when: false
+          ignore_errors: yes
+          
+        - name: Save comprehensive test results
+          copy:
+            content: "{{ comprehensive_test.stdout }}"
+            dest: "{{ test_log_dir }}/crewai_comprehensive_test.log"
+          when: comprehensive_test.stdout is defined
+          
+        - name: Display comprehensive test summary
+          debug:
+            msg: "Comprehensive test completed with return code: {{ comprehensive_test.rc }}"
+
+    - name: Create test summary report
+      block:
+        - name: Create summary report content
+          set_fact:
+            summary_report: |
+              # NIR Intelligence Platform - Crew AI Implementation Test Report
+              
+              ## Test Execution Summary
+              
+              **Date:** {{ ansible_date_time.iso8601 }}
+              **Host:** {{ ansible_hostname }}
+              **Python Version:** {{ python_version.stdout | default('Unknown') | trim }}
+              **Django Version:** {{ django_version.stdout | default('Not installed') | trim }}
+              
+              ## Individual Component Tests
+              
+              ### 1. Spectral Analysis Agent
+              **Status:** {% if spectral_test.rc == 0 %}✅ PASS{% else %}❌ FAIL{% endif %}
+              **Output:**
+              ```
+              {{ spectral_test.stdout | default('No output') }}
+              ```
+              
+              ### 2. Metadata Quality Agent
+              **Status:** {% if metadata_test.rc == 0 %}✅ PASS{% else %}❌ FAIL{% endif %}
+              **Output:**
+              ```
+              {{ metadata_test.stdout | default('No output') }}
+              ```
+              
+              ### 3. Reporting Agent
+              **Status:** {% if reporting_test.rc == 0 %}✅ PASS{% else %}❌ FAIL{% endif %}
+              **Output:**
+              ```
+              {{ reporting_test.stdout | default('No output') }}
+              ```
+              
+              ### 4. NIR Analysis Crew
+              **Status:** {% if crew_test.rc == 0 %}✅ PASS{% else %}❌ FAIL{% endif %}
+              **Output:**
+              ```
+              {{ crew_test.stdout | default('No output') }}
+              ```
+              
+              ### 5. Django API Integration
+              **Status:** {% if api_import_test.rc == 0 %}✅ PASS{% else %}❌ FAIL{% endif %}
+              **Output:**
+              ```
+              {{ api_import_test.stdout | default('No output') }}
+              ```
+              
+              ## Comprehensive Test
+              **Status:** {% if comprehensive_test.rc == 0 %}✅ PASS{% else %}❌ FAIL{% endif %}
+              **Return Code:** {{ comprehensive_test.rc | default('N/A') }}
+              
+              ## Overall Status
+              **Total Tests:** 5
+              **Passed:** {% if spectral_test.rc == 0 %}1{% else %}0{% endif %} + {% if metadata_test.rc == 0 %}1{% else %}0{% endif %} + {% if reporting_test.rc == 0 %}1{% else %}0{% endif %} + {% if crew_test.rc == 0 %}1{% else %}0{% endif %} + {% if api_import_test.rc == 0 %}1{% else %}0{% endif %} = 
+              {% set passed = 0 %}
+              {% if spectral_test.rc == 0 %}{% set passed = passed + 1 %}{% endif %}
+              {% if metadata_test.rc == 0 %}{% set passed = passed + 1 %}{% endif %}
+              {% if reporting_test.rc == 0 %}{% set passed = passed + 1 %}{% endif %}
+              {% if crew_test.rc == 0 %}{% set passed = passed + 1 %}{% endif %}
+              {% if api_import_test.rc == 0 %}{% set passed = passed + 1 %}{% endif %}
+              {{ passed }} / 5
+              
+              **Success Rate:** {{ (passed / 5 * 100) | round(1) }}%
+              
+              {% if passed == 5 %}
+              ## ✅ ALL TESTS PASSED
+              The Crew AI implementation is fully functional and ready for production use.
+              {% elif passed >= 3 %}
+              ## ⚠️ MOST TESTS PASSED
+              The Crew AI implementation is mostly functional with some minor issues to address.
+              {% else %}
+              ## ❌ MAJOR ISSUES DETECTED
+              The Crew AI implementation has significant issues that need to be resolved.
+              {% endif %}
+          
+        - name: Save summary report
+          copy:
+            content: "{{ summary_report }}"
+            dest: "{{ test_report_dir }}/crewai_test_summary.md"
+          
+        - name: Display summary report path
+          debug:
+            msg: "Test summary report saved to: {{ test_report_dir }}/crewai_test_summary.md"
+
+    - name: Display final test results
+      debug:
+        msg: |
+          Crew AI Implementation Test Complete!
+          
+          Test Results:
+          - Spectral Analysis Agent: {% if spectral_test.rc == 0 %}✅ PASS{% else %}❌ FAIL{% endif %}
+          - Metadata Quality Agent: {% if metadata_test.rc == 0 %}✅ PASS{% else %}❌ FAIL{% endif %}
+          - Reporting Agent: {% if reporting_test.rc == 0 %}✅ PASS{% else %}❌ FAIL{% endif %}
+          - NIR Analysis Crew: {% if crew_test.rc == 0 %}✅ PASS{% else %}❌ FAIL{% endif %}
+          - Django API Integration: {% if api_import_test.rc == 0 %}✅ PASS{% else %}❌ FAIL{% endif %}
+          
+          Detailed logs and reports are available in: {{ test_output_dir }}
+
+  handlers:
+    - name: Handle test failures
+      debug:
+        msg: "Test failed. Check the output for details."
+      listen: "test_failure"

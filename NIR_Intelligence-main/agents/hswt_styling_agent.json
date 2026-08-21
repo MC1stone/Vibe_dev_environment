@@ -1,0 +1,24 @@
+{
+  "name": "HSWTStylingAgent",
+  "version": "1.0.0",
+  "description": "HSWTStyling for NIR Intelligence Platform",
+  "type": "default",
+  "dependencies": [],
+  "required_methods": [
+    "execute"
+  ],
+  "configuration": {
+    "enabled": true,
+    "params": {}
+  },
+  "quality_control": {
+    "min_performance": 0.8,
+    "max_errors": 0,
+    "timeout_seconds": 300
+  },
+  "documentation": {
+    "author": "NIR Development Team",
+    "created": "2026",
+    "updated": "2026"
+  }
+}

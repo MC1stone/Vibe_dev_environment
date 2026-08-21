@@ -1,0 +1,43 @@
+---
+title: "Metadata Quality Assessment Report"
+author: "NIR Intelligence Platform"
+format: html
+date: "`r Sys.Date()`"
+---
+
+# Metadata Quality Assessment Report
+
+## Sample Information
+
+Sample ID: `r params$sample_id`
+
+## Overall Quality Assessment
+
+Quality Score: `r params$overall_quality_score` (Grade: `r params$overall_quality_grade`)
+
+### Detailed Scores
+- **Completeness**: `r params$completeness_score` (`r params$completeness_interpretation`)
+- **Accuracy**: `r params$accuracy_score` (`r params$accuracy_interpretation`)
+- **Consistency**: `r params$consistency_score` (`r params$consistency_interpretation`)
+
+## Standards Compliance
+
+`r for (standard in names(params$standards_compliance)) {
+  cat("- **", standard, "**: ", params$standards_compliance[[standard]], " (", params$standards_interpretations[[standard]], ")\n")
+}`
+
+## Field Assessment
+
+### Present Fields
+`r ifelse(length(params$present_fields) > 0, paste("- ", names(params$present_fields), collapse = "\n- "), "No fields present")`
+
+### Missing Required Fields
+`r ifelse(length(params$missing_required_fields) > 0, paste("- ", params$missing_required_fields, collapse = "\n- "), "No missing required fields")`
+
+## Recommendations
+
+`r ifelse(length(params$recommendations) > 0, paste("- ", params$recommendations, collapse = "\n- "), "No recommendations")`
+
+## Enhancements
+
+`r ifelse(length(params$enhancements) > 0, paste("- ", params$enhancements, collapse = "\n- "), "No enhancements suggested")`

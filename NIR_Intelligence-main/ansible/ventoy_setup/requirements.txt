@@ -1,0 +1,27 @@
+# Ansible Python requirements for NIR_Mistral deployment
+# These packages are required for Ansible modules used in the playbooks
+
+# Core Ansible dependencies
+ansible>=8.0.0
+pyyaml
+jinja2
+
+# Database modules
+psycopg2-binary>=2.9.0
+
+# HTTP/HTTPS modules for health checks
+requests>=2.25.0
+urllib3>=1.26.0
+
+# System monitoring
+prometheus-client>=0.14.0
+
+# Docker support (optional)
+docker>=6.0.0
+
+# For Ansible Galaxy collections
+ansible-core>=2.14.0
+
+# Additional utilities
+httpx>=0.23.0
+pydantic>=1.9.0

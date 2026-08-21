@@ -1,0 +1,57 @@
+# NIR Mistral Django Application Dockerfile - Optimized for caching
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies FIRST (this layer will be cached)
+COPY requirements-docker-minimal.txt .
+RUN pip install --no-cache-dir -r requirements-docker-minimal.txt
+
+# Copy only application code (changes here won't invalidate dependency cache)
+COPY django_project/ ./django_project/
+COPY manage.py .
+COPY django_project/static/ ./static/
+COPY django_project/templates/ ./templates/
+COPY agents/ ./agents/
+COPY .env.docker .env
+
+# Create necessary directories
+RUN mkdir -p /app/media /app/logs /app/reports /app/uploads /app/data /app/scripts
+
+# Set environment variables
+ENV PYTHONPATH=/app:/app/agents
+ENV DJANGO_SETTINGS_MODULE=nir_web.settings
+ENV DATABASE_URL=postgres://nir_user:Kooky0-Hatching1-Mullets2-Ninetieth7-Shimmer6-Crayon4-Flashily2@postgresql:5432/nir_mistral
+ENV WEAVIATE_URL=http://weaviate:8080
+ENV OLLAMA_URL=http://ollama:11434
+ENV REDIS_URL=redis://redis:6379/0
+ENV DEBUG=1
+ENV SECRET_KEY=your-secret-key-here-change-in-production
+ENV ALLOWED_HOSTS=*
+ENV QUARTO_PATH=/opt/quarto/bin/quarto
+ENV NIR_FRAMEWORK_PATH=/app
+
+# Collect static files
+RUN python django_project/manage.py collectstatic --noinput || echo "Static files collected or no static files to collect"
+
+# Create a non-root user for security
+RUN useradd -m -u 1000 nir_user && \
+    chown -R nir_user:nir_user /app
+USER nir_user
+
+WORKDIR /app
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python django_project/manage.py check --deploy || exit 1
+
+CMD ["python", "django_project/manage.py", "runserver", "0.0.0.0:8000"]

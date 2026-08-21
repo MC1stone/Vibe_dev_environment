@@ -1,0 +1,23 @@
+# Quarto Version Tracking
+
+CURRENT_VERSION: 1.10.184  # Your currently installed version
+
+AVAILABLE_VERSIONS:
+- 1.10.184  # Currently installed
+- 1.10.180
+- 1.9.54
+- 1.9.38   # Previously mentioned version
+
+COMPATIBILITY:
+- 1.10.x: Fully compatible with NIR platform
+- 1.9.x: Compatible with minor adjustments
+- <1.9: Not recommended
+
+UPDATE_IMPACT:
+- Patch updates (1.10.x): Low impact, automatic updates safe
+- Minor updates (1.x): Test documentation output before deploying
+- Major updates (1.x → 2.x): Review changelog and test thoroughly
+
+INSTALLATION:
+- Specific version: ./tools/scripts/install_quarto_1.10.184.sh
+- Latest version: ./tools/scripts/install_quarto.sh install

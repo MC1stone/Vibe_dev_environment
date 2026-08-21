@@ -1,0 +1,204 @@
+# Venty Stick Specific Configuration for NIR_Mistral
+# These variables override the global variables for Venty stick deployment
+
+---
+# Venty Stick Identification
+is_venty_stick: true
+deployment_type: "stick"
+storage_type: "usb"
+
+# Hardware Configuration (Venty stick specific)
+hardware:
+  cpu_cores: 4
+  memory_gb: 8
+  storage_gb: 64
+  storage_type: "usb3"
+  
+# Performance Optimization for USB storage
+performance:
+  swap_enabled: true
+  swap_size: "2GB"
+  tmpfs_enabled: true
+  tmpfs_size: "1GB"
+  
+# USB Storage Optimization
+usb_optimization:
+  noatime: true
+  nodiratime: true
+  data_writeback: true
+  commit_interval: 60
+
+# Framework Configuration for Venty Stick
+framework:
+  port: 8080
+  host: "0.0.0.0"
+  debug: false
+  workers: 2  # Reduced for USB storage
+  timeout: 30
+  
+# Docker Configuration for Venty Stick
+docker:
+  enabled: true
+  version: "24.0"
+  compose_version: "2.24.0"
+  storage_driver: "overlay2"
+  log_driver: "json-file"
+  log_max_size: "50m"
+  log_max_file: "3"
+  
+  # USB-friendly Docker configuration
+  userns_remap: false
+  iptables: true
+  ip_masq: false
+  
+  # Resource limits for USB
+  default_ulimits: []
+  max_concurrent_downloads: 1
+  max_download_attempts: 3
+
+# Service Configuration for Venty Stick
+services:
+  framework:
+    port: 8080
+    workers: 2
+    timeout: 60
+    
+  api:
+    port: 8000
+    workers: 2
+    timeout: 60
+
+# Database Configuration (for Venty Stick)
+databases:
+  postgresql:
+    enabled: true
+    version: "15"
+    port: 5432
+    storage: "/opt/nir_mistral/data/postgresql"
+    memory_limit: "1GB"
+    
+  weaviate:
+    enabled: true
+    version: "1.23"
+    port: 8081
+    storage: "/opt/nir_mistral/data/weaviate"
+    memory_limit: "2GB"
+    
+  faiss:
+    enabled: true
+    version: "1.7"
+    storage: "/opt/nir_mistral/data/faiss"
+
+# Storage Configuration for Venty Stick
+storage:
+  base_dir: "/opt/nir_mistral"
+  data_dir: "/opt/nir_mistral/data"
+  logs_dir: "/opt/nir_mistral/logs"
+  configs_dir: "/opt/nir_mistral/configs"
+  backups_dir: "/opt/nir_mistral/backups"
+  
+  # USB storage optimization
+  mount_options: "noatime,nodiratime,data=writeback,commit=60"
+  
+# Network Configuration for Venty Stick
+network:
+  interface: "eth0"
+  hostname: "venty-stick-nir"
+  domain: "local"
+  
+  # Static IP configuration (optional)
+  static_ip: false
+  ip_address: "192.168.1.100"
+  netmask: "255.255.255.0"
+  gateway: "192.168.1.1"
+  dns_servers: ["8.8.8.8", "8.8.4.4"]
+
+# Security Configuration for Venty Stick
+security:
+  ssh:
+    port: 22
+    permit_root_login: false
+    password_authentication: false
+    max_auth_tries: 3
+    login_grace_time: 60
+    
+  firewall:
+    enabled: true
+    default_policy: "DROP"
+    allowed_ports:
+      - 22   # SSH
+      - 80  # HTTP
+      - 443 # HTTPS
+      - 8080 # Framework
+      - 8000 # API
+      - 5432 # PostgreSQL
+      - 8081 # Weaviate
+      - 9090 # Monitoring
+    
+  fail2ban:
+    enabled: true
+    max_retry: 3
+    ban_time: 3600
+    
+# Monitoring Configuration for Venty Stick
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    port: 9090
+    storage: "/opt/nir_mistral/data/prometheus"
+    retention: "7d"
+    
+  grafana:
+    enabled: true
+    port: 3000
+    storage: "/opt/nir_mistral/data/grafana"
+    admin_password: "nir_admin_2026"
+
+# Backup Configuration for Venty Stick
+backup:
+  enabled: true
+  schedule: "daily"
+  retention: 7
+  compression: true
+  encryption: false
+  
+  # Backup directories
+  directories:
+    - "/opt/nir_mistral/data"
+    - "/opt/nir_mistral/configs"
+    - "/etc/nir_mistral"
+
+# Power Management for Venty Stick
+power_management:
+  enabled: true
+  auto_shutdown: false
+  shutdown_timeout: 300  # 5 minutes
+  
+# Auto-update Configuration
+auto_update:
+  enabled: false  # Disabled for stability on Venty stick
+  check_interval: 86400  # 24 hours
+  
+# Venty Stick Specific Optimizations
+venty_optimizations:
+  # Reduce I/O operations
+  reduce_io: true
+  sync_interval: 60
+  
+  # Memory optimization
+  swappiness: 10
+  vfs_cache_pressure: 50
+  
+  # CPU optimization
+  governor: "ondemand"
+  min_freq: "1000000"
+  max_freq: "2000000"
+
+# Framework-specific optimizations for Venty Stick
+framework_optimizations:
+  cache_enabled: true
+  cache_ttl: 3600
+  compression_enabled: true
+  max_request_size: "10MB"
+  request_timeout: 30

@@ -1,0 +1,112 @@
+# Global Variables for NIR_Mistral DeveloperAgent Framework
+# These variables apply to all hosts
+
+---
+# Project Configuration
+project_name: "NIR_Mistral"
+project_version: "1.0.0"
+project_description: "NIR Intelligence Platform - DeveloperAgent Framework"
+project_author: "NIR Development Team"
+project_year: "2026"
+
+# Framework Configuration
+framework_name: "DeveloperAgent"
+framework_version: "1.0.0"
+framework_port: 8080
+framework_log_level: "INFO"
+
+# Python Configuration
+python_version: "3.11"
+python_pip_version: "latest"
+python_virtualenv: true
+python_venv_name: "nir_venv"
+python_venv_path: "/opt/{{ project_name }}/venv"
+
+# Git Configuration
+git_repo_url: "https://github.com/martin/Development/vsCode_Environment/NIR_Mistral.git"
+git_branch: "main"
+git_user_name: "NIR Development"
+git_user_email: "nir.dev@company.com"
+
+# Docker Configuration (for Venty stick)
+docker_enabled: true
+docker_version: "24.0"
+docker_compose_version: "2.24.0"
+docker_registry: "docker.io"
+docker_network_name: "nir_network"
+
+# Service Configuration
+services:
+  framework:
+    port: 8080
+    host: "0.0.0.0"
+    debug: false
+    workers: 4
+    
+  api:
+    port: 8000
+    host: "0.0.0.0"
+    debug: false
+    
+  monitoring:
+    port: 9090
+    host: "0.0.0.0"
+
+# Logging Configuration
+log_dir: "/var/log/{{ project_name }}"
+log_level: "INFO"
+log_retention_days: 30
+log_max_size: "100MB"
+
+# Security Configuration
+admin_user: "nir_admin"
+admin_group: "nir_users"
+ssh_port: 22
+firewall_enabled: true
+
+# Network Configuration
+network_interface: "eth0"
+network_timeout: 30
+
+# Timezone Configuration
+timezone: "UTC"
+
+# Package Management
+package_manager: "apt"
+update_cache: true
+
+# Common Packages
+common_packages:
+  - curl
+  - wget
+  - git
+  - build-essential
+  - software-properties-common
+  - apt-transport-https
+  - ca-certificates
+  - gnupg-agent
+  - htop
+  - iotop
+  - iftop
+  - net-tools
+  - iputils-ping
+  - dnsutils
+  - telnet
+  - unzip
+  - zip
+  - tar
+  - gzip
+
+# Development Tools
+development_tools:
+  - vim
+  - nano
+  - tmux
+  - screen
+  - tree
+  - jq
+  - yq
+
+# Monitoring
+monitoring_enabled: true
+metrics_enabled: true

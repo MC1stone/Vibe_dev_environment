@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Spectral Result</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            color: #111827;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 24px;
+        }
+        .panel {
+            background: white;
+            border-radius: 18px;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.10);
+            padding: 24px;
+        }
+        h1 {
+            margin-top: 0;
+        }
+        .meta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            color: #4b5563;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .chart-wrap {
+            background: #f8fafc;
+            border: 1px solid #dbe2ea;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        canvas {
+            width: 100%;
+            height: 360px;
+            display: block;
+            background: #fff;
+            border-radius: 8px;
+        }
+        .legend {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+            font-size: 14px;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel">
+            <h1>Demo Spectral Result</h1>
+            <div class="meta">
+                <span>Session: DEMO-001</span>
+                <span>Sample: Water / Standard</span>
+                <span>Status: Ready</span>
+            </div>
+
+            <div class="chart-wrap">
+                <canvas id="spectraChart" width="1000" height="360"></canvas>
+            </div>
+
+            <div class="legend">
+                <div><span class="dot" style="background:#2563eb"></span>Intensity</div>
+                <div><span class="dot" style="background:#ef4444"></span>Peak marker</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('spectraChart');
+        const ctx = canvas.getContext('2d');
+        const points = [
+            [420, 220], [460, 210], [500, 195], [540, 170], [570, 150],
+            [610, 155], [650, 175], [690, 210], [730, 240], [770, 255],
+            [810, 270], [850, 315], [890, 330], [930, 280], [970, 250]
+        ];
+
+        function drawChart() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const pad = 40;
+
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = pad + (i * (h - pad * 2)) / 5;
+                ctx.beginPath();
+                ctx.moveTo(pad, y);
+                ctx.lineTo(w - pad, y);
+                ctx.stroke();
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(pad, pad);
+            ctx.lineTo(pad, h - pad);
+            ctx.lineTo(w - pad, h - pad);
+            ctx.strokeStyle = '#334155';
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(points[0][0], points[0][1]);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i][0], points[i][1]);
+            }
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            const peak = points[5];
+            ctx.beginPath();
+            ctx.arc(peak[0], peak[1], 6, 0, Math.PI * 2);
+            ctx.fillStyle = '#ef4444';
+            ctx.fill();
+
+            ctx.fillStyle = '#334155';
+            ctx.font = '12px Arial';
+            ctx.fillText('400nm', pad, h - 12);
+            ctx.fillText('700nm', w - 50, h - 12);
+            ctx.fillText('0', 12, h - pad);
+            ctx.fillText('1.0', 12, pad + 10);
+        }
+
+        drawChart();
+    </script>
+</body>
+</html>
