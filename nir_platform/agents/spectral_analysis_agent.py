@@ -292,7 +292,7 @@ class SpectralAnalysisAgent:
         
         # Step 9: Calculate analysis metrics
         analysis_metrics = self._calculate_analysis_metrics(
-            spectral_data, smoothed_data, peak_info, issues
+            spectral_data, smoothed_data, peak_info, issues, initial_quality
         )
         
         # Create result
@@ -967,9 +967,9 @@ class SpectralAnalysisAgent:
             "peak_positions": wavelengths[peaks].tolist(),
             "peak_heights": intensities[peaks].tolist(),
             "peak_properties": {
-                "height": properties.get("height", []).tolist(),
-                "prominence": properties.get("prominence", []).tolist(),
-                "width": properties.get("width", []).tolist()
+                "height": np.asarray(properties.get("height", [])).tolist(),
+                "prominence": np.asarray(properties.get("prominence", [])).tolist(),
+                "width": np.asarray(properties.get("width", [])).tolist()
             }
         }
         
@@ -1179,7 +1179,8 @@ class SpectralAnalysisAgent:
                                      original_data: SpectralData,
                                      processed_data: SpectralData,
                                      peak_info: Dict,
-                                     issues: List[Dict]) -> Dict:
+                                     issues: List[Dict],
+                                     initial_quality: Dict) -> Dict:
         """Calculate comprehensive analysis metrics."""
         metrics = {
             "wavelength_range": {

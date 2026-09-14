@@ -48,6 +48,17 @@ class CalibrationResult:
     recommendations: List[Dict[str, Any]] = field(default_factory=list)
     issues_detected: List[Dict[str, Any]] = field(default_factory=list)
 
+    def to_dict(self) -> Dict:
+        return {
+            "wavelength_calibration": self.wavelength_calibration.to_dict() if self.wavelength_calibration else None,
+            "intensity_calibration": self.intensity_calibration.to_dict() if self.intensity_calibration else None,
+            "drift_compensation": self.drift_compensation,
+            "spectrometer_parameters": self.spectrometer_parameters,
+            "calibration_quality": self.calibration_quality,
+            "recommendations": self.recommendations,
+            "issues_detected": self.issues_detected,
+        }
+
 
 class CalibrationAgent:
     """
@@ -172,7 +183,8 @@ class CalibrationAgent:
         
         y_pred = slope * x_data + intercept
         residuals = y_data - y_pred
-        r_squared = 1 - np.sum(residuals**2) / np.sum((y_data - np.mean(y_data))**2)
+        ss_tot = np.sum((y_data - np.mean(y_data))**2)
+        r_squared = 1.0 - np.sum(residuals**2) / ss_tot if ss_tot > 0 else 1.0
         rmse = np.sqrt(np.mean(residuals**2))
         
         return CalibrationCurve(
@@ -186,13 +198,18 @@ class CalibrationAgent:
     
     def _fit_polynomial_calibration(self, x_data, y_data, degree=3) -> CalibrationCurve:
         """Fit polynomial calibration."""
-        if len(x_data) <= degree:
-            raise ValueError(f"Insufficient data for degree {degree}")
+        # Degrade the polynomial degree when too few calibration points are
+        # available rather than raising, so analysis can still complete.
+        while len(x_data) <= degree and degree > 1:
+            degree -= 1
+        if len(x_data) < 2:
+            raise ValueError("Insufficient data for calibration")
         
         coeffs = np.polyfit(x_data, y_data, degree)
         y_pred = np.polyval(coeffs, x_data)
         residuals = y_data - y_pred
-        r_squared = 1 - np.sum(residuals**2) / np.sum((y_data - np.mean(y_data))**2)
+        ss_tot = np.sum((y_data - np.mean(y_data))**2)
+        r_squared = 1.0 - np.sum(residuals**2) / ss_tot if ss_tot > 0 else 1.0
         rmse = np.sqrt(np.mean(residuals**2))
         
         return CalibrationCurve(
