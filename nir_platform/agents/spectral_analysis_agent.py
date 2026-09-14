@@ -166,6 +166,14 @@ class SpectralAnalysisAgent:
                 "resolution": 15.0,
                 "features": ["low_cost", "nir_only"],
                 "calibration_points": [700, 850, 1000]
+            },
+            "sparkfun_nir_triad": {
+                "wavelength_range": [410, 940],
+                "resolution": 30.0,
+                "num_channels": 18,
+                "wavelengths": [410, 435, 460, 485, 510, 535, 560, 585, 610, 645, 680, 705, 730, 760, 810, 860, 900, 940],
+                "features": ["diy", "low_cost", "fixed_filter", "vis_nir"],
+                "calibration_points": [410, 610, 940]
             }
         }
     
@@ -666,22 +674,41 @@ class SpectralAnalysisAgent:
         best_match = None
         best_score = 0
         
+        # Exact wavelength-set match: strongest signal for fixed-filter
+        # spectrometers (e.g. SparkFun NIR Triad with a known channel grid).
+        wl_set = sorted(set(np.round(wavelengths).astype(float).tolist()))
         for spec_name, spec_info in self.spectrometer_database.items():
             score = 0
+            spec_wls = spec_info.get('wavelengths')
+            if spec_wls is not None:
+                spec_wl_set = sorted(set(float(w) for w in spec_wls))
+                if spec_wl_set == wl_set:
+                    score += 10  # exact grid match dominates everything else
+                elif (spec_info['wavelength_range'][0] <= wl_min <= spec_info['wavelength_range'][1]
+                      and spec_info['wavelength_range'][0] <= wl_max <= spec_info['wavelength_range'][1]):
+                    score += 2
+            else:
+                # Check wavelength range for non-fixed-filter devices
+                spec_range = spec_info['wavelength_range']
+                if spec_range[0] <= wl_min <= spec_range[1] and spec_range[0] <= wl_max <= spec_range[1]:
+                    score += 2
             
-            # Check wavelength range
-            spec_range = spec_info['wavelength_range']
-            if spec_range[0] <= wl_min <= spec_range[1] and spec_range[0] <= wl_max <= spec_range[1]:
-                score += 2
-            
-            # Check resolution
-            if abs(resolution - spec_info['resolution']) < spec_info['resolution'] * 0.5:
-                score += 1
+            # Check resolution (skip for fixed-filter devices with exact grid)
+            if score < 10:
+                if abs(resolution - spec_info['resolution']) < spec_info['resolution'] * 0.5:
+                    score += 1
             
             # Check number of points
-            expected_points = int(wl_range / spec_info['resolution'])
-            if abs(num_points - expected_points) < expected_points * 0.2:
-                score += 1
+            expected_channels = spec_info.get('num_channels')
+            if expected_channels is not None:
+                if num_points == expected_channels:
+                    score += 2
+                elif abs(num_points - expected_channels) <= 1:
+                    score += 1
+            else:
+                expected_points = int(wl_range / spec_info['resolution']) if spec_info['resolution'] > 0 else 0
+                if expected_points and abs(num_points - expected_points) < expected_points * 0.2:
+                    score += 1
             
             if score > best_score:
                 best_score = score

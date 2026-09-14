@@ -106,6 +106,21 @@ class CalibrationAgent:
                     "cost": "~$100",
                     "difficulty": "medium"
                 }
+            },
+            "sparkfun_nir_triad": {
+                "calibration": {
+                    "wavelength": {"method": "linear", "points": [410, 610, 940], "frequency": "each_use"},
+                    "intensity": {"method": "linear", "reference": "white_ptfe_tile"}
+                },
+                "parameters": {
+                    "integration_time": {"default": 50, "min": 1, "max": 100, "unit": "ms"},
+                    "scans_to_average": {"default": 4, "min": 1, "max": 32}
+                },
+                "diy_instructions": {
+                    "components": ["SparkFun Triad (AS7263+AS7262)", "White LED", "MCU"],
+                    "cost": "~$50",
+                    "difficulty": "easy"
+                }
             }
         }
     
