@@ -15,7 +15,7 @@ class UploadFileForm(forms.Form):
         label='Spectral Data File',
         help_text='Upload a file containing spectral data',
         validators=[
-            FileExtensionValidator(allowed_extensions=['.csv', '.txt', '.xlsx', '.json', '.spc', '.jdx', '.zip'])
+            FileExtensionValidator(allowed_extensions=['csv', 'txt', 'xlsx', 'json', 'spc', 'jdx', 'zip'])
         ]
     )
     
