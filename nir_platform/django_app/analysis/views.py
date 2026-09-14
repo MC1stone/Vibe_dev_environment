@@ -141,7 +141,7 @@ def upload_file(request):
                 )
                 spectral_data.save()
                 logger.info(
-                    f'[DIAG upload] saved id={spectral_data.id} '
+                    f'Uploaded spectral data saved id={spectral_data.id} '
                     f'wl_len={len(wavelengths)} int_len={len(intensities)} '
                     f'spec_type={spectrometer_type!r} metadata_error={metadata_error}'
                 )
@@ -238,7 +238,7 @@ def analysis_detail(request, analysis_id):
     # Check if analysis has been performed
     if not spectral_data.is_processed:
         logger.info(
-            f'[DIAG detail] id={spectral_data.id} is_processed=False '
+            f'Analysis pending for id={spectral_data.id} '
             f'wl_len={len(spectral_data.wavelengths or [])} '
             f'int_len={len(spectral_data.intensities or [])}'
         )
@@ -255,10 +255,10 @@ def analysis_detail(request, analysis_id):
                 async def perform_analysis():
                     return await analyze_spectral_data(spectral_data)
                 
-                logger.info(f'[DIAG detail] id={spectral_data.id} starting analysis...')
+                logger.info(f'Starting analysis for id={spectral_data.id}...')
                 results = asyncio.run(perform_analysis())
                 logger.info(
-                    f'[DIAG detail] id={spectral_data.id} analysis returned '
+                    f'Analysis completed for id={spectral_data.id} '
                     f'keys={list(results.keys()) if isinstance(results, dict) else type(results).__name__}'
                 )
                 
@@ -324,7 +324,6 @@ def analysis_detail(request, analysis_id):
                 
             except Exception as e:
                 logger.error(f'Error performing analysis: {e}', exc_info=True)
-                logger.error(f'[DIAG detail] id={spectral_data.id} ANALYSIS FAILED: {type(e).__name__}: {e}')
                 messages.error(request, f'Error performing analysis: {str(e)}')
                 # Mark as processed to avoid retrying the same failing analysis on
                 # every reload; user can re-upload a corrected file to retry.
