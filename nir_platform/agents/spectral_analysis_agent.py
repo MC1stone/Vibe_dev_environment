@@ -337,16 +337,59 @@ class SpectralAnalysisAgent:
             logger.error(f"Error loading spectral data: {e}")
             raise ValueError(f"Unsupported file format or corrupt file: {e}")
     
+    def _load_wide_nir(self, df, file_path: str) -> SpectralData:
+        """Parse a wide-format multi-sample NIR dataframe.
+        
+        Spectral columns are named like A_410, B_435, ... L_940 (wavelength
+        in nm encoded in the column name). Returns a SpectralData whose
+        representative spectrum is the column-wise mean intensity; the full
+        per-sample data and metadata columns (e.g. Brix, Temp) are stored in
+        SpectralData.metadata.
+        Returns None if the dataframe is not a wide NIR export.
+        """
+        wl_cols = {}
+        for col in df.columns:
+            m = re.search(r'([A-Z])_?(\d+(?:\.\d+)?)$', str(col).strip())
+            if m:
+                wl_cols[col] = float(m.group(2))
+        if not wl_cols:
+            return None
+        wavelengths = [wl_cols[c] for c in wl_cols]
+        intensity_matrix = df[list(wl_cols.keys())].apply(
+            pd.to_numeric, errors='coerce'
+        )
+        intensities = intensity_matrix.mean(axis=0, skipna=True).values
+        
+        meta = {}
+        for col in df.columns:
+            if col not in wl_cols:
+                meta[col] = df[col].dropna().tolist()
+        meta['spectral_columns'] = list(wl_cols.keys())
+        meta['num_samples'] = int(len(df))
+        meta['format'] = 'wide_nir_multisample'
+        
+        return SpectralData(
+            wavelengths=np.array(wavelengths),
+            intensities=np.array(intensities),
+            metadata=meta,
+            file_path=file_path
+        )
+
     def _load_csv(self, file_path: str) -> SpectralData:
         """Load spectral data from CSV file."""
         df = pd.read_csv(file_path)
+        
+        # Wide-format multi-sample NIR export (A_410, B_435, ... columns)
+        wide = self._load_wide_nir(df, file_path)
+        if wide is not None:
+            return wide
         
         # Try to detect columns
         wavelength_col = None
         intensity_col = None
         
         for col in df.columns:
-            col_lower = col.lower()
+            col_lower = str(col).lower()
             if any(x in col_lower for x in ['wavelength', 'wave', 'lambda', 'nm']):
                 wavelength_col = col
             elif any(x in col_lower for x in ['intensity', 'absorbance', 'reflectance', 'transmittance', 'counts']):
@@ -414,34 +457,9 @@ class SpectralAnalysisAgent:
                 file_path, sep=delimiter, encoding='utf-8',
                 on_bad_lines='skip', dtype=str,
             )
-            wl_cols = {}
-            for col in df.columns:
-                m = re.search(r'([A-Z])_?(\d+(?:\.\d+)?)$', col.strip())
-                if m:
-                    wl_cols[col] = float(m.group(2))
-            if wl_cols:
-                wavelengths = [wl_cols[c] for c in wl_cols]
-                # Representative spectrum = mean intensity per wavelength column
-                intensity_matrix = df[list(wl_cols.keys())].apply(
-                    pd.to_numeric, errors='coerce'
-                )
-                intensities = intensity_matrix.mean(axis=0, skipna=True).values
-                
-                # Store per-sample data and key metadata columns
-                meta = {}
-                for col in df.columns:
-                    if col not in wl_cols:
-                        meta[col] = df[col].dropna().tolist()
-                meta['spectral_columns'] = list(wl_cols.keys())
-                meta['num_samples'] = int(len(df))
-                meta['format'] = 'wide_nir_multisample'
-                
-                return SpectralData(
-                    wavelengths=np.array(wavelengths),
-                    intensities=np.array(intensities),
-                    metadata=meta,
-                    file_path=file_path
-                )
+            wide = self._load_wide_nir(df, file_path)
+            if wide is not None:
+                return wide
         except Exception:
             pass  # fall through to two-column parsing
         
