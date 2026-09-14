@@ -10,11 +10,16 @@ import uuid
 from datetime import datetime
 import asyncio
 
-# Add parent directory to Python path for agents module
-# Inside Docker: /app/analysis/views.py -> /app
-# On host: /home/.../django_app/analysis/views.py -> /home/.../nir_platform
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, PROJECT_ROOT)
+# Add the package roots to Python path so the `agents` module is importable.
+# views.py lives at nir_platform/django_app/analysis/views.py; the `agents`
+# package lives at nir_platform/agents. In the Docker layout the app is
+# flattened to /app/analysis/views.py with /app/agents, so we add both the
+# django_app directory and its parent to sys.path to cover both layouts.
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+_DJANGO_APP_DIR = os.path.dirname(_THIS_DIR)
+_PLATFORM_DIR = os.path.dirname(_DJANGO_APP_DIR)
+sys.path.insert(0, _PLATFORM_DIR)
+sys.path.insert(0, _DJANGO_APP_DIR)
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse, FileResponse
