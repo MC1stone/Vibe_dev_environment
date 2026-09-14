@@ -9,6 +9,7 @@ noise reduction, peak detection, and spectrometer issue identification.
 import asyncio
 import json
 import logging
+import re
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Any
@@ -378,13 +379,73 @@ class SpectralAnalysisAgent:
     def _load_txt(self, file_path: str) -> SpectralData:
         """Load spectral data from TXT file.
         
-        Handles whitespace, comma, semicolon, and tab delimited two-column
-        spectral data. Non-numeric header rows are skipped automatically.
+        Supports two formats:
+        1. Two-column (wavelength, intensity) data, delimiter-agnostic.
+        2. Wide-format multi-sample NIR exports (semicolon-delimited) with
+           a header row whose spectral columns are named like A_410, B_435,
+           ... L_940 (wavelength in nm encoded in the column name). The
+           representative spectrum is the column-wise mean intensity; the
+           full per-sample data and metadata (e.g. Brix) are stored in
+           SpectralData.metadata.
         """
         with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
             lines = f.readlines()
         
-        # Try to parse as two-column data
+        # Detect delimiter from the first non-empty, non-comment line.
+        first_data_line = ""
+        for line in lines:
+            stripped = line.strip()
+            if stripped and not stripped.startswith('#'):
+                first_data_line = stripped
+                break
+        if not first_data_line:
+            raise ValueError("No valid spectral data found in TXT file")
+        
+        delimiter = None
+        for cand in [';', '\t', ',']:
+            if cand in first_data_line:
+                delimiter = cand
+                break
+        
+        # --- Wide-format multi-sample NIR export ---
+        # Header columns named like A_410, B_435 encode the wavelength (nm).
+        try:
+            df = pd.read_csv(
+                file_path, sep=delimiter, encoding='utf-8',
+                on_bad_lines='skip', dtype=str,
+            )
+            wl_cols = {}
+            for col in df.columns:
+                m = re.search(r'([A-Z])_?(\d+(?:\.\d+)?)$', col.strip())
+                if m:
+                    wl_cols[col] = float(m.group(2))
+            if wl_cols:
+                wavelengths = [wl_cols[c] for c in wl_cols]
+                # Representative spectrum = mean intensity per wavelength column
+                intensity_matrix = df[list(wl_cols.keys())].apply(
+                    pd.to_numeric, errors='coerce'
+                )
+                intensities = intensity_matrix.mean(axis=0, skipna=True).values
+                
+                # Store per-sample data and key metadata columns
+                meta = {}
+                for col in df.columns:
+                    if col not in wl_cols:
+                        meta[col] = df[col].dropna().tolist()
+                meta['spectral_columns'] = list(wl_cols.keys())
+                meta['num_samples'] = int(len(df))
+                meta['format'] = 'wide_nir_multisample'
+                
+                return SpectralData(
+                    wavelengths=np.array(wavelengths),
+                    intensities=np.array(intensities),
+                    metadata=meta,
+                    file_path=file_path
+                )
+        except Exception:
+            pass  # fall through to two-column parsing
+        
+        # --- Two-column (wavelength, intensity) format ---
         wavelengths = []
         intensities = []
         metadata = {}
@@ -392,15 +453,12 @@ class SpectralAnalysisAgent:
         for line in lines:
             line = line.strip()
             if not line or line.startswith('#'):
-                # Skip comments and empty lines
                 if line.startswith('#'):
-                    # Parse metadata from comments
                     parts = line[1:].split(':')
                     if len(parts) >= 2:
                         metadata[parts[0].strip()] = parts[1].strip()
                 continue
             
-            # Support multiple delimiters: semicolon, tab, comma, whitespace
             for delim in [';', '\t', ',', None]:
                 parts = line.split(delim) if delim else line.split()
                 parts = [p.strip() for p in parts if p.strip()]
@@ -410,7 +468,6 @@ class SpectralAnalysisAgent:
                         intensities.append(float(parts[1]))
                         break
                     except ValueError:
-                        # Header row or non-numeric line; try next delimiter
                         continue
         
         if not wavelengths:
