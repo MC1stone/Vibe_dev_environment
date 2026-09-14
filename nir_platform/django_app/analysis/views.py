@@ -8,6 +8,7 @@ import json
 import logging
 import uuid
 from datetime import datetime
+import asyncio
 
 # Add parent directory to Python path for agents module
 # Inside Docker: /app/analysis/views.py -> /app
@@ -71,6 +72,19 @@ def upload_file(request):
                 # Save uploaded file
                 uploaded_file = request.FILES['file']
                 
+                # Parse optional metadata JSON submitted via the form
+                metadata_raw = form.cleaned_data.get('metadata', '')
+                metadata = {}
+                if metadata_raw:
+                    try:
+                        metadata = json.loads(metadata_raw)
+                        if not isinstance(metadata, dict):
+                            messages.error(request, 'Metadata must be a JSON object.')
+                            metadata = {}
+                    except (json.JSONDecodeError, TypeError) as me:
+                        messages.error(request, f'Invalid metadata JSON: {me}')
+                        metadata = {}
+                
                 # Create unique filename
                 file_ext = os.path.splitext(uploaded_file.name)[1]
                 unique_id = uuid.uuid4().hex
@@ -82,14 +96,43 @@ def upload_file(request):
                     for chunk in uploaded_file.chunks():
                         destination.write(chunk)
                 
+                # Parse the uploaded spectral file into wavelengths/intensities
+                # so the downstream analysis agents receive real data.
+                wavelengths = []
+                intensities = []
+                spectrometer_type = form.cleaned_data.get('spectrometer_type', None)
+                try:
+                    loaded = asyncio.run(spectral_agent._load_spectral_data(file_path))
+                    wavelengths = loaded.wavelengths.tolist()
+                    intensities = loaded.intensities.tolist()
+                    # Merge metadata detected from the file (file comments, header cols)
+                    file_metadata = loaded.metadata or {}
+                    if isinstance(file_metadata, dict):
+                        for k, v in file_metadata.items():
+                            metadata.setdefault(k, v)
+                    if not spectrometer_type:
+                        spectrometer_type = loaded.spectrometer_type
+                except Exception as pe:
+                    logger.error(f'Error parsing spectral file {uploaded_file.name}: {pe}')
+                    messages.error(
+                        request,
+                        f'File saved, but could not parse spectral data: {pe}. '
+                        'Analysis will not be available until a valid file is uploaded.'
+                    )
+                    metadata_error = True
+                else:
+                    metadata_error = False
+                
                 # Create SpectralData record
                 spectral_data = SpectralData(
                     user=request.user if request.user.is_authenticated else None,
                     original_filename=uploaded_file.name,
                     file_path=file_path,
                     file_type=file_ext.lower(),
-                    metadata=form.cleaned_data.get('metadata', {}),
-                    spectrometer_type=form.cleaned_data.get('spectrometer_type', None)
+                    wavelengths=wavelengths,
+                    intensities=intensities,
+                    metadata=metadata,
+                    spectrometer_type=spectrometer_type
                 )
                 spectral_data.save()
                 
@@ -101,6 +144,9 @@ def upload_file(request):
                     function='upload_file',
                     context={'file_id': str(spectral_data.id), 'user': str(request.user)}
                 )
+                
+                if metadata_error:
+                    return redirect('analysis_detail', analysis_id=spectral_data.id)
                 
                 messages.success(request, f'File "{uploaded_file.name}" uploaded successfully!')
                 return redirect('analysis_detail', analysis_id=spectral_data.id)
@@ -127,9 +173,8 @@ async def analyze_spectral_data(spectral_data: SpectralData):
     """Analyze spectral data using agents."""
     try:
         # Load spectral data
-        import asyncio
-        
-        # Convert to dict for agent
+        # Build the data dict from the parsed spectral data so the agents
+        # receive the real wavelengths/intensities captured at upload time.
         data_dict = {
             'wavelengths': spectral_data.wavelengths,
             'intensities': spectral_data.intensities,
@@ -156,7 +201,7 @@ async def analyze_spectral_data(spectral_data: SpectralData):
             calibration_result.to_dict()
         )
         
-        # Generate report
+        # Generate report (return the report object so the view can render it)
         report = await reporting_agent.generate_spectral_analysis_report(
             spectral_result.to_dict(),
             metadata_result.to_dict(),
@@ -168,7 +213,7 @@ async def analyze_spectral_data(spectral_data: SpectralData):
             'metadata_result': metadata_result.to_dict(),
             'calibration_result': calibration_result.to_dict(),
             'qa_result': qa_result.to_dict(),
-            'report': report.to_dict()
+            'report': report
         }
         
     except Exception as e:
@@ -182,61 +227,89 @@ def analysis_detail(request, analysis_id):
     
     # Check if analysis has been performed
     if not spectral_data.is_processed:
-        # Perform analysis
-        try:
-            import asyncio
-            
-            async def perform_analysis():
-                return await analyze_spectral_data(spectral_data)
-            
-            results = asyncio.run(perform_analysis())
-            
-            # Save results
-            spectral_data.analysis_results = results.get('spectral_result', {})
-            spectral_data.calibration_results = results.get('calibration_result', {})
-            spectral_data.metadata_quality_results = results.get('metadata_result', {})
-            spectral_data.data_quality_score = results.get('spectral_result', {}).get('quality_score', 0)
-            spectral_data.metadata_quality_score = results.get('metadata_result', {}).get('overall_score', 0)
-            spectral_data.calibration_quality_score = results.get('calibration_result', {}).get('calibration_quality', {}).get('overall_quality', 0)
-            spectral_data.overall_quality_score = (
-                spectral_data.data_quality_score * 0.4 +
-                spectral_data.metadata_quality_score * 0.3 +
-                spectral_data.calibration_quality_score * 0.3
+        # Guard: require parsed spectral data before analysis
+        if not spectral_data.wavelengths or not spectral_data.intensities:
+            messages.error(
+                request,
+                'No spectral data was parsed from this file. Please re-upload a valid '
+                'spectral data file (CSV, TXT, Excel, JSON).'
             )
-            spectral_data.is_processed = True
-            spectral_data.processing_date = datetime.now()
-            spectral_data.save()
-            
-            # Generate and save report
-            report_content = results.get('report', {})
-            report = Report(
-                spectral_data=spectral_data,
-                report_type='spectral_analysis',
-                title=f"Analysis Report - {spectral_data.original_filename}",
-                file_path=os.path.join(settings.REPORT_DIR, f"{spectral_data.id}.html"),
-                quarto_content=json.dumps(report_content, indent=2),
-                python_source=json.dumps(report_content.get('python_source', []), indent=2),
-                is_generated=True,
-                generation_date=datetime.now()
-            )
-            report.save()
-            
-            # Log the analysis
-            SystemLog.objects.create(
-                level='INFO',
-                message=f'Analysis completed for {spectral_data.original_filename}',
-                module='analysis.views',
-                function='analysis_detail',
-                context={'analysis_id': str(spectral_data.id)}
-            )
-            
-            messages.success(request, 'Analysis completed successfully!')
-            
-        except Exception as e:
-            logger.error(f'Error performing analysis: {e}')
-            messages.error(request, f'Error performing analysis: {str(e)}')
-            spectral_data.is_processed = False
-            spectral_data.save()
+        else:
+            # Perform analysis
+            try:
+                async def perform_analysis():
+                    return await analyze_spectral_data(spectral_data)
+                
+                results = asyncio.run(perform_analysis())
+                
+                # Save results
+                spectral_data.analysis_results = results.get('spectral_result', {})
+                spectral_data.calibration_results = results.get('calibration_result', {})
+                spectral_data.metadata_quality_results = results.get('metadata_result', {})
+                spectral_data.data_quality_score = results.get('spectral_result', {}).get('quality_score', 0) or 0
+                spectral_data.metadata_quality_score = results.get('metadata_result', {}).get('overall_score', 0) or 0
+                spectral_data.calibration_quality_score = results.get('calibration_result', {}).get('calibration_quality', {}).get('overall_quality', 0) or 0
+                spectral_data.overall_quality_score = (
+                    (spectral_data.data_quality_score or 0) * 0.4 +
+                    (spectral_data.metadata_quality_score or 0) * 0.3 +
+                    (spectral_data.calibration_quality_score or 0) * 0.3
+                )
+                spectral_data.is_processed = True
+                spectral_data.processing_date = datetime.now()
+                spectral_data.save()
+                
+                # Generate and render the Quarto HTML report
+                report_obj = results.get('report')
+                report_obj = report_obj if hasattr(report_obj, 'to_dict') else None
+                report_dict = report_obj.to_dict() if report_obj else {}
+                
+                html_file_path = os.path.join(settings.REPORT_DIR, f"{spectral_data.id}.html")
+                html_content = ''
+                try:
+                    if report_obj is not None:
+                        render_result = asyncio.run(
+                            reporting_agent.render_report(report_obj, settings.REPORT_DIR)
+                        )
+                        candidate_html = render_result.get('html_file')
+                        if candidate_html and os.path.exists(candidate_html):
+                            html_file_path = candidate_html
+                            with open(candidate_html, 'r', encoding='utf-8') as hf:
+                                html_content = hf.read()
+                except Exception as re:
+                    logger.error(f'Error rendering Quarto report: {re}')
+                
+                report = Report(
+                    spectral_data=spectral_data,
+                    report_type='spectral_analysis',
+                    title=f"Analysis Report - {spectral_data.original_filename}",
+                    file_path=html_file_path,
+                    quarto_content=json.dumps(report_dict, indent=2, default=str),
+                    html_content=html_content,
+                    python_source=json.dumps(report_dict.get('python_source', []), indent=2, default=str),
+                    is_generated=bool(html_content),
+                    generation_date=datetime.now()
+                )
+                report.save()
+                
+                # Log the analysis
+                SystemLog.objects.create(
+                    level='INFO',
+                    message=f'Analysis completed for {spectral_data.original_filename}',
+                    module='analysis.views',
+                    function='analysis_detail',
+                    context={'analysis_id': str(spectral_data.id)}
+                )
+                
+                messages.success(request, 'Analysis completed successfully!')
+                
+            except Exception as e:
+                logger.error(f'Error performing analysis: {e}', exc_info=True)
+                messages.error(request, f'Error performing analysis: {str(e)}')
+                # Mark as processed to avoid retrying the same failing analysis on
+                # every reload; user can re-upload a corrected file to retry.
+                spectral_data.is_processed = True
+                spectral_data.processing_date = datetime.now()
+                spectral_data.save()
     
     # Get analysis results
     analysis_results = spectral_data.analysis_results

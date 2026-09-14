@@ -698,7 +698,11 @@ STANDARDS = {
         return "\n".join(lines)
     
     async def render_report(self, report: QuartoReport, output_dir: str = "reports") -> Dict:
-        """Render report to HTML using Quarto."""
+        """Render report to HTML using Quarto, with a Python fallback."""
+        import shutil
+        import subprocess
+        import markdown
+        
         # Generate unique filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_path = os.path.join(output_dir, f"nir_report_{timestamp}")
@@ -708,16 +712,116 @@ STANDARDS = {
         # Export to Quarto format
         await self.export_to_quarto(report, quarto_file)
         
-        # Render to HTML (this would call Quarto CLI)
-        # In practice: quarto render report.qmd --to html
+        # Try rendering with the Quarto CLI if it is available
+        rendered = False
+        quarto_bin = shutil.which("quarto")
+        if quarto_bin:
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    quarto_bin, "render", quarto_file, "--to", "html",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                _stdout, stderr = await proc.communicate()
+                if proc.returncode == 0 and os.path.exists(html_file):
+                    rendered = True
+                else:
+                    logger.warning(
+                        f"Quarto render failed (rc={proc.returncode}): "
+                        f"{stderr.decode('utf-8', errors='replace') if stderr else ''}"
+                    )
+            except Exception as qe:
+                logger.warning(f"Quarto render subprocess error: {qe}")
+        else:
+            logger.info("Quarto CLI not found; using Python HTML fallback renderer.")
+        
+        # Fallback: convert the generated Quarto document to HTML in pure Python
+        # so a full HTML report is produced even without Quarto installed.
+        if not rendered:
+            try:
+                with open(quarto_file, "r", encoding="utf-8") as f:
+                    quarto_content = f.read()
+                html_body = self._markdown_to_html(quarto_content, report)
+                full_html = self._wrap_html_document(report.title, html_body)
+                with open(html_file, "w", encoding="utf-8") as f:
+                    f.write(full_html)
+                rendered = os.path.exists(html_file)
+            except Exception as fe:
+                logger.error(f"Python HTML fallback render failed: {fe}", exc_info=True)
         
         return {
             "quarto_file": quarto_file,
             "html_file": html_file,
-            "status": "generated",
-            "message": "Report generated successfully"
+            "status": "generated" if rendered else "failed",
+            "message": "Report rendered to HTML" if rendered else "Report rendering failed"
         }
 
+
+    def _markdown_to_html(self, quarto_content: str, report: QuartoReport) -> str:
+        """Convert a generated Quarto (.qmd) document to an HTML body fragment.
+        
+        Strips the YAML front-matter and renders the remaining Markdown to HTML.
+        Quarto python code cells (```{python} ... ```) are preserved as syntax-
+        highlighted code blocks so the source code remains visible in the report.
+        """
+        try:
+            import markdown as md
+        except ImportError:
+            md = None
+        
+        body = quarto_content
+        # Remove YAML front matter
+        if body.startswith("---"):
+            end = body.find("\n---", 3)
+            if end != -1:
+                body = body[end + 4:]
+        
+        # Convert Quarto python code fences ```{python} ... ``` to standard ```python
+        # fences so they render as code blocks (not executed).
+        import re
+        body = re.sub(r"```\{python\}", "```python", body)
+        
+        if md is not None:
+            html_body = md.markdown(
+                body,
+                extensions=["tables", "fenced_code", "codehilite", "toc"],
+            )
+        else:
+            # Minimal escape if the markdown package is unavailable
+            import html as html_mod
+            html_body = (
+                "<pre>" + html_mod.escape(body) + "</pre>"
+            )
+        
+        return html_body
+    
+    def _wrap_html_document(self, title: str, body: str) -> str:
+        """Wrap an HTML body fragment into a complete, styled HTML document."""
+        return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; color: #222; line-height: 1.6; }}
+        h1, h2, h3, h4 {{ color: #1a3c5e; margin-top: 1.5rem; }}
+        h1 {{ border-bottom: 2px solid #1a3c5e; padding-bottom: 0.3rem; }}
+        table {{ border-collapse: collapse; width: 100%; margin: 1rem 0; }}
+        th, td {{ border: 1px solid #ccc; padding: 0.5rem 0.75rem; text-align: left; }}
+        th {{ background: #f2f6fa; }}
+        pre {{ background: #f7f7f9; padding: 1rem; border-radius: 6px; overflow-x: auto; }}
+        code {{ font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }}
+        pre code {{ background: none; }}
+        :not(pre) > code {{ background: #f0f0f2; padding: 0.1em 0.3em; border-radius: 3px; }}
+        blockquote {{ border-left: 4px solid #1a3c5e; margin: 1rem 0; padding: 0.5rem 1rem; color: #555; background: #f9fbfd; }}
+        .codehilite {{ background: #f7f7f9; border-radius: 6px; }}
+    </style>
+</head>
+<body>
+{body}
+</body>
+</html>"""
 
 if __name__ == "__main__":
     import asyncio
