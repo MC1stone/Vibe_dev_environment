@@ -19,6 +19,7 @@ urlpatterns = [
     path('analysis/<uuid:analysis_id>/report/', views.analysis_report, name='analysis_report'),
     path('analysis/<uuid:analysis_id>/download/', views.download_analysis, name='download_analysis'),
     path('chat/', views.chat_interface, name='chat_interface'),
+    path('chat/<uuid:analysis_id>/', views.chat_interface, name='chat_interface'),
     path('api/analyze/', views.api_analyze, name='api_analyze'),
     path('api/chat/', views.api_chat, name='api_chat'),
     path('about/', views.about, name='about'),
