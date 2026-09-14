@@ -376,8 +376,12 @@ class SpectralAnalysisAgent:
         )
     
     def _load_txt(self, file_path: str) -> SpectralData:
-        """Load spectral data from TXT file."""
-        with open(file_path, 'r') as f:
+        """Load spectral data from TXT file.
+        
+        Handles whitespace, comma, semicolon, and tab delimited two-column
+        spectral data. Non-numeric header rows are skipped automatically.
+        """
+        with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
             lines = f.readlines()
         
         # Try to parse as two-column data
@@ -396,13 +400,18 @@ class SpectralAnalysisAgent:
                         metadata[parts[0].strip()] = parts[1].strip()
                 continue
             
-            parts = line.split()
-            if len(parts) >= 2:
-                try:
-                    wavelengths.append(float(parts[0]))
-                    intensities.append(float(parts[1]))
-                except ValueError:
-                    continue
+            # Support multiple delimiters: semicolon, tab, comma, whitespace
+            for delim in [';', '\t', ',', None]:
+                parts = line.split(delim) if delim else line.split()
+                parts = [p.strip() for p in parts if p.strip()]
+                if len(parts) >= 2:
+                    try:
+                        wavelengths.append(float(parts[0]))
+                        intensities.append(float(parts[1]))
+                        break
+                    except ValueError:
+                        # Header row or non-numeric line; try next delimiter
+                        continue
         
         if not wavelengths:
             raise ValueError("No valid spectral data found in TXT file")
