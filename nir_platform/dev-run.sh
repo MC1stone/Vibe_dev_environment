@@ -173,9 +173,30 @@ DB_HOST=localhost "$PYTHON_BIN" manage.py migrate || warn "Migrationen fehlgesch
 ok "Migrationen abgeschlossen."
 
 # ---------------------------------------------------------------------
-# 7. Dev-Server starten
+# 7. Port 8000 pruefen - darf nicht vom Docker-Container belegt sein
 # ---------------------------------------------------------------------
-log "Starte lokalen Dev-Server auf http://localhost:8000"
-log "(Strg+C zum Beenden - Daten-Container laufen weiter.)"
+if command -v ss >/dev/null 2>&1; then
+    if ss -ltn 'sport = :8000' 2>/dev/null | grep -q ':8000'; then
+        listener_pid=$(ss -ltnp 'sport = :8000' 2>/dev/null | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2)
+        err "Port 8000 ist bereits belegt (PID ${listener_pid:-?})."
+        err "Wahrscheinlich laeuft noch der Docker-Container nir_django mit altem Code."
+        err "Beende ihn mit:  docker update --restart=no nir_django && docker stop nir_django"
+        err "oder starte dieses Skript erneut, nachdem der Container gestoppt ist."
+        exit 1
+    fi
+fi
+
+# ---------------------------------------------------------------------
+# 8. Dev-Server starten
+# ---------------------------------------------------------------------
+echo ""
+echo "====================================================="
+echo "  NIR Intelligence Platform - LOKALER DEV-SERVER"
+echo "  http://localhost:8000"
+echo "  Code:  $REPO_ROOT (Branch: $(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?'))"
+echo "  Commit: $(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo '?')"
+echo "  Python: $PYTHON_BIN"
+echo "  Strg+C zum Beenden - Daten-Container laufen weiter."
+echo "====================================================="
 echo ""
 DB_HOST=localhost exec "$PYTHON_BIN" manage.py runserver 0.0.0.0:8000
