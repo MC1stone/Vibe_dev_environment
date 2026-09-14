@@ -9,6 +9,7 @@ noise reduction, peak detection, and spectrometer issue identification.
 import asyncio
 import json
 import logging
+import re
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Any
@@ -165,6 +166,14 @@ class SpectralAnalysisAgent:
                 "resolution": 15.0,
                 "features": ["low_cost", "nir_only"],
                 "calibration_points": [700, 850, 1000]
+            },
+            "sparkfun_nir_triad": {
+                "wavelength_range": [410, 940],
+                "resolution": 30.0,
+                "num_channels": 18,
+                "wavelengths": [410, 435, 460, 485, 510, 535, 560, 585, 610, 645, 680, 705, 730, 760, 810, 860, 900, 940],
+                "features": ["diy", "low_cost", "fixed_filter", "vis_nir"],
+                "calibration_points": [410, 610, 940]
             }
         }
     
@@ -291,7 +300,7 @@ class SpectralAnalysisAgent:
         
         # Step 9: Calculate analysis metrics
         analysis_metrics = self._calculate_analysis_metrics(
-            spectral_data, smoothed_data, peak_info, issues
+            spectral_data, smoothed_data, peak_info, issues, initial_quality
         )
         
         # Create result
@@ -336,16 +345,85 @@ class SpectralAnalysisAgent:
             logger.error(f"Error loading spectral data: {e}")
             raise ValueError(f"Unsupported file format or corrupt file: {e}")
     
+    @staticmethod
+    def _read_delimited(file_path: str, sep: Optional[str] = None) -> 'pd.DataFrame':
+        """Read a delimited file trying several encodings.
+
+        Spectrometer exports frequently use Latin-1 / Windows encodings
+        (e.g. German umlauts in metadata columns), so try utf-8 first and
+        fall back to latin-1 / cp1252 to avoid UnicodeDecodeError.
+        """
+        last_exc = None
+        for enc in ('utf-8', 'latin-1', 'cp1252'):
+            try:
+                return pd.read_csv(
+                    file_path, sep=sep, encoding=enc,
+                    on_bad_lines='skip', dtype=str,
+                )
+            except UnicodeDecodeError as e:
+                last_exc = e
+                continue
+            except Exception:
+                # sep=None triggers the sniffer; non-Unicode errors are not
+                # encoding-related, so stop trying further encodings.
+                break
+        if last_exc is not None:
+            raise last_exc
+        return pd.DataFrame()
+    
+    def _load_wide_nir(self, df, file_path: str) -> SpectralData:
+        """Parse a wide-format multi-sample NIR dataframe.
+        
+        Spectral columns are named like A_410, B_435, ... L_940 (wavelength
+        in nm encoded in the column name). Returns a SpectralData whose
+        representative spectrum is the column-wise mean intensity; the full
+        per-sample data and metadata columns (e.g. Brix, Temp) are stored in
+        SpectralData.metadata.
+        Returns None if the dataframe is not a wide NIR export.
+        """
+        wl_cols = {}
+        for col in df.columns:
+            m = re.search(r'([A-Z])_?(\d+(?:\.\d+)?)$', str(col).strip())
+            if m:
+                wl_cols[col] = float(m.group(2))
+        if not wl_cols:
+            return None
+        wavelengths = [wl_cols[c] for c in wl_cols]
+        intensity_matrix = df[list(wl_cols.keys())].apply(
+            pd.to_numeric, errors='coerce'
+        )
+        intensities = intensity_matrix.mean(axis=0, skipna=True).values
+        
+        meta = {}
+        for col in df.columns:
+            if col not in wl_cols:
+                meta[col] = df[col].dropna().tolist()
+        meta['spectral_columns'] = list(wl_cols.keys())
+        meta['num_samples'] = int(len(df))
+        meta['format'] = 'wide_nir_multisample'
+        
+        return SpectralData(
+            wavelengths=np.array(wavelengths),
+            intensities=np.array(intensities),
+            metadata=meta,
+            file_path=file_path
+        )
+
     def _load_csv(self, file_path: str) -> SpectralData:
         """Load spectral data from CSV file."""
-        df = pd.read_csv(file_path)
+        df = self._read_delimited(file_path)
+        
+        # Wide-format multi-sample NIR export (A_410, B_435, ... columns)
+        wide = self._load_wide_nir(df, file_path)
+        if wide is not None:
+            return wide
         
         # Try to detect columns
         wavelength_col = None
         intensity_col = None
         
         for col in df.columns:
-            col_lower = col.lower()
+            col_lower = str(col).lower()
             if any(x in col_lower for x in ['wavelength', 'wave', 'lambda', 'nm']):
                 wavelength_col = col
             elif any(x in col_lower for x in ['intensity', 'absorbance', 'reflectance', 'transmittance', 'counts']):
@@ -376,11 +454,49 @@ class SpectralAnalysisAgent:
         )
     
     def _load_txt(self, file_path: str) -> SpectralData:
-        """Load spectral data from TXT file."""
-        with open(file_path, 'r') as f:
+        """Load spectral data from TXT file.
+        
+        Supports two formats:
+        1. Two-column (wavelength, intensity) data, delimiter-agnostic.
+        2. Wide-format multi-sample NIR exports (semicolon-delimited) with
+           a header row whose spectral columns are named like A_410, B_435,
+           ... L_940 (wavelength in nm encoded in the column name). The
+           representative spectrum is the column-wise mean intensity; the
+           full per-sample data and metadata (e.g. Brix) are stored in
+           SpectralData.metadata.
+        """
+        with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
             lines = f.readlines()
         
-        # Try to parse as two-column data
+        # Detect delimiter from the first non-empty, non-comment line.
+        first_data_line = ""
+        for line in lines:
+            stripped = line.strip()
+            if stripped and not stripped.startswith('#'):
+                first_data_line = stripped
+                break
+        if not first_data_line:
+            raise ValueError("No valid spectral data found in TXT file")
+        
+        delimiter = None
+        for cand in [';', '\t', ',']:
+            if cand in first_data_line:
+                delimiter = cand
+                break
+        
+        # --- Wide-format multi-sample NIR export ---
+        # Header columns named like A_410, B_435 encode the wavelength (nm).
+        # The helper tries several encodings (utf-8, latin-1, cp1252) so
+        # exports with German umlauts in metadata columns still parse.
+        try:
+            df = self._read_delimited(file_path, sep=delimiter)
+            wide = self._load_wide_nir(df, file_path)
+            if wide is not None:
+                return wide
+        except Exception:
+            pass  # fall through to two-column parsing
+        
+        # --- Two-column (wavelength, intensity) format ---
         wavelengths = []
         intensities = []
         metadata = {}
@@ -388,21 +504,22 @@ class SpectralAnalysisAgent:
         for line in lines:
             line = line.strip()
             if not line or line.startswith('#'):
-                # Skip comments and empty lines
                 if line.startswith('#'):
-                    # Parse metadata from comments
                     parts = line[1:].split(':')
                     if len(parts) >= 2:
                         metadata[parts[0].strip()] = parts[1].strip()
                 continue
             
-            parts = line.split()
-            if len(parts) >= 2:
-                try:
-                    wavelengths.append(float(parts[0]))
-                    intensities.append(float(parts[1]))
-                except ValueError:
-                    continue
+            for delim in [';', '\t', ',', None]:
+                parts = line.split(delim) if delim else line.split()
+                parts = [p.strip() for p in parts if p.strip()]
+                if len(parts) >= 2:
+                    try:
+                        wavelengths.append(float(parts[0]))
+                        intensities.append(float(parts[1]))
+                        break
+                    except ValueError:
+                        continue
         
         if not wavelengths:
             raise ValueError("No valid spectral data found in TXT file")
@@ -582,22 +699,41 @@ class SpectralAnalysisAgent:
         best_match = None
         best_score = 0
         
+        # Exact wavelength-set match: strongest signal for fixed-filter
+        # spectrometers (e.g. SparkFun NIR Triad with a known channel grid).
+        wl_set = sorted(set(np.round(wavelengths).astype(float).tolist()))
         for spec_name, spec_info in self.spectrometer_database.items():
             score = 0
+            spec_wls = spec_info.get('wavelengths')
+            if spec_wls is not None:
+                spec_wl_set = sorted(set(float(w) for w in spec_wls))
+                if spec_wl_set == wl_set:
+                    score += 10  # exact grid match dominates everything else
+                elif (spec_info['wavelength_range'][0] <= wl_min <= spec_info['wavelength_range'][1]
+                      and spec_info['wavelength_range'][0] <= wl_max <= spec_info['wavelength_range'][1]):
+                    score += 2
+            else:
+                # Check wavelength range for non-fixed-filter devices
+                spec_range = spec_info['wavelength_range']
+                if spec_range[0] <= wl_min <= spec_range[1] and spec_range[0] <= wl_max <= spec_range[1]:
+                    score += 2
             
-            # Check wavelength range
-            spec_range = spec_info['wavelength_range']
-            if spec_range[0] <= wl_min <= spec_range[1] and spec_range[0] <= wl_max <= spec_range[1]:
-                score += 2
-            
-            # Check resolution
-            if abs(resolution - spec_info['resolution']) < spec_info['resolution'] * 0.5:
-                score += 1
+            # Check resolution (skip for fixed-filter devices with exact grid)
+            if score < 10:
+                if abs(resolution - spec_info['resolution']) < spec_info['resolution'] * 0.5:
+                    score += 1
             
             # Check number of points
-            expected_points = int(wl_range / spec_info['resolution'])
-            if abs(num_points - expected_points) < expected_points * 0.2:
-                score += 1
+            expected_channels = spec_info.get('num_channels')
+            if expected_channels is not None:
+                if num_points == expected_channels:
+                    score += 2
+                elif abs(num_points - expected_channels) <= 1:
+                    score += 1
+            else:
+                expected_points = int(wl_range / spec_info['resolution']) if spec_info['resolution'] > 0 else 0
+                if expected_points and abs(num_points - expected_points) < expected_points * 0.2:
+                    score += 1
             
             if score > best_score:
                 best_score = score
@@ -637,6 +773,10 @@ class SpectralAnalysisAgent:
             "data_completeness": 1.0,
             "outliers": 0
         }
+        
+        if len(intensities) == 0:
+            quality["data_completeness"] = 0.0
+            return quality
         
         # Check for NaN values
         nan_mask = np.isnan(intensities)
@@ -778,6 +918,10 @@ class SpectralAnalysisAgent:
         """Apply baseline correction to spectral data."""
         intensities = spectral_data.intensities.copy()
         
+        if len(intensities) == 0:
+            logger.warning("Baseline correction skipped: empty intensities")
+            return spectral_data
+        
         # Try different baseline correction methods
         try:
             # Method 1: Simple polynomial baseline
@@ -799,6 +943,8 @@ class SpectralAnalysisAgent:
     
     def _polynomial_baseline_correction(self, intensities: np.ndarray, degree: int = 3) -> np.ndarray:
         """Apply polynomial baseline correction."""
+        if len(intensities) == 0:
+            return intensities
         x = np.arange(len(intensities))
         
         # Fit polynomial to baseline (use lower envelope)
@@ -820,6 +966,10 @@ class SpectralAnalysisAgent:
     def _reduce_noise(self, spectral_data: SpectralData) -> SpectralData:
         """Apply noise reduction to spectral data."""
         intensities = spectral_data.intensities.copy()
+        
+        if len(intensities) == 0:
+            logger.warning("Noise reduction skipped: empty intensities")
+            return spectral_data
         
         # Apply Savitzky-Golay filter
         try:
@@ -843,6 +993,10 @@ class SpectralAnalysisAgent:
     def _smooth_data(self, spectral_data: SpectralData) -> SpectralData:
         """Apply additional smoothing to spectral data."""
         intensities = spectral_data.intensities.copy()
+        
+        if len(intensities) == 0:
+            logger.warning("Smoothing skipped: empty intensities")
+            return spectral_data
         
         # Apply moving average
         try:
@@ -870,6 +1024,18 @@ class SpectralAnalysisAgent:
         intensities = spectral_data.intensities
         wavelengths = spectral_data.wavelengths
         
+        if len(intensities) == 0 or len(wavelengths) == 0:
+            logger.warning("Empty data passed to peak detection — returning empty result")
+            return {
+                "num_peaks": 0,
+                "peak_positions": [],
+                "peak_heights": [],
+                "peak_properties": {"height": [], "prominence": [], "width": []},
+                "num_valleys": 0,
+                "valley_positions": [],
+                "valley_depths": [],
+            }
+        
         # Find peaks
         peaks, properties = signal.find_peaks(
             intensities, 
@@ -883,9 +1049,9 @@ class SpectralAnalysisAgent:
             "peak_positions": wavelengths[peaks].tolist(),
             "peak_heights": intensities[peaks].tolist(),
             "peak_properties": {
-                "height": properties.get("height", []).tolist(),
-                "prominence": properties.get("prominence", []).tolist(),
-                "width": properties.get("width", []).tolist()
+                "height": np.asarray(properties.get("height", [])).tolist(),
+                "prominence": np.asarray(properties.get("prominence", [])).tolist(),
+                "width": np.asarray(properties.get("width", [])).tolist()
             }
         }
         
@@ -907,6 +1073,15 @@ class SpectralAnalysisAgent:
                                      original_data: SpectralData) -> List[Dict]:
         """Detect potential spectrometer issues."""
         issues = []
+        
+        # Defensive guard: empty arrays cannot be reduced by numpy.
+        if len(processed_data.intensities) == 0 or len(processed_data.wavelengths) == 0:
+            logger.warning(
+                "Empty processed data passed to issue detection "
+                "(intensities=%d, wavelengths=%d) — skipping issue detection",
+                len(processed_data.intensities), len(processed_data.wavelengths),
+            )
+            return issues
         
         # Check for wavelength shift
         if len(original_data.wavelengths) == len(processed_data.wavelengths):
@@ -1095,26 +1270,44 @@ class SpectralAnalysisAgent:
                                      original_data: SpectralData,
                                      processed_data: SpectralData,
                                      peak_info: Dict,
-                                     issues: List[Dict]) -> Dict:
+                                     issues: List[Dict],
+                                     initial_quality: Dict) -> Dict:
         """Calculate comprehensive analysis metrics."""
+        # Defensive guards for empty data
+        wl = processed_data.wavelengths
+        it = processed_data.intensities
+        wl_range_ok = len(wl) > 1
+        it_ok = len(it) > 0
+        
+        def _safe_wl_range():
+            if not wl_range_ok:
+                return {"min": 0.0, "max": 0.0, "range": 0.0}
+            lo = float(np.min(wl)); hi = float(np.max(wl))
+            return {"min": lo, "max": hi, "range": hi - lo}
+        
+        def _safe_it_stats():
+            if not it_ok:
+                return {"min": 0.0, "max": 0.0, "mean": 0.0, "std": 0.0, "median": 0.0}
+            return {
+                "min": float(np.min(it)),
+                "max": float(np.max(it)),
+                "mean": float(np.mean(it)),
+                "std": float(np.std(it)),
+                "median": float(np.median(it)),
+            }
+        
+        wl_span = (float(wl[-1] - wl[0])
+                   if wl_range_ok else 0.0)
+        peak_density = (peak_info.get("num_peaks", 0) / wl_span * 100
+                        if wl_span > 0 else 0.0)
+        
         metrics = {
-            "wavelength_range": {
-                "min": float(np.min(processed_data.wavelengths)),
-                "max": float(np.max(processed_data.wavelengths)),
-                "range": float(np.max(processed_data.wavelengths) - np.min(processed_data.wavelengths))
-            },
-            "intensity_statistics": {
-                "min": float(np.min(processed_data.intensities)),
-                "max": float(np.max(processed_data.intensities)),
-                "mean": float(np.mean(processed_data.intensities)),
-                "std": float(np.std(processed_data.intensities)),
-                "median": float(np.median(processed_data.intensities))
-            },
+            "wavelength_range": _safe_wl_range(),
+            "intensity_statistics": _safe_it_stats(),
             "peak_analysis": {
                 "num_peaks": peak_info.get("num_peaks", 0),
                 "num_valleys": peak_info.get("num_valleys", 0),
-                "peak_density": peak_info.get("num_peaks", 0) / 
-                              (processed_data.wavelengths[-1] - processed_data.wavelengths[0]) * 100
+                "peak_density": peak_density
             },
             "data_quality": {
                 "signal_to_noise": initial_quality.get("signal_to_noise", 0),

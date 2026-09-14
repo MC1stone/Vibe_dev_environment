@@ -32,6 +32,7 @@ python-multipart>=0.0.6
 # File Processing
 python-magic>=0.4.27
 pyzipper>=0.3.6
+Markdown>=3.5.0  # Quarto-to-HTML fallback renderer when Quarto CLI is unavailable
 
 # API Clients
 requests>=2.31.0

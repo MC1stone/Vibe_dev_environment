@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load custom_filters %}
 
 {% block title %}{{ page_title|default:"Analysis Details" }}{% endblock %}
 
@@ -476,7 +477,7 @@
                                 <tr>
                                     <td>{{ param|title }}</td>
                                     <td>{{ info.current|default:"N/A" }}</td>
-                                    <td>{{ info.recommended|default:"N/A" }} {{ info.unit|default:"", }}</td>
+                                    <td>{{ info.recommended|default:"N/A" }} {{ info.unit|default:"" }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -525,12 +526,4 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
-<script>
-    // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
-</script>
-{% endblock %}
+{% block extra_js %}{% endblock %}
