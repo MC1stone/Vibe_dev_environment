@@ -494,7 +494,29 @@
                         <dd class="col-sm-7">{{ cal.analyte_calibration.rmse_cv|floatformat:4 }} °Brix</dd>
                         <dt class="col-sm-5">RMSE (cal):</dt>
                         <dd class="col-sm-7">{{ cal.analyte_calibration.rmse_cal|floatformat:4 }} °Brix</dd>
+                        <dt class="col-sm-5">Outliers removed:</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.outliers_removed|default:0 }} ({{ cal.analyte_calibration.outlier_method|default:"none" }})</dd>
                     </dl>
+                    {% if cal.neural_calibration %}
+                    <h5 class="mt-3">Neural Network (MLP) Calibration</h5>
+                    <p class="small text-muted mb-2">{{ cal.neural_calibration.method }}</p>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Architecture:</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.hidden_layer_sizes|join:',' }} hidden layers</dd>
+                        <dt class="col-sm-5">Samples:</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.num_samples }}</dd>
+                        <dt class="col-sm-5">R&sup2; (CV):</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.r_squared_cv|floatformat:4 }}</dd>
+                        <dt class="col-sm-5">RMSE (CV):</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.rmse_cv|floatformat:4 }} °Brix</dd>
+                        <dt class="col-sm-5">R&sup2; (cal):</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.r_squared_cal|floatformat:4 }}</dd>
+                        <dt class="col-sm-5">RMSE (cal):</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.rmse_cal|floatformat:4 }} °Brix</dd>
+                        <dt class="col-sm-5">Outliers removed:</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.outliers_removed|default:0 }}</dd>
+                    </dl>
+                    {% endif %}
                     {% endif %}
                 </div>
                 

@@ -215,6 +215,7 @@ def recalibrate(request):
             'label': sd.original_filename,
         })
         used.append(_spectral_data_brief(sd))
+    combined_neural = None
     if request.method == 'POST' and samples:
         try:
             ac = calibration_agent.recalibrate_from_samples(samples)
@@ -223,6 +224,13 @@ def recalibrate(request):
             else:
                 error = ('Could not recalibrate: not enough combined samples, '
                          'or scikit-learn is unavailable.')
+            # Fit a combined neural-network model in parallel to PLS.
+            try:
+                ncal = calibration_agent.recalibrate_neural_from_samples(samples)
+                if ncal is not None:
+                    combined_neural = ncal.to_dict()
+            except Exception as ne:
+                logger.warning(f'Neural recalibration failed: {ne}')
         except Exception as e:
             error = f'Recalibration failed: {e}'
     # Pair wavelengths with their coefficients so the template can iterate
@@ -241,6 +249,7 @@ def recalibrate(request):
         'used': used,
         'combined_cal': combined_cal,
         'coeff_table': coeff_table,
+        'combined_neural': combined_neural,
         'error': error,
         'all_analyses': all_analyses,
         'selected_ids': selected_ids,

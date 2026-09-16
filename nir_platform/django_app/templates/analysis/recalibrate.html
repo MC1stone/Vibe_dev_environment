@@ -88,6 +88,31 @@
     </div>
     {% endif %}
 
+    {% if combined_neural %}
+    <!-- Combined neural-network result -->
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0"><i class="bi bi-cpu"></i> Combined neural-network calibration (MLP) ({{ combined_neural.analyte }})</h5></div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <tbody>
+                        <tr><th style="width:45%;">Method</th><td>{{ combined_neural.method }}</td></tr>
+                        <tr><th>Architecture</th><td>{{ combined_neural.hidden_layer_sizes|join:',' }} hidden layers</td></tr>
+                        <tr><th>Combined samples</th><td>{{ combined_neural.num_samples }}</td></tr>
+                        <tr><th>Features</th><td>{{ combined_neural.num_features }}</td></tr>
+                        <tr><th>R&sup2;cv</th><td>{{ combined_neural.r_squared_cv|floatformat:3 }}</td></tr>
+                        <tr><th>RMSEcv</th><td>{{ combined_neural.rmse_cv|floatformat:3 }}</td></tr>
+                        <tr><th>R&sup2;cal</th><td>{{ combined_neural.r_squared_cal|floatformat:3 }}</td></tr>
+                        <tr><th>RMSEcal</th><td>{{ combined_neural.rmse_cal|floatformat:3 }}</td></tr>
+                        <tr><th>Outliers removed</th><td>{{ combined_neural.outliers_removed|default:0 }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-muted"><small>{{ combined_neural.notes }}</small></p>
+        </div>
+    </div>
+    {% endif %}
+
     {% if combined_cal %}
     <!-- Combined calibration result -->
     <div class="card mb-4">
@@ -108,6 +133,7 @@
                                 <tr><th>RMSEcv</th><td>{{ combined_cal.rmse_cv|floatformat:3 }}</td></tr>
                                 <tr><th>R&sup2;cal</th><td>{{ combined_cal.r_squared_cal|floatformat:3 }}</td></tr>
                                 <tr><th>RMSEcal</th><td>{{ combined_cal.rmse_cal|floatformat:3 }}</td></tr>
+                                <tr><th>Outliers removed</th><td>{{ combined_cal.outliers_removed|default:0 }} ({{ combined_cal.outlier_method|default:"none" }})</td></tr>
                             </tbody>
                         </table>
                     </div>

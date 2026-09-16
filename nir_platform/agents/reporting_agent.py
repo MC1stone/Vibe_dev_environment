@@ -303,8 +303,14 @@ Processing steps applied:
                 f"Brix = {intercept_:.4f} + "
                 + " + ".join(eq_terms)
                 if eq_terms else f"Brix = {intercept_:.4f}")
+            outliers_removed = analyte_cal.get('outliers_removed', 0)
+            outlier_method = analyte_cal.get('outlier_method', 'none')
+            outlier_line = (
+                f"\n- **Outliers removed**: {outliers_removed} "
+                f"({outlier_method})"
+                if outliers_removed else "\n- **Outliers removed**: 0")
             analyte_block = f"""
-### NIR \u2192 Brix Calibration (Ripeness Model)
+### NIR \u2192 Brix Calibration (Ripeness Model) - PLS
 - **Analyte**: {analyte_cal.get('analyte', 'Brix')}
 - **Method**: {analyte_cal.get('method', 'N/A')}
 - **Samples**: {analyte_cal.get('num_samples', 0)}
@@ -314,7 +320,7 @@ Processing steps applied:
 - **R\u00b2 (cross-validated)**: {analyte_cal.get('r_squared_cv', 0):.4f}
 - **RMSE (cross-validated)**: {analyte_cal.get('rmse_cv', 0):.4f} \u00b0Brix
 - **R\u00b2 (calibration)**: {analyte_cal.get('r_squared_cal', 0):.4f}
-- **RMSE (calibration)**: {analyte_cal.get('rmse_cal', 0):.4f} \u00b0Brix
+- **RMSE (calibration)**: {analyte_cal.get('rmse_cal', 0):.4f} \u00b0Brix{outlier_line}
 - **Intercept**: {analyte_cal.get('intercept', 0):.4f}
 - **Notes**: {analyte_cal.get('notes', '')}
 
@@ -327,15 +333,36 @@ Processing steps applied:
 {coef_lines}
 """
 
+        # Neural-network (MLP) calibration, fitted in parallel to PLS.
+        neural_cal = calibration_result.get('neural_calibration')
+        neural_block = ""
+        if neural_cal:
+            neural_block = f"""
+### NIR \u2192 Brix Calibration - Neural Network (MLP)
+- **Analyte**: {neural_cal.get('analyte', 'Brix')}
+- **Method**: {neural_cal.get('method', 'N/A')}
+- **Architecture**: {tuple(neural_cal.get('hidden_layer_sizes', []))} hidden layers (ReLU, Adam)
+- **Samples**: {neural_cal.get('num_samples', 0)}
+- **Features**: {neural_cal.get('num_features', 0)} channels
+- **R\u00b2 (cross-validated)**: {neural_cal.get('r_squared_cv', 0):.4f}
+- **RMSE (cross-validated)**: {neural_cal.get('rmse_cv', 0):.4f} \u00b0Brix
+- **R\u00b2 (calibration)**: {neural_cal.get('r_squared_cal', 0):.4f}
+- **RMSE (calibration)**: {neural_cal.get('rmse_cal', 0):.4f} \u00b0Brix
+- **Outliers removed**: {neural_cal.get('outliers_removed', 0)}
+- **Notes**: {neural_cal.get('notes', '')}
+"""
+
+
         calibration_content = f"""
 ## Calibration Results
 
 ### Calibration Quality
 - **Wavelength Calibration Quality**: {cal_quality.get('wavelength_quality', 0):.1f}%
 - **Intensity Calibration Quality**: {cal_quality.get('intensity_quality', 0):.1f}%
-- **Analyte (NIR\u2192Brix) Quality**: {cal_quality.get('analyte_quality', 0):.1f}%
+- **Analyte (NIR\u2192Brix) Quality (PLS)**: {cal_quality.get('analyte_quality', 0):.1f}%
+- **Neural-Network Quality (MLP)**: {cal_quality.get('neural_quality', 0):.1f}%
 - **Overall Calibration Quality**: {cal_quality.get('overall_quality', 0):.1f}%
-{analyte_block}
+{analyte_block}{neural_block}
 ### Calibration Recommendations
 {chr(10).join([f'- **{rec.get("type", "")}** ({rec.get("priority", "medium")}): {rec.get("description", "")}' for rec in cal_recs]) or 'None'}
 
