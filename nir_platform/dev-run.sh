@@ -9,6 +9,12 @@
 # lokalen Django-Dev-Server mit der fuer den Host korrekten
 # DB-Konfiguration (DB_HOST=localhost).
 #
+# Port-Zuweisung: Bevor der Server startet, prueft dev-run.sh ueber den
+# Port Management Agent (agents/port_management_agent.py), ob der
+# bevorzugte Port 8000 frei ist. Ist er belegt, wird automatisch auf eine
+# Alternative (8001, 8002, 8080, 8888) ausgewichen, so dass der Dev-Server
+# sicher startet statt abzubrechen.
+#
 # Nutzung:
 #   ./dev-run.sh                       # Default: PR-Branch, kein Reset
 #   ./dev-run.sh --reset                # Hartes Reset auf origin/<branch>
@@ -218,17 +224,57 @@ DB_HOST=localhost "$PYTHON_BIN" manage.py migrate || warn "Migrationen fehlgesch
 ok "Migrationen abgeschlossen."
 
 # ---------------------------------------------------------------------
-# 7. Port 8000 pruefen - darf nicht vom Docker-Container belegt sein
+# 7. Port-Zuweisung ueber den Port Management Agent
 # ---------------------------------------------------------------------
-if command -v ss >/dev/null 2>&1; then
-    if ss -ltn 'sport = :8000' 2>/dev/null | grep -q ':8000'; then
-        listener_pid=$(ss -ltnp 'sport = :8000' 2>/dev/null | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2)
-        err "Port 8000 ist bereits belegt (PID ${listener_pid:-?})."
-        err "Wahrscheinlich laeuft noch der Docker-Container nir_django mit altem Code."
-        err "Beende ihn mit:  docker update --restart=no nir_django && docker stop nir_django"
-        err "oder starte dieses Skript erneut, nachdem der Container gestoppt ist."
-        exit 1
-    fi
+# Statt hart abzubrechen, wenn Port 8000 belegt ist (z.B. durch einen noch
+# laufenden Docker-Container), nutzt dev-run.sh den PortManager aus
+# agents/port_management_agent.py. Er prueft, ob der Default-Port frei ist,
+# und weicht sonst automatisch auf eine Alternative (8001, 8002, 8080, 8888)
+# aus, so dass der Dev-Server sicher startet.
+PREFERRED_PORT=8000
+AGENTS_DIR="$REPO_ROOT/nir_platform/agents"
+PORT_RESOLVER="$(mktemp /tmp/nir_port_resolver.XXXXXX.py)"
+cat > "$PORT_RESOLVER" <<'__PORT_MGR__'
+import os, sys, socket
+sys.path.insert(0, os.environ.get('AGENTS_DIR', '.'))
+from port_management_agent import PortManager
+pm = PortManager()
+preferred = int(os.environ.get('DEV_PREFERRED_PORT', '8000'))
+def free(p):
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind(('0.0.0.0', p))
+            return True
+    except OSError:
+        return False
+if free(preferred):
+    print(preferred)
+    sys.exit(0)
+alt = pm.find_alternative_port('django', preferred)
+if alt and free(alt):
+    print(alt)
+    sys.exit(0)
+for p in range(preferred + 1, preferred + 100):
+    if free(p):
+        print(p)
+        sys.exit(0)
+print('')
+__PORT_MGR__
+log "Port-Zuweisung ueber Port Management Agent (bevorzugt: $PREFERRED_PORT)..."
+DEV_PORT=$(DEV_PREFERRED_PORT="$PREFERRED_PORT" AGENTS_DIR="$AGENTS_DIR" \
+            "$PYTHON_BIN" "$PORT_RESOLVER" 2>/dev/null)
+rm -f "$PORT_RESOLVER"
+if [ -z "$DEV_PORT" ]; then
+    err "Konnte keinen freien Port finden ($PREFERRED_PORT..$((PREFERRED_PORT + 100)))."
+    err "Beende ggf. Konflikte manuell:  docker stop nir_django"
+    exit 1
+fi
+if [ "$DEV_PORT" != "$PREFERRED_PORT" ]; then
+    warn "Port $PREFERRED_PORT ist belegt - Dev-Server startet auf Port $DEV_PORT."
+    warn "Oeffne http://localhost:$DEV_PORT im Browser."
+else
+    ok "Port $PREFERRED_PORT ist frei."
 fi
 
 # ---------------------------------------------------------------------
@@ -237,11 +283,11 @@ fi
 echo ""
 echo "====================================================="
 echo "  NIR Intelligence Platform - LOKALER DEV-SERVER"
-echo "  http://localhost:8000"
+echo "  http://localhost:$DEV_PORT"
 echo "  Code:  $REPO_ROOT (Branch: $(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?'))"
 echo "  Commit: $(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo '?')"
 echo "  Python: $PYTHON_BIN"
 echo "  Strg+C zum Beenden - Daten-Container laufen weiter."
 echo "====================================================="
 echo ""
-DB_HOST=localhost exec "$PYTHON_BIN" manage.py runserver 0.0.0.0:8000
+DB_HOST=localhost exec "$PYTHON_BIN" manage.py runserver 0.0.0.0:$DEV_PORT
