@@ -15,3 +15,6 @@ uploads/
 reports/
 staticfiles/
 .env
+
+# Matplotlib plot-code artifacts (spectral comparison image)
+nir_platform/spectrum_comparison.png

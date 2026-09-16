@@ -5,13 +5,21 @@ This agent generates comprehensive Quarto reports with embedded Python source co
 visualizations, and analysis results for spectral data.
 """
 
+import base64
+import io
 import json
 import logging
 import os
+import re
+import tempfile
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 import numpy as np
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -282,6 +290,15 @@ Processing steps applied:
             coef_lines = (chr(10).join(
                 [f"  - {w:.0f} nm: {c:+.4e}" for w, c in wl_coef])
                 or '  None')
+            intercept_ = analyte_cal.get('intercept', 0.0)
+            # Build a human-readable regression equation.
+            eq_terms = []
+            for w, c in wl_coef:
+                eq_terms.append(f"({c:+.4e})\u00b7I_{{{int(w)}}}")
+            equation = (
+                f"Brix = {intercept_:.4f} + "
+                + " + ".join(eq_terms)
+                if eq_terms else f"Brix = {intercept_:.4f}")
             analyte_block = f"""
 ### NIR \u2192 Brix Calibration (Ripeness Model)
 - **Analyte**: {analyte_cal.get('analyte', 'Brix')}
@@ -296,6 +313,11 @@ Processing steps applied:
 - **RMSE (calibration)**: {analyte_cal.get('rmse_cal', 0):.4f} \u00b0Brix
 - **Intercept**: {analyte_cal.get('intercept', 0):.4f}
 - **Notes**: {analyte_cal.get('notes', '')}
+
+#### Regression equation (raw intensity scale)
+```
+{equation}
+```
 
 #### Regression coefficients (raw intensity scale)
 {coef_lines}
@@ -317,9 +339,26 @@ Processing steps applied:
 {chr(10).join([f'- **{param}**: {info.get("current", "N/A")} → {info.get("recommended", "N/A")} {info.get("unit", "")} ({info.get("reason", "")})' for param, info in calibration_result.get('spectrometer_parameters', {}).items()]) or 'None'}
         """
         
+        calibration_plot_code = ""
+        if analyte_cal:
+            calibration_plot_code = self._generate_calibration_plot_code(
+                analyte_cal, analysis_result)
+            # Attach the data the plot code reads from __cal_data__ so the
+            # fallback renderer can execute it without embedding huge lists.
+            report.metadata['cal_plot_data'] = {
+                'coefficients': analyte_cal.get('coefficients', []),
+                'intercept': analyte_cal.get('intercept', 0.0),
+                'brix': (analysis_result.get('original_data', {})
+                         .get('metadata', {}).get('Brix', [])),
+                'intensity_matrix': (analysis_result.get('original_data', {})
+                                     .get('metadata', {})
+                                     .get('intensity_matrix', [])),
+            }
+
         report.sections.append(ReportSection(
             title="Calibration",
-            content=calibration_content
+            content=calibration_content,
+            code=calibration_plot_code or None
         ))
         
         # Section 6: Recommendations
@@ -787,6 +826,79 @@ STANDARDS = {
             "message": "Report rendered to HTML" if rendered else "Report rendering failed"
         }
 
+    def _execute_plot_code_to_b64(self, code: str,
+                                  extra_ns: Optional[Dict] = None) -> Optional[str]:
+        """Execute matplotlib plot code in an isolated namespace and return
+        the rendered figure as a base64-encoded PNG string, or None on failure.
+
+        Quarto would execute ```{python}`` cells to produce figures; this
+        fallback runs the same code with the Agg backend and captures the
+        figure so the graph is embedded even without Quarto.
+        """
+        try:
+            ns = {"plt": plt, "np": np, "matplotlib": matplotlib}
+            if extra_ns:
+                ns.update(extra_ns)
+            plt.close("all")
+            exec(compile(code, "<plot_code>", "exec"), ns)
+            fig = plt.gcf()
+            if not fig.get_size_inches().tolist() == [0.0, 0.0] and len(fig.axes) > 0:
+                buf = io.BytesIO()
+                fig.savefig(buf, format="png", dpi=120, bbox_inches="tight")
+                plt.close(fig)
+                buf.seek(0)
+                return base64.b64encode(buf.read()).decode("ascii")
+            plt.close("all")
+        except Exception as e:
+            logger.warning(f"Plot code execution failed: {e}")
+            plt.close("all")
+        return None
+
+    def _generate_calibration_plot_code(self, analyte_cal: Dict,
+                                        analysis_result: Dict) -> str:
+        """Generate matplotlib code for the NIR->Brix calibration curve.
+
+        Plots predicted vs measured Brix (1:1 line) from the calibration
+        model so the report shows the actual calibration curve. The data is
+        read from the execution namespace variables ``__cal_data__`` (set by
+        _execute_plot_code_to_b64) rather than literal-embedded, which keeps
+        the source short and avoids quoting issues with large matrices.
+        """
+        return """
+import numpy as np
+import matplotlib.pyplot as plt
+
+cal = __cal_data__
+coef = np.array(cal['coefficients'], dtype=float)
+intercept = float(cal['intercept'])
+brix = cal['brix']
+matrix = cal['intensity_matrix']
+
+if brix and matrix and len(coef) > 0:
+    X = np.array(matrix, dtype=float)
+    y = np.array([float(v) for v in brix if v not in (None, '')], dtype=float)
+    n = min(len(X), len(y))
+    X = X[:n]; y = y[:n]
+    y_pred = X @ coef + intercept
+
+    fig, ax = plt.subplots(figsize=(7, 7))
+    ax.scatter(y, y_pred, s=18, alpha=0.45, edgecolor='none', color='#1a3c5e')
+    lo = float(min(y.min(), y_pred.min())) - 0.2
+    hi = float(max(y.max(), y_pred.max())) + 0.2
+    ax.plot([lo, hi], [lo, hi], 'r--', lw=1.5, label='1:1 line')
+    ax.set_xlabel('Measured Brix (\u00b0Brix)', fontsize=12)
+    ax.set_ylabel('Predicted Brix (\u00b0Brix)', fontsize=12)
+    ax.set_title('NIR \u2192 Brix Calibration: Predicted vs Measured', fontsize=13)
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    ax.axis('equal')
+    plt.tight_layout()
+else:
+    fig, ax = plt.subplots(figsize=(7, 3))
+    ax.text(0.5, 0.5, 'Calibration curve unavailable (no per-sample matrix / Brix reference)',
+            ha='center', va='center', transform=ax.transAxes, color='#888')
+    ax.axis('off')
+"""
 
     def _markdown_to_html(self, quarto_content: str, report: QuartoReport) -> str:
         """Convert a generated Quarto (.qmd) document to an HTML body fragment.
@@ -808,21 +920,57 @@ STANDARDS = {
                 body = body[end + 4:]
         
         # Convert Quarto python code fences ```{python} ... ``` to standard ```python
-        # fences so they render as code blocks (not executed).
-        import re
         body = re.sub(r"```\{python\}", "```python", body)
         
+        # Execute matplotlib plot code blocks and replace them with an
+        # embedded base64 PNG figure, keeping the source in a collapsible
+        # <details> block so graphs render without the Quarto CLI.
+        import html as html_mod
+
+        cal_data = report.metadata.get('cal_plot_data') if report else None
+
+        def _replace_plot_block(match: "re.Match") -> str:
+            code = match.group(1)
+            is_plot = ("matplotlib" in code or "plt." in code)
+            img_html = ""
+            if is_plot:
+                extra_ns = None
+                if cal_data and "__cal_data__" in code:
+                    extra_ns = {"__cal_data__": cal_data}
+                b64 = self._execute_plot_code_to_b64(code, extra_ns=extra_ns)
+                if b64:
+                    img_html = (
+                        f"<div class=\"figure\"><img alt=\"figure\" "
+                        f"src=\"data:image/png;base64,{b64}\" "
+                        f"style=\"max-width:100%;height:auto;\"/></div>")
+            escaped = html_mod.escape(code)
+            details = (
+                "<details class=\"code-details\"><summary>"
+                "Show Python source</summary><pre><code class=\"language-python\">"
+                f"{escaped}</code></pre></details>")
+            return img_html + details if img_html else (
+                f"<pre><code class=\"language-python\">{escaped}</code></pre>")
+
+        body = re.sub(r"```python\n(.*?)```", _replace_plot_block, body,
+                      flags=re.DOTALL)
+        
         if md is not None:
+            # Render the remaining (non-code) Markdown to HTML. The fenced
+            # code blocks were already substituted above, so disable the
+            # fenced_code extension to avoid double-processing.
             html_body = md.markdown(
                 body,
-                extensions=["tables", "fenced_code", "codehilite", "toc"],
+                extensions=["tables", "toc"],
             )
         else:
-            # Minimal escape if the markdown package is unavailable
-            import html as html_mod
-            html_body = (
-                "<pre>" + html_mod.escape(body) + "</pre>"
-            )
+            # Minimal HTML conversion if the markdown package is unavailable:
+            # render headings and bold inline, escape everything else.
+            escaped = html_mod.escape(body)
+            escaped = re.sub(r"\n### (.+)", r"<h3>\1</h3>", escaped)
+            escaped = re.sub(r"\n## (.+)", r"<h2>\1</h2>", escaped)
+            escaped = re.sub(r"\n# (.+)", r"<h1>\1</h1>", escaped)
+            escaped = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped)
+            html_body = f"<div class=\"md-body\">{escaped}</div>"
         
         return html_body
     
@@ -847,6 +995,11 @@ STANDARDS = {
         :not(pre) > code {{ background: #f0f0f2; padding: 0.1em 0.3em; border-radius: 3px; }}
         blockquote {{ border-left: 4px solid #1a3c5e; margin: 1rem 0; padding: 0.5rem 1rem; color: #555; background: #f9fbfd; }}
         .codehilite {{ background: #f7f7f9; border-radius: 6px; }}
+        .figure {{ margin: 1.2rem 0; text-align: center; border: 1px solid #e5e5e5; border-radius: 6px; padding: 0.6rem; background: #fff; }}
+        .figure img {{ max-width: 100%; height: auto; }}
+        .code-details {{ margin: 0.5rem 0 1rem; }}
+        .code-details summary {{ cursor: pointer; color: #1a3c5e; font-size: 0.9em; }}
+        .md-body h1, .md-body h2, .md-body h3 {{ color: #1a3c5e; }}
     </style>
 </head>
 <body>

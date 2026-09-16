@@ -509,11 +509,102 @@ def chat_interface(request, analysis_id=None):
             # Generate AI response
             try:
                 import asyncio
-                
+                import httpx
+
+                # Build a short context summary of the current analysis so the
+                # assistant can answer questions about this dataset.
+                ctx_lines = []
+                if spectral_data:
+                    ctx_lines.append(f"File: {spectral_data.original_filename}")
+                    ctx_lines.append(f"Spectrometer: {spectral_data.spectrometer_type or 'auto-detected'}")
+                    ctx_lines.append(f"Data points: {len(spectral_data.wavelengths or [])}")
+                    ar = spectral_data.analysis_results or {}
+                    cr = spectral_data.calibration_results or {}
+                    if ar.get('quality_score') is not None:
+                        ctx_lines.append(f"Spectral quality score: {ar['quality_score']}")
+                    cal = cr.get('analyte_calibration') if isinstance(cr, dict) else None
+                    if cal:
+                        ctx_lines.append(
+                            f"NIR->Brix calibration: {cal.get('method')} "
+                            f"R2_cv={cal.get('r_squared_cv', 0):.3f} "
+                            f"RMSE_cv={cal.get('rmse_cv', 0):.3f} Brix")
+                    sm = (spectral_data.metadata or {}).get('standard_metadata') or {}
+                    if sm:
+                        ctx_lines.append(
+                            f"Metadata: {', '.join(f'{k}={v}' for k, v in list(sm.items())[:6])}")
+                context_summary = chr(10).join(ctx_lines)
+
                 async def get_ai_response():
-                    # Use Ollama via MCP server or direct API
-                    # For now, return a mock response
-                    return "I'm the NIR Intelligence AI assistant. I can help you analyze your spectral data, interpret results, and provide recommendations for improving your measurements."
+                    ollama_url = settings.AGENT_CONFIG.get(
+                        'ollama_url', 'http://localhost:11434')
+                    model = os.environ.get('NIR_OLLAMA_MODEL', 'mistral')
+                    system_prompt = (
+                        "You are the NIR Intelligence Platform assistant, an expert "
+                        "in near-infrared spectroscopy, spectrometer calibration, and "
+                        "tomato ripeness (Brix) analysis. Answer the user's question "
+                        "about their spectral data concisely and in the user's language. "
+                        "Use the provided analysis context where relevant.")
+                    prompt = f"{system_prompt}\n\nAnalysis context:\n{context_summary}\n\nUser question: {message}"
+                    try:
+                        async with httpx.AsyncClient(timeout=60) as client:
+                            resp = await client.post(
+                                f"{ollama_url}/api/generate",
+                                json={"model": model, "prompt": prompt, "stream": False},
+                            )
+                            if resp.status_code == 200:
+                                data = resp.json()
+                                return data.get('response', '').strip() or (
+                                    "No response from the model.")
+                            return f"(Ollama returned HTTP {resp.status_code}). Try starting the Ollama container."
+                    except (httpx.HTTPError, Exception) as oe:
+                        logger.warning(f"Ollama unavailable, using local fallback: {oe}")
+                        return _local_chat_fallback(message, context_summary)
+
+                def _local_chat_fallback(q: str, ctx: str) -> str:
+                    ql = q.lower()
+                    # Reference spectral_data from the enclosing closure so the
+                    # canned reply can surface the real calibration numbers.
+                    cal = None
+                    if spectral_data and isinstance(spectral_data.calibration_results, dict):
+                        cal = spectral_data.calibration_results.get('analyte_calibration')
+                    if any(k in ql for k in ('brix', 'kalibrier', 'calibrat', 'ripeness', 'reifegrad')):
+                        if cal:
+                            return (
+                                f"The NIR->Brix calibration is a {cal.get('method', 'PLS')} "
+                                f"regression of the 18 SparkFun Triad channels onto the "
+                                f"refractometer Brix reference ({cal.get('num_samples')} "
+                                f"samples, {cal.get('num_components')} components). "
+                                f"Cross-validated (5-fold): R2_cv={cal.get('r_squared_cv', 0):.3f}, "
+                                f"RMSE_cv={cal.get('rmse_cv', 0):.3f} Brix. "
+                                f"See the Calibration card on the analysis page for the "
+                                f"full equation and calibration curve. Note: Ollama is "
+                                f"offline, so this is a canned answer - start the "
+                                f"nir_ollama container for full AI replies.")
+                        return (
+                            "The NIR->Brix calibration is a PLS regression of the 18 "
+                            "SparkFun Triad channels onto the refractometer Brix "
+                            "reference. It is cross-validated (5-fold); see the "
+                            "Calibration card on the analysis page for R2_cv and "
+                            "RMSE_cv. Note: Ollama is offline, so this is a canned "
+                            "answer - start the nir_ollama container for full AI replies.")
+                    if any(k in ql for k in ('metadata', 'metadaten', 'quality')):
+                        sm = (spectral_data.metadata or {}).get('standard_metadata') if spectral_data else {}
+                        mq = (spectral_data.metadata or {}).get('metadata_quality') if spectral_data else None
+                        grade = mq.get('grade') if isinstance(mq, dict) else None
+                        return (
+                            "The Data Loader Agent extracts structured metadata "
+                            "from the file header (instrument, wavelengths, "
+                            "temperature, operators, Brix reference) and rates it"
+                            + (f" (current grade: {grade})" if grade else "") + ". "
+                            "Use the 'Extracted Metadata' panel to add missing "
+                            "fields and re-run the analysis. (Ollama offline - "
+                            "canned answer.)")
+                    return (
+                        "I'm the NIR Intelligence assistant. I can help interpret "
+                        "your spectral data, the Brix calibration, and metadata. "
+                        "The Ollama LLM is currently offline, so this is a local "
+                        "fallback reply - start the nir_ollama container for full "
+                        "AI responses.\n\nAnalysis context:\n" + (ctx or 'none'))
                 
                 ai_response = asyncio.run(get_ai_response())
                 
