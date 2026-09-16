@@ -293,15 +293,31 @@
                         <div class="list-group list-group-flush">
                             {% for issue in issues %}
                             <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
                                         <h6 class="mb-1">
                                             <span class="badge bg-{% if issue.severity == 'high' %}danger{% elif issue.severity == 'medium' %}warning{% else %}info{% endif %}">
                                                 {{ issue.severity|title }}
                                             </span>
                                             {{ issue.type|title }}
                                         </h6>
-                                        <p class="mb-0 small text-muted">{{ issue.description }}</p>
+                                        <p class="mb-1 small text-muted">{{ issue.description }}</p>
+                                        {% if issue.recommendation %}
+                                        <p class="mb-1 small"><i class="bi bi-arrow-right-short"></i> {{ issue.recommendation }}</p>
+                                        {% endif %}
+                                        {% if issue.explanation %}
+                                        <p class="mb-2 small text-body-secondary">{{ issue.explanation }}</p>
+                                        {% endif %}
+                                        {% if issue.solutions %}
+                                        <div class="ps-2 border-start mb-1">
+                                            <h6 class="small fw-semibold mb-1">How to fix it</h6>
+                                            <ul class="small mb-0">
+                                                {% for sol in issue.solutions %}
+                                                <li><strong>{{ sol.title }}.</strong> {{ sol.steps }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -330,15 +346,31 @@
                         <div class="list-group list-group-flush">
                             {% for rec in recommendations %}
                             <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
                                         <h6 class="mb-1">
                                             <span class="badge bg-{% if rec.priority == 'high' %}danger{% elif rec.priority == 'medium' %}warning{% else %}info{% endif %}">
                                                 {{ rec.priority|title }}
                                             </span>
                                             {{ rec.type|title }}
                                         </h6>
-                                        <p class="mb-0 small text-muted">{{ rec.description }}</p>
+                                        <p class="mb-1 small text-muted">{{ rec.description }}</p>
+                                        {% if rec.method %}
+                                        <p class="mb-1 small"><i class="bi bi-gear-wide-connected"></i> Method: {{ rec.method }}{% if rec.parameters %} &mdash; {{ rec.parameters }}{% endif %}</p>
+                                        {% endif %}
+                                        {% if rec.explanation %}
+                                        <p class="mb-2 small text-body-secondary">{{ rec.explanation }}</p>
+                                        {% endif %}
+                                        {% if rec.solutions %}
+                                        <div class="ps-2 border-start mb-1">
+                                            <h6 class="small fw-semibold mb-1">How to apply it</h6>
+                                            <ul class="small mb-0">
+                                                {% for sol in rec.solutions %}
+                                                <li><strong>{{ sol.title }}.</strong> {{ sol.steps }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        {% endif %
                                     </div>
                                 </div>
                             </div>

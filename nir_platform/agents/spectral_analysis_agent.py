@@ -293,6 +293,12 @@ class SpectralAnalysisAgent:
             smoothed_data, spectrometer_info, issues
         )
         
+        # Step 7b: Elaborate each issue/recommendation with an explanation and
+        # concrete, actionable solutions so the UI and report can show why it
+        # matters and how to fix it.
+        self._enrich_with_guidance(issues, self._ISSUE_GUIDANCE)
+        self._enrich_with_guidance(calibration_recs, self._RECOMMENDATION_GUIDANCE)
+        
         # Step 8: Calculate final quality score
         quality_score = self._calculate_quality_score(
             smoothed_data, initial_quality, issues, calibration_recs
@@ -1273,6 +1279,220 @@ class SpectralAnalysisAgent:
         
         return recommendations
     
+    # ------------------------------------------------------------------
+    # Elaboration knowledge base
+    # ------------------------------------------------------------------
+    # Maps each detected-issue / recommendation type to a human-readable
+    # explanation and a list of concrete, actionable solutions. The pipeline
+    # attaches these to every issue/recommendation dict so the detail page and
+    # the report can show not just *what* is wrong but *why* and *how to fix it*.
+    _ISSUE_GUIDANCE: Dict[str, Dict[str, Any]] = {
+        "intensity_drift": {
+            "explanation": (
+                "The intensity baseline changed substantially between the raw "
+                "and processed spectra relative to the natural spread of the "
+                "signal. This points to detector sensitivity drift or light-"
+                "source instability during the measurement, which corrupts the "
+                "absolute intensity scale the calibration relies on."
+            ),
+            "solutions": [
+                {"title": "Warm up the light source",
+                 "steps": "Let the lamp run 15-30 min before measuring so its output stabilizes."},
+                {"title": "Take a fresh dark + white reference",
+                 "steps": "Re-measure the dark and white/reference before each batch; the loader applies them to correct drift."},
+                {"title": "Normalize intensities",
+                 "steps": "Apply per-spectrum normalization (e.g. SNV or divide by the mean) so absolute drift cancels out."},
+                {"title": "Check detector stability",
+                 "steps": "Repeat the same sample 5x; if the drift persists, the detector or its power supply needs servicing."},
+            ],
+        },
+        "low_snr": {
+            "explanation": (
+                "The signal-to-noise ratio (mean |signal| / std) is low, meaning "
+                "random noise is a large fraction of the actual spectrum. Noisy "
+                "data weakens the Brix regression and makes peaks unreliable."
+            ),
+            "solutions": [
+                {"title": "Average more scans",
+                 "steps": "Increase scans_averaged (e.g. 10-50); averaging reduces random noise by sqrt(N)."},
+                {"title": "Increase integration time",
+                 "steps": "Lengthen the integration/exposure time to collect more photons (watch for saturation, see below)."},
+                {"title": "Improve illumination",
+                 "steps": "Move the source closer or use a brighter lamp; more signal lifts SNR without changing noise."},
+                {"title": "Shield from stray light",
+                 "steps": "Cover the sample path; ambient/stray light raises the noise floor."},
+                {"title": "Apply Savitzky-Golay smoothing",
+                 "steps": "The pipeline already smooths; raising the window can help if peaks stay sharp."},
+            ],
+        },
+        "saturation": {
+            "explanation": (
+                "At least one channel hit a very high intensity value, which "
+                "likely clipped at the detector's maximum. Clipped values are "
+                "no longer proportional to the light received, so any calibration "
+                "built on them is biased."
+            ),
+            "solutions": [
+                {"title": "Reduce integration time",
+                 "steps": "Shorten the exposure so the brightest channel stays below ~80% of the detector maximum."},
+                {"title": "Add a neutral-density filter",
+                 "steps": "Attenuate the light uniformly so no channel saturates while keeping the usable range."},
+                {"title": "Move the source/sample apart",
+                 "steps": "Lower the received light by increasing source-sample distance."},
+                {"title": "Drop saturated samples before calibration",
+                 "steps": "Exclude samples whose max channel is clipped so the PLS model is not trained on clipped values."},
+            ],
+        },
+        "wavelength_shift": {
+            "explanation": (
+                "The wavelength axis shifted between raw and processed data by "
+                "more than the tolerance. Channel-to-analyte assignments rely on "
+                "the correct wavelength, so a shift mislabels the spectral bands."
+            ),
+            "solutions": [
+                {"title": "Recalibrate with known emission lines",
+                 "steps": "Measure a known source (e.g. Hg/Ar lines, a didymium glass) and fit the correction."},
+                {"title": "Apply the measured shift",
+                 "steps": "Subtract the reported shift from all wavelengths or refit the wavelength polynomial."},
+                {"title": "Lock the spectrometer mechanically",
+                 "steps": "Vibration/temperature can move the grating; mount it firmly."},
+            ],
+        },
+        "narrow_wavelength_range": {
+            "explanation": (
+                "The covered wavelength range is small. Few bands limit which "
+                "absorbers can be distinguished and reduce calibration selectivity."
+            ),
+            "solutions": [
+                {"title": "Use a broader-range spectrometer",
+                 "steps": "If available, switch to a unit covering more of the NIR (e.g. 900-1700 nm)."},
+                {"title": "Add a second sensor",
+                 "steps": "Combine two sensors (visible + NIR) and merge their wavelength sets."},
+            ],
+        },
+        "wavelength_gaps": {
+            "explanation": (
+                "There is a gap in the wavelength grid much larger than the "
+                "average spacing, indicating missing channels or a calibration "
+                "drop-out. Calibration assumes a continuous band set."
+            ),
+            "solutions": [
+                {"title": "Inspect the channel list",
+                 "steps": "Confirm no channel was dropped during export; re-export if needed."},
+                {"title": "Interpolate small gaps",
+                 "steps": "For small gaps, linearly interpolate the missing channels before calibration."},
+            ],
+        },
+    }
+
+    _RECOMMENDATION_GUIDANCE: Dict[str, Dict[str, Any]] = {
+        "wavelength_calibration": {
+            "explanation": (
+                "Wavelength calibration maps the raw channel index to a true "
+                "wavelength in nm. The calibration points listed are the known "
+                "reference bands for this spectrometer; a polynomial fit through "
+                "them corrects the axis."
+            ),
+            "solutions": [
+                {"title": "Fit a polynomial to the calibration points",
+                 "steps": "Use the listed points (e.g. [410, 610, 940]) to fit a degree-2/3 polynomial; apply it to remap channels to nm."},
+                {"title": "Validate with a secondary standard",
+                 "steps": "Check the fit against an independent line (e.g. a laser or didymium glass) and refit if the residual exceeds ~1 nm."},
+                {"title": "Store the coefficients with each dataset",
+                 "steps": "Save the fit coefficients in metadata so every analysis uses the same correction."},
+            ],
+        },
+        "intensity_stabilization": {
+            "explanation": (
+                "Intensity stabilization makes spectra comparable across samples "
+                "and over time by removing multiplicative intensity differences, "
+                "which is the main fix for the detected intensity drift."
+            ),
+            "solutions": [
+                {"title": "Apply SNV (Standard Normal Variate)",
+                 "steps": "Per spectrum: subtract the mean and divide by the std across channels. This removes multiplicative/scaling drift."},
+                {"title": "Use a white-reference normalization",
+                 "steps": "Divide each sample by a fresh white/reference spectrum taken the same day."},
+                {"title": "MSC (Multiplicative Scatter Correction)",
+                 "steps": "Fit each spectrum to a mean spectrum and correct slope/offset as an alternative to SNV."},
+            ],
+        },
+        "snr_improvement": {
+            "explanation": (
+                "Improving SNR means collecting more signal relative to noise. "
+                "The fastest lever is averaging more scans, which the hardware "
+                "or a pre-processing step can do."
+            ),
+            "solutions": [
+                {"title": "Increase scans_averaged",
+                 "steps": "Average 10-50 scans per sample; SNR improves by sqrt(N)."},
+                {"title": "Increase integration time (within saturation limit)",
+                 "steps": "Longer exposure collects more photons, but keep the brightest channel below saturation."},
+                {"title": "Savitzky-Golay smoothing in software",
+                 "steps": "Apply a SG filter (window 5-15, poly 2) to the already-collected data."},
+            ],
+        },
+        "regular_calibration": {
+            "explanation": (
+                "Calibration drifts over days/weeks with lamp aging, "
+                "temperature, and detector changes. Recalibrating against known "
+                "standards on a fixed schedule keeps the model valid."
+            ),
+            "solutions": [
+                {"title": "Daily white/dark reference",
+                 "steps": "Take dark + white references at the start of each measurement day."},
+                {"title": "Weekly wavelength check",
+                 "steps": "Measure a known standard (didymium/mercury) weekly; refit if it shifts."},
+                {"title": "Rebuild the Brix model periodically",
+                 "steps": "Re-run the PLS calibration with new reference samples monthly or when RMSEcv rises."},
+            ],
+        },
+        "temperature_compensation": {
+            "explanation": (
+                "NIR spectra shift with sample temperature (water-band "
+                "positions change), which adds a confounding variable to the "
+                "Brix model. Compensation corrects for it when temperature is "
+                "recorded."
+            ),
+            "solutions": [
+                {"title": "Record sample temperature",
+                 "steps": "Log the Temp column already in the file for every sample."},
+                {"title": "Add temperature as a PLS regressor",
+                 "steps": "Include temperature as an extra variable in the Brix model so the model learns and removes its effect."},
+                {"title": "Measure at a fixed temperature",
+                 "steps": "Condition samples to a set temperature before measuring to avoid the correction entirely."},
+            ],
+        },
+        "wavelength_shift_correction": {
+            "explanation": (
+                "Corrects a measured wavelength offset so channels are "
+                "labelled with the correct nm value before calibration."
+            ),
+            "solutions": [
+                {"title": "Apply a linear shift",
+                 "steps": "Subtract the measured shift (nm) from every wavelength; refit peaks to confirm they land on known bands."},
+            ],
+        },
+    }
+
+    def _enrich_with_guidance(
+        self, items: List[Dict], guidance: Dict[str, Dict[str, Any]]
+    ) -> List[Dict]:
+        """Attach explanation + solutions to each issue/recommendation dict.
+
+        Existing fields are preserved; 'explanation' and 'solutions' are only
+        added when the type has a knowledge-base entry, so unknown types stay
+        valid and never crash the UI/report.
+        """
+        for item in items:
+            key = item.get("type", "")
+            entry = guidance.get(key)
+            if entry is None:
+                continue
+            item.setdefault("explanation", entry["explanation"])
+            item.setdefault("solutions", entry["solutions"])
+        return items
+
     def _calculate_quality_score(self, 
                                   processed_data: SpectralData,
                                   initial_quality: Dict,

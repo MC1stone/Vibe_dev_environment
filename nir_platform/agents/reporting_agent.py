@@ -397,17 +397,51 @@ Processing steps applied:
         cal_issues = calibration_result.get('issues_detected', [])
         all_recs = analysis_result.get('calibration_recommendations', [])
         
+        def _issue_block(title: str, items: list) -> str:
+            if not items:
+                return f"### {title}\nNo issues detected.\n"
+            lines = [f"### {title}"]
+            for it in items:
+                sev = it.get("severity", it.get("priority", "medium"))
+                lines.append(
+                    f"#### {it.get('type', '').replace('_', ' ').title()} "
+                    f"({sev})\n{it.get('description', '')}"
+                )
+                if it.get("explanation"):
+                    lines.append(f"\n{it['explanation']}")
+                if it.get("solutions"):
+                    lines.append("\n**How to fix / apply it:**")
+                    for sol in it["solutions"]:
+                        lines.append(f"- **{sol['title']}.** {sol['steps']}")
+                lines.append("")
+            return "\n".join(lines)
+
+        def _rec_block(title: str, items: list) -> str:
+            if not items:
+                return f"### {title}\nNo recommendations.\n"
+            lines = [f"### {title}"]
+            for it in items:
+                lines.append(
+                    f"#### {it.get('type', '').replace('_', ' ').title()} "
+                    f"({it.get('priority', 'medium')})\n{it.get('description', '')}"
+                )
+                if it.get("method"):
+                    lines.append(f"\n*Method:* {it['method']}")
+                if it.get("explanation"):
+                    lines.append(f"\n{it['explanation']}")
+                if it.get("solutions"):
+                    lines.append("\n**How to apply it:**")
+                    for sol in it["solutions"]:
+                        lines.append(f"- **{sol['title']}.** {sol['steps']}")
+                lines.append("")
+            return "\n".join(lines)
+
         recommendations_content = f"""
 ## Recommendations for Improvement
 
-### Spectral Data Issues
-{chr(10).join([f'- **{issue.get("type", "")}** ({issue.get("severity", "medium")}): {issue.get("description", "")}' for issue in issues]) or 'No issues detected'}
-
-### Calibration Issues
-{chr(10).join([f'- **{issue.get("type", "")}** ({issue.get("severity", "medium")}): {issue.get("description", "")}' for issue in cal_issues]) or 'No calibration issues detected'}
-
-### Enhancement Recommendations
-{chr(10).join([f'- **{rec.get("type", "")}**: {rec.get("description", "")}' for rec in all_recs]) or 'No recommendations'}
+{_issue_block('Spectral Data Issues', issues)}
+{_issue_block('Calibration Issues', cal_issues)}
+{_rec_block('Enhancement Recommendations', all_recs)}
 
 ### Priority Actions
 1. Address high-severity issues first
