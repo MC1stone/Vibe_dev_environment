@@ -381,6 +381,10 @@
                                href="{% url 'upload_file' %}">Upload</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {% if request.path|slice:':9' == '/analysis/' %}active{% endif %}"
+                               href="{% url 'analyses_overview' %}">Analyses</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {% if 'docs' in request.path %}active{% endif %}" 
                                href="{% url 'documentation' %}">Documentation</a>
                         </li>

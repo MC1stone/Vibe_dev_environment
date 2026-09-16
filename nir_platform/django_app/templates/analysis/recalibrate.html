@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title|default:"Recalculate Calibration" }}{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'analyses_overview' %}">Analyses</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Recalculate</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2><i class="bi bi-calculator"></i> {{ page_title|default:"Recalculate Calibration" }}</h2>
+            <p class="text-muted">Combine the per-sample intensity matrices and Brix references from several analyses into a single PLS regression, so the calibration can be recalculated with potential additional data.</p>
+        </div>
+    </div>
+
+    <!-- Selection form -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-list-check"></i> Select analyses to combine</h5>
+            <span class="badge bg-secondary">{{ all_analyses|length }} available</span>
+        </div>
+        <div class="card-body">
+            {% if all_analyses %}
+            <form method="post" action="{% url 'recalibrate' %}" id="recalc-form">
+                {% csrf_token %}
+                <div class="row">
+                    {% for a in all_analyses %}
+                    <div class="col-md-6 col-lg-4 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input recalc-cb" type="checkbox" name="ids" value="{{ a.id }}" id="r_{{ a.id }}" {% if a.id in selected_ids %}checked{% endif %}>
+                            <label class="form-check-label" for="r_{{ a.id }}">
+                                {{ a.original_filename|truncatechars:35 }}
+                                <small class="text-muted d-block">{{ a.spectrometer_type }} &middot; {{ a.upload_date|date:'Y-m-d' }}{% if a.brix_range %} &middot; Brix {{ a.brix_range.0|floatformat:1 }}-{{ a.brix_range.1|floatformat:1 }}{% endif %}</small>
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="d-flex gap-2 mt-3">
+                    <button type="submit" class="btn btn-primary" id="recalc-btn"><i class="bi bi-calculator"></i> Recalculate calibration</button>
+                    <a href="{% url 'compare_analyses' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left-right"></i> Compare instead</a>
+                </div>
+            </form>
+            {% else %}
+            <p class="text-muted mb-0">No analyses available. <a href="{% url 'upload_file' %}">Upload data</a> first.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>
+    {% endif %}
+
+    {% if used %}
+    <!-- Selected analyses -->
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0"><i class="bi bi-collection"></i> Used analyses ({{ used|length }} with Brix data)</h5></div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead><tr><th>File</th><th>Spectrometer</th><th>Uploaded</th><th>Channels</th><th>Samples</th><th>Brix range</th><th>Open</th></tr></thead>
+                    <tbody>
+                        {% for a in used %}
+                        <tr>
+                            <td>{{ a.original_filename|truncatechars:30 }}</td>
+                            <td>{{ a.spectrometer_type }}</td>
+                            <td>{{ a.upload_date|date:'Y-m-d' }}</td>
+                            <td>{{ a.wavelength_count|default:'-' }}</td>
+                            <td>{{ a.sample_count|default:'-' }}</td>
+                            <td>{% if a.brix_range %}{{ a.brix_range.0|floatformat:1 }} - {{ a.brix_range.1|floatformat:1 }}{% else %}-{% endif %}</td>
+                            <td><a href="{% url 'analysis_detail' a.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if combined_cal %}
+    <!-- Combined calibration result -->
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Combined calibration result ({{ combined_cal.analyte }})</h5></div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <tbody>
+                                <tr><th style="width:45%;">Method</th><td>{{ combined_cal.method }}</td></tr>
+                                <tr><th>Analyte</th><td>{{ combined_cal.analyte }}</td></tr>
+                                <tr><th>Combined samples</th><td>{{ combined_cal.num_samples }}</td></tr>
+                                <tr><th>Features (wavelengths)</th><td>{{ combined_cal.num_features }}</td></tr>
+                                <tr><th>PLS components</th><td>{{ combined_cal.num_components }}</td></tr>
+                                <tr><th>Brix range</th><td>{% if combined_cal.brix_range %}{{ combined_cal.brix_range.0|floatformat:2 }} - {{ combined_cal.brix_range.1|floatformat:2 }}{% else %}-{% endif %}</td></tr>
+                                <tr><th>R&sup2;cv</th><td>{{ combined_cal.r_squared_cv|floatformat:3 }}</td></tr>
+                                <tr><th>RMSEcv</th><td>{{ combined_cal.rmse_cv|floatformat:3 }}</td></tr>
+                                <tr><th>R&sup2;cal</th><td>{{ combined_cal.r_squared_cal|floatformat:3 }}</td></tr>
+                                <tr><th>RMSEcal</th><td>{{ combined_cal.rmse_cal|floatformat:3 }}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6>Calibration equation</h6>
+                    <p><strong>{{ combined_cal.analyte }} = intercept</strong>
+                    {% for coef in combined_cal.coefficients %}
+                    + ({{ coef|floatformat:4 }} &middot; I<sub>{{ forloop.counter }}</sub>)
+                    {% endfor %}
+                    </p>
+                    <p class="text-muted"><small>Intercept = {{ combined_cal.intercept|floatformat:4 }} &middot; coefficients on standardized X scale.</small></p>
+                    {% if combined_cal.notes %}
+                    <div class="alert alert-secondary"><small>{{ combined_cal.notes }}</small></div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if coeff_table %}
+            <hr>
+            <div class="row">
+                <div class="col-12">
+                    <h6>Coefficients per wavelength</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead><tr><th>#</th><th>Wavelength (nm)</th><th>Coefficient</th></tr></thead>
+                            <tbody>
+                                {% for row in coeff_table %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ row.wavelength|floatformat:1 }}</td>
+                                    <td>{% if row.coefficient is not None %}{{ row.coefficient|floatformat:4 }}{% else %}-{% endif %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+        {% if not error and used %}
+        <div class="alert alert-info"><i class="bi bi-info-circle"></i> Click "Recalculate calibration" to fit a combined PLS regression from the selected analyses.</div>
+        {% endif %}
+    {% endif %}
+
+    <p>
+        <a href="{% url 'analyses_overview' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to overview</a>
+    </p>
+</div>
+
+<script>
+(function () {
+    var cbs = document.querySelectorAll('.recalc-cb');
+    var btn = document.getElementById('recalc-btn');
+    function sync() {
+        if (!btn) return;
+        var n = 0;
+        cbs.forEach(function (c) { if (c.checked) n++; });
+        btn.disabled = n < 2;
+    }
+    cbs.forEach(function (c) { c.addEventListener('change', sync); });
+    sync();
+})();
+</script>
+{% endblock %}

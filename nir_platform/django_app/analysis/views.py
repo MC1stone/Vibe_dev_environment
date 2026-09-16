@@ -32,6 +32,7 @@ from .models import SpectralData, AnalysisProject, Report, ChatSession, SystemLo
 from .forms import UploadFileForm, AnalysisForm, ChatForm
 from agents.data_loader_agent import DataLoaderAgent
 from agents.spectral_analysis_agent import SpectralAnalysisAgent
+from agents.spectral_search_agent import SpectralSearchAgent
 from agents.metadata_quality_agent import MetadataQualityAgent
 from agents.calibration_agent import CalibrationAgent
 from agents.reporting_agent import ReportingAgent
@@ -44,6 +45,7 @@ logger = logging.getLogger(__name__)
 # Initialize agents (singleton instances)
 data_loader_agent = DataLoaderAgent()
 spectral_agent = SpectralAnalysisAgent()
+spectral_search_agent = SpectralSearchAgent()
 metadata_agent = MetadataQualityAgent()
 calibration_agent = CalibrationAgent()
 reporting_agent = ReportingAgent()
@@ -68,6 +70,181 @@ def home(request):
     }
     
     return render(request, 'analysis/home.html', context)
+
+
+def _spectral_data_brief(sd: SpectralData) -> Dict[str, Any]:
+    """Compact summary of one analysis for the overview/comparison views."""
+    md = sd.metadata or {}
+    brix = md.get('Brix') or md.get('brix') or md.get('BRIX') or []
+    brix_range = None
+    if brix:
+        try:
+            vals = [float(x) for x in brix if x not in (None, '')]
+            if vals:
+                brix_range = (min(vals), max(vals))
+        except (TypeError, ValueError):
+            brix_range = None
+    ac = (sd.calibration_results or {}).get('analyte_calibration') if isinstance(sd.calibration_results, dict) else None
+    return {
+        'id': str(sd.id),
+        'original_filename': sd.original_filename,
+        'spectrometer_type': sd.spectrometer_type or 'Auto-detect',
+        'upload_date': sd.upload_date,
+        'is_processed': sd.is_processed,
+        'wavelength_count': len(sd.wavelengths or []),
+        'sample_count': len(md.get('intensity_matrix', [])) if isinstance(md, dict) else 0,
+        'brix_range': brix_range,
+        'overall_quality_score': sd.overall_quality_score,
+        'data_quality_score': sd.data_quality_score,
+        'calibration_quality_score': sd.calibration_quality_score,
+        'calibration_r2_cv': ac.get('r_squared_cv') if ac else None,
+        'calibration_rmse_cv': ac.get('rmse_cv') if ac else None,
+        'has_report': Report.objects.filter(spectral_data=sd).exists(),
+    }
+
+
+def analyses_overview(request):
+    """Overview of all past analyses and reports.
+
+    Lets the customer recall already-created reports/analyses, and links
+    into the comparison and recalibration workflows.
+    """
+    qs = SpectralData.objects.all().order_by('-upload_date')
+    rows = [(_spectral_data_brief(sd), sd) for sd in qs]
+    # Index all of them into the vector DB so the search/comparison works
+    # even if the index was empty (e.g. after a DB restore).
+    for brief, sd in rows:
+        try:
+            spectral_search_agent.index_analysis(
+                analysis_id=brief['id'],
+                intensities=sd.intensities or [],
+                metadata=sd.metadata or {},
+                original_filename=sd.original_filename,
+                spectrometer_type=sd.spectrometer_type or '',
+                quality_score=sd.data_quality_score,
+                upload_date=sd.upload_date.isoformat() if sd.upload_date else None,
+            )
+        except Exception:
+            pass
+    context = {
+        'page_title': 'Analyses Overview',
+        'analyses': [b for b, _ in rows],
+        'indexed_count': spectral_search_agent.count(),
+        'search_backend': spectral_search_agent.backend,
+    }
+    return render(request, 'analysis/analyses_overview.html', context)
+
+
+def compare_analyses(request):
+    """Compare 2+ analyses side by side and find comparable measurements.
+
+    Accepts a list of analysis ids (GET ?ids=...&ids=... or POST). Shows
+    side-by-side quality/calibration metrics and, for the first selected
+    analysis, the most similar past measurements found via the vector DB
+    (Qdrant / numpy) so the customer can see whether comparable
+    measurements were already executed.
+    """
+    selected_ids = request.GET.getlist('ids') or request.POST.getlist('ids')
+    selected = []
+    comparison_rows = []
+    comparable = None
+    base_id = None
+    for aid in selected_ids:
+        try:
+            sd = SpectralData.objects.get(pk=aid)
+        except (SpectralData.DoesNotExist, ValueError):
+            continue
+        selected.append(sd)
+        comparison_rows.append(_spectral_data_brief(sd))
+    if selected:
+        base = selected[0]
+        base_id = str(base.id)
+        try:
+            result = spectral_search_agent.search_similar(
+                query_analysis_id=base_id,
+                limit=10,
+                min_similarity=0.5,
+                same_spectrometer_only=True,
+            )
+            comparable = result.to_dict()
+        except Exception as e:
+            logger.warning(f'compare search failed: {e}')
+            comparable = {'hits': [], 'backend': spectral_search_agent.backend,
+                          'note': f'Search failed: {e}', 'count': 0}
+    # If nothing selected, offer all analyses for selection.
+    all_analyses = [_spectral_data_brief(sd) for sd in
+                    SpectralData.objects.all().order_by('-upload_date')]
+    context = {
+        'page_title': 'Compare Analyses',
+        'comparison_rows': comparison_rows,
+        'comparable': comparable,
+        'base_id': base_id,
+        'all_analyses': all_analyses,
+        'selected_ids': selected_ids,
+    }
+    return render(request, 'analysis/compare_analyses.html', context)
+
+
+def recalibrate(request):
+    """Recalculate the NIR->Brix calibration from combined analyses.
+
+    The customer selects 2+ analyses; their per-sample intensity matrices
+    and Brix references are stacked and a new PLS regression is fitted so
+    the calibration can be recalculated with potential additional data.
+    """
+    selected_ids = request.GET.getlist('ids') or request.POST.getlist('ids')
+    samples = []
+    used = []
+    combined_cal = None
+    error = None
+    for aid in selected_ids:
+        try:
+            sd = SpectralData.objects.get(pk=aid)
+        except (SpectralData.DoesNotExist, ValueError):
+            continue
+        md = sd.metadata or {}
+        mat = md.get('intensity_matrix') if isinstance(md, dict) else None
+        brix = md.get('Brix') or md.get('brix') or md.get('BRIX')
+        if not mat or not brix:
+            continue
+        samples.append({
+            'intensity_matrix': mat,
+            'analyte': brix,
+            'wavelengths': sd.wavelengths or [],
+            'label': sd.original_filename,
+        })
+        used.append(_spectral_data_brief(sd))
+    if request.method == 'POST' and samples:
+        try:
+            ac = calibration_agent.recalibrate_from_samples(samples)
+            if ac is not None:
+                combined_cal = ac.to_dict()
+            else:
+                error = ('Could not recalibrate: not enough combined samples, '
+                         'or scikit-learn is unavailable.')
+        except Exception as e:
+            error = f'Recalibration failed: {e}'
+    # Pair wavelengths with their coefficients so the template can iterate
+    # without relying on a non-existent index filter.
+    coeff_table = []
+    if combined_cal:
+        wls = combined_cal.get('wavelengths') or []
+        coefs = combined_cal.get('coefficients') or []
+        for i, wl in enumerate(wls):
+            c = coefs[i] if i < len(coefs) else None
+            coeff_table.append({'wavelength': wl, 'coefficient': c})
+    all_analyses = [_spectral_data_brief(sd) for sd in
+                    SpectralData.objects.all().order_by('-upload_date')]
+    context = {
+        'page_title': 'Recalculate Calibration',
+        'used': used,
+        'combined_cal': combined_cal,
+        'coeff_table': coeff_table,
+        'error': error,
+        'all_analyses': all_analyses,
+        'selected_ids': selected_ids,
+    }
+    return render(request, 'analysis/recalibrate.html', context)
 
 
 def upload_file(request):
@@ -243,6 +420,22 @@ async def analyze_spectral_data(spectral_data: SpectralData):
             metadata_result.to_dict(),
             calibration_result.to_dict()
         )
+        
+        # Index the spectral fingerprint in the vector DB (Qdrant / numpy)
+        # so this analysis can be recalled and compared against future
+        # uploads and other past analyses.
+        try:
+            spectral_search_agent.index_analysis(
+                analysis_id=str(spectral_data.id),
+                intensities=spectral_data.intensities or [],
+                metadata=spectral_data.metadata or {},
+                original_filename=spectral_data.original_filename,
+                spectrometer_type=spectral_data.spectrometer_type or '',
+                quality_score=spectral_data.data_quality_score,
+                upload_date=spectral_data.upload_date.isoformat() if spectral_data.upload_date else None,
+            )
+        except Exception as ie:
+            logger.warning(f'Failed to index spectral fingerprint: {ie}')
         
         return {
             'spectral_result': spectral_result.to_dict(),

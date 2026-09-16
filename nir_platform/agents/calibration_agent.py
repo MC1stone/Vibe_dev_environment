@@ -407,7 +407,109 @@ class CalibrationAgent:
                     "reason": "Default recommendation"
                 }
         return recommendations
-    
+
+    def recalibrate_from_samples(
+        self,
+        samples: List[Dict[str, Any]],
+        analyte_name: str = "Brix",
+    ) -> Optional[AnalyteCalibration]:
+        """Build a combined NIR->analyte PLS regression from several analyses.
+
+        Each entry in ``samples`` must provide ``intensity_matrix`` (a
+        per-sample N x F matrix) and ``analyte`` (the matching N-length
+        reference vector), plus optional ``wavelengths`` (F-length) and a
+        label. The matrices are stacked row-wise so the combined dataset
+        spans all selected analyses - this lets the customer recalculate the
+        calibration with potential additional data.
+
+        Returns an AnalyteCalibration, or None when there is not enough
+        combined data or sklearn is unavailable.
+        """
+        if not _SKLEARN_AVAILABLE:
+            return None
+        X_parts: List[np.ndarray] = []
+        y_parts: List[float] = []
+        wl: List[float] = []
+        n_features = 0
+        for s in samples:
+            mat = s.get("intensity_matrix")
+            ref = s.get("analyte") or s.get(analyte_name)
+            if not mat or not ref:
+                continue
+            try:
+                Xm = np.array(mat, dtype=float)
+                ym = np.array([float(v) for v in ref if v not in (None, "")], dtype=float)
+            except (TypeError, ValueError):
+                continue
+            if Xm.ndim != 2 or Xm.shape[0] < 1 or len(ym) != Xm.shape[0]:
+                continue
+            if n_features == 0:
+                n_features = Xm.shape[1]
+                sw = s.get("wavelengths") or []
+                if len(sw) == n_features:
+                    wl = [float(w) for w in sw]
+                else:
+                    wl = [float(410 + 30 * i) for i in range(n_features)]
+            elif Xm.shape[1] != n_features:
+                # skip analyses with a different channel count
+                continue
+            X_parts.append(Xm)
+            y_parts.extend(ym.tolist())
+        if not X_parts or n_features == 0:
+            return None
+        X = np.vstack(X_parts)
+        y = np.array(y_parts, dtype=float)
+        if X.shape[0] < 10 or len(y) != X.shape[0]:
+            return None
+
+        scaler = StandardScaler()
+        Xs = scaler.fit_transform(X)
+        max_comp = max(1, min(n_features, 10, X.shape[0] - 1))
+        best = None
+        for ncomp in range(1, max_comp + 1):
+            pls = PLSRegression(n_components=ncomp, scale=False)
+            try:
+                pred_cv = cross_val_predict(pls, Xs, y, cv=5)
+            except Exception:
+                continue
+            r2_cv = float(r2_score(y, pred_cv))
+            rmse_cv = float(np.sqrt(mean_squared_error(y, pred_cv)))
+            if best is None or r2_cv > best[0]:
+                best = (r2_cv, rmse_cv, ncomp)
+        if best is None:
+            return None
+        r2_cv, rmse_cv, ncomp = best
+        pls = PLSRegression(n_components=ncomp, scale=False)
+        pls.fit(Xs, y)
+        pred_cal = pls.predict(Xs).ravel()
+        r2_cal = float(r2_score(y, pred_cal))
+        rmse_cal = float(np.sqrt(mean_squared_error(y, pred_cal)))
+        coef_std = pls.coef_.ravel()
+        means = scaler.mean_
+        scales = scaler.scale_
+        coef_orig = coef_std / scales
+        intercept = float(pls.y_mean_ - np.sum(coef_orig * means)) if hasattr(pls, "y_mean_") else 0.0
+        return AnalyteCalibration(
+            analyte=analyte_name,
+            method=f"PLS ({ncomp} components, 5-fold CV) - combined {len(samples)} analyses",
+            num_samples=int(X.shape[0]),
+            num_features=int(n_features),
+            num_components=int(ncomp),
+            coefficients=[float(c) for c in coef_orig],
+            intercept=intercept,
+            wavelengths=wl,
+            brix_range=(float(np.min(y)), float(np.max(y))),
+            r_squared_cv=r2_cv,
+            rmse_cv=rmse_cv,
+            r_squared_cal=r2_cal,
+            rmse_cal=rmse_cal,
+            notes=(
+                f"Combined PLS regression over {len(samples)} analyses "
+                f"({X.shape[0]} samples total). R\u00b2_cv/RMSE_cv are 5-fold "
+                "cross-validated; coefficients are on the raw intensity scale."
+            ),
+        )
+
     def _assess_calibration_quality(self, wl_cal, int_cal, analyte_cal=None) -> Dict:
         """Assess calibration quality."""
         quality = {}
