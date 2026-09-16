@@ -532,9 +532,21 @@ def analysis_detail(request, analysis_id):
                 # Save results
                 spectral_data.analysis_results = results.get('spectral_result', {})
                 spectral_data.calibration_results = results.get('calibration_result', {})
+                # Keep the full standards-compliance assessment for reference,
+                # but the headline metadata quality score is the Data Loader
+                # Agent's rating (metadata['metadata_quality']), which grades the
+                # fields actually extracted from the file header. The
+                # MetadataQualityAgent demands ISO 19115 / Open Science /
+                # Federated-Learning fields a single NIR measurement never has,
+                # so its score would otherwise drag the overview grade down to a
+                # low value that disagrees with the Data Loader's 'A' rating.
                 spectral_data.metadata_quality_results = results.get('metadata_result', {})
+                dl_md = (spectral_data.metadata or {}).get('metadata_quality') or {}
+                dl_score = dl_md.get('score') if isinstance(dl_md, dict) else None
+                if dl_score is None:
+                    dl_score = results.get('metadata_result', {}).get('overall_score', 0) or 0
                 spectral_data.data_quality_score = results.get('spectral_result', {}).get('quality_score', 0) or 0
-                spectral_data.metadata_quality_score = results.get('metadata_result', {}).get('overall_score', 0) or 0
+                spectral_data.metadata_quality_score = dl_score
                 spectral_data.calibration_quality_score = results.get('calibration_result', {}).get('calibration_quality', {}).get('overall_quality', 0) or 0
                 spectral_data.overall_quality_score = (
                     (spectral_data.data_quality_score or 0) * 0.4 +
