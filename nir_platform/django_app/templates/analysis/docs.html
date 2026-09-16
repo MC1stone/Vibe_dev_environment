@@ -34,12 +34,12 @@
                 {% for doc in docs %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link {% if forloop.first %}active{% endif %}" 
-                            id="{{ doc.title|lower
+                            id="{{ doc.title|slugify }}-tab" 
                             data-bs-toggle="tab" 
-                            data-bs-target="#{{ doc.title|lower
+                            data-bs-target="#{{ doc.title|slugify }}" 
                             type="button" 
                             role="tab" 
-                            aria-controls="{{ doc.title|lower
+                            aria-controls="{{ doc.title|slugify }}" 
                             aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
                         <i class="bi bi-file-earmark-text"></i> {{ doc.title }}
                     </button>
@@ -53,9 +53,9 @@
     <div class="tab-content" id="docsTabContent">
         {% for doc in docs %}
         <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" 
-             id="{{ doc.title|lower
+             id="{{ doc.title|slugify }}" 
              role="tabpanel" 
-             aria-labelledby="{{ doc.title|lower
+             aria-labelledby="{{ doc.title|slugify }}-tab">
             
             <div class="card mb-4">
                 <div class="card-header">
@@ -73,7 +73,7 @@
                             <ul class="list-group list-group-flush">
                                 {% for section in doc.sections %}
                                 <li class="list-group-item">
-                                    <a href="#{{ section|lower
+                                    <a href="#{{ section|slugify }}">
                                         <i class="bi bi-chevron-right me-2"></i> {{ section }}
                                     </a>
                                 </li>
@@ -84,7 +84,7 @@
                     
                     <!-- Sections -->
                     {% for section in doc.sections %}
-                    <div class="mb-5" id="{{ section|lower
+                    <div class="mb-5" id="{{ section|slugify }}">
                         <h3>{{ section }}</h3>
                         <hr>
                         
@@ -644,5 +644,4 @@ print(results)</code></pre>
         });
     });
 </script>
-{% endblock %}
 {% endblock %}
