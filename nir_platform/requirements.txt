@@ -13,6 +13,8 @@ scikit-learn>=1.3.0
 
 # Spectral Libraries (optional)
 Pillow>=10.0.0
+# Plotting (HTML report figures / calibration curves)
+matplotlib>=3.7.0
 
 # Vector Databases
 faiss-cpu>=1.7.4
