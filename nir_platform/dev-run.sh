@@ -78,7 +78,10 @@ container_exists() {
 # ---------------------------------------------------------------------
 require_cmd docker
 require_cmd git
-require_cmd python
+# Debian ships python3 without a 'python' alias, so accept either.
+if ! command -v python >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
+    warn "'python' nicht gefunden, verwende 'python3'."
+fi
 
 if [ ! -d "$DJANGO_DIR" ]; then
     err "Django-Verzeichnis nicht gefunden: $DJANGO_DIR"
@@ -160,6 +163,7 @@ if [ ! -x "$VENV_PY" ]; then
     warn "Kein .venv gefunden unter $REPO_ROOT/.venv."
     warn "Erstelle eines mit:  python3 -m venv $REPO_ROOT/.venv && $REPO_ROOT/.venv/bin/pip install -r requirements.txt"
     PYTHON_BIN="python"
+    command -v "$PYTHON_BIN" >/dev/null 2>&1 || PYTHON_BIN="python3"
 else
     PYTHON_BIN="$VENV_PY"
 fi
