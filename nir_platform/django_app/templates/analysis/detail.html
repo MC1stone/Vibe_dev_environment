@@ -106,6 +106,13 @@
                 <a href="{% url 'analysis_report' spectral_data.id %}" class="btn btn-outline-primary">
                     <i class="bi bi-file-earmark-text"></i> View Report
                 </a>
+                <form method="post" action="" class="d-inline" onsubmit="return confirm('Re-run analysis and regenerate the report? This overwrites the current results.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="rerun_analysis">
+                    <button type="submit" class="btn btn-outline-warning">
+                        <i class="bi bi-arrow-repeat"></i> Re-run Analysis
+                    </button>
+                </form>
                 <a href="{% url 'download_analysis' spectral_data.id %}" class="btn btn-outline-success">
                     <i class="bi bi-download"></i> Download All
                 </a>

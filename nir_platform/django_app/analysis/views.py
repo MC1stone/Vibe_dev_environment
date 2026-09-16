@@ -261,6 +261,20 @@ def analysis_detail(request, analysis_id):
     """Analysis detail view."""
     spectral_data = get_object_or_404(SpectralData, pk=analysis_id)
 
+    # Allow the user to re-run the analysis (and regenerate the report)
+    # on an existing record without re-uploading the file. This is needed
+    # when a previous run generated an empty/broken report (e.g. a missing
+    # dependency that has since been installed).
+    if request.method == 'POST' and request.POST.get('action') == 'rerun_analysis':
+        Report.objects.filter(spectral_data=spectral_data).delete()
+        spectral_data.is_processed = False
+        spectral_data.processing_date = None
+        spectral_data.save()
+        logger.info(
+            f'Re-run requested for id={spectral_data.id}; resetting analysis.')
+        messages.success(request, 'Re-running analysis and regenerating report...')
+        return redirect('analysis_detail', analysis_id=spectral_data.id)
+
     # Allow the user to add/append missing metadata and re-run the analysis.
     if request.method == 'POST' and request.POST.get('action') == 'add_metadata':
         md = dict(spectral_data.metadata or {})
