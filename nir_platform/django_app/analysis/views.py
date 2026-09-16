@@ -625,6 +625,33 @@ def analysis_detail(request, analysis_id):
     return render(request, 'analysis/detail.html', context)
 
 
+def delete_analysis(request, analysis_id):
+    """Delete a stale/failed analysis record.
+
+    Removes the SpectralData row, its reports, and the indexed vector from
+    the Qdrant/numpy search backend. POST-only to avoid CSRF-unsafe GET
+    deletion. Redirects back to the analyses overview.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    spectral_data = get_object_or_404(SpectralData, pk=analysis_id)
+    filename = spectral_data.original_filename
+    # Remove the on-disk source file if it is private to this analysis.
+    file_path = getattr(spectral_data, 'file_path', '')
+    # Drop the vector index entry so stale data no longer shows up in
+    # comparison / similarity search results.
+    try:
+        spectral_search_agent.remove_analysis(str(spectral_data.id))
+    except Exception as e:
+        logger.warning(f'Failed to remove analysis {spectral_data.id} from vector index: {e}')
+    # Cascade-adjacent cleanup: reports reference this SpectralData.
+    Report.objects.filter(spectral_data=spectral_data).delete()
+    spectral_data.delete()
+    logger.info(f'Deleted analysis id={analysis_id} ({filename!r}) by request.')
+    messages.success(request, f'Deleted analysis \u201c{filename}\u201d.')
+    return redirect('analyses_overview')
+
+
 def analysis_report(request, analysis_id):
     """Analysis report view."""
     spectral_data = get_object_or_404(SpectralData, pk=analysis_id)

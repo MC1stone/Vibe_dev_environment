@@ -119,6 +119,12 @@
                 <a href="{% url 'chat_interface' spectral_data.id %}" class="btn btn-outline-secondary">
                     <i class="bi bi-chat-dots"></i> Chat with AI
                 </a>
+                <form method="post" action="{% url 'delete_analysis' spectral_data.id %}" class="d-inline" onsubmit="return confirm('Delete this analysis and its report? This cannot be undone.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="bi bi-trash"></i> Delete Analysis
+                    </button>
+                </form>
             </div>
         </div>
     </div>

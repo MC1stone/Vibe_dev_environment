@@ -302,7 +302,13 @@ class MetadataQualityAgent:
             data_type="string",
             required=True,
             standard="ASTM_E131,ASTM_E1421",
-            possible_values=["Ocean Optics", "ASD FieldSpec", "Bruker", "DIY Raspberry", "DIY Arduino", "Other"]
+            possible_values=[
+                "Ocean Optics", "ASD FieldSpec", "Bruker",
+                "DIY Raspberry", "DIY Arduino", "Other",
+                # Data-Loader-detected types (lowercase ids)
+                "sparkfun_nir_triad", "ocean_optics", "asd_fieldspec",
+                "diy_raspberry", "diy_arduino",
+            ]
         )
         
         fields["wavelength_range"] = MetadataField(
@@ -697,17 +703,32 @@ class MetadataQualityAgent:
                 "error": error_message if not is_valid else None
             }
         
-        # Check for unknown fields (not in definitions)
+        # Check for unknown fields (not in definitions). Per-sample data
+        # columns (the wide-NIR export's Brix/Temp/Counter/etc., which are
+        # list-valued) and structural sub-dicts are *data*, not metadata, so
+        # they must not be scored as extra metadata fields - otherwise they
+        # dilute the average and make the grade disagree with the Data
+        # Loader's own rating.
+        _STRUCTURAL = {
+            "standard_metadata", "intensity_matrix", "spectral_columns",
+            "spectrometer_info", "metadata_quality", "data_quality",
+        }
         for field_name in metadata:
-            if field_name not in self.field_definitions:
-                # This is an extra field, give partial credit
-                field_scores[field_name] = {
-                    "score": 0.3,
-                    "valid": True,
-                    "required": False,
-                    "standard": "extra",
-                    "error": None
-                }
+            if field_name in self.field_definitions or field_name in _STRUCTURAL:
+                continue
+            value = metadata[field_name]
+            # Skip per-sample data columns (list/dict values are data, not
+            # scalar metadata fields).
+            if isinstance(value, (list, dict)):
+                continue
+            # This is a genuine extra scalar metadata field, give partial credit
+            field_scores[field_name] = {
+                "score": 0.3,
+                "valid": True,
+                "required": False,
+                "standard": "extra",
+                "error": None
+            }
         
         return field_scores, missing_fields, invalid_fields
     
@@ -876,28 +897,19 @@ class MetadataQualityAgent:
         return round(overall_score, 2)
     
     def _determine_grade(self, score: float) -> str:
-        """Determine letter grade based on score."""
-        if score >= 95:
-            return "A+"
-        elif score >= 90:
+        """Determine letter grade based on score.
+
+        Thresholds match the Data Loader Agent's rating so the two ratings
+        shown on the detail page agree on the same letter for the same data:
+        A>=90, B>=75, C>=60, D>=40, F<40.
+        """
+        if score >= 90:
             return "A"
-        elif score >= 85:
-            return "A-"
-        elif score >= 80:
-            return "B+"
         elif score >= 75:
             return "B"
-        elif score >= 70:
-            return "B-"
-        elif score >= 65:
-            return "C+"
         elif score >= 60:
             return "C"
-        elif score >= 55:
-            return "C-"
-        elif score >= 50:
-            return "D+"
-        elif score >= 45:
+        elif score >= 40:
             return "D"
         else:
             return "F"
