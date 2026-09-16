@@ -84,12 +84,11 @@
                             <label for="{{ form.metadata.id_for_label }}" class="form-label">
                                 {{ form.metadata.label }}
                             </label>
-                            <textarea class="form-control" 
-                                      id="{{ form.metadata.id_for_label }}" 
+                            <textarea class="form-control"
+                                      id="{{ form.metadata.id_for_label }}"
                                       name="{{ form.metadata.name }}"
                                       rows="4"
-                                      placeholder="{{ form.metadata.field.widget.attrs.placeholder }}">{{ form.metadata.value|default:"
-" }}</textarea>
+                                      placeholder="{{ form.metadata.field.widget.attrs.placeholder|default:'' }}">{{ form.metadata.value|default:'' }}</textarea>
                             <div class="form-text">{{ form.metadata.help_text }}</div>
                         </div>
 
