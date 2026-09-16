@@ -357,6 +357,11 @@ def analysis_detail(request, analysis_id):
                         candidate_html = render_result.get('html_file')
                         if candidate_html and os.path.exists(candidate_html):
                             html_file_path = candidate_html
+                        # Prefer the embeddable fragment (scoped styles, no
+                        # <html>/<head> wrapper) so the report renders cleanly
+                        # inside the Django page via {{ report.html_content|safe }}.
+                        html_content = render_result.get('html_content') or ''
+                        if not html_content and candidate_html and os.path.exists(candidate_html):
                             with open(candidate_html, 'r', encoding='utf-8') as hf:
                                 html_content = hf.read()
                 except Exception as re:

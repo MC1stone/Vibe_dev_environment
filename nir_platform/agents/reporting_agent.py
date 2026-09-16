@@ -811,6 +811,7 @@ STANDARDS = {
         
         # Fallback: convert the generated Quarto document to HTML in pure Python
         # so a full HTML report is produced even without Quarto installed.
+        html_fragment = ""
         if not rendered:
             try:
                 with open(quarto_file, "r", encoding="utf-8") as f:
@@ -819,13 +820,25 @@ STANDARDS = {
                 full_html = self._wrap_html_document(report.title, html_body)
                 with open(html_file, "w", encoding="utf-8") as f:
                     f.write(full_html)
+                html_fragment = self._report_fragment(report.title, html_body)
                 rendered = os.path.exists(html_file)
             except Exception as fe:
                 logger.error(f"Python HTML fallback render failed: {fe}", exc_info=True)
+        else:
+            # Quarto succeeded: derive an embeddable fragment from the body.
+            try:
+                with open(html_file, "r", encoding="utf-8") as f:
+                    full_html = f.read()
+                m = re.search(r"<body[^>]*>(.*)</body>", full_html, re.DOTALL)
+                body_inner = m.group(1) if m else full_html
+                html_fragment = self._report_fragment(report.title, body_inner)
+            except Exception:
+                html_fragment = ""
         
         return {
             "quarto_file": quarto_file,
             "html_file": html_file,
+            "html_content": html_fragment,
             "status": "generated" if rendered else "failed",
             "message": "Report rendered to HTML" if rendered else "Report rendering failed"
         }
@@ -931,9 +944,13 @@ else:
         # Execute matplotlib plot code blocks and replace them with an
         # embedded base64 PNG figure, keeping the source in a collapsible
         # <details> block so graphs render without the Quarto CLI.
+        # The injected HTML is stored via placeholder tokens so the later
+        # text-escaping pass (markdown fallback) cannot escape the tags.
         import html as html_mod
+        import uuid as _uuid
 
         cal_data = report.metadata.get('cal_plot_data') if report else None
+        _plot_placeholders: Dict[str, str] = {}
 
         def _replace_plot_block(match: "re.Match") -> str:
             code = match.group(1)
@@ -954,7 +971,10 @@ else:
                 "<details class=\"code-details\"><summary>"
                 "Show Python source</summary><pre><code class=\"language-python\">"
                 f"{escaped}</code></pre></details>")
-            return img_html + details if img_html else details
+            block_html = img_html + details if img_html else details
+            token = f"PLOTPH{_uuid.uuid4().hex}PLOTPH"
+            _plot_placeholders[token] = block_html
+            return token
 
         body = re.sub(r"```python\n(.*?)```", _replace_plot_block, body,
                       flags=re.DOTALL)
@@ -968,17 +988,104 @@ else:
                 extensions=["tables", "toc"],
             )
         else:
-            # Minimal HTML conversion if the markdown package is unavailable:
-            # render headings and bold inline, escape everything else.
-            escaped = html_mod.escape(body)
-            escaped = re.sub(r"\n### (.+)", r"<h3>\1</h3>", escaped)
-            escaped = re.sub(r"\n## (.+)", r"<h2>\1</h2>", escaped)
-            escaped = re.sub(r"\n# (.+)", r"<h1>\1</h1>", escaped)
-            escaped = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped)
-            html_body = f"<div class=\"md-body\">{escaped}</div>"
+            # Minimal-but-readable HTML conversion if the markdown package is
+            # unavailable. Escape the text, render headings/bold, turn markdown
+            # bullet and numbered lists into <ul>/<ol>, wrap loose paragraphs
+            # in <p>, and preserve line breaks within list items. Plot-block
+            # HTML is restored from placeholders afterwards.
+            lines = body.split(chr(10))
+            out: List[str] = []
+            list_type: Optional[str] = None  # 'ul' | 'ol' | None
+            para: List[str] = []
+
+            def flush_para() -> None:
+                nonlocal para
+                if para:
+                    text = chr(10).join(para)
+                    text = html_mod.escape(text)
+                    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+                    text = re.sub(r"\[(.+?)\]\((https?://[^\)]+)\)",
+                                  r'<a href="\2">\1</a>', text)
+                    out.append(f"<p>{text}</p>")
+                    para = []
+
+            def close_list() -> None:
+                nonlocal list_type
+                if list_type:
+                    out.append(f"</{list_type}>")
+                    list_type = None
+
+            for ln in lines:
+                if ln.startswith("### "):
+                    flush_para(); close_list()
+                    out.append(f"<h3>{html_mod.escape(ln[4:])}</h3>")
+                elif ln.startswith("## "):
+                    flush_para(); close_list()
+                    out.append(f"<h2>{html_mod.escape(ln[3:])}</h2>")
+                elif ln.startswith("# "):
+                    flush_para(); close_list()
+                    out.append(f"<h1>{html_mod.escape(ln[2:])}</h1>")
+                elif re.match(r"^\s*[-*]\s+", ln):
+                    flush_para()
+                    if list_type != "ul":
+                        close_list(); out.append("<ul>"); list_type = "ul"
+                    item = re.sub(r"^\s*[-*]\s+", "", ln)
+                    item = html_mod.escape(item)
+                    item = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", item)
+                    out.append(f"<li>{item}</li>")
+                elif re.match(r"^\s*\d+\.\s+", ln):
+                    flush_para()
+                    if list_type != "ol":
+                        close_list(); out.append("<ol>"); list_type = "ol"
+                    item = re.sub(r"^\s*\d+\.\s+", "", ln)
+                    item = html_mod.escape(item)
+                    item = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", item)
+                    out.append(f"<li>{item}</li>")
+                elif ln.strip() == "":
+                    flush_para(); close_list()
+                else:
+                    close_list()
+                    para.append(ln)
+            flush_para(); close_list()
+            html_body = chr(10).join(out)
+            html_body = f"<div class=\"md-body\">{html_body}</div>"
+        
+        # Restore plot-block HTML (now safe from the escaping pass).
+        for token, block_html in _plot_placeholders.items():
+            html_body = html_body.replace(token, block_html)
         
         return html_body
     
+    _REPORT_STYLE_CSS = """
+        .md-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #222; line-height: 1.6; }
+        .md-body h1, .md-body h2, .md-body h3, .md-body h4 { color: #1a3c5e; margin-top: 1.5rem; }
+        .md-body h1 { border-bottom: 2px solid #1a3c5e; padding-bottom: 0.3rem; }
+        .md-body table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+        .md-body th, .md-body td { border: 1px solid #ccc; padding: 0.5rem 0.75rem; text-align: left; }
+        .md-body th { background: #f2f6fa; }
+        .md-body pre { background: #f7f7f9; padding: 1rem; border-radius: 6px; overflow-x: auto; }
+        .md-body code { font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
+        .md-body pre code { background: none; }
+        .md-body :not(pre) > code { background: #f0f0f2; padding: 0.1em 0.3em; border-radius: 3px; }
+        .md-body blockquote { border-left: 4px solid #1a3c5e; margin: 1rem 0; padding: 0.5rem 1rem; color: #555; background: #f9fbfd; }
+        .md-body .codehilite { background: #f7f7f9; border-radius: 6px; }
+        .md-body .figure { margin: 1.2rem 0; text-align: center; border: 1px solid #e5e5e5; border-radius: 6px; padding: 0.6rem; background: #fff; }
+        .md-body .figure img { max-width: 100%; height: auto; }
+        .md-body .code-details { margin: 0.5rem 0 1rem; }
+        .md-body .code-details summary { cursor: pointer; color: #1a3c5e; font-size: 0.9em; }
+        .md-body h1, .md-body h2, .md-body h3 { color: #1a3c5e; }
+    """
+
+    def _report_fragment(self, title: str, body: str) -> str:
+        """Return an embeddable report fragment: scoped <style> + body, no
+        document wrapper. Safe to inject into another HTML page via |safe."""
+        return (
+            f"<div class=\"nir-report\">"
+            f"<style>{self._REPORT_STYLE_CSS}</style>"
+            f"{body}"
+            f"</div>"
+        )
+
     def _wrap_html_document(self, title: str, body: str) -> str:
         """Wrap an HTML body fragment into a complete, styled HTML document."""
         return f"""<!DOCTYPE html>

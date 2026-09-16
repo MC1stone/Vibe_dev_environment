@@ -3,6 +3,17 @@
 
 {% block title %}{{ page_title|default:"Analysis Report" }}{% endblock %}
 
+{% block extra_css %}
+<style>
+  .nir-report { background: #fff; padding: 1rem 1.25rem; border-radius: 8px; }
+  @media print {
+    .no-print, .navbar, .breadcrumb, .card-header, .list-group { display: none !important; }
+    .nir-report { padding: 0; }
+    .card { border: none !important; box-shadow: none !important; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="fade-in">
     <div class="row mb-4">
@@ -112,6 +123,14 @@
         </div>
         <div class="card-body">
             {% if report.html_content %}
+            <div class="d-flex justify-content-end mb-2 gap-2 no-print">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print
+                </button>
+                <a href="{% url 'download_analysis' spectral_data.id %}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-download"></i> Download
+                </a>
+            </div>
             <div class="quarto-report" id="introduction" style="width:100%;">
                 {{ report.html_content|safe }}
             </div>
