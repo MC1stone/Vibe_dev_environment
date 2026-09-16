@@ -408,6 +408,68 @@
         </div>
     </div>
 
+    <!-- Extracted Header Metadata + Add Missing Fields -->
+    {% with dm=spectral_data.metadata %}
+    {% with sm=dm.standard_metadata %}
+    {% with dmq=dm.metadata_quality %}
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Extracted Metadata &amp; Data-Loader Analysis</h4>
+            {% if dmq %}
+            <span class="badge bg-{% if dmq.grade == 'A' %}success{% elif dmq.grade == 'B' %}primary{% elif dmq.grade == 'C' %}warning{% else %}danger{% endif %}">
+                Data-Loader rating: {{ dmq.grade }} ({{ dmq.score|floatformat:1 }}%)
+            </span>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            {% if sm %}
+            <h5>Metadata extracted from the file header</h5>
+            <p class="small text-muted">The Data Loader Agent parsed the file preamble and reference columns and mapped them onto the standard metadata fields.</p>
+            <dl class="row mb-0">
+                {% for k, v in sm.items %}
+                <dt class="col-sm-4">{{ k|title }}</dt>
+                <dd class="col-sm-8">{{ v|default:"&mdash;" }}</dd>
+                {% endfor %}
+            </dl>
+            {% else %}
+            <p class="text-muted mb-0">No structured metadata was extracted from the file header.</p>
+            {% endif %}
+
+            {% if dmq %}
+            <hr class="my-3">
+            <h5>Proposed metadata rating</h5>
+            <p class="mb-1">
+                <span class="badge bg-{% if dmq.grade == 'A' %}success{% elif dmq.grade == 'B' %}primary{% elif dmq.grade == 'C' %}warning{% else %}danger{% endif %}">{{ dmq.grade }}</span>
+                <strong>{{ dmq.score|floatformat:1 }}%</strong>
+            </p>
+            {% if dmq.missing_fields %}
+            <p class="small text-muted mb-2">{{ dmq.recommendation }}</p>
+            <h6>Missing fields you can add:</h6>
+            <form method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_metadata">
+                <div class="row g-2 mb-3">
+                    {% for field in dmq.missing_fields %}
+                    <div class="col-md-6">
+                        <label class="form-label small mb-0">{{ field|title }}</label>
+                        <input type="text" class="form-control form-control-sm" name="{{ field }}" placeholder="Enter {{ field|title }}">
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle"></i> Add metadata &amp; re-run analysis
+                </button>
+            </form>
+            {% else %}
+            <p class="small text-success mb-0">All standard metadata fields are present.</p>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+
     <!-- Calibration -->
     <div class="card mb-4">
         <div class="card-header">

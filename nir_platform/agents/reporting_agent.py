@@ -729,7 +729,10 @@ STANDARDS = {
         """Render report to HTML using Quarto, with a Python fallback."""
         import shutil
         import subprocess
-        import markdown
+        try:
+            import markdown
+        except ImportError:
+            markdown = None
         
         # Generate unique filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

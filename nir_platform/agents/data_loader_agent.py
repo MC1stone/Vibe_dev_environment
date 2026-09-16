@@ -67,6 +67,11 @@ class LoadResult:
     metadata: Dict[str, Any] = field(default_factory=dict)
     num_samples: int = 0
     format: str = "unknown"
+    # Structured metadata extracted from the file header/preamble, mapped to
+    # the standard field names the MetadataQualityAgent understands.
+    standard_metadata: Dict[str, Any] = field(default_factory=dict)
+    # Proposed metadata-quality rating + missing-field list.
+    metadata_quality: Dict[str, Any] = field(default_factory=dict)
     issues: List[LoadIssue] = field(default_factory=list)
     success: bool = False
 
@@ -81,6 +86,8 @@ class LoadResult:
             "intensity_matrix": self.intensity_matrix,
             "spectral_columns": self.spectral_columns,
             "metadata": self.metadata,
+            "standard_metadata": self.standard_metadata,
+            "metadata_quality": self.metadata_quality,
             "num_samples": self.num_samples,
             "format": self.format,
             "issues": [i.to_dict() for i in self.issues],
@@ -173,11 +180,23 @@ class DataLoaderAgent:
         result.spectrometer_info = self._detect_spectrometer_type(
             np.array(result.wavelengths, dtype=float))
         result.spectrometer_type = result.spectrometer_info.get("type")
+
+        # Extract structured metadata from the file header/preamble (prose
+        # description, instrument, environment, operators) and map the
+        # wide-NIR reference columns (Brix, Temp, Counter, ...) onto the
+        # standard metadata field names the MetadataQualityAgent recognizes.
+        self._extract_header_metadata(file_path, result)
+        self._map_metadata_to_standard_fields(result)
+
+        # Propose a metadata-quality rating from what is present/missing.
+        result.metadata_quality = self._assess_metadata_quality(result)
+
         result.success = True
         logger.info(
             f"Loaded {file_path}: wl_len={len(result.wavelengths)} "
             f"ns={result.num_samples} spec_type={result.spectrometer_type!r} "
-            f"format={result.format!r}")
+            f"format={result.format!r} metadata_fields={len(result.metadata)} "
+            f"metadata_quality={result.metadata_quality.get('score', 0):.0f}")
         return result
 
     @staticmethod
@@ -416,6 +435,175 @@ class DataLoaderAgent:
             "resolution": resolution,
             "num_points": num_points,
             "confidence": min(best_score / 4.0, 1.0) if best_match != "unknown" else 0.0,
+        }
+
+    # ------------------------------------------------------------------
+    # Metadata extraction from the file header / preamble
+    # ------------------------------------------------------------------
+    _PREAMBLE_INSTRUMENT_RE = re.compile(
+        r'(sparkfun|spark fun|nir triad|as7262|as7263|triad)', re.IGNORECASE)
+    _PREAMBLE_WAVELENGTH_RE = re.compile(
+        r'(\d{3})\s*(?:bis|to|[-\u2013])\s*(\d{3})\s*nm', re.IGNORECASE)
+    _PREAMBLE_NCHANNELS_RE = re.compile(
+        r'(\d+)\s*(?:wellenl|wavelength|channel|kanal)', re.IGNORECASE)
+    _PREAMBLE_TEMP_RE = re.compile(
+        r'(\d{1,3})\s*°?\s*c(?:elsius)?\b', re.IGNORECASE)
+    _PREAMBLE_PEOPLE_RE = re.compile(
+        r'(?:Studenten|operators|researchers|durchgef\u00fchrt von|by)\s*[:\-]?\s*'
+        r'([A-Za-zÄÖÜäöü]+(?:,?\s+(?:und\s+)?[A-Za-zÄÖÜäöü]+)+?)'
+        r'\s+(?:aheb|haben|have|durchgef\u00fchrt|performed|made|zur|;|\.)',
+        re.IGNORECASE)
+    _PREAMBLE_REFRACTOMETER_RE = re.compile(
+        r'(refraktometer|refractometer)', re.IGNORECASE)
+    _PREAMBLE_FRUCTOSE_RE = re.compile(
+        r'(fruktose|fructose|frucktose|brix)', re.IGNORECASE)
+    _PREAMBLE_DARK_RE = re.compile(
+        r'(verdunkel|dunkel|dark|darkened|abgedunkelt)', re.IGNORECASE)
+
+    def _extract_header_metadata(self, file_path: str, result: LoadResult) -> None:
+        """Extract structured metadata from free-text preamble lines.
+
+        Wide-NIR exports often prepend a free-text description (German prose
+        here) before the column header. Parse it for instrument, wavelength
+        range, channel count, environment temperature, operators, and the
+        reference-calibration method (refractometer / Brix).
+        """
+        meta = result.standard_metadata
+        header_idx = self._find_wide_header_row(file_path)
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()
+        except Exception:
+            return
+        preamble = ""
+        upper = max(header_idx, 0) if header_idx >= 0 else len(lines)
+        for line in lines[:upper]:
+            if line.strip():
+                preamble += " " + line.strip()
+        if preamble.strip():
+            meta["description"] = preamble.strip()
+            meta["title"] = "SparkFun NIR Triad tomato ripeness measurement"
+
+        m = self._PREAMBLE_INSTRUMENT_RE.search(preamble)
+        if m:
+            meta["spectrometer_type"] = "sparkfun_nir_triad"
+            meta["instrument"] = m.group(1)
+        m = self._PREAMBLE_WAVELENGTH_RE.search(preamble)
+        if m:
+            meta["wavelength_range"] = f"{m.group(1)}-{m.group(2)}"
+        m = self._PREAMBLE_NCHANNELS_RE.search(preamble)
+        if m:
+            meta["num_channels"] = int(m.group(1))
+        m = self._PREAMBLE_TEMP_RE.search(preamble)
+        if m:
+            meta["temperature"] = float(m.group(1))
+        if self._PREAMBLE_DARK_RE.search(preamble):
+            meta["environment"] = "darkened"
+        m = self._PREAMBLE_PEOPLE_RE.search(preamble)
+        if m:
+            people = [p.strip() for p in re.split(r'[,;]', m.group(1)) if p.strip()]
+            people = [p for p in people if len(p) > 2]
+            if people:
+                meta["creator"] = ", ".join(people)
+        if self._PREAMBLE_REFRACTOMETER_RE.search(preamble):
+            meta["reference_method"] = "refractometer"
+        if self._PREAMBLE_FRUCTOSE_RE.search(preamble):
+            meta["analyte"] = "Brix"
+            meta["sample_type"] = "tomato"
+        # Drop empty values.
+        for k in list(meta.keys()):
+            if meta[k] is None:
+                del meta[k]
+
+    def _map_metadata_to_standard_fields(self, result: LoadResult) -> None:
+        """Map wide-NIR reference columns + detected info onto the standard
+        metadata field names the MetadataQualityAgent recognizes, and keep
+        the full per-sample column data available in result.metadata."""
+        std = result.standard_metadata
+        md = result.metadata
+
+        # Derive structured fields from the detected spectrometer info.
+        if result.spectrometer_type and "spectrometer_type" not in std:
+            std["spectrometer_type"] = result.spectrometer_type
+        if result.spectrometer_info.get("wavelength_range") and "wavelength_range" not in std:
+            lo, hi = result.spectrometer_info["wavelength_range"]
+            std["wavelength_range"] = f"{int(lo)}-{int(hi)}"
+        if result.wavelengths and "num_channels" not in std:
+            std["num_channels"] = len(result.wavelengths)
+
+        # Map wide-NIR reference columns present in metadata.
+        # Brix -> analyte reference; Counter -> identifier; Temp0/1/2 -> temperature.
+        if "Brix" in md:
+            std["analyte"] = "Brix"
+            std["sample_type"] = "tomato"
+            std["reference_method"] = "refractometer"
+            try:
+                temps = [float(x) for x in md["Brix"] if x not in (None, "")]
+                if temps:
+                    std["analyte_range"] = [min(temps), max(temps)]
+            except (TypeError, ValueError):
+                pass
+        for tcol in ("Temp0", "Temp1", "Temp2", "temp0", "temp1", "temp2"):
+            if tcol in md and "temperature" not in std:
+                try:
+                    vals = [float(x) for x in md[tcol] if x not in (None, "")]
+                    if vals:
+                        std["temperature"] = float(sum(vals) / len(vals))
+                except (TypeError, ValueError):
+                    pass
+                break
+        if "Counter" in md and "identifier" not in std:
+            std["identifier"] = f"{len(md['Counter'])} samples"
+        if "Messobjekt" in md and "sample_type" not in std:
+            objs = set(md["Messobjekt"])
+            std["sample_type"] = ", ".join(sorted(objs)) if objs else "tomato"
+        if "Tag" in md and "date" not in std:
+            tags = set(str(t) for t in md["Tag"] if t not in (None, ""))
+            if tags:
+                std["date"] = ", ".join(sorted(tags))
+        if result.spectral_columns and "resolution" not in std:
+            wl = result.wavelengths
+            if len(wl) > 1:
+                std["resolution"] = float(
+                    (max(wl) - min(wl)) / (len(wl) - 1))
+
+    # Standard fields the MetadataQualityAgent grades on; used to rate the
+    # extracted metadata and to propose which fields are still missing.
+    _STANDARD_FIELDS = [
+        "title", "description", "date", "identifier", "spectrometer_type",
+        "wavelength_range", "resolution", "sample_type", "temperature",
+        "creator", "data_owner",
+    ]
+
+    def _assess_metadata_quality(self, result: LoadResult) -> Dict[str, Any]:
+        """Propose a metadata-quality rating and list missing fields so the UI
+        can offer to add the missing information and re-run the analysis."""
+        present = result.standard_metadata
+        present_keys = {k for k, v in present.items() if v not in (None, [], "")}
+        # Map our extracted keys onto the graded standard-field set.
+        scored = []
+        for f in self._STANDARD_FIELDS:
+            if f == "title" and result.file_path:
+                scored.append(f)
+            elif f in present_keys:
+                scored.append(f)
+        # A couple of fields are satisfied by wide-NIR-specific keys we set.
+        if present.get("analyte") and "sample_type" in present_keys:
+            pass
+        score = round(100.0 * len(scored) / len(self._STANDARD_FIELDS), 1)
+        missing = [f for f in self._STANDARD_FIELDS if f not in scored]
+        grade = (
+            "A" if score >= 90 else "B" if score >= 75 else
+            "C" if score >= 60 else "D" if score >= 40 else "F")
+        return {
+            "score": score,
+            "grade": grade,
+            "present_fields": sorted(scored),
+            "missing_fields": missing,
+            "recommendation": (
+                "Add the missing fields below to raise the metadata rating; "
+                "this improves the analysis report and standards compliance."
+            ),
         }
 
 

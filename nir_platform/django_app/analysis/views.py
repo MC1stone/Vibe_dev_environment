@@ -129,6 +129,13 @@ def upload_file(request):
                         metadata['spectral_columns'] = loaded.spectral_columns
                     if loaded.spectrometer_info:
                         metadata['spectrometer_info'] = loaded.spectrometer_info
+                    # Persist the structured header metadata + proposed quality
+                    # rating so the metadata-quality agent and the UI can use them
+                    # and the user can fill in missing fields.
+                    if loaded.standard_metadata:
+                        metadata['standard_metadata'] = loaded.standard_metadata
+                    if loaded.metadata_quality:
+                        metadata['metadata_quality'] = loaded.metadata_quality
                     if not spectrometer_type:
                         spectrometer_type = loaded.spectrometer_type
                 except Exception as pe:
@@ -210,10 +217,15 @@ async def analyze_spectral_data(spectral_data: SpectralData):
         # Run spectral analysis
         spectral_result = await spectral_agent.analyze_spectral_data(data=data_dict)
         
-        # Run metadata quality assessment
-        metadata_result = await metadata_agent.evaluate_metadata_quality(
-            spectral_data.metadata or {}
-        )
+        # Run metadata quality assessment. Merge the structured header
+        # metadata extracted by the Data Loader Agent so the metadata agent
+        # grades on the real extracted fields, not just the raw columns.
+        md_for_eval = dict(spectral_data.metadata or {})
+        std_md = md_for_eval.get('standard_metadata') or {}
+        if isinstance(std_md, dict):
+            for k, v in std_md.items():
+                md_for_eval.setdefault(k, v)
+        metadata_result = await metadata_agent.evaluate_metadata_quality(md_for_eval)
         
         # Run calibration
         calibration_result = await calibration_agent.generate_calibration(data_dict)
@@ -248,7 +260,31 @@ async def analyze_spectral_data(spectral_data: SpectralData):
 def analysis_detail(request, analysis_id):
     """Analysis detail view."""
     spectral_data = get_object_or_404(SpectralData, pk=analysis_id)
-    
+
+    # Allow the user to add/append missing metadata and re-run the analysis.
+    if request.method == 'POST' and request.POST.get('action') == 'add_metadata':
+        md = dict(spectral_data.metadata or {})
+        std_md = dict(md.get('standard_metadata') or {})
+        for field in (
+            'title', 'description', 'date', 'identifier', 'spectrometer_type',
+            'wavelength_range', 'resolution', 'sample_type', 'temperature',
+            'creator', 'data_owner', 'humidity', 'sample_preparation',
+            'measurement_geometry', 'license',
+        ):
+            val = request.POST.get(field, '').strip()
+            if val:
+                std_md[field] = val
+        md['standard_metadata'] = std_md
+        spectral_data.metadata = md
+        # Re-run the analysis with the enriched metadata.
+        spectral_data.is_processed = False
+        spectral_data.processing_date = None
+        spectral_data.save()
+        logger.info(
+            f'Metadata added by user for id={spectral_data.id}; re-running analysis.')
+        messages.success(request, 'Metadata added. Re-running analysis...')
+        return redirect('analysis_detail', analysis_id=spectral_data.id)
+
     # Check if analysis has been performed
     if not spectral_data.is_processed:
         logger.info(
