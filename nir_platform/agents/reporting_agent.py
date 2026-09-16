@@ -17,9 +17,13 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 import numpy as np
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+try:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+except ImportError:  # graceful degrade: reports render without figures
+    matplotlib = None
+    plt = None
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -835,6 +839,8 @@ STANDARDS = {
         fallback runs the same code with the Agg backend and captures the
         figure so the graph is embedded even without Quarto.
         """
+        if plt is None or matplotlib is None:
+            return None
         try:
             ns = {"plt": plt, "np": np, "matplotlib": matplotlib}
             if extra_ns:
@@ -948,8 +954,7 @@ else:
                 "<details class=\"code-details\"><summary>"
                 "Show Python source</summary><pre><code class=\"language-python\">"
                 f"{escaped}</code></pre></details>")
-            return img_html + details if img_html else (
-                f"<pre><code class=\"language-python\">{escaped}</code></pre>")
+            return img_html + details if img_html else details
 
         body = re.sub(r"```python\n(.*?)```", _replace_plot_block, body,
                       flags=re.DOTALL)
