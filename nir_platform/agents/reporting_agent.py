@@ -273,15 +273,43 @@ Processing steps applied:
         # Section 5: Calibration
         cal_quality = calibration_result.get('calibration_quality', {})
         cal_recs = calibration_result.get('recommendations', [])
-        
+        analyte_cal = calibration_result.get('analyte_calibration')
+
+        analyte_block = ""
+        if analyte_cal:
+            wl_coef = list(zip(analyte_cal.get('wavelengths', []),
+                              analyte_cal.get('coefficients', [])))
+            coef_lines = (chr(10).join(
+                [f"  - {w:.0f} nm: {c:+.4e}" for w, c in wl_coef])
+                or '  None')
+            analyte_block = f"""
+### NIR \u2192 Brix Calibration (Ripeness Model)
+- **Analyte**: {analyte_cal.get('analyte', 'Brix')}
+- **Method**: {analyte_cal.get('method', 'N/A')}
+- **Samples**: {analyte_cal.get('num_samples', 0)}
+- **Features**: {analyte_cal.get('num_features', 0)} channels
+- **Components**: {analyte_cal.get('num_components', 0)}
+- **Brix range**: {analyte_cal.get('brix_range', [0, 0])[0]:.2f} \u2013 {analyte_cal.get('brix_range', [0, 0])[1]:.2f} \u00b0Brix
+- **R\u00b2 (cross-validated)**: {analyte_cal.get('r_squared_cv', 0):.4f}
+- **RMSE (cross-validated)**: {analyte_cal.get('rmse_cv', 0):.4f} \u00b0Brix
+- **R\u00b2 (calibration)**: {analyte_cal.get('r_squared_cal', 0):.4f}
+- **RMSE (calibration)**: {analyte_cal.get('rmse_cal', 0):.4f} \u00b0Brix
+- **Intercept**: {analyte_cal.get('intercept', 0):.4f}
+- **Notes**: {analyte_cal.get('notes', '')}
+
+#### Regression coefficients (raw intensity scale)
+{coef_lines}
+"""
+
         calibration_content = f"""
 ## Calibration Results
 
 ### Calibration Quality
 - **Wavelength Calibration Quality**: {cal_quality.get('wavelength_quality', 0):.1f}%
 - **Intensity Calibration Quality**: {cal_quality.get('intensity_quality', 0):.1f}%
+- **Analyte (NIR\u2192Brix) Quality**: {cal_quality.get('analyte_quality', 0):.1f}%
 - **Overall Calibration Quality**: {cal_quality.get('overall_quality', 0):.1f}%
-
+{analyte_block}
 ### Calibration Recommendations
 {chr(10).join([f'- **{rec.get("type", "")}** ({rec.get("priority", "medium")}): {rec.get("description", "")}' for rec in cal_recs]) or 'None'}
 

@@ -435,6 +435,16 @@
                                 </span>
                             </span>
                         </div>
+                        {% if cal.analyte_calibration %}
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>NIR &rarr; Brix (R&sup2; CV):</span>
+                            <span>
+                                <span class="badge bg-{% if cal.calibration_quality.analyte_quality >= 70 %}success{% elif cal.calibration_quality.analyte_quality >= 40 %}primary{% elif cal.calibration_quality.analyte_quality >= 20 %}warning{% else %}danger{% endif %}">
+                                    {{ cal.calibration_quality.analyte_quality|floatformat:1 }}%
+                                </span>
+                            </span>
+                        </div>
+                        {% endif %}
                         <div class="d-flex justify-content-between">
                             <span>Overall:</span>
                             <span>
@@ -456,6 +466,29 @@
                         <dd class="col-sm-7">{{ cal.wavelength_calibration.rmse|floatformat:4 }} nm</dd>
                         <dt class="col-sm-5">Points:</dt>
                         <dd class="col-sm-7">{{ cal.wavelength_calibration.num_points }}</dd>
+                    </dl>
+                    {% endif %}
+                    
+                    {% if cal.analyte_calibration %}
+                    <h5 class="mt-3">NIR &rarr; Brix Calibration</h5>
+                    <p class="small text-muted mb-2">{{ cal.analyte_calibration.method }} &middot; {{ cal.analyte_calibration.notes }}</p>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Analyte:</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.analyte }}</dd>
+                        <dt class="col-sm-5">Samples:</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.num_samples }}</dd>
+                        <dt class="col-sm-5">Features:</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.num_features }} channels</dd>
+                        <dt class="col-sm-5">Components:</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.num_components }}</dd>
+                        <dt class="col-sm-5">Brix range:</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.brix_range.0|floatformat:2 }} &ndash; {{ cal.analyte_calibration.brix_range.1|floatformat:2 }} °Brix</dd>
+                        <dt class="col-sm-5">R&sup2; (CV):</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.r_squared_cv|floatformat:4 }}</dd>
+                        <dt class="col-sm-5">RMSE (CV):</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.rmse_cv|floatformat:4 }} °Brix</dd>
+                        <dt class="col-sm-5">RMSE (cal):</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.rmse_cal|floatformat:4 }} °Brix</dd>
                     </dl>
                     {% endif %}
                 </div>

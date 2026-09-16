@@ -30,6 +30,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import SpectralData, AnalysisProject, Report, ChatSession, SystemLog
 from .forms import UploadFileForm, AnalysisForm, ChatForm
+from agents.data_loader_agent import DataLoaderAgent
 from agents.spectral_analysis_agent import SpectralAnalysisAgent
 from agents.metadata_quality_agent import MetadataQualityAgent
 from agents.calibration_agent import CalibrationAgent
@@ -41,6 +42,7 @@ logger = logging.getLogger(__name__)
 
 
 # Initialize agents (singleton instances)
+data_loader_agent = DataLoaderAgent()
 spectral_agent = SpectralAnalysisAgent()
 metadata_agent = MetadataQualityAgent()
 calibration_agent = CalibrationAgent()
@@ -101,20 +103,32 @@ def upload_file(request):
                     for chunk in uploaded_file.chunks():
                         destination.write(chunk)
                 
-                # Parse the uploaded spectral file into wavelengths/intensities
-                # so the downstream analysis agents receive real data.
+                # Parse the uploaded spectral file via the Data Loader Agent,
+                # which runs on every new upload and returns the structured
+                # LoadResult (wavelengths, representative intensities, the full
+                # per-sample intensity matrix, metadata incl. Brix, and the
+                # detected spectrometer type).
                 wavelengths = []
                 intensities = []
                 spectrometer_type = form.cleaned_data.get('spectrometer_type', None)
                 try:
-                    loaded = asyncio.run(spectral_agent._load_spectral_data(file_path))
-                    wavelengths = loaded.wavelengths.tolist()
-                    intensities = loaded.intensities.tolist()
-                    # Merge metadata detected from the file (file comments, header cols)
+                    loaded = asyncio.run(data_loader_agent.load(file_path))
+                    wavelengths = list(loaded.wavelengths)
+                    intensities = list(loaded.intensities)
+                    # Merge metadata detected from the file (file comments, header
+                    # cols, Brix/Temp reference columns).
                     file_metadata = loaded.metadata or {}
                     if isinstance(file_metadata, dict):
                         for k, v in file_metadata.items():
                             metadata.setdefault(k, v)
+                    # Carry the full per-sample intensity matrix + spectral
+                    # column order + spectrometer info into metadata so the
+                    # calibration agent can build the NIR->Brix regression.
+                    if loaded.intensity_matrix:
+                        metadata['intensity_matrix'] = loaded.intensity_matrix
+                        metadata['spectral_columns'] = loaded.spectral_columns
+                    if loaded.spectrometer_info:
+                        metadata['spectrometer_info'] = loaded.spectrometer_info
                     if not spectrometer_type:
                         spectrometer_type = loaded.spectrometer_type
                 except Exception as pe:

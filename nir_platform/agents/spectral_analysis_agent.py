@@ -346,19 +346,50 @@ class SpectralAnalysisAgent:
             raise ValueError(f"Unsupported file format or corrupt file: {e}")
     
     @staticmethod
-    def _read_delimited(file_path: str, sep: Optional[str] = None) -> 'pd.DataFrame':
+    def _spectral_col_name_re() -> "re.Pattern":
+        return re.compile(r'([A-Z])_?(\d+(?:\.\d+)?)\s*[;,\t]')
+
+    @classmethod
+    def _find_wide_header_row(cls, file_path: str) -> int:
+        """Return the 0-based index of the wide-NIR spectral header row.
+
+        Wide-NIR exports (e.g. SparkFun Triad) are often prefixed with a
+        free-text description / blank lines before the actual column header
+        (Counter;Messobjekt;...;A_410;B_435;...). When pandas reads such a
+        file with the default header it treats the prose line as the column
+        names, so the A_410-style spectral columns are never found and the
+        loader silently falls through to two-column mode. Scan the file for
+        the first line that contains several spectral-style tokens and use
+        it as the header. Returns -1 when no such line is found.
+        """
+        pat = cls._spectral_col_name_re()
+        with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+            for idx, line in enumerate(f):
+                if len(pat.findall(line)) >= 2:
+                    return idx
+        return -1
+
+    @classmethod
+    def _read_delimited(cls, file_path: str, sep: Optional[str] = None) -> 'pd.DataFrame':
         """Read a delimited file trying several encodings.
 
         Spectrometer exports frequently use Latin-1 / Windows encodings
         (e.g. German umlauts in metadata columns), so try utf-8 first and
         fall back to latin-1 / cp1252 to avoid UnicodeDecodeError.
+
+        Wide-NIR exports often have a free-text preamble before the column
+        header; if a spectral header row is detected later in the file, it
+        is used as the pandas header (skiprows) so the A_410-style columns are
+        parsed correctly instead of being swallowed by the prose line.
         """
+        skip = cls._find_wide_header_row(file_path)
         last_exc = None
         for enc in ('utf-8', 'latin-1', 'cp1252'):
             try:
                 return pd.read_csv(
                     file_path, sep=sep, encoding=enc,
                     on_bad_lines='skip', dtype=str,
+                    skiprows=(skip if skip > 0 else None),
                 )
             except UnicodeDecodeError as e:
                 last_exc = e
@@ -468,13 +499,21 @@ class SpectralAnalysisAgent:
         with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
             lines = f.readlines()
         
-        # Detect delimiter from the first non-empty, non-comment line.
-        first_data_line = ""
-        for line in lines:
-            stripped = line.strip()
-            if stripped and not stripped.startswith('#'):
-                first_data_line = stripped
-                break
+        # Detect the wide-NIR spectral header row (if any) so the delimiter
+        # is taken from the real column header rather than from a free-text
+        # preamble line that precedes it (e.g. a German description paragraph
+        # before the `Counter;...;A_410;...` header).
+        header_row_idx = self._find_wide_header_row(file_path)
+        if header_row_idx >= 0 and header_row_idx < len(lines):
+            first_data_line = lines[header_row_idx].strip()
+        else:
+            # Detect delimiter from the first non-empty, non-comment line.
+            first_data_line = ""
+            for line in lines:
+                stripped = line.strip()
+                if stripped and not stripped.startswith('#'):
+                    first_data_line = stripped
+                    break
         if not first_data_line:
             raise ValueError("No valid spectral data found in TXT file")
         

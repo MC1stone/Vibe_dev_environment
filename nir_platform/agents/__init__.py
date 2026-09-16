@@ -2,15 +2,17 @@
 NIR Intelligence Platform - Agents Package
 
 This package contains all specialized agents for the NIR Intelligence Platform:
+
 - MCP Server for orchestration
+- Data Loader Agent (ingests/parses every new upload)
 - Spectral Analysis Agent
 - Metadata Quality Agent
 - Calibration Agent
 - Reporting Agent
 - Quality Assurance Agent
 """
-
 from .mcp_server import MCPServer
+from .data_loader_agent import DataLoaderAgent
 from .spectral_analysis_agent import SpectralAnalysisAgent
 from .metadata_quality_agent import MetadataQualityAgent
 from .calibration_agent import CalibrationAgent
@@ -19,6 +21,7 @@ from .quality_assurance_agent import QualityAssuranceAgent
 
 __all__ = [
     'MCPServer',
+    'DataLoaderAgent',
     'SpectralAnalysisAgent',
     'MetadataQualityAgent',
     'CalibrationAgent',
