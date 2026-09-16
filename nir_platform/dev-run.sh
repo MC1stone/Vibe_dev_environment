@@ -3,10 +3,11 @@
 # NIR Intelligence Platform - Lokaler Entwicklungs-Server
 #
 # Stoppt die Docker-Container, die Port 8000 belegen und sich selbst
-# neu starten (nir_django, nir_mcp), laesst die Daten-Infrastruktur
-# (postgres, qdrant, ollama) laufen, bringt den Quellcode auf den
-# neuesten Stand des PR-Branches und startet den lokalen Django-Dev-Server
-# mit der fuer den Host korrekten DB-Konfiguration (DB_HOST=localhost).
+# neu starten (nir_django, nir_mcp), startet die Daten-Infrastruktur
+# (postgres, qdrant, ollama) per 'docker compose up -d', bringt den
+# Quellcode auf den neuesten Stand des PR-Branches und startet den
+# lokalen Django-Dev-Server mit der fuer den Host korrekten
+# DB-Konfiguration (DB_HOST=localhost).
 #
 # Nutzung:
 #   ./dev-run.sh                       # Default: PR-Branch, kein Reset
@@ -31,8 +32,13 @@ DO_PULL=1
 # Container, die den Dev-Server stoeren: belegen Port 8000 und starten
 # sich wegen restart: unless-stopped selbst wieder neu.
 STOP_CONTAINERS=(nir_django nir_mcp)
-# Container, die der lokale Dev-Server benoetigt - diese laufen weiter.
+# Daten-Infrastruktur, die der lokale Dev-Server benoetigt. Diese werden
+# per 'docker compose up -d' gestartet (auch wenn sie noch nicht existieren)
+# und laufen weiter, nachdem der Dev-Server beendet wurde.
+COMPOSE_DIR="$REPO_ROOT/nir_platform/docker"
 KEEP_CONTAINERS=(nir_postgres nir_qdrant nir_ollama)
+# Diese Services werden hochgefahren (postgres, qdrant, ollama).
+COMPOSE_SERVICES=(postgres qdrant ollama)
 
 # ---------------------------------------------------------------------
 # Argumente
@@ -106,20 +112,28 @@ for c in "${STOP_CONTAINERS[@]}"; do
 done
 
 # ---------------------------------------------------------------------
-# 3. Daten-Infrastruktur pruefen
+# 3. Daten-Infrastruktur starten (postgres, qdrant, ollama)
 # ---------------------------------------------------------------------
-log "Pruefe Daten-Container (postgres, qdrant, ollama)..."
-for c in "${KEEP_CONTAINERS[@]}"; do
-    if ! container_exists "$c"; then
-        warn "Container '$c' fehlt - starte ihn mit:"
-        warn "  cd nir_platform/docker && docker compose up -d $c"
-        continue
+log "Starte Daten-Container (postgres, qdrant, ollama) via docker compose..."
+if [ -f "$COMPOSE_DIR/docker-compose.yml" ]; then
+    cd "$COMPOSE_DIR"
+    # 'docker compose up -d' erstellt fehlende Container und startet
+    # gestoppte. Schraenkt auf die Daten-Services ein, damit der Dev-
+    # Server (django, mcp) nicht versehentlich mit gestartet wird.
+    if docker compose up -d "${COMPOSE_SERVICES[@]}" >/dev/null 2>&1; then
+        ok "Daten-Container gestartet (postgres, qdrant, ollama)."
+    else
+        warn "'docker compose up -d' fehlgeschlagen - versuche Container einzeln zu starten."
+        for c in "${KEEP_CONTAINERS[@]}"; do
+            if container_exists "$c" && ! docker ps --filter "name=^/$c$" --filter "status=running" | grep -q "$c"; then
+                docker start "$c" >/dev/null 2>&1 || warn "Konnte '$c' nicht starten."
+            fi
+        done
     fi
-    if ! docker ps --filter "name=^/$c$" --filter "status=running" | grep -q "$c"; then
-        warn "Container '$c' ist gestoppt - starte ihn..."
-        docker start "$c" >/dev/null 2>&1 || true
-    fi
-done
+    cd "$REPO_ROOT"
+else
+    warn "docker-compose.yml nicht gefunden unter $COMPOSE_DIR - übersprungen."
+fi
 
 # Warte kurz, bis postgres Verbindungen annimmt.
 if container_exists nir_postgres; then
@@ -131,6 +145,33 @@ if container_exists nir_postgres; then
         fi
         sleep 1
     done
+fi
+
+# Pruefe, ob Ollama erreichbar ist (der Chat-Bot braucht es).
+if container_exists nir_ollama; then
+    log "Pruefe Ollama auf http://localhost:11435 ..."
+    ollama_ok=0
+    for _ in $(seq 1 10); do
+        if curl -s --max-time 2 http://localhost:11435/api/tags >/dev/null 2>&1; then
+            ollama_ok=1
+            break
+        fi
+        sleep 1
+    done
+    if [ "$ollama_ok" -eq 1 ]; then
+        ok "Ollama ist erreichbar (http://localhost:11435)."
+        # Hinweis: Das Modell muss einmal gezogen worden sein.
+        if ! docker exec nir_ollama ollama list 2>/dev/null | grep -qi mistral; then
+            warn "Modell 'mistral' noch nicht in Ollama vorhanden."
+            warn "Ziehen mit:  docker exec -it nir_ollama ollama pull mistral"
+            warn "Danach ist der Chat-Bot einsatzbereit."
+        else
+            ok "Modell 'mistral' ist vorhanden - Chat-Bot einsatzbereit."
+        fi
+    else
+        warn "Ollama antwortet nicht auf Port 11435. Chat-Bot nutzt lokalen Fallback."
+        warn "Starte Ollama manuell:  docker start nir_ollama"
+    fi
 fi
 
 # ---------------------------------------------------------------------
