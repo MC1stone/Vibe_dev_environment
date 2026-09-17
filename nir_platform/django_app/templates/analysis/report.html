@@ -173,6 +173,10 @@
                 {% if analysis_pending %}
                 The analysis has not run yet. Open the analysis page to start it —
                 this report page will refresh itself while you wait.
+                {% elif last_analysis_error %}
+                The last analysis failed:
+                <pre class="mt-2 mb-0 text-danger" style="white-space: pre-wrap;">{{ last_analysis_error }}</pre>
+                Re-run the analysis to retry.
                 {% else %}
                 The analysis ran but produced no report (it may have failed, or
                 the report step errored). Re-run the analysis to produce one.

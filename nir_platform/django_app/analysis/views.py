@@ -473,6 +473,7 @@ def analysis_detail(request, analysis_id):
         Report.objects.filter(spectral_data=spectral_data).delete()
         spectral_data.is_processed = False
         spectral_data.processing_date = None
+        spectral_data.last_analysis_error = ''
         spectral_data.save()
         logger.info(
             f'Re-run requested for id={spectral_data.id}; resetting analysis.')
@@ -497,6 +498,7 @@ def analysis_detail(request, analysis_id):
         # Re-run the analysis with the enriched metadata.
         spectral_data.is_processed = False
         spectral_data.processing_date = None
+        spectral_data.last_analysis_error = ''
         spectral_data.save()
         logger.info(
             f'Metadata added by user for id={spectral_data.id}; re-running analysis.')
@@ -556,6 +558,7 @@ def analysis_detail(request, analysis_id):
                 )
                 spectral_data.is_processed = True
                 spectral_data.processing_date = django_timezone.now()
+                spectral_data.last_analysis_error = ''
                 spectral_data.save()
                 
                 # Generate and render the Quarto HTML report
@@ -612,8 +615,12 @@ def analysis_detail(request, analysis_id):
                 messages.error(request, f'Error performing analysis: {str(e)}')
                 # Mark as processed to avoid retrying the same failing analysis on
                 # every reload; user can re-upload a corrected file to retry.
+                # Record the failure so the UI can distinguish a failed run
+                # (is_processed=True + last_analysis_error set) from a
+                # successful one and show a Re-run affordance.
                 spectral_data.is_processed = True
                 spectral_data.processing_date = django_timezone.now()
+                spectral_data.last_analysis_error = str(e)[:2000]
                 spectral_data.save()
     
     # Get analysis results
@@ -679,12 +686,18 @@ def analysis_report(request, analysis_id):
     #    failed, or the report step errored). Offer an explicit re-run.
     if not report:
         analysis_pending = not spectral_data.is_processed
+        last_error = (spectral_data.last_analysis_error or '').strip()
         if analysis_pending:
             messages.info(
                 request,
                 'The analysis has not run yet. Open the analysis page to start '
                 'it (the report is generated automatically when it finishes); '
                 'this page will refresh itself while you wait.'
+            )
+        elif last_error:
+            messages.error(
+                request,
+                f'The last analysis failed: {last_error}. Re-run it to retry.'
             )
         else:
             messages.info(
@@ -700,6 +713,7 @@ def analysis_report(request, analysis_id):
                 'spectral_data': spectral_data,
                 'report': None,
                 'analysis_pending': analysis_pending,
+                'last_analysis_error': last_error,
             },
         )
 

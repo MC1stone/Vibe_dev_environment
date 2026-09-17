@@ -5,6 +5,16 @@
 
 {% block content %}
 <div class="fade-in">
+    {% if spectral_data.is_processed and spectral_data.last_analysis_error %}
+    <div class="alert alert-danger d-flex align-items-start" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+        <div>
+            <strong>The last analysis failed.</strong>
+            <pre class="mb-2 mt-2" style="white-space: pre-wrap;">{{ spectral_data.last_analysis_error }}</pre>
+            Use the Re-run Analysis button to retry once the underlying issue is fixed.
+        </div>
+    </div>
+    {% endif %}
     <div class="row mb-4">
         <div class="col-12">
             <nav aria-label="breadcrumb">
@@ -58,9 +68,13 @@
                         
                         <dt class="col-sm-4">Status:</dt>
                         <dd class="col-sm-8">
-                            <span class="badge bg-{% if spectral_data.is_processed %}success{% else %}warning{% endif %}">
-                                {% if spectral_data.is_processed %}Processed{% else %}Pending{% endif %}
-                            </span>
+                            {% if spectral_data.is_processed and spectral_data.last_analysis_error %}
+                                <span class="badge bg-danger">Failed</span>
+                            {% elif spectral_data.is_processed %}
+                                <span class="badge bg-success">Processed</span>
+                            {% else %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% endif %}
                         </dd>
                     </dl>
                 </div>
