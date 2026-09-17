@@ -8,6 +8,7 @@ import json
 import logging
 import uuid
 from datetime import datetime
+from django.utils import timezone as django_timezone
 from typing import Any, Dict
 import asyncio
 
@@ -554,7 +555,7 @@ def analysis_detail(request, analysis_id):
                     (spectral_data.calibration_quality_score or 0) * 0.3
                 )
                 spectral_data.is_processed = True
-                spectral_data.processing_date = datetime.now()
+                spectral_data.processing_date = django_timezone.now()
                 spectral_data.save()
                 
                 # Generate and render the Quarto HTML report
@@ -591,7 +592,7 @@ def analysis_detail(request, analysis_id):
                     html_content=html_content,
                     python_source=json.dumps(report_dict.get('python_source', []), indent=2, default=str),
                     is_generated=bool(html_content),
-                    generation_date=datetime.now()
+                    generation_date=django_timezone.now()
                 )
                 report.save()
                 
@@ -612,7 +613,7 @@ def analysis_detail(request, analysis_id):
                 # Mark as processed to avoid retrying the same failing analysis on
                 # every reload; user can re-upload a corrected file to retry.
                 spectral_data.is_processed = True
-                spectral_data.processing_date = datetime.now()
+                spectral_data.processing_date = django_timezone.now()
                 spectral_data.save()
     
     # Get analysis results

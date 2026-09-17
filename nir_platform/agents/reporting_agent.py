@@ -853,10 +853,19 @@ STANDARDS = {
         quarto_bin = shutil.which("quarto")
         if quarto_bin:
             try:
+                # Quarto runs a Python kernel to execute ```{python}`` cells;
+                # by default it picks the system /usr/bin/python3, which usually
+                # lacks jupyter/nbformat and matplotlib. Pin it to the *current*
+                # interpreter (the project venv) so the kernel can import the
+                # same deps as the app. Still requires jupyter in that venv.
+                import sys
+                env = dict(os.environ)
+                env.setdefault("QUARTO_PYTHON", sys.executable)
                 proc = await asyncio.create_subprocess_exec(
                     quarto_bin, "render", quarto_file, "--to", "html",
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
+                    env=env,
                 )
                 _stdout, stderr = await proc.communicate()
                 if proc.returncode == 0 and os.path.exists(html_file):
