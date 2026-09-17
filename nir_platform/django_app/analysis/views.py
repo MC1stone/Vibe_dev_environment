@@ -115,13 +115,31 @@ def analyses_overview(request):
     """
     qs = SpectralData.objects.all().order_by('-upload_date')
     rows = [(_spectral_data_brief(sd), sd) for sd in qs]
-    # Index all of them into the vector DB so the search/comparison works
-    # even if the index was empty (e.g. after a DB restore).
+    # Ensure every analysis has a fingerprint in the vector DB so the
+    # search/comparison works, but only index the ones that are NOT yet
+    # indexed. Re-upserting all of them on every page load caused a burst
+    # of Qdrant PUTs on each refresh; is_indexed() skips already-stored
+    # points. For multi-sample uploads whose flattened 'intensities' list
+    # is empty, fall back to the column-wise mean of the per-sample
+    # intensity_matrix so they still get a representative fingerprint.
+    import numpy as _np
+    already_indexed = spectral_search_agent.indexed_analysis_ids()
     for brief, sd in rows:
         try:
+            if str(brief['id']) in already_indexed:
+                continue
+            ints = sd.intensities or []
+            if not ints:
+                matrix = (sd.metadata or {}).get('intensity_matrix')
+                if matrix:
+                    try:
+                        ints = _np.nanmean(_np.array(matrix, dtype=float), axis=0)
+                        ints = [float(v) if _np.isfinite(v) else 0.0 for v in ints]
+                    except Exception:
+                        ints = []
             spectral_search_agent.index_analysis(
                 analysis_id=brief['id'],
-                intensities=sd.intensities or [],
+                intensities=ints,
                 metadata=sd.metadata or {},
                 original_filename=sd.original_filename,
                 spectrometer_type=sd.spectrometer_type or '',

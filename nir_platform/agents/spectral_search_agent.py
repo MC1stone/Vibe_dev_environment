@@ -160,6 +160,49 @@ class SpectralSearchAgent:
     # ------------------------------------------------------------------
     # Indexing
     # ------------------------------------------------------------------
+    def is_indexed(self, analysis_id: str) -> bool:
+        """Return True if a fingerprint for analysis_id is already stored."""
+        return str(analysis_id) in self.indexed_analysis_ids()
+
+    def indexed_analysis_ids(self) -> set:
+        """Return the set of analysis_ids already in the index.
+
+        Used by the overview page to skip re-upserting analyses that are
+        already indexed, avoiding a full re-index (and its Qdrant PUT
+        flood) on every page load. Qdrant scrolls all NIR collections once
+        and unions their analysis_id payloads; the numpy backend returns
+        its in-process keys.
+        """
+        ids: set = set()
+        if self._client is not None:
+            try:
+                cols = [c.name for c in self._client.get_collections().collections]
+                for name in cols:
+                    if not name.startswith(COLLECTION_PREFIX):
+                        continue
+                    offset = None
+                    while True:
+                        points, offset = self._client.scroll(
+                            collection_name=name,
+                            offset=offset,
+                            limit=256,
+                            with_payload=True,
+                            with_vectors=False,
+                        )
+                        if not points:
+                            break
+                        for p in points:
+                            pl = p.payload or {}
+                            aid = pl.get("analysis_id") or str(p.id)
+                            if aid:
+                                ids.add(str(aid))
+                        if offset is None:
+                            break
+            except Exception:
+                pass
+        ids.update(str(k) for k in self._numpy_index.keys())
+        return ids
+
     def index_analysis(
         self,
         analysis_id: str,
