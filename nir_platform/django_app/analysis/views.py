@@ -670,16 +670,28 @@ def analysis_report(request, analysis_id):
     spectral_data = get_object_or_404(SpectralData, pk=analysis_id)
     report = Report.objects.filter(spectral_data=spectral_data).first()
 
-    # No report row yet: the analysis failed before generating one, or a
-    # re-run is in progress and the browser raced ahead. Show a clear
-    # 'not generated yet' page instead of a 404.
+    # No report row yet. Two cases:
+    #  * is_processed=False -> the analysis has not run yet (or a re-run is
+    #    pending). The detail page runs the pipeline on a GET and creates the
+    #    Report row; tell the user to open it (the auto-refresh will then flip
+    #    to the report once the row appears).
+    #  * is_processed=True  -> the analysis ran but produced no report (it
+    #    failed, or the report step errored). Offer an explicit re-run.
     if not report:
-        messages.info(
-            request,
-            'The report for this analysis has not been generated yet. '
-            'Re-run the analysis (or wait for the current run to finish) to '
-            'produce it.'
-        )
+        analysis_pending = not spectral_data.is_processed
+        if analysis_pending:
+            messages.info(
+                request,
+                'The analysis has not run yet. Open the analysis page to start '
+                'it (the report is generated automatically when it finishes); '
+                'this page will refresh itself while you wait.'
+            )
+        else:
+            messages.info(
+                request,
+                'The analysis ran but produced no report (it may have failed, '
+                'or the report step errored). Re-run the analysis to produce one.'
+            )
         return render(
             request,
             'analysis/report.html',
@@ -687,6 +699,7 @@ def analysis_report(request, analysis_id):
                 'page_title': f'Report: {spectral_data.original_filename}',
                 'spectral_data': spectral_data,
                 'report': None,
+                'analysis_pending': analysis_pending,
             },
         )
 
