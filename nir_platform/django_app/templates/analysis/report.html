@@ -173,6 +173,10 @@
                 The analysis may still be running, or it failed before generating a report.
                 Re-run the analysis to produce one.
             </p>
+            <div id="report-wait-status" class="text-muted small mb-3">
+                <span class="spinner-border spinner-border-sm" role="status"></span>
+                Waiting for the report to be generated&hellip; this page will refresh automatically.
+            </div>
             <form method="post" action="{% url 'analysis_detail' spectral_data.id %}">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="rerun_analysis">
@@ -208,5 +212,38 @@
             }
         });
     });
+
+    {% if not report %}
+    // The report row does not exist yet: the analysis is likely still
+    // running (the browser raced ahead). Poll the same URL and reload once
+    // the report appears, so the user doesn't have to refresh by hand.
+    (function () {
+        var REFRESH_MS = 5000;          // poll interval
+        var MAX_POLLS = 36;             // ~3 minutes, then stop auto-reloading
+        var key = 'report_poll_' + '{{ spectral_data.id }}';
+        var polls = parseInt(sessionStorage.getItem(key) || '0', 10) || 0;
+
+        function setStatus(msg, isDone) {
+            var el = document.getElementById('report-wait-status');
+            if (!el) return;
+            el.innerHTML = isDone
+                ? msg
+                : '<span class="spinner-border spinner-border-sm" role="status"></span> ' + msg;
+        }
+
+        if (polls >= MAX_POLLS) {
+            setStatus('The report still has not appeared after several tries. ' +
+                      'Re-run the analysis or check the server logs for a failure.', true);
+            sessionStorage.removeItem(key);
+            return;
+        }
+
+        sessionStorage.setItem(key, String(polls + 1));
+        setStatus('Waiting for the report to be generated&hellip; (attempt ' +
+                  (polls + 1) + '/' + MAX_POLLS + ') this page will refresh automatically.');
+
+        setTimeout(function () { window.location.reload(); }, REFRESH_MS);
+    })();
+    {% endif %}
 </script>
 {% endblock %}
