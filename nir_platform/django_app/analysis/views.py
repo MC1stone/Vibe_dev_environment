@@ -39,6 +39,7 @@ from agents.metadata_quality_agent import MetadataQualityAgent
 from agents.calibration_agent import CalibrationAgent
 from agents.reporting_agent import ReportingAgent
 from agents.quality_assurance_agent import QualityAssuranceAgent
+from agents.hardware_info_agent import HardwareInfoAgent
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -52,6 +53,7 @@ metadata_agent = MetadataQualityAgent()
 calibration_agent = CalibrationAgent()
 reporting_agent = ReportingAgent()
 qa_agent = QualityAssuranceAgent()
+hardware_info_agent = HardwareInfoAgent()
 
 
 def home(request):
@@ -405,6 +407,27 @@ async def analyze_spectral_data(spectral_data: SpectralData):
         # Run spectral analysis
         spectral_result = await spectral_agent.analyze_spectral_data(data=data_dict)
         
+        # Collect / consolidate hardware information about the spectrometer
+        # that produced this measurement. Runs after spectral analysis (which
+        # detects the spectrometer type) so it can reuse the detected
+        # spectrometer_info, then merges the knowledge base, the file header
+        # metadata, and spectral-derived characteristics. Failures here must
+        # never break the analysis pipeline.
+        try:
+            spec_info = (spectral_result.to_dict()
+                         .get('original_data', {}).get('metadata', {})
+                         .get('spectrometer_info', {})) or {}
+            hardware_info = await hardware_info_agent.collect_hardware_info(
+                spectrometer_type=spectral_data.spectrometer_type or spec_info.get('type'),
+                wavelengths=spectral_data.wavelengths or [],
+                intensities=spectral_data.intensities or [],
+                metadata=spectral_data.metadata or {},
+                spectrometer_info=spec_info,
+            )
+        except Exception as hie:
+            logger.warning(f'Hardware info collection failed (non-fatal): {hie}')
+            hardware_info = None
+        
         # Run metadata quality assessment. Merge the structured header
         # metadata extracted by the Data Loader Agent so the metadata agent
         # grades on the real extracted fields, not just the raw columns.
@@ -429,7 +452,8 @@ async def analyze_spectral_data(spectral_data: SpectralData):
         report = await reporting_agent.generate_spectral_analysis_report(
             spectral_result.to_dict(),
             metadata_result.to_dict(),
-            calibration_result.to_dict()
+            calibration_result.to_dict(),
+            hardware_info=hardware_info.to_dict() if hardware_info else None,
         )
         
         # Index the spectral fingerprint in the vector DB (Qdrant / numpy)
@@ -453,6 +477,7 @@ async def analyze_spectral_data(spectral_data: SpectralData):
             'metadata_result': metadata_result.to_dict(),
             'calibration_result': calibration_result.to_dict(),
             'qa_result': qa_result.to_dict(),
+            'hardware_info': hardware_info.to_dict() if hardware_info else {},
             'report': report
         }
         
@@ -534,6 +559,13 @@ def analysis_detail(request, analysis_id):
                 
                 # Save results
                 spectral_data.analysis_results = results.get('spectral_result', {})
+                # Persist the consolidated hardware info (collected by the
+                # HardwareInfoAgent) inside analysis_results so the dedicated
+                # /analysis/<id>/hardware/ page can render it without re-running.
+                ar = spectral_data.analysis_results or {}
+                if isinstance(ar, dict):
+                    ar['hardware_info'] = results.get('hardware_info', {})
+                    spectral_data.analysis_results = ar
                 spectral_data.calibration_results = results.get('calibration_result', {})
                 # Keep the full standards-compliance assessment for reference,
                 # but the headline metadata quality score is the Data Loader
@@ -736,6 +768,44 @@ def analysis_report(request, analysis_id):
     }
 
     return render(request, 'analysis/report.html', context)
+
+
+def analysis_hardware(request, analysis_id):
+    """Hardware information view.
+
+    Surfaces all collected hardware information about the spectrometer / sensor
+    that produced this analysis, as consolidated by the HardwareInfoAgent. The
+    data is read from the persisted analysis_results['hardware_info']; if that
+    is absent (e.g. an analysis run before the agent existed) it is collected
+    on the fly so the page always works.
+    """
+    spectral_data = get_object_or_404(SpectralData, pk=analysis_id)
+
+    ar = spectral_data.analysis_results or {}
+    hardware_info = ar.get('hardware_info') if isinstance(ar, dict) else None
+    if not hardware_info:
+        # Collect on the fly from the persisted spectral data + metadata so
+        # older analyses (pre-HardwareInfoAgent) still show hardware info.
+        try:
+            spec_info = (spectral_data.metadata or {}).get('spectrometer_info', {}) or {}
+            hi = asyncio.run(hardware_info_agent.collect_hardware_info(
+                spectrometer_type=spectral_data.spectrometer_type or spec_info.get('type'),
+                wavelengths=spectral_data.wavelengths or [],
+                intensities=spectral_data.intensities or [],
+                metadata=spectral_data.metadata or {},
+                spectrometer_info=spec_info,
+            ))
+            hardware_info = hi.to_dict()
+        except Exception as e:
+            logger.warning(f'On-the-fly hardware info collection failed: {e}')
+            hardware_info = {}
+
+    context = {
+        'page_title': f'Hardware: {spectral_data.original_filename}',
+        'spectral_data': spectral_data,
+        'hardware_info': hardware_info or {},
+    }
+    return render(request, 'analysis/hardware.html', context)
 
 
 def download_analysis(request, analysis_id):

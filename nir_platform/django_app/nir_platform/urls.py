@@ -21,6 +21,7 @@ urlpatterns = [
     path('analysis/<uuid:analysis_id>/', views.analysis_detail, name='analysis_detail'),
     path('analysis/<uuid:analysis_id>/delete/', views.delete_analysis, name='delete_analysis'),
     path('analysis/<uuid:analysis_id>/report/', views.analysis_report, name='analysis_report'),
+    path('analysis/<uuid:analysis_id>/hardware/', views.analysis_hardware, name='analysis_hardware'),
     path('analysis/<uuid:analysis_id>/download/', views.download_analysis, name='download_analysis'),
     path('chat/', views.chat_interface, name='chat_interface'),
     path('chat/<uuid:analysis_id>/', views.chat_interface, name='chat_interface'),

@@ -20,6 +20,7 @@ from .metadata_quality_agent import MetadataQualityAgent
 from .calibration_agent import CalibrationAgent
 from .reporting_agent import ReportingAgent
 from .quality_assurance_agent import QualityAssuranceAgent
+from .hardware_info_agent import HardwareInfoAgent
 
 __all__ = [
     'MCPServer',
@@ -30,4 +31,5 @@ __all__ = [
     'CalibrationAgent',
     'ReportingAgent',
     'QualityAssuranceAgent',
+    'HardwareInfoAgent',
 ]

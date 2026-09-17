@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+
+{% block title %}{{ page_title|default:"Hardware Information" }}{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'analysis_detail' spectral_data.id %}">{{ spectral_data.original_filename|truncatechars:30 }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Hardware</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="bi bi-cpu"></i> Hardware Information</h2>
+            <p class="text-muted">All available information about the spectrometer / sensor used in this analysis, consolidated by the Hardware Information Agent.</p>
+        </div>
+    </div>
+
+    {% if hardware_info and hardware_info.spectrometer_type %}
+    <!-- Summary header card -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="bi bi-card-list"></i> Device Summary</h4>
+            <span class="badge bg-{% if hardware_info.spectrometer_type_confidence == 'high' %}success{% elif hardware_info.spectrometer_type_confidence == 'medium' %}warning{% else %}danger{% endif %}">
+                Detection: {{ hardware_info.spectrometer_type_confidence|title }}
+            </span>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Spectrometer type</dt>
+                <dd class="col-sm-8"><code>{{ hardware_info.spectrometer_type }}</code></dd>
+
+                {% if hardware_info.manufacturer %}
+                <dt class="col-sm-4">Manufacturer</dt>
+                <dd class="col-sm-8">{{ hardware_info.manufacturer }}</dd>
+                {% endif %}
+
+                {% if hardware_info.model %}
+                <dt class="col-sm-4">Model</dt>
+                <dd class="col-sm-8">{{ hardware_info.model }}</dd>
+                {% endif %}
+
+                {% if hardware_info.detector %}
+                <dt class="col-sm-4">Detector / Sensor</dt>
+                <dd class="col-sm-8">{{ hardware_info.detector }}</dd>
+                {% endif %}
+
+                {% if hardware_info.light_source %}
+                <dt class="col-sm-4">Light source</dt>
+                <dd class="col-sm-8">{{ hardware_info.light_source }}</dd>
+                {% endif %}
+
+                {% if hardware_info.wavelength_range %}
+                <dt class="col-sm-4">Wavelength range</dt>
+                <dd class="col-sm-8">{{ hardware_info.wavelength_range|first }}&ndash;{{ hardware_info.wavelength_range|last }} nm</dd>
+                {% endif %}
+
+                {% if hardware_info.resolution_nm is not None %}
+                <dt class="col-sm-4">Resolution</dt>
+                <dd class="col-sm-8">{{ hardware_info.resolution_nm|floatformat:2 }} nm</dd>
+                {% endif %}
+
+                {% if hardware_info.num_channels %}
+                <dt class="col-sm-4">Channels</dt>
+                <dd class="col-sm-8">{{ hardware_info.num_channels }}</dd>
+                {% endif %}
+
+                {% if hardware_info.num_data_points %}
+                <dt class="col-sm-4">Data points (measured)</dt>
+                <dd class="col-sm-8">{{ hardware_info.num_data_points }}</dd>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    <!-- Measurement parameters -->
+    {% if hardware_info.integration_time or hardware_info.scans_to_average or hardware_info.gain or hardware_info.firmware_version or hardware_info.serial_number %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0"><i class="bi bi-sliders"></i> Measurement Parameters</h4>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                {% if hardware_info.integration_time %}
+                <dt class="col-sm-4">Integration time</dt>
+                <dd class="col-sm-8">
+                    {% if hardware_info.integration_time|length >= 2 %}
+                        {{ hardware_info.integration_time|slice:":1"|first|default_if_none:"" }}&ndash;{{ hardware_info.integration_time|slice:"1:2"|first|default_if_none:"" }} ms
+                    {% else %}
+                        {{ hardware_info.integration_time }}
+                    {% endif %}
+                </dd>
+                {% endif %}
+                {% if hardware_info.scans_to_average %}
+                <dt class="col-sm-4">Scans to average</dt>
+                <dd class="col-sm-8">{{ hardware_info.scans_to_average }}</dd>
+                {% endif %}
+                {% if hardware_info.gain %}
+                <dt class="col-sm-4">Gain</dt>
+                <dd class="col-sm-8">{{ hardware_info.gain }}</dd>
+                {% endif %}
+                {% if hardware_info.firmware_version %}
+                <dt class="col-sm-4">Firmware version</dt>
+                <dd class="col-sm-8">{{ hardware_info.firmware_version }}</dd>
+                {% endif %}
+                {% if hardware_info.serial_number %}
+                <dt class="col-sm-4">Serial number</dt>
+                <dd class="col-sm-8"><code>{{ hardware_info.serial_number }}</code></dd>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Features & calibration -->
+    {% if hardware_info.features or hardware_info.calibration_points %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0"><i class="bi bi-stars"></i> Features &amp; Calibration</h4>
+        </div>
+        <div class="card-body">
+            {% if hardware_info.features %}
+            <h6>Device features</h6>
+            <ul>
+                {% for f in hardware_info.features %}
+                <li>{{ f|title }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% if hardware_info.calibration_points %}
+            <h6>Recommended calibration points</h6>
+            <p>{{ hardware_info.calibration_points|join:", " }} nm</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- DIY build info -->
+    {% if hardware_info.diy_components %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0"><i class="bi bi-tools"></i> DIY Build</h4>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Components</dt>
+                <dd class="col-sm-8">{{ hardware_info.diy_components|join:", " }}</dd>
+                {% if hardware_info.cost %}
+                <dt class="col-sm-4">Estimated cost</dt>
+                <dd class="col-sm-8">{{ hardware_info.cost }}</dd>
+                {% endif %}
+                {% if hardware_info.difficulty %}
+                <dt class="col-sm-4">Difficulty</dt>
+                <dd class="col-sm-8">{{ hardware_info.difficulty|title }}</dd>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Field provenance table -->
+    {% if hardware_info.fields %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0"><i class="bi bi-info-circle"></i> Field Provenance</h4>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">Where each value came from and how confident it is.</p>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value</th>
+                            <th>Source</th>
+                            <th>Confidence</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in hardware_info.fields %}
+                        <tr>
+                            <td><code>{{ f.name }}</code></td>
+                            <td>{{ f.value }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ f.source|title }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if f.confidence == 'high' %}success{% elif f.confidence == 'medium' %}warning{% else %}danger{% endif %}">{{ f.confidence|title }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if hardware_info.notes %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0"><i class="bi bi-journal-text"></i> Notes</h4>
+        </div>
+        <div class="card-body">
+            <p class="mb-0">{{ hardware_info.notes }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5 text-muted">
+            <i class="bi bi-question-circle" style="font-size: 4rem;"></i>
+            <h5 class="mt-3">No hardware information available</h5>
+            <p>Run the analysis to let the Hardware Information Agent collect hardware details from the spectral data and file header.</p>
+            <form method="post" action="{% url 'analysis_detail' spectral_data.id %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="rerun_analysis">
+                <button type="submit" class="btn btn-warning">
+                    <i class="bi bi-arrow-repeat"></i> Re-run Analysis
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Back to Analysis -->
+    <div class="card">
+        <div class="card-body text-center">
+            <a href="{% url 'analysis_detail' spectral_data.id %}" class="btn btn-primary">
+                <i class="bi bi-arrow-left"></i> Back to Analysis Details
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

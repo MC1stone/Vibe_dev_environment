@@ -129,8 +129,14 @@ class ReportingAgent:
                                                 analysis_result: Dict,
                                                 metadata_quality: Dict,
                                                 calibration_result: Dict,
-                                                output_dir: str = "reports") -> QuartoReport:
-        """Generate comprehensive spectral analysis report."""
+                                                output_dir: str = "reports",
+                                                hardware_info: Optional[Dict] = None) -> QuartoReport:
+        """Generate comprehensive spectral analysis report.
+
+        ``hardware_info`` (collected by the HardwareInfoAgent) is optional;
+        when present a Hardware Information section is appended to the
+        report so the spectrometer provenance travels with the report.
+        """
         logger.info("Generating spectral analysis report")
         
         report = QuartoReport(
@@ -526,6 +532,17 @@ are included with this report for reproducibility and further analysis.
             content=conclusion_content
         ))
         
+        # Hardware Information section (optional): surface the consolidated
+        # spectrometer / sensor info collected by the HardwareInfoAgent so the
+        # report records what hardware produced the data.
+        if hardware_info:
+            hw_content = self._generate_hardware_content(hardware_info)
+            if hw_content:
+                report.sections.append(ReportSection(
+                    title="Hardware Information",
+                    content=hw_content
+                ))
+        
         # Add Python source code
         report.python_source = self._generate_analysis_source_code(
             analysis_result, metadata_quality, calibration_result
@@ -547,10 +564,19 @@ are included with this report for reproducibility and further analysis.
                                      orig_int: List[float],
                                      proc_wl: List[float],
                                      proc_int: List[float]) -> str:
-        """Generate Python code for spectral plot."""
+        """Generate Python code for spectral plot.
+
+        The cell is executed by the Quarto jupyter kernel (and by the
+        in-process fallback). It must NOT call plt.show() (the Agg backend
+        is non-interactive and Quarto captures the figure itself) nor
+        plt.savefig() to a hard-coded path (that litters a file in the CWD
+        and can fail on a read-only working dir). Quarto renders the last
+        figure produced in the cell automatically.
+        """
         code = f"""
 import matplotlib.pyplot as plt
 import numpy as np
+plt.close('all')
 
 # Data
 original_wavelengths = {orig_wl}
@@ -558,31 +584,27 @@ original_intensities = {orig_int}
 processed_wavelengths = {proc_wl}
 processed_intensities = {proc_int}
 
-# Create figure
-fig, ax = plt.subplots(figsize=(12, 6))
-
-# Plot original spectrum
-ax.plot(original_wavelengths, original_intensities, 
-        label='Original Spectrum', alpha=0.7, linewidth=1)
-
-# Plot processed spectrum
-ax.plot(processed_wavelengths, processed_intensities, 
-        label='Processed Spectrum', linewidth=2, color='red')
-
-# Formatting
-ax.set_xlabel('Wavelength (nm)', fontsize=12)
-ax.set_ylabel('Intensity (a.u.)', fontsize=12)
-ax.set_title('Original vs Processed NIR Spectrum', fontsize=14)
-ax.legend(fontsize=10)
-ax.grid(True, alpha=0.3)
-
-# Highlight NIR region
-ax.axvspan(700, 1100, color='yellow', alpha=0.1, label='NIR Region')
-
-plt.tight_layout()
-plt.savefig('spectrum_comparison.png', dpi=300)
-plt.show()
-        """
+if not original_wavelengths and not processed_wavelengths:
+    fig, ax = plt.subplots(figsize=(7, 2))
+    ax.text(0.5, 0.5, 'Spectral plot unavailable (no wavelength data)',
+            ha='center', va='center', transform=ax.transAxes, color='#888')
+    ax.axis('off')
+else:
+    fig, ax = plt.subplots(figsize=(12, 6))
+    if original_wavelengths:
+        ax.plot(original_wavelengths, original_intensities,
+                label='Original Spectrum', alpha=0.7, linewidth=1)
+    if processed_wavelengths:
+        ax.plot(processed_wavelengths, processed_intensities,
+                label='Processed Spectrum', linewidth=2, color='red')
+    ax.set_xlabel('Wavelength (nm)', fontsize=12)
+    ax.set_ylabel('Intensity (a.u.)', fontsize=12)
+    ax.set_title('Original vs Processed NIR Spectrum', fontsize=14)
+    ax.legend(fontsize=10)
+    ax.grid(True, alpha=0.3)
+    ax.axvspan(700, 1100, color='yellow', alpha=0.1, label='NIR Region')
+    plt.tight_layout()
+"""
         return code
     
     def _generate_analysis_source_code(self, 
@@ -1035,6 +1057,70 @@ STANDARDS = {
             logger.warning(f"Plot code execution failed: {e}")
             plt.close("all")
         return None
+
+    @staticmethod
+    def _generate_hardware_content(hardware_info: Dict) -> str:
+        """Render the consolidated hardware info as a Markdown section."""
+        if not hardware_info or not hardware_info.get("spectrometer_type"):
+            return ""
+        lines = ["## Hardware Information", ""]
+        lines.append(
+            "All available information about the spectrometer / sensor that "
+            "produced this measurement, consolidated by the Hardware "
+            "Information Agent from spectral detection, the known-device "
+            "knowledge base, the uploaded file header, and spectral-derived "
+            "characteristics.")
+        lines.append("")
+        spec_type = hardware_info.get("spectrometer_type", "unknown")
+        conf = hardware_info.get("spectrometer_type_confidence", "low")
+        lines.append(f"- **Detected spectrometer type**: `{spec_type}` "
+                     f"(confidence: {conf})")
+        for label, key in [
+            ("Manufacturer", "manufacturer"), ("Model", "model"),
+            ("Detector / sensor", "detector"), ("Light source", "light_source"),
+        ]:
+            v = hardware_info.get(key)
+            if v:
+                lines.append(f"- **{label}**: {v}")
+        wr = hardware_info.get("wavelength_range") or []
+        if wr and len(wr) >= 2:
+            lines.append(f"- **Wavelength range**: {wr[0]:.1f}\u2013{wr[1]:.1f} nm")
+        if hardware_info.get("resolution_nm") is not None:
+            lines.append(f"- **Resolution**: {float(hardware_info['resolution_nm']):.2f} nm")
+        if hardware_info.get("num_channels"):
+            lines.append(f"- **Channels**: {hardware_info['num_channels']}")
+        if hardware_info.get("num_data_points"):
+            lines.append(f"- **Data points (measured)**: {hardware_info['num_data_points']}")
+        it = hardware_info.get("integration_time")
+        if it:
+            lines.append(f"- **Integration time**: {it}")
+        sa = hardware_info.get("scans_to_average")
+        if sa:
+            lines.append(f"- **Scans to average**: {sa}")
+        sn = hardware_info.get("serial_number")
+        if sn:
+            lines.append(f"- **Serial number**: `{sn}`")
+        fw = hardware_info.get("firmware_version")
+        if fw:
+            lines.append(f"- **Firmware version**: {fw}")
+        feats = hardware_info.get("features") or []
+        if feats:
+            lines.append(f"- **Features**: {', '.join(f.title() for f in feats)}")
+        cp = hardware_info.get("calibration_points") or []
+        if cp:
+            lines.append(f"- **Recommended calibration points**: {', '.join(str(p) for p in cp)} nm")
+        comps = hardware_info.get("diy_components") or []
+        if comps:
+            lines.append(f"- **DIY components**: {', '.join(comps)}")
+            if hardware_info.get("cost"):
+                lines.append(f"- **Estimated cost**: {hardware_info['cost']}")
+            if hardware_info.get("difficulty"):
+                lines.append(f"- **Difficulty**: {hardware_info['difficulty'].title()}")
+        notes = hardware_info.get("notes")
+        if notes:
+            lines.append("")
+            lines.append(f"_{notes}_")
+        return "\n".join(lines)
 
     def _generate_calibration_plot_code(self, analyte_cal: Dict,
                                         analysis_result: Dict) -> str:
