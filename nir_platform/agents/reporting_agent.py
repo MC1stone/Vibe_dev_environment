@@ -833,7 +833,11 @@ STANDARDS = {
         for i, source in enumerate(report.python_source, 1):
             lines.append(f"## Source File {i}")
             lines.append("")
-            lines.append("```{python}")
+            # Display-only: the appendix is documentation/template code
+            # with undefined functions and a __main__ block, so it must NOT
+            # be executed by the Quarto jupyter kernel (it would NameError).
+            # ```{.python eval=false} renders the code without running it.
+            lines.append("```{.python eval=false}")
             lines.append(source)
             lines.append("```")
             lines.append("")
@@ -1021,15 +1025,33 @@ else:
         
         # Convert Quarto python code fences ```{python} ... ``` to standard ```python
         body = re.sub(r"```\{python\}", "```python", body)
-        
+
+        import html as html_mod
+        import uuid as _uuid
+        cal_data = report.metadata.get('cal_plot_data') if report else None
+        _plot_placeholders: Dict[str, str] = {}
+
+        # Display-only Quarto fences (```{.python eval=false}) are
+        # documentation/template source, not executable plots: render them
+        # as escaped code blocks WITHOUT executing (they contain undefined
+        # functions / a __main__ block that would NameError).
+        def _replace_display_block(match: "re.Match") -> str:
+            code = match.group(1)
+            escaped = html_mod.escape(code)
+            token = f"DISPPH{_uuid.uuid4().hex}DISPPH"
+            _plot_placeholders[token] = (
+                "<details class=\"code-details\"><summary>"
+                "Show Python source</summary><pre><code class=\"language-python\">"
+                f"{escaped}</code></pre></details>")
+            return token
+        body = re.sub(r"```\{\.python\s+eval=false\}\n(.*?)```",
+                      _replace_display_block, body, flags=re.DOTALL)
+
         # Execute matplotlib plot code blocks and replace them with an
         # embedded base64 PNG figure, keeping the source in a collapsible
         # <details> block so graphs render without the Quarto CLI.
         # The injected HTML is stored via placeholder tokens so the later
         # text-escaping pass (markdown fallback) cannot escape the tags.
-        import html as html_mod
-        import uuid as _uuid
-
         cal_data = report.metadata.get('cal_plot_data') if report else None
         _plot_placeholders: Dict[str, str] = {}
 
