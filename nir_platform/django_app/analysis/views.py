@@ -45,11 +45,15 @@ from agents.hardware_info_agent import HardwareInfoAgent
 logger = logging.getLogger(__name__)
 
 
-# Initialize agents (singleton instances)
+# Initialize agents (singleton instances). Ollama runs on the port
+# configured in settings.AGENT_CONFIG (11435 in the dev container, not
+# the library default 11434); pass it explicitly so the agents talk to
+# the running server instead of falling back to local canned replies.
+_OLLAMA_URL = settings.AGENT_CONFIG.get('ollama_url', 'http://localhost:11435')
 data_loader_agent = DataLoaderAgent()
-spectral_agent = SpectralAnalysisAgent()
+spectral_agent = SpectralAnalysisAgent(ollama_url=_OLLAMA_URL)
 spectral_search_agent = SpectralSearchAgent()
-metadata_agent = MetadataQualityAgent()
+metadata_agent = MetadataQualityAgent(ollama_url=_OLLAMA_URL)
 calibration_agent = CalibrationAgent()
 reporting_agent = ReportingAgent()
 qa_agent = QualityAssuranceAgent()
@@ -137,6 +141,11 @@ def analyses_overview(request):
                         ints = [float(v) if _np.isfinite(v) else 0.0 for v in ints]
                     except Exception:
                         ints = []
+            if not ints:
+                # No usable spectrum (broken upload / no matrix). Skip
+                # silently rather than logging an 'empty intensities'
+                # warning on every overview page load.
+                continue
             spectral_search_agent.index_analysis(
                 analysis_id=brief['id'],
                 intensities=ints,
@@ -945,7 +954,7 @@ def chat_interface(request, analysis_id=None):
 
                 async def get_ai_response():
                     ollama_url = settings.AGENT_CONFIG.get(
-                        'ollama_url', 'http://localhost:11434')
+                        'ollama_url', 'http://localhost:11435')
                     model = os.environ.get('NIR_OLLAMA_MODEL', 'mistral')
                     system_prompt = (
                         "You are the NIR Intelligence Platform assistant, an expert "
