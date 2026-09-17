@@ -5,6 +5,7 @@ This agent generates comprehensive Quarto reports with embedded Python source co
 visualizations, and analysis results for spectral data.
 """
 
+import asyncio
 import base64
 import io
 import json

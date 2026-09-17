@@ -28,6 +28,7 @@
         </div>
     </div>
 
+    {% if report %}
     <!-- Report Header -->
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -159,6 +160,36 @@
             </a>
         </div>
     </div>
+    {% else %}
+    <!-- Report not generated yet -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2><i class="bi bi-hourglass-split"></i> Report not generated yet</h2>
+        </div>
+        <div class="card-body text-center py-5">
+            <i class="bi bi-file-earmark-text text-muted" style="font-size: 4rem;"></i>
+            <h5 class="mt-3">No report exists for this analysis yet.</h5>
+            <p class="text-muted">
+                The analysis may still be running, or it failed before generating a report.
+                Re-run the analysis to produce one.
+            </p>
+            <form method="post" action="{% url 'analysis_detail' spectral_data.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="rerun_analysis">
+                <button type="submit" class="btn btn-warning" onclick="return confirm('Re-run analysis and regenerate the report?');">
+                    <i class="bi bi-arrow-repeat"></i> Re-run Analysis
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body text-center">
+            <a href="{% url 'analysis_detail' spectral_data.id %}" class="btn btn-primary">
+                <i class="bi bi-arrow-left"></i> Back to Analysis Details
+            </a>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 

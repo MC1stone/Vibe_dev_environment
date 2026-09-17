@@ -667,14 +667,34 @@ def delete_analysis(request, analysis_id):
 def analysis_report(request, analysis_id):
     """Analysis report view."""
     spectral_data = get_object_or_404(SpectralData, pk=analysis_id)
-    report = get_object_or_404(Report, spectral_data=spectral_data)
-    
+    report = Report.objects.filter(spectral_data=spectral_data).first()
+
+    # No report row yet: the analysis failed before generating one, or a
+    # re-run is in progress and the browser raced ahead. Show a clear
+    # 'not generated yet' page instead of a 404.
+    if not report:
+        messages.info(
+            request,
+            'The report for this analysis has not been generated yet. '
+            'Re-run the analysis (or wait for the current run to finish) to '
+            'produce it.'
+        )
+        return render(
+            request,
+            'analysis/report.html',
+            {
+                'page_title': f'Report: {spectral_data.original_filename}',
+                'spectral_data': spectral_data,
+                'report': None,
+            },
+        )
+
     context = {
         'page_title': f'Report: {report.title}',
         'spectral_data': spectral_data,
         'report': report
     }
-    
+
     return render(request, 'analysis/report.html', context)
 
 
