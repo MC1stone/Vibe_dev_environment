@@ -91,21 +91,15 @@
             <dl class="row mb-0">
                 {% if hardware_info.integration_time %}
                 <dt class="col-sm-4">Integration time</dt>
-                <dd class="col-sm-8">
-                    {% if hardware_info.integration_time|length >= 2 %}
-                        {{ hardware_info.integration_time|slice:":1"|first|default_if_none:"" }}&ndash;{{ hardware_info.integration_time|slice:"1:2"|first|default_if_none:"" }} ms
-                    {% else %}
-                        {{ hardware_info.integration_time }}
-                    {% endif %}
-                </dd>
+                <dd class="col-sm-8">{{ hardware_info.integration_time|hw_param }}</dd>
                 {% endif %}
                 {% if hardware_info.scans_to_average %}
                 <dt class="col-sm-4">Scans to average</dt>
-                <dd class="col-sm-8">{{ hardware_info.scans_to_average }}</dd>
+                <dd class="col-sm-8">{{ hardware_info.scans_to_average|hw_param }}</dd>
                 {% endif %}
                 {% if hardware_info.gain %}
                 <dt class="col-sm-4">Gain</dt>
-                <dd class="col-sm-8">{{ hardware_info.gain }}</dd>
+                <dd class="col-sm-8">{{ hardware_info.gain|hw_param }}</dd>
                 {% endif %}
                 {% if hardware_info.firmware_version %}
                 <dt class="col-sm-4">Firmware version</dt>
