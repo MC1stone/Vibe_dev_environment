@@ -810,7 +810,17 @@ STANDARDS = {
             if section.code:
                 lines.append("```{python}")
                 lines.append("# " + section.title.replace(" ", "_"))
-                lines.append(section.code)
+                # The Quarto jupyter kernel executes each cell in a fresh-ish
+                # namespace, so code that reads execution variables set only by
+                # the in-process fallback (e.g. __cal_data__) would NameError.
+                # Inline-define those vars from report.metadata so the cell is
+                # self-contained when Quarto runs it.
+                code_to_emit = section.code
+                if "__cal_data__" in code_to_emit:
+                    cal_data = (report.metadata or {}).get("cal_plot_data") or {}
+                    lines.append("import json")
+                    lines.append(f"__cal_data__ = {json.dumps(cal_data, default=str)}")
+                lines.append(code_to_emit)
                 lines.append("```")
                 lines.append("")
         
