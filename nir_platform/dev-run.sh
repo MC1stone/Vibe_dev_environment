@@ -290,4 +290,8 @@ echo "  Python: $PYTHON_BIN"
 echo "  Strg+C zum Beenden - Daten-Container laufen weiter."
 echo "====================================================="
 echo ""
-DB_HOST=localhost exec "$PYTHON_BIN" manage.py runserver 0.0.0.0:$DEV_PORT
+# --threading so the dev server can serve other requests (e.g. the report
+# page / its auto-refresh polls) while a synchronous analysis is running in
+# a GET handler. Without it the single worker blocks on the analysis and
+# concurrent tabs appear to 'stop processing'.
+DB_HOST=localhost exec "$PYTHON_BIN" manage.py runserver --threading 0.0.0.0:$DEV_PORT
