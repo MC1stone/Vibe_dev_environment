@@ -881,7 +881,20 @@ STANDARDS = {
                     stderr=asyncio.subprocess.PIPE,
                     env=env,
                 )
-                _stdout, stderr = await proc.communicate()
+                # Bound the Quarto render so a hung jupyter kernel cannot
+                # block the whole analysis request forever ('stops processing
+                # without error or result'). On timeout, kill the process and
+                # fall through to the in-process Python renderer.
+                try:
+                    _stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
+                except asyncio.TimeoutError:
+                    logger.warning("Quarto render timed out after 120s; killing process and using Python fallback.")
+                    try:
+                        proc.kill()
+                    except ProcessLookupError:
+                        pass
+                    await proc.wait()
+                    stderr = b''
                 if proc.returncode == 0 and os.path.exists(html_file):
                     rendered = True
                 else:
