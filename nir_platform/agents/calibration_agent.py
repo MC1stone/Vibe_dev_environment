@@ -76,6 +76,18 @@ class AnalyteCalibration:
     outliers_removed: int = 0
     outlier_method: str = ""
     outlier_indices: List[int] = field(default_factory=list)
+    # Spectral scatter-correction preprocessing applied to the spectra
+    # matrix before StandardScaler + PLS ('raw' = none, 'SNV', 'MSC').
+    # Surfaced in the report so the calibration method is transparent.
+    preprocessing: str = "raw"
+    # Predicted-vs-measured plot data, recorded on the FULL (pre-outlier-
+    # removal) sample ordering so the report can show the kept samples
+    # (model predictions) and the removed outliers in distinct colours.
+    # plot_predicted_kept[i] is None for removed samples. None when no
+    # per-sample matrix was available for plotting.
+    plot_measured: Optional[List[float]] = None
+    plot_predicted_kept: Optional[List[float]] = None
+    plot_predicted_removed: Optional[List[float]] = None
 
     def to_dict(self) -> Dict:
         return {
@@ -96,6 +108,10 @@ class AnalyteCalibration:
             "outliers_removed": self.outliers_removed,
             "outlier_method": self.outlier_method,
             "outlier_indices": self.outlier_indices,
+            "preprocessing": self.preprocessing,
+            "plot_measured": self.plot_measured,
+            "plot_predicted_kept": self.plot_predicted_kept,
+            "plot_predicted_removed": self.plot_predicted_removed,
         }
 
 
@@ -377,15 +393,58 @@ class CalibrationAgent:
         method = "; ".join(method_parts) if method_parts else "none"
         return keep, sorted(removed), method
 
+    @staticmethod
+    def _apply_preprocessing(X: np.ndarray, method: str) -> np.ndarray:
+        """Apply a scatter-correction preprocessing to the spectra matrix.
+
+        SNV (Standard Normal Variate) normalizes each row by its own mean
+        and std, removing multiplicative scatter / baseline offset. MSC
+        (Multiplicative Scatter Correction) regresses each row onto a mean
+        reference spectrum and removes the offset/slope. 'raw' returns X
+        unchanged. Falls back to 'raw' on any error so the fit never fails
+        because of preprocessing.
+        """
+        if not isinstance(X, np.ndarray) or X.ndim != 2 or X.shape[0] == 0:
+            return X
+        method = (method or "raw").strip().lower()
+        if method == "raw":
+            return X
+        try:
+            if method == "snv":
+                mu = X.mean(axis=1, keepdims=True)
+                sd = X.std(axis=1, keepdims=True)
+                sd = np.where(sd == 0, 1.0, sd)
+                return (X - mu) / sd
+            if method == "msc":
+                ref = X.mean(axis=0)
+                out = np.empty_like(X, dtype=float)
+                for i in range(X.shape[0]):
+                    a = np.polyfit(ref, X[i], 1)
+                    out[i] = (X[i] - a[1]) / np.where(a[0] == 0, 1.0, a[0])
+                return out
+        except Exception:
+            return X
+        return X
+
     def _fit_pls(self, X: np.ndarray, y: np.ndarray, wavelengths: List[float],
-                 n_features: int, remove_outliers: bool = True) -> Optional[AnalyteCalibration]:
-        """Shared PLS fit with optional outlier removal.
+                 n_features: int, remove_outliers: bool = True,
+                 preprocessing: str = "raw") -> Optional[AnalyteCalibration]:
+        """Shared PLS fit with optional outlier removal and preprocessing.
 
         Returns an AnalyteCalibration (or None) covering the fitted PLS
         regression, the chosen number of components, and any samples that
-        were removed as outliers.
+        were removed as outliers. ``preprocessing`` selects a scatter-
+        correction step applied before StandardScaler: 'SNV' (Standard
+        Normal Variate), 'MSC' (Multiplicative Scatter Correction), or
+        'raw' (none). Plot data is recorded on the full (pre-removal)
+        sample ordering so the report can show the kept samples (model
+        predictions) and removed outliers in distinct colours, matching
+        the fitted model rather than mixing outliers back into a clean fit.
         """
-        keep = np.ones(X.shape[0], dtype=bool)
+        n_total = X.shape[0]
+        X_full = X.copy()
+        y_full = y.copy()
+        keep = np.ones(n_total, dtype=bool)
         removed_idx: List[int] = []
         outlier_method = ""
         if remove_outliers:
@@ -394,8 +453,9 @@ class CalibrationAgent:
             y = y[keep]
         if X.shape[0] < 8 or X.shape[0] <= n_features:
             return None
+        Xp = self._apply_preprocessing(X, preprocessing)
         scaler = StandardScaler()
-        Xs = scaler.fit_transform(X)
+        Xs = scaler.fit_transform(Xp)
         max_comp = max(1, min(n_features, 10, X.shape[0] - 1))
         best = None
         for ncomp in range(1, max_comp + 1):
@@ -425,14 +485,42 @@ class CalibrationAgent:
                      "refractometer Brix reference. R\u00b2_cv/RMSE_cv are "
                      "5-fold cross-validated; coefficients are on the raw "
                      "intensity scale."]
+        if preprocessing and preprocessing != "raw":
+            note_bits.append(f"Spectra preprocessed with {preprocessing} "
+                             f"scatter correction before fitting.")
         if removed_idx:
             note_bits.append(
                 f"{len(removed_idx)} outlier sample(s) removed before fitting "
                 f"({outlier_method})."
             )
+        # Predicted-vs-measured plot data on the FULL (pre-removal) sample
+        # ordering: the fitted model predicts every sample (kept in blue,
+        # removed outliers in red) so the report plot matches the fitted
+        # model and outliers are visible rather than silently dropped.
+        plot_measured = None
+        plot_predicted_kept = None
+        plot_predicted_removed = None
+        try:
+            Xp_full = self._apply_preprocessing(X_full, preprocessing)
+            Xs_full = (Xp_full - scaler.mean_) / np.where(
+                scaler.scale_ == 0, 1.0, scaler.scale_)
+            pred_full = pls.predict(Xs_full).ravel()
+            removed_set = set(removed_idx)
+            kept_pred: List[Optional[float]] = [None] * n_total
+            for i in range(n_total):
+                if i not in removed_set:
+                    kept_pred[i] = float(pred_full[i])
+            plot_measured = [float(v) for v in y_full]
+            plot_predicted_kept = kept_pred
+            plot_predicted_removed = (
+                [float(pred_full[i]) for i in range(n_total) if i in removed_set]
+                if removed_set else None
+            )
+        except Exception:
+            pass
         return AnalyteCalibration(
             analyte="Brix",
-            method=f"PLS ({ncomp} components, 5-fold CV)",
+            method=f"PLS ({ncomp} components, 5-fold CV, {preprocessing})",
             num_samples=int(X.shape[0]),
             num_features=int(n_features),
             num_components=int(ncomp),
@@ -448,6 +536,10 @@ class CalibrationAgent:
             outliers_removed=len(removed_idx),
             outlier_method=outlier_method or "none",
             outlier_indices=removed_idx,
+            preprocessing=preprocessing,
+            plot_measured=plot_measured,
+            plot_predicted_kept=plot_predicted_kept,
+            plot_predicted_removed=plot_predicted_removed,
         )
 
     def _fit_neural(self, X: np.ndarray, y: np.ndarray, n_features: int,
@@ -545,7 +637,11 @@ class CalibrationAgent:
             wl = [float(w) for w in wavelengths]
         else:
             wl = [float(w) for w in wavelengths][:n_features]
-        return self._fit_pls(X, y, wl, n_features, remove_outliers=True)
+        # SNV (Standard Normal Variate) scatter correction removes
+        # multiplicative baseline / scatter offset that otherwise dominates
+        # the first PLS component and inflates RMSE on raw intensities.
+        return self._fit_pls(X, y, wl, n_features, remove_outliers=True,
+                             preprocessing="SNV")
     
     def _generate_neural_calibration(self, wavelengths, metadata) -> Optional[NeuralCalibration]:
         """Build a NIR -> analyte (Brix) neural-network (MLP) regression.
@@ -704,7 +800,8 @@ class CalibrationAgent:
         if X.shape[0] < 10 or len(y) != X.shape[0]:
             return None
 
-        ac = self._fit_pls(X, y, wl, n_features, remove_outliers=True)
+        ac = self._fit_pls(X, y, wl, n_features, remove_outliers=True,
+                           preprocessing="SNV")
         if ac is None:
             return None
         # Relabel so the combined provenance is visible.

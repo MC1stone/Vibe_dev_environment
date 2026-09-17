@@ -353,6 +353,31 @@ Processing steps applied:
 - **Notes**: {neural_cal.get('notes', '')}
 """
 
+        # Side-by-side PLS vs MLP comparison so the user can see which model
+        # generalises best at a glance (higher R^2_cv / lower RMSE_cv wins).
+        comparison_block = ""
+        if analyte_cal and neural_cal:
+            pls_r2 = float(analyte_cal.get('r_squared_cv', 0) or 0)
+            pls_rmse = float(analyte_cal.get('rmse_cv', 0) or 0)
+            nn_r2 = float(neural_cal.get('r_squared_cv', 0) or 0)
+            nn_rmse = float(neural_cal.get('rmse_cv', 0) or 0)
+            if pls_r2 > nn_r2:
+                best, best_note = "PLS", "Higher cross-validated R\u00b2 (less overfitting risk on small datasets)"
+            elif nn_r2 > pls_r2:
+                best, best_note = "MLP", "Higher cross-validated R\u00b2 (captures non-linearity)"
+            else:
+                best, best_note = "Tie", "Both models perform equally on cross-validation"
+            comparison_block = f"""
+### Model Comparison: PLS vs Neural Network (MLP)
+
+| Model | R\u00b2 (CV) | RMSE (CV, \u00b0Brix) | Samples | Outliers removed |
+|-------|-----------|------------------|---------|------------------|
+| **PLS** | {pls_r2:.4f} | {pls_rmse:.4f} | {analyte_cal.get('num_samples', 0)} | {analyte_cal.get('outliers_removed', 0)} |
+| **MLP** | {nn_r2:.4f} | {nn_rmse:.4f} | {neural_cal.get('num_samples', 0)} | {neural_cal.get('outliers_removed', 0)} |
+
+**Best model (cross-validated): {best}.** {best_note}.
+"""
+
 
         calibration_content = f"""
 ## Calibration Results
@@ -363,7 +388,7 @@ Processing steps applied:
 - **Analyte (NIR\u2192Brix) Quality (PLS)**: {cal_quality.get('analyte_quality', 0):.1f}%
 - **Neural-Network Quality (MLP)**: {cal_quality.get('neural_quality', 0):.1f}%
 - **Overall Calibration Quality**: {cal_quality.get('overall_quality', 0):.1f}%
-{analyte_block}{neural_block}
+{analyte_block}{neural_block}{comparison_block}
 ### Calibration Recommendations
 {chr(10).join([f'- **{rec.get("type", "")}** ({rec.get("priority", "medium")}): {rec.get("description", "")}' for rec in cal_recs]) or 'None'}
 
@@ -377,14 +402,22 @@ Processing steps applied:
                 analyte_cal, analysis_result)
             # Attach the data the plot code reads from __cal_data__ so the
             # fallback renderer can execute it without embedding huge lists.
+            # Prefer the model's own predictions (kept vs removed outliers)
+            # so the plot matches the fitted model; keep the legacy raw
+            # coefficients/matrix as a fallback when no plot data exists.
+            orig_meta = analysis_result.get('original_data', {}).get('metadata', {})
             report.metadata['cal_plot_data'] = {
                 'coefficients': analyte_cal.get('coefficients', []),
                 'intercept': analyte_cal.get('intercept', 0.0),
-                'brix': (analysis_result.get('original_data', {})
-                         .get('metadata', {}).get('Brix', [])),
-                'intensity_matrix': (analysis_result.get('original_data', {})
-                                     .get('metadata', {})
-                                     .get('intensity_matrix', [])),
+                'brix': orig_meta.get('Brix', []) or orig_meta.get('brix', []),
+                'intensity_matrix': orig_meta.get('intensity_matrix', []),
+                'plot_measured': analyte_cal.get('plot_measured'),
+                'plot_predicted_kept': analyte_cal.get('plot_predicted_kept'),
+                'plot_predicted_removed': analyte_cal.get('plot_predicted_removed'),
+                'r_squared_cv': analyte_cal.get('r_squared_cv', 0.0),
+                'rmse_cv': analyte_cal.get('rmse_cv', 0.0),
+                'preprocessing': analyte_cal.get('preprocessing', 'raw'),
+                'outliers_removed': analyte_cal.get('outliers_removed', 0),
             }
 
         report.sections.append(ReportSection(
@@ -770,6 +803,31 @@ STANDARDS = {
         
         return output_path
     
+    @staticmethod
+    def _to_py_literal(obj):
+        """Recursively coerce a JSON-ish object into plain Python literals.
+
+        numpy scalars / arrays, tuples and other non-repr-safe values are
+        downcast to int/float/list/None so repr() then yields valid Python
+        source (and therefore a valid Quarto-jupyter cell assignment). This
+        avoids the JSON-vs-Python mismatch (null/true) that previously made
+        Quarto's jupyter kernel NameError on ``__cal_data__``.
+        """
+        import numpy as _np
+        if obj is None:
+            return None
+        if isinstance(obj, _np.generic):
+            return obj.item()
+        if isinstance(obj, _np.ndarray):
+            return [ReportingAgent._to_py_literal(v) for v in obj.tolist()]
+        if isinstance(obj, (list, tuple)):
+            return [ReportingAgent._to_py_literal(v) for v in obj]
+        if isinstance(obj, dict):
+            return {k: ReportingAgent._to_py_literal(v) for k, v in obj.items()}
+        if isinstance(obj, (str, int, float, bool)):
+            return obj
+        return str(obj)
+
     def _generate_quarto_document(self, report: QuartoReport) -> str:
         """Generate Quarto document content."""
         lines = []
@@ -818,8 +876,15 @@ STANDARDS = {
                 code_to_emit = section.code
                 if "__cal_data__" in code_to_emit:
                     cal_data = (report.metadata or {}).get("cal_plot_data") or {}
-                    lines.append("import json")
-                    lines.append(f"__cal_data__ = {json.dumps(cal_data, default=str)}")
+                    # Emit a valid PYTHON literal (not JSON) so the cell,
+                    # which executes as Python in Quarto's jupyter kernel,
+                    # does not NameError on JSON-only tokens like null/true.
+                    # repr() converts None->None, True->True, floats/ints and
+                    # nested lists/dicts to valid Python source. Values that
+                    # are not plain literals (numpy scalars, etc.) are str()-
+                    # coerced first via _to_py_literal below.
+                    lines.append("__cal_data__ = "
+                                 + repr(self._to_py_literal(cal_data)))
                 lines.append(code_to_emit)
                 lines.append("```")
                 lines.append("")
@@ -975,30 +1040,64 @@ STANDARDS = {
                                         analysis_result: Dict) -> str:
         """Generate matplotlib code for the NIR->Brix calibration curve.
 
-        Plots predicted vs measured Brix (1:1 line) from the calibration
-        model so the report shows the actual calibration curve. The data is
-        read from the execution namespace variables ``__cal_data__`` (set by
-        _execute_plot_code_to_b64) rather than literal-embedded, which keeps
-        the source short and avoids quoting issues with large matrices.
+        Plots predicted vs measured Brix (1:1 line) from the fitted PLS
+        model. ``__cal_data__`` (set by _execute_plot_code_to_b64 or inlined
+        by the Quarto export) carries the model's own predictions on the
+        full (pre-outlier-removal) sample ordering, so the scatter matches
+        the fitted model exactly: kept samples are shown in blue and the
+        removed outliers in red, rather than re-computing predictions from
+        raw intensities (which mixes outliers back into a cleaned fit and
+        makes the curve look 'off'). Falls back to the legacy raw-X@coef
+        path only when the model did not record plot data.
         """
         return """
 import numpy as np
 import matplotlib.pyplot as plt
 
 cal = __cal_data__
-coef = np.array(cal['coefficients'], dtype=float)
-intercept = float(cal['intercept'])
-brix = cal['brix']
-matrix = cal['intensity_matrix']
+measured = cal.get('plot_measured')
+pred_kept = cal.get('plot_predicted_kept')
+pred_removed = cal.get('plot_predicted_removed')
+coef = cal.get('coefficients', [])
+r2 = float(cal.get('r_squared_cv', 0.0) or 0.0)
+rmse = float(cal.get('rmse_cv', 0.0) or 0.0)
+prep = cal.get('preprocessing', 'raw') or 'raw'
+n_out = int(cal.get('outliers_removed', 0) or 0)
 
-if brix and matrix and len(coef) > 0:
-    X = np.array(matrix, dtype=float)
-    y = np.array([float(v) for v in brix if v not in (None, '')], dtype=float)
+have_model_plot = (measured and pred_kept and len(measured) == len(pred_kept)
+                   and any(p is not None for p in pred_kept))
+
+fig, ax = plt.subplots(figsize=(7, 7))
+if have_model_plot:
+    y = np.array([float(v) for v in measured], dtype=float)
+    kept_y = [y[i] for i in range(len(y)) if pred_kept[i] is not None]
+    kept_p = [float(pred_kept[i]) for i in range(len(y)) if pred_kept[i] is not None]
+    ax.scatter(kept_y, kept_p, s=22, alpha=0.6, edgecolor='none',
+               color='#1a3c5e', label='Kept samples')
+    if pred_removed and len(pred_removed) == len(y):
+        rem_y = [y[i] for i in range(len(y)) if pred_kept[i] is None]
+        ax.scatter(rem_y, [float(v) for v in pred_removed], s=36, alpha=0.8,
+                   edgecolor='#7b1d1d', facecolor='#d9534f', marker='X',
+                   label=f'Outliers removed ({n_out})')
+    all_vals = list(kept_y) + list(kept_p) + (list(pred_removed) if pred_removed else [])
+    lo = float(min(all_vals)) - 0.3
+    hi = float(max(all_vals)) + 0.3
+    ax.plot([lo, hi], [lo, hi], 'r--', lw=1.5, label='1:1 line')
+    ax.set_xlabel('Measured Brix (\u00b0Brix)', fontsize=12)
+    ax.set_ylabel('Predicted Brix (\u00b0Brix)', fontsize=12)
+    ax.set_title(f'NIR \u2192 Brix Calibration (PLS, {prep.upper()}): '
+                 f'R\u00b2cv={r2:.3f}, RMSEcv={rmse:.3f} \u00b0Brix', fontsize=12)
+    ax.legend(loc='upper left', fontsize=9)
+    ax.grid(True, alpha=0.3)
+    ax.axis('equal')
+    plt.tight_layout()
+elif coef and cal.get('brix') and cal.get('intensity_matrix'):
+    X = np.array(cal['intensity_matrix'], dtype=float)
+    y = np.array([float(v) for v in cal['brix'] if v not in (None, '')], dtype=float)
+    c = np.array(coef, dtype=float)
     n = min(len(X), len(y))
     X = X[:n]; y = y[:n]
-    y_pred = X @ coef + intercept
-
-    fig, ax = plt.subplots(figsize=(7, 7))
+    y_pred = X @ c + float(cal.get('intercept', 0.0))
     ax.scatter(y, y_pred, s=18, alpha=0.45, edgecolor='none', color='#1a3c5e')
     lo = float(min(y.min(), y_pred.min())) - 0.2
     hi = float(max(y.max(), y_pred.max())) + 0.2
@@ -1011,7 +1110,6 @@ if brix and matrix and len(coef) > 0:
     ax.axis('equal')
     plt.tight_layout()
 else:
-    fig, ax = plt.subplots(figsize=(7, 3))
     ax.text(0.5, 0.5, 'Calibration curve unavailable (no per-sample matrix / Brix reference)',
             ha='center', va='center', transform=ax.transAxes, color='#888')
     ax.axis('off')
