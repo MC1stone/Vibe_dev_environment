@@ -556,8 +556,12 @@ def analysis_detail(request, analysis_id):
                     (spectral_data.metadata_quality_score or 0) * 0.3 +
                     (spectral_data.calibration_quality_score or 0) * 0.3
                 )
-                spectral_data.is_processed = True
-                spectral_data.processing_date = django_timezone.now()
+                # Save the computed scores now, but keep is_processed=False until
+                # the report is generated and saved: the report-not-ready page
+                # treats is_processed=False as 'analysis still running' (polls /
+                # shows the spinner) and is_processed=True without a report as a
+                # FAILURE. Flipping the flag only after the report exists keeps
+                # the in-flight Quarto render in the correct transient state.
                 spectral_data.last_analysis_error = ''
                 spectral_data.save()
                 
@@ -585,6 +589,7 @@ def analysis_detail(request, analysis_id):
                                 html_content = hf.read()
                 except Exception as re:
                     logger.error(f'Error rendering Quarto report: {re}')
+                    spectral_data.last_analysis_error = f'Report generation failed: {re}'[:2000]
                 
                 report = Report(
                     spectral_data=spectral_data,
@@ -598,6 +603,13 @@ def analysis_detail(request, analysis_id):
                     generation_date=django_timezone.now()
                 )
                 report.save()
+                
+                # The whole pipeline (analysis + report) is done: mark processed.
+                # If the report step failed, last_analysis_error is already set,
+                # so the row records a failed run rather than silently 'done'.
+                spectral_data.is_processed = True
+                spectral_data.processing_date = django_timezone.now()
+                spectral_data.save()
                 
                 # Log the analysis
                 SystemLog.objects.create(

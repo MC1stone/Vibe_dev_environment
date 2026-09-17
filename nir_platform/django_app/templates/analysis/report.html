@@ -140,6 +140,9 @@
                 <i class="bi bi-exclamation-triangle" style="font-size: 4rem;"></i>
                 <h5 class="mt-3">No rendered HTML report available</h5>
                 <p>The HTML report could not be generated (a dependency may have been missing at analysis time). Re-run the analysis to regenerate it.</p>
+                {% if spectral_data.last_analysis_error %}
+                <pre class="mt-2 text-danger text-start" style="white-space: pre-wrap;">{{ spectral_data.last_analysis_error }}</pre>
+                {% endif %}
                 <form method="post" action="{% url 'analysis_detail' spectral_data.id %}" class="d-inline">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="rerun_analysis">
