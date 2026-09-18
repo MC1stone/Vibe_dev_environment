@@ -59,6 +59,14 @@ reporting_agent = ReportingAgent()
 qa_agent = QualityAssuranceAgent()
 hardware_info_agent = HardwareInfoAgent()
 
+# In-flight analysis guard: the detail page runs the (synchronous)
+# analysis pipeline on a GET while is_processed=False. A second GET for
+# the same analysis_id (e.g. the report page's auto-refresh, or the user
+# reloading the detail page) would start a second parallel run, which
+# wastes work, double-indexes, and can produce two reports. Track the
+# ids currently being analysed and skip re-entering an in-flight one.
+_running_analyses: set = set()
+
 
 def home(request):
     """Home page view."""
@@ -559,6 +567,29 @@ def analysis_detail(request, analysis_id):
 
     # Check if analysis has been performed
     if not spectral_data.is_processed:
+        # Skip re-entering an analysis that is already running on another
+        # request (e.g. the report page auto-refresh or a manual reload).
+        # Re-fetch from the DB in case the in-flight run finished while this
+        # request waited, then show the not-ready page so the browser polls.
+        aid = str(spectral_data.id)
+        if aid in _running_analyses:
+            spectral_data.refresh_from_db()
+            if spectral_data.is_processed:
+                pass  # finished during this request; fall through to render
+            else:
+                logger.info(f'Analysis already running for id={aid}; skipping duplicate run.')
+                context = {
+                    'page_title': f'Analysis: {spectral_data.original_filename}',
+                    'spectral_data': spectral_data,
+                    'analysis_results': spectral_data.analysis_results,
+                    'calibration_results': spectral_data.calibration_results,
+                    'metadata_quality': spectral_data.metadata_quality_results,
+                    'report': Report.objects.filter(spectral_data=spectral_data).first(),
+                    'quality_grade': spectral_data.get_quality_grade(),
+                    'is_owner': request.user == spectral_data.user or not spectral_data.user,
+                    'analysis_running': True,
+                }
+                return render(request, 'analysis/detail.html', context)
         logger.info(
             f'Analysis pending for id={spectral_data.id} '
             f'wl_len={len(spectral_data.wavelengths or [])} '
@@ -577,8 +608,12 @@ def analysis_detail(request, analysis_id):
                 async def perform_analysis():
                     return await analyze_spectral_data(spectral_data)
                 
+                _running_analyses.add(aid)
                 logger.info(f'Starting analysis for id={spectral_data.id}...')
-                results = asyncio.run(perform_analysis())
+                try:
+                    results = asyncio.run(perform_analysis())
+                finally:
+                    _running_analyses.discard(aid)
                 logger.info(
                     f'Analysis completed for id={spectral_data.id} '
                     f'keys={list(results.keys()) if isinstance(results, dict) else type(results).__name__}'

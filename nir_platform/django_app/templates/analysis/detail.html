@@ -148,6 +148,9 @@
 
     <!-- Processing Status -->
     {% if not spectral_data.is_processed %}
+    {% if analysis_running %}
+    <meta http-equiv="refresh" content="5">
+    {% endif %}
     <div class="card mb-4">
         <div class="card-header">
             <h4><i class="bi bi-hourglass-split"></i> Processing Status</h4>
@@ -158,7 +161,11 @@
             </div>
             <h5>Processing Your Data</h5>
             <p class="text-muted">
+                {% if analysis_running %}
+                An analysis for this data is already running in another request. This page will refresh automatically until it finishes.
+                {% else %}
                 Our AI agents are analyzing your spectral data. This may take a few moments.
+                {% endif %}
             </p>
             <div class="progress mb-3">
                 <div class="progress-bar progress-bar-striped progress-bar-animated" 
