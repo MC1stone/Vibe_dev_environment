@@ -811,12 +811,88 @@ STANDARDS = {
 }
         """
     
+    def _validate_executable_cells(self, quarto_content: str,
+                                   report: QuartoReport) -> str:
+        """Pre-validate every ```{python}``` cell so a broken cell cannot
+        crash the Quarto jupyter kernel and abort the whole render.
+
+        Mirrors the __cal_data__ inlining done by _generate_quarto_document,
+        compile()s each executable cell (catching SyntaxError / unbound
+        names early), and runs plot cells through the in-process Agg
+        renderer to catch runtime errors. Cells that fail are rewritten to a
+        display-only ```` ```{.python eval=false}```` block with the error,
+        so Quarto still renders the report and the user sees what failed
+        instead of an opaque subprocess rc=1.
+        """
+        cal_data = (report.metadata or {}).get("cal_plot_data") or {}
+        cal_literal = ("__cal_data__ = "
+                       + repr(self._to_py_literal(cal_data))
+                       if "__cal_data__" in quarto_content else None)
+        lines = quarto_content.splitlines(keepends=True)
+        out: List[str] = []
+        i = 0
+        n = len(lines)
+        while i < n:
+            line = lines[i]
+            stripped = line.strip()
+            if stripped.startswith("```{python}"):
+                block_start = i
+                body: List[str] = []
+                i += 1
+                while i < n and not lines[i].strip().startswith("```"):
+                    body.append(lines[i])
+                    i += 1
+                fence = lines[i] if i < n else "```\n"
+                i += 1
+                full_code = "".join(body)
+                test_code = full_code
+                if cal_literal and "__cal_data__" in full_code:
+                    test_code = cal_literal + "\n" + full_code
+                ok = True
+                err_msg = ""
+                try:
+                    compile(test_code, "<quarto_cell>", "exec")
+                except SyntaxError as se:
+                    ok = False
+                    err_msg = f"SyntaxError: {se.msg} (line {se.lineno})"
+                if ok and ("matplotlib" in full_code or "plt." in full_code):
+                    rendered = self._execute_plot_code_to_b64(
+                        test_code, extra_ns={})
+                    if rendered is None:
+                        try:
+                            ns = {"plt": plt, "np": np,
+                                  "matplotlib": matplotlib}
+                            if cal_literal and "__cal_data__" in full_code:
+                                exec(compile(cal_literal, "<cal>", "exec"), ns)
+                            exec(compile(full_code, "<quarto_cell>", "exec"), ns)
+                        except Exception as re_exc:
+                            ok = False
+                            err_msg = f"{type(re_exc).__name__}: {re_exc}"
+                if ok:
+                    out.append(line)
+                    out.extend(body)
+                    out.append(fence)
+                else:
+                    logger.warning(f"Quarto cell failed pre-validation: {err_msg}")
+                    out.append("```{.python eval=false}\n")
+                    out.append("# This analysis cell could not be executed safely\n")
+                    out.append(f"# and is shown for reference only.\n# Error: {err_msg}\n\n")
+                    out.extend(body)
+                    out.append("```\n")
+            else:
+                out.append(line)
+                i += 1
+        return "".join(out)
+
     async def export_to_quarto(self, report: QuartoReport, output_path: str) -> str:
         """Export report to Quarto format."""
         logger.info(f"Exporting report to {output_path}")
         
         # Create Quarto document
         quarto_content = self._generate_quarto_document(report)
+        # Validate executable cells in-process so a broken cell degrades to a
+        # display-only block instead of aborting the Quarto jupyter kernel.
+        quarto_content = self._validate_executable_cells(quarto_content, report)
         
         # Save to file
         os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
