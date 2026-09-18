@@ -1025,9 +1025,31 @@ STANDARDS = {
         # Export to Quarto format
         await self.export_to_quarto(report, quarto_file)
         
-        # Try rendering with the Quarto CLI if it is available
+        # Render to HTML. Two renderers are available:
+        #   1. The Quarto CLI (`quarto render`), which spins up a jupyter
+        #      kernel to execute the python cells and produces a 'native'
+        #      Quarto HTML document. This is slow (kernel spinup + cell exec)
+        #      and fragile in a local single-user setup: a kernel that hangs
+        #      blocks the whole analysis request for up to the 120s timeout
+        #      before falling back, which the user experiences as the report
+        #      page polling for two minutes on every run.
+        #   2. The in-process Python renderer, which converts the .qmd to HTML
+        #      directly (executing the matplotlib plot cells with the Agg
+        #      backend and embedding the figures as base64 PNGs). It is fast,
+        #      dependency-light, and produces a complete report.
+        #
+        # Default to the fast in-process renderer; opt into the Quarto CLI with
+        # the NIR_USE_QUARTO_CLI env var or the Django setting of the same name
+        # (for users who specifically want the native Quarto render / toolchain).
         rendered = False
-        quarto_bin = shutil.which("quarto")
+        use_quarto_cli = os.environ.get("NIR_USE_QUARTO_CLI", "").lower() in ("1", "true", "yes")
+        if not use_quarto_cli:
+            try:
+                from django.conf import settings as _dj_settings
+                use_quarto_cli = bool(getattr(_dj_settings, "NIR_USE_QUARTO_CLI", False))
+            except Exception:
+                pass
+        quarto_bin = shutil.which("quarto") if use_quarto_cli else None
         if quarto_bin:
             try:
                 # Quarto runs a Python kernel to execute ```{python}`` cells;
@@ -1067,8 +1089,8 @@ STANDARDS = {
                     )
             except Exception as qe:
                 logger.warning(f"Quarto render subprocess error: {qe}")
-        else:
-            logger.info("Quarto CLI not found; using Python HTML fallback renderer.")
+        elif use_quarto_cli:
+            logger.info("Quarto CLI requested (NIR_USE_QUARTO_CLI) but `quarto` not found on PATH; using Python HTML fallback renderer.")
         
         # Fallback: convert the generated Quarto document to HTML in pure Python
         # so a full HTML report is produced even without Quarto installed.
