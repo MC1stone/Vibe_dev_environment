@@ -252,6 +252,7 @@
     // Handle file selection
     const fileInput = document.getElementById('{{ form.file.id_for_label }}');
     const uploadArea = document.getElementById('uploadArea');
+    const form = fileInput.closest('form');
     
     function renderSelected(fileName) {
         const status = document.getElementById('uploadStatus');
@@ -272,6 +273,8 @@
     fileInput.addEventListener('change', function(e) {
         if (e.target.files.length > 0) {
             renderSelected(e.target.files[0].name);
+            // Auto-submit the form after a file is selected (single-file upload UX)
+            form.submit();
         }
     });
     
@@ -322,6 +325,8 @@
         fileInput.files = files;
         if (files.length > 0) {
             renderSelected(files[0].name);
+            // Auto-submit the form after a file is dropped (single-file upload UX)
+            form.submit();
         }
     }, false);
 </script>
