@@ -590,144 +590,152 @@ def analysis_detail(request, analysis_id):
                     'analysis_running': True,
                 }
                 return render(request, 'analysis/detail.html', context)
-        logger.info(
-            f'Analysis pending for id={spectral_data.id} '
-            f'wl_len={len(spectral_data.wavelengths or [])} '
-            f'int_len={len(spectral_data.intensities or [])}'
-        )
-        # Guard: require parsed spectral data before analysis
-        if not spectral_data.wavelengths or not spectral_data.intensities:
-            messages.error(
-                request,
-                'No spectral data was parsed from this file. Please re-upload a valid '
-                'spectral data file (CSV, TXT, Excel, JSON).'
+        # Re-check after the in-flight check: the row may have just finished
+        # (the in-flight run completed during this request), in which case
+        # there is nothing to run and we fall through to render the result.
+        if not spectral_data.is_processed:
+            logger.info(
+                f'Analysis pending for id={spectral_data.id} '
+                f'wl_len={len(spectral_data.wavelengths or [])} '
+                f'int_len={len(spectral_data.intensities or [])}'
             )
-        else:
-            # Perform analysis
-            try:
-                async def perform_analysis():
-                    return await analyze_spectral_data(spectral_data)
-                
+            # Guard: require parsed spectral data before analysis
+            if not spectral_data.wavelengths or not spectral_data.intensities:
+                messages.error(
+                    request,
+                    'No spectral data was parsed from this file. Please re-upload a valid '
+                    'spectral data file (CSV, TXT, Excel, JSON).'
+                )
+            else:
+                # Perform analysis. The in-flight guard wraps the WHOLE pipeline
+                # (analysis -> Quarto render -> Report.save -> is_processed=True),
+                # not just the analysis step: a second GET that arrives while the
+                # first run is still rendering Quarto (which can take up to 120s
+                # for the CLI + fallback) must see the id as in-flight and skip,
+                # otherwise it re-enters, double-runs the agents, and races on
+                # the DB writes. The id is only released after is_processed is
+                # persisted (success or failure), so there is no window where
+                # another request sees is_processed=False and starts a dup run.
                 _running_analyses.add(aid)
-                logger.info(f'Starting analysis for id={spectral_data.id}...')
                 try:
+                    async def perform_analysis():
+                        return await analyze_spectral_data(spectral_data)
+
+                    logger.info(f'Starting analysis for id={spectral_data.id}...')
                     results = asyncio.run(perform_analysis())
-                finally:
-                    _running_analyses.discard(aid)
-                logger.info(
-                    f'Analysis completed for id={spectral_data.id} '
-                    f'keys={list(results.keys()) if isinstance(results, dict) else type(results).__name__}'
-                )
-                
-                # Save results
-                spectral_data.analysis_results = results.get('spectral_result', {})
-                # Persist the consolidated hardware info (collected by the
-                # HardwareInfoAgent) inside analysis_results so the dedicated
-                # /analysis/<id>/hardware/ page can render it without re-running.
-                ar = spectral_data.analysis_results or {}
-                if isinstance(ar, dict):
-                    ar['hardware_info'] = results.get('hardware_info', {})
-                    spectral_data.analysis_results = ar
-                spectral_data.calibration_results = results.get('calibration_result', {})
-                # Keep the full standards-compliance assessment for reference,
-                # but the headline metadata quality score is the Data Loader
-                # Agent's rating (metadata['metadata_quality']), which grades the
-                # fields actually extracted from the file header. The
-                # MetadataQualityAgent demands ISO 19115 / Open Science /
-                # Federated-Learning fields a single NIR measurement never has,
-                # so its score would otherwise drag the overview grade down to a
-                # low value that disagrees with the Data Loader's 'A' rating.
-                spectral_data.metadata_quality_results = results.get('metadata_result', {})
-                dl_md = (spectral_data.metadata or {}).get('metadata_quality') or {}
-                dl_score = dl_md.get('score') if isinstance(dl_md, dict) else None
-                if dl_score is None:
-                    dl_score = results.get('metadata_result', {}).get('overall_score', 0) or 0
-                spectral_data.data_quality_score = results.get('spectral_result', {}).get('quality_score', 0) or 0
-                spectral_data.metadata_quality_score = dl_score
-                spectral_data.calibration_quality_score = results.get('calibration_result', {}).get('calibration_quality', {}).get('overall_quality', 0) or 0
-                spectral_data.overall_quality_score = (
-                    (spectral_data.data_quality_score or 0) * 0.4 +
-                    (spectral_data.metadata_quality_score or 0) * 0.3 +
-                    (spectral_data.calibration_quality_score or 0) * 0.3
-                )
-                # Save the computed scores now, but keep is_processed=False until
-                # the report is generated and saved: the report-not-ready page
-                # treats is_processed=False as 'analysis still running' (polls /
-                # shows the spinner) and is_processed=True without a report as a
-                # FAILURE. Flipping the flag only after the report exists keeps
-                # the in-flight Quarto render in the correct transient state.
-                spectral_data.last_analysis_error = ''
-                spectral_data.save()
-                
-                # Generate and render the Quarto HTML report
-                report_obj = results.get('report')
-                report_obj = report_obj if hasattr(report_obj, 'to_dict') else None
-                report_dict = report_obj.to_dict() if report_obj else {}
-                
-                html_file_path = os.path.join(settings.REPORT_DIR, f"{spectral_data.id}.html")
-                html_content = ''
-                try:
-                    if report_obj is not None:
-                        render_result = asyncio.run(
-                            reporting_agent.render_report(report_obj, settings.REPORT_DIR)
+                    logger.info(
+                        f'Analysis completed for id={spectral_data.id} '
+                        f'keys={list(results.keys()) if isinstance(results, dict) else type(results).__name__}'
+                    )
+
+                    # Save results
+                    spectral_data.analysis_results = results.get('spectral_result', {})
+                    ar = spectral_data.analysis_results or {}
+                    if isinstance(ar, dict):
+                        ar['hardware_info'] = results.get('hardware_info', {})
+                        spectral_data.analysis_results = ar
+                    spectral_data.calibration_results = results.get('calibration_result', {})
+                    spectral_data.metadata_quality_results = results.get('metadata_result', {})
+                    dl_md = (spectral_data.metadata or {}).get('metadata_quality') or {}
+                    dl_score = dl_md.get('score') if isinstance(dl_md, dict) else None
+                    if dl_score is None:
+                        dl_score = results.get('metadata_result', {}).get('overall_score', 0) or 0
+                    spectral_data.data_quality_score = results.get('spectral_result', {}).get('quality_score', 0) or 0
+                    spectral_data.metadata_quality_score = dl_score
+                    spectral_data.calibration_quality_score = results.get('calibration_result', {}).get('calibration_quality', {}).get('overall_quality', 0) or 0
+                    spectral_data.overall_quality_score = (
+                        (spectral_data.data_quality_score or 0) * 0.4 +
+                        (spectral_data.metadata_quality_score or 0) * 0.3 +
+                        (spectral_data.calibration_quality_score or 0) * 0.3
+                    )
+                    # Keep is_processed=False until the report is saved: the
+                    # report-not-ready page treats is_processed=False as 'analysis
+                    # still running' (polls / spinner) and is_processed=True
+                    # without a report as a FAILURE.
+                    spectral_data.last_analysis_error = ''
+                    spectral_data.save()
+
+                    # Generate and render the Quarto HTML report. A failure here
+                    # must NOT prevent the Report row from being created: the
+                    # report page polls until a Report row exists, so always
+                    # persist a row (with is_generated=False + the error) even if
+                    # rendering threw, so the page stops spinning.
+                    report_obj = results.get('report')
+                    report_obj = report_obj if hasattr(report_obj, 'to_dict') else None
+                    report_dict = report_obj.to_dict() if report_obj else {}
+
+                    html_file_path = os.path.join(settings.REPORT_DIR, f"{spectral_data.id}.html")
+                    html_content = ''
+                    render_error = ''
+                    try:
+                        if report_obj is not None:
+                            render_result = asyncio.run(
+                                reporting_agent.render_report(report_obj, settings.REPORT_DIR)
+                            )
+                            candidate_html = render_result.get('html_file')
+                            if candidate_html and os.path.exists(candidate_html):
+                                html_file_path = candidate_html
+                            html_content = render_result.get('html_content') or ''
+                            if not html_content and candidate_html and os.path.exists(candidate_html):
+                                with open(candidate_html, 'r', encoding='utf-8') as hf:
+                                    html_content = hf.read()
+                    except Exception as re:
+                        logger.error(f'Error rendering Quarto report: {re}', exc_info=True)
+                        render_error = f'Report generation failed: {re}'
+
+                    try:
+                        report = Report(
+                            spectral_data=spectral_data,
+                            report_type='spectral_analysis',
+                            title=f"Analysis Report - {spectral_data.original_filename}",
+                            file_path=html_file_path,
+                            quarto_content=json.dumps(report_dict, indent=2, default=str),
+                            html_content=html_content,
+                            python_source=json.dumps(report_dict.get('python_source', []), indent=2, default=str),
+                            is_generated=bool(html_content),
+                            generation_date=django_timezone.now()
                         )
-                        candidate_html = render_result.get('html_file')
-                        if candidate_html and os.path.exists(candidate_html):
-                            html_file_path = candidate_html
-                        # Prefer the embeddable fragment (scoped styles, no
-                        # <html>/<head> wrapper) so the report renders cleanly
-                        # inside the Django page via {{ report.html_content|safe }}.
-                        html_content = render_result.get('html_content') or ''
-                        if not html_content and candidate_html and os.path.exists(candidate_html):
-                            with open(candidate_html, 'r', encoding='utf-8') as hf:
-                                html_content = hf.read()
-                except Exception as re:
-                    logger.error(f'Error rendering Quarto report: {re}')
-                    spectral_data.last_analysis_error = f'Report generation failed: {re}'[:2000]
-                
-                report = Report(
-                    spectral_data=spectral_data,
-                    report_type='spectral_analysis',
-                    title=f"Analysis Report - {spectral_data.original_filename}",
-                    file_path=html_file_path,
-                    quarto_content=json.dumps(report_dict, indent=2, default=str),
-                    html_content=html_content,
-                    python_source=json.dumps(report_dict.get('python_source', []), indent=2, default=str),
-                    is_generated=bool(html_content),
-                    generation_date=django_timezone.now()
-                )
-                report.save()
-                
-                # The whole pipeline (analysis + report) is done: mark processed.
-                # If the report step failed, last_analysis_error is already set,
-                # so the row records a failed run rather than silently 'done'.
-                spectral_data.is_processed = True
-                spectral_data.processing_date = django_timezone.now()
-                spectral_data.save()
-                
-                # Log the analysis
-                SystemLog.objects.create(
-                    level='INFO',
-                    message=f'Analysis completed for {spectral_data.original_filename}',
-                    module='analysis.views',
-                    function='analysis_detail',
-                    context={'analysis_id': str(spectral_data.id)}
-                )
-                
-                messages.success(request, 'Analysis completed successfully!')
-                
-            except Exception as e:
-                logger.error(f'Error performing analysis: {e}', exc_info=True)
-                messages.error(request, f'Error performing analysis: {str(e)}')
-                # Mark as processed to avoid retrying the same failing analysis on
-                # every reload; user can re-upload a corrected file to retry.
-                # Record the failure so the UI can distinguish a failed run
-                # (is_processed=True + last_analysis_error set) from a
-                # successful one and show a Re-run affordance.
-                spectral_data.is_processed = True
-                spectral_data.processing_date = django_timezone.now()
-                spectral_data.last_analysis_error = str(e)[:2000]
-                spectral_data.save()
+                        report.save()
+                    except Exception as rse:
+                        logger.error(f'Failed to persist Report row: {rse}', exc_info=True)
+                        render_error = (render_error + ' | ' if render_error else '') + f'Report save failed: {rse}'
+
+                    if render_error:
+                        spectral_data.last_analysis_error = render_error[:2000]
+
+                    spectral_data.is_processed = True
+                    spectral_data.processing_date = django_timezone.now()
+                    spectral_data.save()
+
+                    try:
+                        SystemLog.objects.create(
+                            level='INFO',
+                            message=f'Analysis completed for {spectral_data.original_filename}',
+                            module='analysis.views',
+                            function='analysis_detail',
+                            context={'analysis_id': str(spectral_data.id)}
+                        )
+                    except Exception:
+                        pass
+
+                    messages.success(request, 'Analysis completed successfully!')
+
+                except Exception as e:
+                    logger.error(f'Error performing analysis: {e}', exc_info=True)
+                    messages.error(request, f'Error performing analysis: {str(e)}')
+                    try:
+                        spectral_data.is_processed = True
+                        spectral_data.processing_date = django_timezone.now()
+                        spectral_data.last_analysis_error = str(e)[:2000]
+                        spectral_data.save()
+                    except Exception as se:
+                        logger.error(f'Failed to persist failed-analysis state: {se}', exc_info=True)
+                finally:
+                    # Release the id only after the pipeline fully finished and
+                    # is_processed is persisted (success or failure), so a
+                    # concurrent GET never sees is_processed=False while a run is
+                    # still in flight and starts a duplicate run.
+                    _running_analyses.discard(aid)
     
     # Get analysis results
     analysis_results = spectral_data.analysis_results
