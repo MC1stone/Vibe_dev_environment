@@ -17,12 +17,24 @@ import os
 import sys
 import socket
 import subprocess
-import yaml
 import re
 from typing import Dict, List, Tuple, Optional, Set
 from dataclasses import dataclass
-import psutil
-import netifaces
+
+try:
+    import yaml
+except ImportError:  # yaml is only needed to read/write docker-compose.yml
+    yaml = None
+
+try:
+    import psutil
+except ImportError:  # psutil enriches process names; not required for port checks
+    psutil = None
+
+try:
+    import netifaces
+except ImportError:  # netifaces is not used by PortManager; kept for API compat
+    netifaces = None
 
 
 @dataclass
@@ -125,7 +137,7 @@ class PortManager:
                                         pid = int(p.split('pid=')[1].split(',')[0])
                                         break
                                 
-                                if pid:
+                                if pid and psutil is not None:
                                     try:
                                         proc = psutil.Process(pid)
                                         process_name = proc.name()

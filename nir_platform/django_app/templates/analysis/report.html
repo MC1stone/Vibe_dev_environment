@@ -1,6 +1,18 @@
 {% extends "base.html" %}
+{% load custom_filters %}
 
 {% block title %}{{ page_title|default:"Analysis Report" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .nir-report { background: #fff; padding: 1rem 1.25rem; border-radius: 8px; }
+  @media print {
+    .no-print, .navbar, .breadcrumb, .card-header, .list-group { display: none !important; }
+    .nir-report { padding: 0; }
+    .card { border: none !important; box-shadow: none !important; }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="fade-in">
@@ -16,6 +28,7 @@
         </div>
     </div>
 
+    {% if report %}
     <!-- Report Header -->
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -99,605 +112,46 @@
         </div>
     </div>
 
-    <!-- Report Content -->
+    <!-- Report Content: rendered Quarto HTML -->
     <div class="card mb-4">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h4><i class="bi bi-file-earmark-text"></i> Report Content</h4>
+            {% if not report.is_generated %}
+            <span class="badge bg-warning">Not generated</span>
+            {% else %}
+            <span class="badge bg-success">Generated</span>
+            {% endif %}
         </div>
         <div class="card-body">
-            <!-- Introduction Section -->
-            <div id="introduction" class="mb-5">
-                <h3><i class="bi bi-file-earmark-text"></i> Introduction</h3>
-                <hr>
-                <div class="card">
-                    <div class="card-body">
-                        <p class="lead">
-                            This report presents the comprehensive analysis of near-infrared (NIR) spectral data 
-                            collected on {{ spectral_data.upload_date|date:"Y-m-d" }}.
-                        </p>
-                        
-                        <h5>Analysis Overview</h5>
-                        <p>
-                            The analysis includes spectral data processing, metadata quality assessment, 
-                            and spectrometer calibration. All analysis was performed using the NIR Intelligence 
-                            Platform's AI agents.
-                        </p>
-                        
-                        <h5>Sample Information</h5>
-                        <dl class="row">
-                            <dt class="col-sm-4">Sample Type:</dt>
-                            <dd class="col-sm-8">{{ spectral_data.metadata.sample_type|default:"Unknown" }}</dd>
-                            
-                            <dt class="col-sm-4">Spectrometer:</dt>
-                            <dd class="col-sm-8">{{ spectral_data.spectrometer_type|default:"Unknown" }}</dd>
-                            
-                            <dt class="col-sm-4">Measurement Date:</dt>
-                            <dd class="col-sm-8">{{ spectral_data.metadata.date|default:"Unknown" }}</dd>
-                            
-                            <dt class="col-sm-4">Temperature:</dt>
-                            <dd class="col-sm-8">{{ spectral_data.metadata.temperature|default:"Unknown" }}°C</dd>
-                            
-                            <dt class="col-sm-4">Humidity:</dt>
-                            <dd class="col-sm-8">{{ spectral_data.metadata.humidity|default:"Unknown" }}%</dd>
-                        </dl>
-                    </div>
-                </div>
+            {% if report.html_content %}
+            <div class="d-flex justify-content-end mb-2 gap-2 no-print">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print
+                </button>
+                <a href="{% url 'download_analysis' spectral_data.id %}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-download"></i> Download
+                </a>
             </div>
-
-            <!-- Spectral Analysis Section -->
-            <div id="spectral-analysis" class="mb-5">
-                <h3><i class="bi bi-bar-chart-line"></i> Spectral Analysis</h3>
-                <hr>
-                
-                {% with analysis=report.quarto_content|parse_json %}
-                {% with metrics=analysis.sections.2.content|parse_json %}
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h5>Wavelength Information</h5>
-                            </div>
-                            <div class="card-body">
-                                <dl class="row mb-0">
-                                    <dt class="col-sm-5">Range:</dt>
-                                    <dd class="col-sm-7">
-                                        {{ metrics.wavelength_range.min|floatformat:1 }} - 
-                                        {{ metrics.wavelength_range.max|floatformat:1 }} nm
-                                    </dd>
-                                    <dt class="col-sm-5">Total Range:</dt>
-                                    <dd class="col-sm-7">{{ metrics.wavelength_range.range|floatformat:1 }} nm</dd>
-                                    <dt class="col-sm-5">Resolution:</dt>
-                                    <dd class="col-sm-7">
-                                        {{ metrics.wavelength_range.range|div:metrics.wavelength_range.range|floatformat:2 }} nm
-                                    </dd>
-                                    <dt class="col-sm-5">Data Points:</dt>
-                                    <dd class="col-sm-7">{{ spectral_data.wavelengths|length }}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                        
-                        <div class="card">
-                            <div class="card-header">
-                                <h5>Peak Analysis</h5>
-                            </div>
-                            <div class="card-body">
-                                <dl class="row mb-0">
-                                    <dt class="col-sm-5">Peaks Detected:</dt>
-                                    <dd class="col-sm-7">{{ metrics.peak_analysis.num_peaks }}</dd>
-                                    <dt class="col-sm-5">Valleys Detected:</dt>
-                                    <dd class="col-sm-7">{{ metrics.peak_analysis.num_valleys }}</dd>
-                                    <dt class="col-sm-5">Peak Density:</dt>
-                                    <dd class="col-sm-7">{{ metrics.peak_analysis.peak_density|floatformat:2 }} peaks/100nm</dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h5>Intensity Statistics</h5>
-                            </div>
-                            <div class="card-body">
-                                <dl class="row mb-0">
-                                    <dt class="col-sm-5">Minimum:</dt>
-                                    <dd class="col-sm-7">{{ metrics.intensity_statistics.min|floatformat:2 }}</dd>
-                                    <dt class="col-sm-5">Maximum:</dt>
-                                    <dd class="col-sm-7">{{ metrics.intensity_statistics.max|floatformat:2 }}</dd>
-                                    <dt class="col-sm-5">Mean:</dt>
-                                    <dd class="col-sm-7">{{ metrics.intensity_statistics.mean|floatformat:2 }}</dd>
-                                    <dt class="col-sm-5">Std Dev:</dt>
-                                    <dd class="col-sm-7">{{ metrics.intensity_statistics.std|floatformat:2 }}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                        
-                        <div class="card">
-                            <div class="card-header">
-                                <h5>Data Quality Metrics</h5>
-                            </div>
-                            <div class="card-body">
-                                <dl class="row mb-0">
-                                    <dt class="col-sm-5">Signal-to-Noise:</dt>
-                                    <dd class="col-sm-7">{{ metrics.data_quality.signal_to_noise|floatformat:1 }}</dd>
-                                    <dt class="col-sm-5">Wavelength Coverage:</dt>
-                                    <dd class="col-sm-7">{{ metrics.data_quality.wavelength_coverage|floatformat:2 }}</dd>
-                                    <dt class="col-sm-5">Completeness:</dt>
-                                    <dd class="col-sm-7">{{ metrics.data_quality.data_completeness|mul:100|floatformat:1 }}%</dd>
-                                    <dt class="col-sm-5">Outliers:</dt>
-                                    <dd class="col-sm-7">{{ metrics.data_quality.outliers }}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <h5>Processing Steps</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-flex flex-wrap gap-2">
-                            {% for step in analysis.sections.2.processing_steps %}
-                            <span class="badge bg-primary">{{ step }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                {% endwith %}
-                {% endwith %}
+            <div class="quarto-report" id="introduction" style="width:100%;">
+                {{ report.html_content|safe }}
             </div>
-
-            <!-- Metadata Quality Section -->
-            <div id="metadata-quality" class="mb-5">
-                <h3><i class="bi bi-tags"></i> Metadata Quality Assessment</h3>
-                <hr>
-                
-                {% with mq=report.quarto_content|parse_json %}
-                {% with metadata_quality=mq.sections.1.content|parse_json %}
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h5>Overall Score</h5>
-                            </div>
-                            <div class="card-body text-center">
-                                <div class="display-4 fw-bold">{{ metadata_quality.overall_score|floatformat:1 }}</div>
-                                <div class="badge bg-{% if metadata_quality.grade == 'A+' or metadata_quality.grade == 'A' or metadata_quality.grade == 'A-' %}success{% elif metadata_quality.grade == 'B+' or metadata_quality.grade == 'B' or metadata_quality.grade == 'B-' %}primary{% elif metadata_quality.grade == 'C+' or metadata_quality.grade == 'C' or metadata_quality.grade == 'C-' %}warning{% else %}danger{% endif %}">
-                                    {{ metadata_quality.grade }}
-                                </div>
-                                <p class="text-muted mt-2">Grade</p>
-                            </div>
-                        </div>
-                        
-                        <div class="card">
-                            <div class="card-header">
-                                <h5>Field Status</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between mb-3">
-                                    <span>Fields Checked:</span>
-                                    <span class="badge bg-success">{{ metadata_quality.field_scores|length }}</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-3">
-                                    <span>Missing Required:</span>
-                                    <span class="badge bg-danger">{{ metadata_quality.missing_fields|length }}</span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span>Invalid Fields:</span>
-                                    <span class="badge bg-warning">{{ metadata_quality.invalid_fields|length }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5>Standards Compliance</h5>
-                            </div>
-                            <div class="card-body">
-                                {% for std, score in metadata_quality.compliance_scores.items %}
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between mb-1">
-                                        <span>{{ std|title }}</span>
-                                        <span>{{ score|floatformat:1 }}%</span>
-                                    </div>
-                                    <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar bg-{% if score >= 90 %}success{% elif score >= 70 %}primary{% elif score >= 50 %}warning{% else %}danger{% endif %}" 
-                                             role="progressbar" 
-                                             style="width: {{ score }}%" 
-                                             aria-valuenow="{{ score }}" 
-                                             aria-valuemin="0" 
-                                             aria-valuemax="100">
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <h5>Summary</h5>
-                    </div>
-                    <div class="card-body">
-                        <p>{{ metadata_quality.summary.narrative }}</p>
-                        
-                        {% if metadata_quality.missing_fields %}
-                        <h6 class="mt-3">Missing Required Fields:</h6>
-                        <ul>
-                            {% for field in metadata_quality.missing_fields %}
-                            <li>{{ field|title }}</li>
-                            {% endfor %}
-                        </ul>
-                        {% endif %}
-                        
-                        {% if metadata_quality.invalid_fields %}
-                        <h6 class="mt-3">Invalid Fields:</h6>
-                        <ul>
-                            {% for field in metadata_quality.invalid_fields %}
-                            <li>
-                                <strong>{{ field.field|title }}:</strong> 
-                                {{ field.error }}
-                            </li>
-                            {% endfor %}
-                        </ul>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endwith %}
-                {% endwith %}
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-exclamation-triangle" style="font-size: 4rem;"></i>
+                <h5 class="mt-3">No rendered HTML report available</h5>
+                <p>The HTML report could not be generated (a dependency may have been missing at analysis time). Re-run the analysis to regenerate it.</p>
+                {% if spectral_data.last_analysis_error %}
+                <pre class="mt-2 text-danger text-start" style="white-space: pre-wrap;">{{ spectral_data.last_analysis_error }}</pre>
+                {% endif %}
+                <form method="post" action="{% url 'analysis_detail' spectral_data.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="rerun_analysis">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-repeat"></i> Re-run Analysis & Regenerate Report
+                    </button>
+                </form>
             </div>
-
-            <!-- Calibration Section -->
-            <div id="calibration" class="mb-5">
-                <h3><i class="bi bi-calculator"></i> Calibration Results</h3>
-                <hr>
-                
-                {% with cal=report.quarto_content|parse_json %}
-                {% with calibration=cal.sections.1.content|parse_json %}
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h5>Calibration Quality</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between mb-3">
-                                    <span>Wavelength:</span>
-                                    <span class="badge bg-{% if calibration.calibration_quality.wavelength_quality >= 90 %}success{% elif calibration.calibration_quality.wavelength_quality >= 70 %}primary{% elif calibration.calibration_quality.wavelength_quality >= 50 %}warning{% else %}danger{% endif %}">
-                                        {{ calibration.calibration_quality.wavelength_quality|floatformat:1 }}%
-                                    </span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-3">
-                                    <span>Intensity:</span>
-                                    <span class="badge bg-{% if calibration.calibration_quality.intensity_quality >= 90 %}success{% elif calibration.calibration_quality.intensity_quality >= 70 %}primary{% elif calibration.calibration_quality.intensity_quality >= 50 %}warning{% else %}danger{% endif %}">
-                                        {{ calibration.calibration_quality.intensity_quality|floatformat:1 }}%
-                                    </span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span>Overall:</span>
-                                    <span class="badge bg-{% if calibration.calibration_quality.overall_quality >= 90 %}success{% elif calibration.calibration_quality.overall_quality >= 70 %}primary{% elif calibration.calibration_quality.overall_quality >= 50 %}warning{% else %}danger{% endif %}">
-                                        {{ calibration.calibration_quality.overall_quality|floatformat:1 }}%
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {% if calibration.wavelength_calibration %}
-                        <div class="card">
-                            <div class="card-header">
-                                <h5>Wavelength Calibration</h5>
-                            </div>
-                            <div class="card-body">
-                                <dl class="row mb-0">
-                                    <dt class="col-sm-5">Type:</dt>
-                                    <dd class="col-sm-7">{{ calibration.wavelength_calibration.curve_type|title }}</dd>
-                                    <dt class="col-sm-5">R²:</dt>
-                                    <dd class="col-sm-7">{{ calibration.wavelength_calibration.r_squared|floatformat:4 }}</dd>
-                                    <dt class="col-sm-5">RMSE:</dt>
-                                    <dd class="col-sm-7">{{ calibration.wavelength_calibration.rmse|floatformat:4 }} nm</dd>
-                                    <dt class="col-sm-5">Points:</dt>
-                                    <dd class="col-sm-7">{{ calibration.wavelength_calibration.num_points }}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="col-md-6">
-                        {% if calibration.spectrometer_parameters %}
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h5>Parameter Recommendations</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Parameter</th>
-                                                <th>Current</th>
-                                                <th>Recommended</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for param, info in calibration.spectrometer_parameters.items %}
-                                            <tr>
-                                                <td>{{ param|title }}</td>
-                                                <td>{{ info.current|default:"N/A" }}</td>
-                                                <td>{{ info.recommended|default:"N/A" }} {{ info.unit|default:"", }}</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if calibration.recommendations %}
-                        <div class="card">
-                            <div class="card-header">
-                                <h5>Calibration Recommendations</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="list-group list-group-flush">
-                                    {% for rec in calibration.recommendations %}
-                                    <div class="list-group-item">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <h6 class="mb-1">
-                                                    <span class="badge bg-{% if rec.priority == 'high' %}danger{% elif rec.priority == 'medium' %}warning{% else %}info{% endif %}">
-                                                        {{ rec.priority|title }}
-                                                    </span>
-                                                    {{ rec.type|title }}
-                                                </h6>
-                                                <p class="mb-0 small text-muted">{{ rec.description }}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endwith %}
-                {% endwith %}
-            </div>
-
-            <!-- Recommendations Section -->
-            <div id="recommendations" class="mb-5">
-                <h3><i class="bi bi-lightbulb"></i> Recommendations</h3>
-                <hr>
-                
-                {% with analysis=report.quarto_content|parse_json %}
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h5>Spectral Data Issues</h5>
-                            </div>
-                            <div class="card-body">
-                                {% with issues=analysis.sections.4.content|parse_json %}
-                                {% if issues %}
-                                    <div class="list-group list-group-flush">
-                                        {% for issue in issues %}
-                                        <div class="list-group-item">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <div>
-                                                    <h6 class="mb-1">
-                                                        <span class="badge bg-{% if issue.severity == 'high' %}danger{% elif issue.severity == 'medium' %}warning{% else %}info{% endif %}">
-                                                            {{ issue.severity|title }}
-                                                        </span>
-                                                        {{ issue.type|title }}
-                                                    </h6>
-                                                    <p class="mb-0 small text-muted">{{ issue.description }}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    <div class="text-center py-4">
-                                        <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
-                                        <h5 class="mt-3">No Issues Detected</h5>
-                                        <p class="text-muted">Your spectral data looks good!</p>
-                                    </div>
-                                {% endif %}
-                                {% endwith %}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h5>Enhancement Recommendations</h5>
-                            </div>
-                            <div class="card-body">
-                                {% with recs=analysis.sections.4.content|parse_json %}
-                                {% if recs %}
-                                    <div class="list-group list-group-flush">
-                                        {% for rec in recs %}
-                                        <div class="list-group-item">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <div>
-                                                    <h6 class="mb-1">
-                                                        <span class="badge bg-{% if rec.priority == 'high' %}danger{% elif rec.priority == 'medium' %}warning{% else %}info{% endif %}">
-                                                            {{ rec.priority|title }}
-                                                        </span>
-                                                        {{ rec.type|title }}
-                                                    </h6>
-                                                    <p class="mb-0 small text-muted">{{ rec.description }}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    <div class="text-center py-4">
-                                        <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
-                                        <h5 class="mt-3">No Recommendations</h5>
-                                        <p class="text-muted">Your data meets all quality standards!</p>
-                                    </div>
-                                {% endif %}
-                                {% endwith %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Priority Actions</h5>
-                    </div>
-                    <div class="card-body">
-                        <ol class="mb-0">
-                            <li>Address high-severity issues first</li>
-                            <li>Implement calibration recommendations</li>
-                            <li>Add missing metadata fields</li>
-                            <li>Consider spectrometer parameter optimization</li>
-                        </ol>
-                    </div>
-                </div>
-                {% endwith %}
-            </div>
-
-            <!-- Conclusion Section -->
-            <div id="conclusion" class="mb-5">
-                <h3><i class="bi bi-check-circle"></i> Conclusion</h3>
-                <hr>
-                
-                {% with analysis=report.quarto_content|parse_json %}
-                {% with conclusion=analysis.sections.6.content|parse_json %}
-                <div class="card">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h5>Overall Assessment</h5>
-                                <dl class="row mb-4">
-                                    <dt class="col-sm-6">Spectral Data Quality:</dt>
-                                    <dd class="col-sm-6">
-                                        <span class="badge bg-{% if spectral_data.data_quality_score >= 90 %}success{% elif spectral_data.data_quality_score >= 70 %}primary{% elif spectral_data.data_quality_score >= 50 %}warning{% else %}danger{% endif %}">
-                                            {{ spectral_data.data_quality_score|floatformat:1 }}/100
-                                        </span>
-                                    </dd>
-                                    <dt class="col-sm-6">Metadata Quality:</dt>
-                                    <dd class="col-sm-6">
-                                        <span class="badge bg-{% if spectral_data.metadata_quality_score >= 90 %}success{% elif spectral_data.metadata_quality_score >= 70 %}primary{% elif spectral_data.metadata_quality_score >= 50 %}warning{% else %}danger{% endif %}">
-                                            {{ spectral_data.metadata_quality_score|floatformat:1 }}/100
-                                        </span>
-                                    </dd>
-                                    <dt class="col-sm-6">Calibration Quality:</dt>
-                                    <dd class="col-sm-6">
-                                        <span class="badge bg-{% if spectral_data.calibration_quality_score >= 90 %}success{% elif spectral_data.calibration_quality_score >= 70 %}primary{% elif spectral_data.calibration_quality_score >= 50 %}warning{% else %}danger{% endif %}">
-                                            {{ spectral_data.calibration_quality_score|floatformat:1 }}%
-                                        </span>
-                                    </dd>
-                                    <dt class="col-sm-6">Overall Quality:</dt>
-                                    <dd class="col-sm-6">
-                                        <span class="badge bg-{% if spectral_data.overall_quality_score >= 90 %}success{% elif spectral_data.overall_quality_score >= 70 %}primary{% elif spectral_data.overall_quality_score >= 50 %}warning{% else %}danger{% endif %}">
-                                            {{ spectral_data.overall_quality_score|floatformat:1 }}/100
-                                        </span>
-                                    </dd>
-                                </dl>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <h5>Key Findings</h5>
-                                <ul>
-                                    <li>The spectral data shows {{ analysis.sections.2.content.peak_analysis.num_peaks }} distinct peaks in the NIR region</li>
-                                    <li>Metadata quality is rated as <strong>{{ analysis.sections.1.content.grade }}</strong></li>
-                                    <li>{{ analysis.sections.2.content.issue_summary.total_issues }} potential spectrometer issues were detected</li>
-                                    <li>{{ analysis.sections.2.content.issue_summary.total_issues|add:analysis.sections.4.content|length }} recommendations for improvement have been provided</li>
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <hr>
-                        
-                        <h5>Next Steps</h5>
-                        <ol>
-                            <li>Review and address all high-priority recommendations</li>
-                            <li>Implement suggested calibration procedures</li>
-                            <li>Add missing metadata fields for better data documentation</li>
-                            <li>Consider spectrometer parameter optimization for improved measurement quality</li>
-                        </ol>
-                        
-                        <div class="alert alert-info mt-4">
-                            <i class="bi bi-info-circle me-2"></i>
-                            All original and processed data, along with the Python source code used for analysis, 
-                            are included with this report for reproducibility and further analysis.
-                        </div>
-                        
-                        <div class="text-center text-muted mt-4">
-                            <p class="mb-0">
-                                Report generated by NIR Intelligence Platform on 
-                                {{ report.generation_date|date:"Y-m-d H:i:s" }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                {% endwith %}
-                {% endwith %}
-            </div>
-
-            <!-- Source Code Section -->
-            <div id="source-code" class="mb-5">
-                <h3><i class="bi bi-code-slash"></i> Python Source Code</h3>
-                <hr>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Analysis Source Code</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="alert alert-info mb-4">
-                            <i class="bi bi-info-circle me-2"></i>
-                            The following Python code was used to perform the analysis. 
-                            You can copy and modify it for your own use.
-                        </div>
-                        
-                        {% if report.python_source %}
-                        <div class="accordion" id="sourceCodeAccordion">
-                            {% for i in report.python_source %}
-                            <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed" 
-                                            type="button" 
-                                            data-bs-toggle="collapse" 
-                                            data-bs-target="#sourceFile{{ forloop.counter }}" 
-                                            aria-expanded="false" 
-                                            aria-controls="sourceFile{{ forloop.counter }}">
-                                        Source File {{ forloop.counter }}
-                                    </button>
-                                </h2>
-                                <div id="sourceFile{{ forloop.counter }}" 
-                                     class="accordion-collapse collapse" 
-                                     data-bs-parent="#sourceCodeAccordion">
-                                    <div class="accordion-body">
-                                        <pre><code>{{ i }}</code></pre>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        <div class="text-center py-4 text-muted">
-                            <i class="bi bi-code-slash" style="font-size: 4rem;"></i>
-                            <h5 class="mt-3">No Source Code Available</h5>
-                            <p>Source code was not included in this report.</p>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -709,6 +163,58 @@
             </a>
         </div>
     </div>
+    {% else %}
+    <!-- Report not generated yet -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2><i class="bi bi-hourglass-split"></i> Report not generated yet</h2>
+        </div>
+        <div class="card-body text-center py-5">
+            <i class="bi bi-file-earmark-text text-muted" style="font-size: 4rem;"></i>
+            <h5 class="mt-3">No report exists for this analysis yet.</h5>
+            <p class="text-muted">
+                {% if analysis_pending %}
+                The analysis has not run yet. Open the analysis page to start it —
+                this report page will refresh itself while you wait.
+                {% elif last_analysis_error %}
+                The last analysis failed:
+                <pre class="mt-2 mb-0 text-danger" style="white-space: pre-wrap;">{{ last_analysis_error }}</pre>
+                Re-run the analysis to retry.
+                {% else %}
+                The analysis ran but produced no report (it may have failed, or
+                the report step errored). Re-run the analysis to produce one.
+                {% endif %}
+            </p>
+            {% if analysis_pending %}
+            <a href="{% url 'analysis_detail' spectral_data.id %}" class="btn btn-primary mb-3">
+                <i class="bi bi-play-circle"></i> Open analysis to run it
+            </a>
+            {% endif %}
+            <div id="report-wait-status" class="text-muted small mb-3">
+                {% if analysis_pending %}
+                <span class="spinner-border spinner-border-sm" role="status"></span>
+                Waiting for the report to be generated&hellip; this page will refresh automatically.
+                {% else %}
+                No report available. Use Re-run Analysis below to retry.
+                {% endif %}
+            </div>
+            <form method="post" action="{% url 'analysis_detail' spectral_data.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="rerun_analysis">
+                <button type="submit" class="btn btn-warning" onclick="return confirm('Re-run analysis and regenerate the report?');">
+                    <i class="bi bi-arrow-repeat"></i> Re-run Analysis
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body text-center">
+            <a href="{% url 'analysis_detail' spectral_data.id %}" class="btn btn-primary">
+                <i class="bi bi-arrow-left"></i> Back to Analysis Details
+            </a>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
@@ -727,6 +233,40 @@
             }
         });
     });
+
+    {% if analysis_pending %}
+    // The report row does not exist yet and the analysis has not run / is
+    // pending. The detail page runs the pipeline on a GET and creates the
+    // Report row; poll this URL and reload once the report appears so the
+    // user does not have to refresh by hand. (If is_processed is True and
+    // there is still no report, the analysis failed — do not poll.)
+    (function () {
+        var REFRESH_MS = 5000;          // poll interval
+        var MAX_POLLS = 36;             // ~3 minutes, then stop auto-reloading
+        var key = 'report_poll_' + '{{ spectral_data.id }}';
+        var polls = parseInt(sessionStorage.getItem(key) || '0', 10) || 0;
+
+        function setStatus(msg, isDone) {
+            var el = document.getElementById('report-wait-status');
+            if (!el) return;
+            el.innerHTML = isDone
+                ? msg
+                : '<span class="spinner-border spinner-border-sm" role="status"></span> ' + msg;
+        }
+
+        if (polls >= MAX_POLLS) {
+            setStatus('The report still has not appeared after several tries. ' +
+                      'Re-run the analysis or check the server logs for a failure.', true);
+            sessionStorage.removeItem(key);
+            return;
+        }
+
+        sessionStorage.setItem(key, String(polls + 1));
+        setStatus('Waiting for the report to be generated&hellip; (attempt ' +
+                  (polls + 1) + '/' + MAX_POLLS + ') this page will refresh automatically.');
+
+        setTimeout(function () { window.location.reload(); }, REFRESH_MS);
+    })();
+    {% endif %}
 </script>
-{% endblock %}
 {% endblock %}

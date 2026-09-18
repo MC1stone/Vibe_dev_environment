@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.eggs/
+*.egg
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+*.log
+db.sqlite3
+media/
+uploads/
+reports/
+staticfiles/
+.env
+
+# Matplotlib plot-code artifacts (spectral comparison image)
+nir_platform/spectrum_comparison.png

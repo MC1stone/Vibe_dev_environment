@@ -8,12 +8,20 @@ import json
 import logging
 import uuid
 from datetime import datetime
+from django.utils import timezone as django_timezone
+from typing import Any, Dict
+import asyncio
 
-# Add parent directory to Python path for agents module
-# Inside Docker: /app/analysis/views.py -> /app
-# On host: /home/.../django_app/analysis/views.py -> /home/.../nir_platform
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, PROJECT_ROOT)
+# Add the package roots to Python path so the `agents` module is importable.
+# views.py lives at nir_platform/django_app/analysis/views.py; the `agents`
+# package lives at nir_platform/agents. In the Docker layout the app is
+# flattened to /app/analysis/views.py with /app/agents, so we add both the
+# django_app directory and its parent to sys.path to cover both layouts.
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+_DJANGO_APP_DIR = os.path.dirname(_THIS_DIR)
+_PLATFORM_DIR = os.path.dirname(_DJANGO_APP_DIR)
+sys.path.insert(0, _PLATFORM_DIR)
+sys.path.insert(0, _DJANGO_APP_DIR)
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse, FileResponse
@@ -24,22 +32,40 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import SpectralData, AnalysisProject, Report, ChatSession, SystemLog
 from .forms import UploadFileForm, AnalysisForm, ChatForm
+from agents.data_loader_agent import DataLoaderAgent
 from agents.spectral_analysis_agent import SpectralAnalysisAgent
+from agents.spectral_search_agent import SpectralSearchAgent
 from agents.metadata_quality_agent import MetadataQualityAgent
 from agents.calibration_agent import CalibrationAgent
 from agents.reporting_agent import ReportingAgent
 from agents.quality_assurance_agent import QualityAssuranceAgent
+from agents.hardware_info_agent import HardwareInfoAgent
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
-# Initialize agents (singleton instances)
-spectral_agent = SpectralAnalysisAgent()
-metadata_agent = MetadataQualityAgent()
+# Initialize agents (singleton instances). Ollama runs on the port
+# configured in settings.AGENT_CONFIG (11435 in the dev container, not
+# the library default 11434); pass it explicitly so the agents talk to
+# the running server instead of falling back to local canned replies.
+_OLLAMA_URL = settings.AGENT_CONFIG.get('ollama_url', 'http://localhost:11435')
+data_loader_agent = DataLoaderAgent()
+spectral_agent = SpectralAnalysisAgent(ollama_url=_OLLAMA_URL)
+spectral_search_agent = SpectralSearchAgent()
+metadata_agent = MetadataQualityAgent(ollama_url=_OLLAMA_URL)
 calibration_agent = CalibrationAgent()
 reporting_agent = ReportingAgent()
 qa_agent = QualityAssuranceAgent()
+hardware_info_agent = HardwareInfoAgent()
+
+# In-flight analysis guard: the detail page runs the (synchronous)
+# analysis pipeline on a GET while is_processed=False. A second GET for
+# the same analysis_id (e.g. the report page's auto-refresh, or the user
+# reloading the detail page) would start a second parallel run, which
+# wastes work, double-indexes, and can produce two reports. Track the
+# ids currently being analysed and skip re-entering an in-flight one.
+_running_analyses: set = set()
 
 
 def home(request):
@@ -62,6 +88,213 @@ def home(request):
     return render(request, 'analysis/home.html', context)
 
 
+def _spectral_data_brief(sd: SpectralData) -> Dict[str, Any]:
+    """Compact summary of one analysis for the overview/comparison views."""
+    md = sd.metadata or {}
+    brix = md.get('Brix') or md.get('brix') or md.get('BRIX') or []
+    brix_range = None
+    if brix:
+        try:
+            vals = [float(x) for x in brix if x not in (None, '')]
+            if vals:
+                brix_range = (min(vals), max(vals))
+        except (TypeError, ValueError):
+            brix_range = None
+    ac = (sd.calibration_results or {}).get('analyte_calibration') if isinstance(sd.calibration_results, dict) else None
+    return {
+        'id': str(sd.id),
+        'original_filename': sd.original_filename,
+        'spectrometer_type': sd.spectrometer_type or 'Auto-detect',
+        'upload_date': sd.upload_date,
+        'is_processed': sd.is_processed,
+        'wavelength_count': len(sd.wavelengths or []),
+        'sample_count': len(md.get('intensity_matrix', [])) if isinstance(md, dict) else 0,
+        'brix_range': brix_range,
+        'overall_quality_score': sd.overall_quality_score,
+        'data_quality_score': sd.data_quality_score,
+        'calibration_quality_score': sd.calibration_quality_score,
+        'calibration_r2_cv': ac.get('r_squared_cv') if ac else None,
+        'calibration_rmse_cv': ac.get('rmse_cv') if ac else None,
+        'has_report': Report.objects.filter(spectral_data=sd).exists(),
+    }
+
+
+def analyses_overview(request):
+    """Overview of all past analyses and reports.
+
+    Lets the customer recall already-created reports/analyses, and links
+    into the comparison and recalibration workflows.
+    """
+    qs = SpectralData.objects.all().order_by('-upload_date')
+    rows = [(_spectral_data_brief(sd), sd) for sd in qs]
+    # Ensure every analysis has a fingerprint in the vector DB so the
+    # search/comparison works, but only index the ones that are NOT yet
+    # indexed. Re-upserting all of them on every page load caused a burst
+    # of Qdrant PUTs on each refresh; is_indexed() skips already-stored
+    # points. For multi-sample uploads whose flattened 'intensities' list
+    # is empty, fall back to the column-wise mean of the per-sample
+    # intensity_matrix so they still get a representative fingerprint.
+    import numpy as _np
+    already_indexed = spectral_search_agent.indexed_analysis_ids()
+    for brief, sd in rows:
+        try:
+            if str(brief['id']) in already_indexed:
+                continue
+            ints = sd.intensities or []
+            if not ints:
+                matrix = (sd.metadata or {}).get('intensity_matrix')
+                if matrix:
+                    try:
+                        ints = _np.nanmean(_np.array(matrix, dtype=float), axis=0)
+                        ints = [float(v) if _np.isfinite(v) else 0.0 for v in ints]
+                    except Exception:
+                        ints = []
+            if not ints:
+                # No usable spectrum (broken upload / no matrix). Skip
+                # silently rather than logging an 'empty intensities'
+                # warning on every overview page load.
+                continue
+            spectral_search_agent.index_analysis(
+                analysis_id=brief['id'],
+                intensities=ints,
+                metadata=sd.metadata or {},
+                original_filename=sd.original_filename,
+                spectrometer_type=sd.spectrometer_type or '',
+                quality_score=sd.data_quality_score,
+                upload_date=sd.upload_date.isoformat() if sd.upload_date else None,
+            )
+        except Exception:
+            pass
+    context = {
+        'page_title': 'Analyses Overview',
+        'analyses': [b for b, _ in rows],
+        'indexed_count': spectral_search_agent.count(),
+        'search_backend': spectral_search_agent.backend,
+    }
+    return render(request, 'analysis/analyses_overview.html', context)
+
+
+def compare_analyses(request):
+    """Compare 2+ analyses side by side and find comparable measurements.
+
+    Accepts a list of analysis ids (GET ?ids=...&ids=... or POST). Shows
+    side-by-side quality/calibration metrics and, for the first selected
+    analysis, the most similar past measurements found via the vector DB
+    (Qdrant / numpy) so the customer can see whether comparable
+    measurements were already executed.
+    """
+    selected_ids = request.GET.getlist('ids') or request.POST.getlist('ids')
+    selected = []
+    comparison_rows = []
+    comparable = None
+    base_id = None
+    for aid in selected_ids:
+        try:
+            sd = SpectralData.objects.get(pk=aid)
+        except (SpectralData.DoesNotExist, ValueError):
+            continue
+        selected.append(sd)
+        comparison_rows.append(_spectral_data_brief(sd))
+    if selected:
+        base = selected[0]
+        base_id = str(base.id)
+        try:
+            result = spectral_search_agent.search_similar(
+                query_analysis_id=base_id,
+                limit=10,
+                min_similarity=0.5,
+                same_spectrometer_only=True,
+            )
+            comparable = result.to_dict()
+        except Exception as e:
+            logger.warning(f'compare search failed: {e}')
+            comparable = {'hits': [], 'backend': spectral_search_agent.backend,
+                          'note': f'Search failed: {e}', 'count': 0}
+    # If nothing selected, offer all analyses for selection.
+    all_analyses = [_spectral_data_brief(sd) for sd in
+                    SpectralData.objects.all().order_by('-upload_date')]
+    context = {
+        'page_title': 'Compare Analyses',
+        'comparison_rows': comparison_rows,
+        'comparable': comparable,
+        'base_id': base_id,
+        'all_analyses': all_analyses,
+        'selected_ids': selected_ids,
+    }
+    return render(request, 'analysis/compare_analyses.html', context)
+
+
+def recalibrate(request):
+    """Recalculate the NIR->Brix calibration from combined analyses.
+
+    The customer selects 2+ analyses; their per-sample intensity matrices
+    and Brix references are stacked and a new PLS regression is fitted so
+    the calibration can be recalculated with potential additional data.
+    """
+    selected_ids = request.GET.getlist('ids') or request.POST.getlist('ids')
+    samples = []
+    used = []
+    combined_cal = None
+    error = None
+    for aid in selected_ids:
+        try:
+            sd = SpectralData.objects.get(pk=aid)
+        except (SpectralData.DoesNotExist, ValueError):
+            continue
+        md = sd.metadata or {}
+        mat = md.get('intensity_matrix') if isinstance(md, dict) else None
+        brix = md.get('Brix') or md.get('brix') or md.get('BRIX')
+        if not mat or not brix:
+            continue
+        samples.append({
+            'intensity_matrix': mat,
+            'analyte': brix,
+            'wavelengths': sd.wavelengths or [],
+            'label': sd.original_filename,
+        })
+        used.append(_spectral_data_brief(sd))
+    combined_neural = None
+    if request.method == 'POST' and samples:
+        try:
+            ac = calibration_agent.recalibrate_from_samples(samples)
+            if ac is not None:
+                combined_cal = ac.to_dict()
+            else:
+                error = ('Could not recalibrate: not enough combined samples, '
+                         'or scikit-learn is unavailable.')
+            # Fit a combined neural-network model in parallel to PLS.
+            try:
+                ncal = calibration_agent.recalibrate_neural_from_samples(samples)
+                if ncal is not None:
+                    combined_neural = ncal.to_dict()
+            except Exception as ne:
+                logger.warning(f'Neural recalibration failed: {ne}')
+        except Exception as e:
+            error = f'Recalibration failed: {e}'
+    # Pair wavelengths with their coefficients so the template can iterate
+    # without relying on a non-existent index filter.
+    coeff_table = []
+    if combined_cal:
+        wls = combined_cal.get('wavelengths') or []
+        coefs = combined_cal.get('coefficients') or []
+        for i, wl in enumerate(wls):
+            c = coefs[i] if i < len(coefs) else None
+            coeff_table.append({'wavelength': wl, 'coefficient': c})
+    all_analyses = [_spectral_data_brief(sd) for sd in
+                    SpectralData.objects.all().order_by('-upload_date')]
+    context = {
+        'page_title': 'Recalculate Calibration',
+        'used': used,
+        'combined_cal': combined_cal,
+        'coeff_table': coeff_table,
+        'combined_neural': combined_neural,
+        'error': error,
+        'all_analyses': all_analyses,
+        'selected_ids': selected_ids,
+    }
+    return render(request, 'analysis/recalibrate.html', context)
+
+
 def upload_file(request):
     """File upload view."""
     if request.method == 'POST':
@@ -70,6 +303,19 @@ def upload_file(request):
             try:
                 # Save uploaded file
                 uploaded_file = request.FILES['file']
+                
+                # Parse optional metadata JSON submitted via the form
+                metadata_raw = form.cleaned_data.get('metadata', '')
+                metadata = {}
+                if metadata_raw:
+                    try:
+                        metadata = json.loads(metadata_raw)
+                        if not isinstance(metadata, dict):
+                            messages.error(request, 'Metadata must be a JSON object.')
+                            metadata = {}
+                    except (json.JSONDecodeError, TypeError) as me:
+                        messages.error(request, f'Invalid metadata JSON: {me}')
+                        metadata = {}
                 
                 # Create unique filename
                 file_ext = os.path.splitext(uploaded_file.name)[1]
@@ -82,16 +328,69 @@ def upload_file(request):
                     for chunk in uploaded_file.chunks():
                         destination.write(chunk)
                 
+                # Parse the uploaded spectral file via the Data Loader Agent,
+                # which runs on every new upload and returns the structured
+                # LoadResult (wavelengths, representative intensities, the full
+                # per-sample intensity matrix, metadata incl. Brix, and the
+                # detected spectrometer type).
+                wavelengths = []
+                intensities = []
+                spectrometer_type = form.cleaned_data.get('spectrometer_type', None)
+                try:
+                    loaded = asyncio.run(data_loader_agent.load(file_path))
+                    wavelengths = list(loaded.wavelengths)
+                    intensities = list(loaded.intensities)
+                    # Merge metadata detected from the file (file comments, header
+                    # cols, Brix/Temp reference columns).
+                    file_metadata = loaded.metadata or {}
+                    if isinstance(file_metadata, dict):
+                        for k, v in file_metadata.items():
+                            metadata.setdefault(k, v)
+                    # Carry the full per-sample intensity matrix + spectral
+                    # column order + spectrometer info into metadata so the
+                    # calibration agent can build the NIR->Brix regression.
+                    if loaded.intensity_matrix:
+                        metadata['intensity_matrix'] = loaded.intensity_matrix
+                        metadata['spectral_columns'] = loaded.spectral_columns
+                    if loaded.spectrometer_info:
+                        metadata['spectrometer_info'] = loaded.spectrometer_info
+                    # Persist the structured header metadata + proposed quality
+                    # rating so the metadata-quality agent and the UI can use them
+                    # and the user can fill in missing fields.
+                    if loaded.standard_metadata:
+                        metadata['standard_metadata'] = loaded.standard_metadata
+                    if loaded.metadata_quality:
+                        metadata['metadata_quality'] = loaded.metadata_quality
+                    if not spectrometer_type:
+                        spectrometer_type = loaded.spectrometer_type
+                except Exception as pe:
+                    logger.error(f'Error parsing spectral file {uploaded_file.name}: {pe}')
+                    messages.error(
+                        request,
+                        f'File saved, but could not parse spectral data: {pe}. '
+                        'Analysis will not be available until a valid file is uploaded.'
+                    )
+                    metadata_error = True
+                else:
+                    metadata_error = False
+                
                 # Create SpectralData record
                 spectral_data = SpectralData(
                     user=request.user if request.user.is_authenticated else None,
                     original_filename=uploaded_file.name,
                     file_path=file_path,
                     file_type=file_ext.lower(),
-                    metadata=form.cleaned_data.get('metadata', {}),
-                    spectrometer_type=form.cleaned_data.get('spectrometer_type', None)
+                    wavelengths=wavelengths,
+                    intensities=intensities,
+                    metadata=metadata,
+                    spectrometer_type=spectrometer_type
                 )
                 spectral_data.save()
+                logger.info(
+                    f'Uploaded spectral data saved id={spectral_data.id} '
+                    f'wl_len={len(wavelengths)} int_len={len(intensities)} '
+                    f'spec_type={spectrometer_type!r} metadata_error={metadata_error}'
+                )
                 
                 # Log the upload
                 SystemLog.objects.create(
@@ -101,6 +400,9 @@ def upload_file(request):
                     function='upload_file',
                     context={'file_id': str(spectral_data.id), 'user': str(request.user)}
                 )
+                
+                if metadata_error:
+                    return redirect('analysis_detail', analysis_id=spectral_data.id)
                 
                 messages.success(request, f'File "{uploaded_file.name}" uploaded successfully!')
                 return redirect('analysis_detail', analysis_id=spectral_data.id)
@@ -127,9 +429,8 @@ async def analyze_spectral_data(spectral_data: SpectralData):
     """Analyze spectral data using agents."""
     try:
         # Load spectral data
-        import asyncio
-        
-        # Convert to dict for agent
+        # Build the data dict from the parsed spectral data so the agents
+        # receive the real wavelengths/intensities captured at upload time.
         data_dict = {
             'wavelengths': spectral_data.wavelengths,
             'intensities': spectral_data.intensities,
@@ -141,10 +442,36 @@ async def analyze_spectral_data(spectral_data: SpectralData):
         # Run spectral analysis
         spectral_result = await spectral_agent.analyze_spectral_data(data=data_dict)
         
-        # Run metadata quality assessment
-        metadata_result = await metadata_agent.evaluate_metadata_quality(
-            spectral_data.metadata or {}
-        )
+        # Collect / consolidate hardware information about the spectrometer
+        # that produced this measurement. Runs after spectral analysis (which
+        # detects the spectrometer type) so it can reuse the detected
+        # spectrometer_info, then merges the knowledge base, the file header
+        # metadata, and spectral-derived characteristics. Failures here must
+        # never break the analysis pipeline.
+        try:
+            spec_info = (spectral_result.to_dict()
+                         .get('original_data', {}).get('metadata', {})
+                         .get('spectrometer_info', {})) or {}
+            hardware_info = await hardware_info_agent.collect_hardware_info(
+                spectrometer_type=spectral_data.spectrometer_type or spec_info.get('type'),
+                wavelengths=spectral_data.wavelengths or [],
+                intensities=spectral_data.intensities or [],
+                metadata=spectral_data.metadata or {},
+                spectrometer_info=spec_info,
+            )
+        except Exception as hie:
+            logger.warning(f'Hardware info collection failed (non-fatal): {hie}')
+            hardware_info = None
+        
+        # Run metadata quality assessment. Merge the structured header
+        # metadata extracted by the Data Loader Agent so the metadata agent
+        # grades on the real extracted fields, not just the raw columns.
+        md_for_eval = dict(spectral_data.metadata or {})
+        std_md = md_for_eval.get('standard_metadata') or {}
+        if isinstance(std_md, dict):
+            for k, v in std_md.items():
+                md_for_eval.setdefault(k, v)
+        metadata_result = await metadata_agent.evaluate_metadata_quality(md_for_eval)
         
         # Run calibration
         calibration_result = await calibration_agent.generate_calibration(data_dict)
@@ -156,19 +483,37 @@ async def analyze_spectral_data(spectral_data: SpectralData):
             calibration_result.to_dict()
         )
         
-        # Generate report
+        # Generate report (return the report object so the view can render it)
         report = await reporting_agent.generate_spectral_analysis_report(
             spectral_result.to_dict(),
             metadata_result.to_dict(),
-            calibration_result.to_dict()
+            calibration_result.to_dict(),
+            hardware_info=hardware_info.to_dict() if hardware_info else None,
         )
+        
+        # Index the spectral fingerprint in the vector DB (Qdrant / numpy)
+        # so this analysis can be recalled and compared against future
+        # uploads and other past analyses.
+        try:
+            spectral_search_agent.index_analysis(
+                analysis_id=str(spectral_data.id),
+                intensities=spectral_data.intensities or [],
+                metadata=spectral_data.metadata or {},
+                original_filename=spectral_data.original_filename,
+                spectrometer_type=spectral_data.spectrometer_type or '',
+                quality_score=spectral_data.data_quality_score,
+                upload_date=spectral_data.upload_date.isoformat() if spectral_data.upload_date else None,
+            )
+        except Exception as ie:
+            logger.warning(f'Failed to index spectral fingerprint: {ie}')
         
         return {
             'spectral_result': spectral_result.to_dict(),
             'metadata_result': metadata_result.to_dict(),
             'calibration_result': calibration_result.to_dict(),
             'qa_result': qa_result.to_dict(),
-            'report': report.to_dict()
+            'hardware_info': hardware_info.to_dict() if hardware_info else {},
+            'report': report
         }
         
     except Exception as e:
@@ -179,64 +524,218 @@ async def analyze_spectral_data(spectral_data: SpectralData):
 def analysis_detail(request, analysis_id):
     """Analysis detail view."""
     spectral_data = get_object_or_404(SpectralData, pk=analysis_id)
-    
+
+    # Allow the user to re-run the analysis (and regenerate the report)
+    # on an existing record without re-uploading the file. This is needed
+    # when a previous run generated an empty/broken report (e.g. a missing
+    # dependency that has since been installed).
+    if request.method == 'POST' and request.POST.get('action') == 'rerun_analysis':
+        Report.objects.filter(spectral_data=spectral_data).delete()
+        spectral_data.is_processed = False
+        spectral_data.processing_date = None
+        spectral_data.last_analysis_error = ''
+        spectral_data.save()
+        logger.info(
+            f'Re-run requested for id={spectral_data.id}; resetting analysis.')
+        messages.success(request, 'Re-running analysis and regenerating report...')
+        return redirect('analysis_detail', analysis_id=spectral_data.id)
+
+    # Allow the user to add/append missing metadata and re-run the analysis.
+    if request.method == 'POST' and request.POST.get('action') == 'add_metadata':
+        md = dict(spectral_data.metadata or {})
+        std_md = dict(md.get('standard_metadata') or {})
+        for field in (
+            'title', 'description', 'date', 'identifier', 'spectrometer_type',
+            'wavelength_range', 'resolution', 'sample_type', 'temperature',
+            'creator', 'data_owner', 'humidity', 'sample_preparation',
+            'measurement_geometry', 'license',
+        ):
+            val = request.POST.get(field, '').strip()
+            if val:
+                std_md[field] = val
+        md['standard_metadata'] = std_md
+        spectral_data.metadata = md
+        # Re-run the analysis with the enriched metadata.
+        spectral_data.is_processed = False
+        spectral_data.processing_date = None
+        spectral_data.last_analysis_error = ''
+        spectral_data.save()
+        logger.info(
+            f'Metadata added by user for id={spectral_data.id}; re-running analysis.')
+        messages.success(request, 'Metadata added. Re-running analysis...')
+        return redirect('analysis_detail', analysis_id=spectral_data.id)
+
     # Check if analysis has been performed
     if not spectral_data.is_processed:
-        # Perform analysis
-        try:
-            import asyncio
-            
-            async def perform_analysis():
-                return await analyze_spectral_data(spectral_data)
-            
-            results = asyncio.run(perform_analysis())
-            
-            # Save results
-            spectral_data.analysis_results = results.get('spectral_result', {})
-            spectral_data.calibration_results = results.get('calibration_result', {})
-            spectral_data.metadata_quality_results = results.get('metadata_result', {})
-            spectral_data.data_quality_score = results.get('spectral_result', {}).get('quality_score', 0)
-            spectral_data.metadata_quality_score = results.get('metadata_result', {}).get('overall_score', 0)
-            spectral_data.calibration_quality_score = results.get('calibration_result', {}).get('calibration_quality', {}).get('overall_quality', 0)
-            spectral_data.overall_quality_score = (
-                spectral_data.data_quality_score * 0.4 +
-                spectral_data.metadata_quality_score * 0.3 +
-                spectral_data.calibration_quality_score * 0.3
+        # Skip re-entering an analysis that is already running on another
+        # request (e.g. the report page auto-refresh or a manual reload).
+        # Re-fetch from the DB in case the in-flight run finished while this
+        # request waited, then show the not-ready page so the browser polls.
+        aid = str(spectral_data.id)
+        if aid in _running_analyses:
+            spectral_data.refresh_from_db()
+            if spectral_data.is_processed:
+                pass  # finished during this request; fall through to render
+            else:
+                logger.info(f'Analysis already running for id={aid}; skipping duplicate run.')
+                context = {
+                    'page_title': f'Analysis: {spectral_data.original_filename}',
+                    'spectral_data': spectral_data,
+                    'analysis_results': spectral_data.analysis_results,
+                    'calibration_results': spectral_data.calibration_results,
+                    'metadata_quality': spectral_data.metadata_quality_results,
+                    'report': Report.objects.filter(spectral_data=spectral_data).first(),
+                    'quality_grade': spectral_data.get_quality_grade(),
+                    'is_owner': request.user == spectral_data.user or not spectral_data.user,
+                    'analysis_running': True,
+                }
+                return render(request, 'analysis/detail.html', context)
+        # Re-check after the in-flight check: the row may have just finished
+        # (the in-flight run completed during this request), in which case
+        # there is nothing to run and we fall through to render the result.
+        if not spectral_data.is_processed:
+            logger.info(
+                f'Analysis pending for id={spectral_data.id} '
+                f'wl_len={len(spectral_data.wavelengths or [])} '
+                f'int_len={len(spectral_data.intensities or [])}'
             )
-            spectral_data.is_processed = True
-            spectral_data.processing_date = datetime.now()
-            spectral_data.save()
-            
-            # Generate and save report
-            report_content = results.get('report', {})
-            report = Report(
-                spectral_data=spectral_data,
-                report_type='spectral_analysis',
-                title=f"Analysis Report - {spectral_data.original_filename}",
-                file_path=os.path.join(settings.REPORT_DIR, f"{spectral_data.id}.html"),
-                quarto_content=json.dumps(report_content, indent=2),
-                python_source=json.dumps(report_content.get('python_source', []), indent=2),
-                is_generated=True,
-                generation_date=datetime.now()
-            )
-            report.save()
-            
-            # Log the analysis
-            SystemLog.objects.create(
-                level='INFO',
-                message=f'Analysis completed for {spectral_data.original_filename}',
-                module='analysis.views',
-                function='analysis_detail',
-                context={'analysis_id': str(spectral_data.id)}
-            )
-            
-            messages.success(request, 'Analysis completed successfully!')
-            
-        except Exception as e:
-            logger.error(f'Error performing analysis: {e}')
-            messages.error(request, f'Error performing analysis: {str(e)}')
-            spectral_data.is_processed = False
-            spectral_data.save()
+            # Guard: require parsed spectral data before analysis
+            if not spectral_data.wavelengths or not spectral_data.intensities:
+                messages.error(
+                    request,
+                    'No spectral data was parsed from this file. Please re-upload a valid '
+                    'spectral data file (CSV, TXT, Excel, JSON).'
+                )
+            else:
+                # Perform analysis. The in-flight guard wraps the WHOLE pipeline
+                # (analysis -> Quarto render -> Report.save -> is_processed=True),
+                # not just the analysis step: a second GET that arrives while the
+                # first run is still rendering Quarto (which can take up to 120s
+                # for the CLI + fallback) must see the id as in-flight and skip,
+                # otherwise it re-enters, double-runs the agents, and races on
+                # the DB writes. The id is only released after is_processed is
+                # persisted (success or failure), so there is no window where
+                # another request sees is_processed=False and starts a dup run.
+                _running_analyses.add(aid)
+                try:
+                    async def perform_analysis():
+                        return await analyze_spectral_data(spectral_data)
+
+                    logger.info(f'Starting analysis for id={spectral_data.id}...')
+                    results = asyncio.run(perform_analysis())
+                    logger.info(
+                        f'Analysis completed for id={spectral_data.id} '
+                        f'keys={list(results.keys()) if isinstance(results, dict) else type(results).__name__}'
+                    )
+
+                    # Save results
+                    spectral_data.analysis_results = results.get('spectral_result', {})
+                    ar = spectral_data.analysis_results or {}
+                    if isinstance(ar, dict):
+                        ar['hardware_info'] = results.get('hardware_info', {})
+                        spectral_data.analysis_results = ar
+                    spectral_data.calibration_results = results.get('calibration_result', {})
+                    spectral_data.metadata_quality_results = results.get('metadata_result', {})
+                    dl_md = (spectral_data.metadata or {}).get('metadata_quality') or {}
+                    dl_score = dl_md.get('score') if isinstance(dl_md, dict) else None
+                    if dl_score is None:
+                        dl_score = results.get('metadata_result', {}).get('overall_score', 0) or 0
+                    spectral_data.data_quality_score = results.get('spectral_result', {}).get('quality_score', 0) or 0
+                    spectral_data.metadata_quality_score = dl_score
+                    spectral_data.calibration_quality_score = results.get('calibration_result', {}).get('calibration_quality', {}).get('overall_quality', 0) or 0
+                    spectral_data.overall_quality_score = (
+                        (spectral_data.data_quality_score or 0) * 0.4 +
+                        (spectral_data.metadata_quality_score or 0) * 0.3 +
+                        (spectral_data.calibration_quality_score or 0) * 0.3
+                    )
+                    # Keep is_processed=False until the report is saved: the
+                    # report-not-ready page treats is_processed=False as 'analysis
+                    # still running' (polls / spinner) and is_processed=True
+                    # without a report as a FAILURE.
+                    spectral_data.last_analysis_error = ''
+                    spectral_data.save()
+
+                    # Generate and render the Quarto HTML report. A failure here
+                    # must NOT prevent the Report row from being created: the
+                    # report page polls until a Report row exists, so always
+                    # persist a row (with is_generated=False + the error) even if
+                    # rendering threw, so the page stops spinning.
+                    report_obj = results.get('report')
+                    report_obj = report_obj if hasattr(report_obj, 'to_dict') else None
+                    report_dict = report_obj.to_dict() if report_obj else {}
+
+                    html_file_path = os.path.join(settings.REPORT_DIR, f"{spectral_data.id}.html")
+                    html_content = ''
+                    render_error = ''
+                    try:
+                        if report_obj is not None:
+                            render_result = asyncio.run(
+                                reporting_agent.render_report(report_obj, settings.REPORT_DIR)
+                            )
+                            candidate_html = render_result.get('html_file')
+                            if candidate_html and os.path.exists(candidate_html):
+                                html_file_path = candidate_html
+                            html_content = render_result.get('html_content') or ''
+                            if not html_content and candidate_html and os.path.exists(candidate_html):
+                                with open(candidate_html, 'r', encoding='utf-8') as hf:
+                                    html_content = hf.read()
+                    except Exception as re:
+                        logger.error(f'Error rendering Quarto report: {re}', exc_info=True)
+                        render_error = f'Report generation failed: {re}'
+
+                    try:
+                        report = Report(
+                            spectral_data=spectral_data,
+                            report_type='spectral_analysis',
+                            title=f"Analysis Report - {spectral_data.original_filename}",
+                            file_path=html_file_path,
+                            quarto_content=json.dumps(report_dict, indent=2, default=str),
+                            html_content=html_content,
+                            python_source=json.dumps(report_dict.get('python_source', []), indent=2, default=str),
+                            is_generated=bool(html_content),
+                            generation_date=django_timezone.now()
+                        )
+                        report.save()
+                    except Exception as rse:
+                        logger.error(f'Failed to persist Report row: {rse}', exc_info=True)
+                        render_error = (render_error + ' | ' if render_error else '') + f'Report save failed: {rse}'
+
+                    if render_error:
+                        spectral_data.last_analysis_error = render_error[:2000]
+
+                    spectral_data.is_processed = True
+                    spectral_data.processing_date = django_timezone.now()
+                    spectral_data.save()
+
+                    try:
+                        SystemLog.objects.create(
+                            level='INFO',
+                            message=f'Analysis completed for {spectral_data.original_filename}',
+                            module='analysis.views',
+                            function='analysis_detail',
+                            context={'analysis_id': str(spectral_data.id)}
+                        )
+                    except Exception:
+                        pass
+
+                    messages.success(request, 'Analysis completed successfully!')
+
+                except Exception as e:
+                    logger.error(f'Error performing analysis: {e}', exc_info=True)
+                    messages.error(request, f'Error performing analysis: {str(e)}')
+                    try:
+                        spectral_data.is_processed = True
+                        spectral_data.processing_date = django_timezone.now()
+                        spectral_data.last_analysis_error = str(e)[:2000]
+                        spectral_data.save()
+                    except Exception as se:
+                        logger.error(f'Failed to persist failed-analysis state: {se}', exc_info=True)
+                finally:
+                    # Release the id only after the pipeline fully finished and
+                    # is_processed is persisted (success or failure), so a
+                    # concurrent GET never sees is_processed=False while a run is
+                    # still in flight and starts a duplicate run.
+                    _running_analyses.discard(aid)
     
     # Get analysis results
     analysis_results = spectral_data.analysis_results
@@ -260,18 +759,123 @@ def analysis_detail(request, analysis_id):
     return render(request, 'analysis/detail.html', context)
 
 
+def delete_analysis(request, analysis_id):
+    """Delete a stale/failed analysis record.
+
+    Removes the SpectralData row, its reports, and the indexed vector from
+    the Qdrant/numpy search backend. POST-only to avoid CSRF-unsafe GET
+    deletion. Redirects back to the analyses overview.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    spectral_data = get_object_or_404(SpectralData, pk=analysis_id)
+    filename = spectral_data.original_filename
+    # Remove the on-disk source file if it is private to this analysis.
+    file_path = getattr(spectral_data, 'file_path', '')
+    # Drop the vector index entry so stale data no longer shows up in
+    # comparison / similarity search results.
+    try:
+        spectral_search_agent.remove_analysis(str(spectral_data.id))
+    except Exception as e:
+        logger.warning(f'Failed to remove analysis {spectral_data.id} from vector index: {e}')
+    # Cascade-adjacent cleanup: reports reference this SpectralData.
+    Report.objects.filter(spectral_data=spectral_data).delete()
+    spectral_data.delete()
+    logger.info(f'Deleted analysis id={analysis_id} ({filename!r}) by request.')
+    messages.success(request, f'Deleted analysis \u201c{filename}\u201d.')
+    return redirect('analyses_overview')
+
+
 def analysis_report(request, analysis_id):
     """Analysis report view."""
     spectral_data = get_object_or_404(SpectralData, pk=analysis_id)
-    report = get_object_or_404(Report, spectral_data=spectral_data)
-    
+    report = Report.objects.filter(spectral_data=spectral_data).first()
+
+    # No report row yet. Two cases:
+    #  * is_processed=False -> the analysis has not run yet (or a re-run is
+    #    pending). The detail page runs the pipeline on a GET and creates the
+    #    Report row; tell the user to open it (the auto-refresh will then flip
+    #    to the report once the row appears).
+    #  * is_processed=True  -> the analysis ran but produced no report (it
+    #    failed, or the report step errored). Offer an explicit re-run.
+    if not report:
+        analysis_pending = not spectral_data.is_processed
+        last_error = (spectral_data.last_analysis_error or '').strip()
+        if analysis_pending:
+            messages.info(
+                request,
+                'The analysis has not run yet. Open the analysis page to start '
+                'it (the report is generated automatically when it finishes); '
+                'this page will refresh itself while you wait.'
+            )
+        elif last_error:
+            messages.error(
+                request,
+                f'The last analysis failed: {last_error}. Re-run it to retry.'
+            )
+        else:
+            messages.info(
+                request,
+                'The analysis ran but produced no report (it may have failed, '
+                'or the report step errored). Re-run the analysis to produce one.'
+            )
+        return render(
+            request,
+            'analysis/report.html',
+            {
+                'page_title': f'Report: {spectral_data.original_filename}',
+                'spectral_data': spectral_data,
+                'report': None,
+                'analysis_pending': analysis_pending,
+                'last_analysis_error': last_error,
+            },
+        )
+
     context = {
         'page_title': f'Report: {report.title}',
         'spectral_data': spectral_data,
         'report': report
     }
-    
+
     return render(request, 'analysis/report.html', context)
+
+
+def analysis_hardware(request, analysis_id):
+    """Hardware information view.
+
+    Surfaces all collected hardware information about the spectrometer / sensor
+    that produced this analysis, as consolidated by the HardwareInfoAgent. The
+    data is read from the persisted analysis_results['hardware_info']; if that
+    is absent (e.g. an analysis run before the agent existed) it is collected
+    on the fly so the page always works.
+    """
+    spectral_data = get_object_or_404(SpectralData, pk=analysis_id)
+
+    ar = spectral_data.analysis_results or {}
+    hardware_info = ar.get('hardware_info') if isinstance(ar, dict) else None
+    if not hardware_info:
+        # Collect on the fly from the persisted spectral data + metadata so
+        # older analyses (pre-HardwareInfoAgent) still show hardware info.
+        try:
+            spec_info = (spectral_data.metadata or {}).get('spectrometer_info', {}) or {}
+            hi = asyncio.run(hardware_info_agent.collect_hardware_info(
+                spectrometer_type=spectral_data.spectrometer_type or spec_info.get('type'),
+                wavelengths=spectral_data.wavelengths or [],
+                intensities=spectral_data.intensities or [],
+                metadata=spectral_data.metadata or {},
+                spectrometer_info=spec_info,
+            ))
+            hardware_info = hi.to_dict()
+        except Exception as e:
+            logger.warning(f'On-the-fly hardware info collection failed: {e}')
+            hardware_info = {}
+
+    context = {
+        'page_title': f'Hardware: {spectral_data.original_filename}',
+        'spectral_data': spectral_data,
+        'hardware_info': hardware_info or {},
+    }
+    return render(request, 'analysis/hardware.html', context)
 
 
 def download_analysis(request, analysis_id):
@@ -366,11 +970,102 @@ def chat_interface(request, analysis_id=None):
             # Generate AI response
             try:
                 import asyncio
-                
+                import httpx
+
+                # Build a short context summary of the current analysis so the
+                # assistant can answer questions about this dataset.
+                ctx_lines = []
+                if spectral_data:
+                    ctx_lines.append(f"File: {spectral_data.original_filename}")
+                    ctx_lines.append(f"Spectrometer: {spectral_data.spectrometer_type or 'auto-detected'}")
+                    ctx_lines.append(f"Data points: {len(spectral_data.wavelengths or [])}")
+                    ar = spectral_data.analysis_results or {}
+                    cr = spectral_data.calibration_results or {}
+                    if ar.get('quality_score') is not None:
+                        ctx_lines.append(f"Spectral quality score: {ar['quality_score']}")
+                    cal = cr.get('analyte_calibration') if isinstance(cr, dict) else None
+                    if cal:
+                        ctx_lines.append(
+                            f"NIR->Brix calibration: {cal.get('method')} "
+                            f"R2_cv={cal.get('r_squared_cv', 0):.3f} "
+                            f"RMSE_cv={cal.get('rmse_cv', 0):.3f} Brix")
+                    sm = (spectral_data.metadata or {}).get('standard_metadata') or {}
+                    if sm:
+                        ctx_lines.append(
+                            f"Metadata: {', '.join(f'{k}={v}' for k, v in list(sm.items())[:6])}")
+                context_summary = chr(10).join(ctx_lines)
+
                 async def get_ai_response():
-                    # Use Ollama via MCP server or direct API
-                    # For now, return a mock response
-                    return "I'm the NIR Intelligence AI assistant. I can help you analyze your spectral data, interpret results, and provide recommendations for improving your measurements."
+                    ollama_url = settings.AGENT_CONFIG.get(
+                        'ollama_url', 'http://localhost:11435')
+                    model = os.environ.get('NIR_OLLAMA_MODEL', 'mistral')
+                    system_prompt = (
+                        "You are the NIR Intelligence Platform assistant, an expert "
+                        "in near-infrared spectroscopy, spectrometer calibration, and "
+                        "tomato ripeness (Brix) analysis. Answer the user's question "
+                        "about their spectral data concisely and in the user's language. "
+                        "Use the provided analysis context where relevant.")
+                    prompt = f"{system_prompt}\n\nAnalysis context:\n{context_summary}\n\nUser question: {message}"
+                    try:
+                        async with httpx.AsyncClient(timeout=60) as client:
+                            resp = await client.post(
+                                f"{ollama_url}/api/generate",
+                                json={"model": model, "prompt": prompt, "stream": False},
+                            )
+                            if resp.status_code == 200:
+                                data = resp.json()
+                                return data.get('response', '').strip() or (
+                                    "No response from the model.")
+                            return f"(Ollama returned HTTP {resp.status_code}). Try starting the Ollama container."
+                    except (httpx.HTTPError, Exception) as oe:
+                        logger.warning(f"Ollama unavailable, using local fallback: {oe}")
+                        return _local_chat_fallback(message, context_summary)
+
+                def _local_chat_fallback(q: str, ctx: str) -> str:
+                    ql = q.lower()
+                    # Reference spectral_data from the enclosing closure so the
+                    # canned reply can surface the real calibration numbers.
+                    cal = None
+                    if spectral_data and isinstance(spectral_data.calibration_results, dict):
+                        cal = spectral_data.calibration_results.get('analyte_calibration')
+                    if any(k in ql for k in ('brix', 'kalibrier', 'calibrat', 'ripeness', 'reifegrad')):
+                        if cal:
+                            return (
+                                f"The NIR->Brix calibration is a {cal.get('method', 'PLS')} "
+                                f"regression of the 18 SparkFun Triad channels onto the "
+                                f"refractometer Brix reference ({cal.get('num_samples')} "
+                                f"samples, {cal.get('num_components')} components). "
+                                f"Cross-validated (5-fold): R2_cv={cal.get('r_squared_cv', 0):.3f}, "
+                                f"RMSE_cv={cal.get('rmse_cv', 0):.3f} Brix. "
+                                f"See the Calibration card on the analysis page for the "
+                                f"full equation and calibration curve. Note: Ollama is "
+                                f"offline, so this is a canned answer - start the "
+                                f"nir_ollama container for full AI replies.")
+                        return (
+                            "The NIR->Brix calibration is a PLS regression of the 18 "
+                            "SparkFun Triad channels onto the refractometer Brix "
+                            "reference. It is cross-validated (5-fold); see the "
+                            "Calibration card on the analysis page for R2_cv and "
+                            "RMSE_cv. Note: Ollama is offline, so this is a canned "
+                            "answer - start the nir_ollama container for full AI replies.")
+                    if any(k in ql for k in ('metadata', 'metadaten', 'quality')):
+                        sm = (spectral_data.metadata or {}).get('standard_metadata') if spectral_data else {}
+                        mq = (spectral_data.metadata or {}).get('metadata_quality') if spectral_data else None
+                        grade = mq.get('grade') if isinstance(mq, dict) else None
+                        return (
+                            "The Data Loader Agent extracts structured metadata "
+                            "from the file header (instrument, wavelengths, "
+                            "temperature, operators, Brix reference) and rates it"
+                            + (f" (current grade: {grade})" if grade else "") + ". "
+                            "Use the 'Extracted Metadata' panel to add missing "
+                            "fields and re-run the analysis. (Ollama offline - "
+                            "canned answer.)")
+                    return (
+                        "I'm the NIR Intelligence assistant. I can help interpret "
+                        "your spectral data, the Brix calibration, and metadata. "
+                        "The Ollama LLM is currently offline, so this is a local "
+                        "fallback reply - start the nir_ollama container for full "
+                        "AI responses.\n\nAnalysis context:\n" + (ctx or 'none'))
                 
                 ai_response = asyncio.run(get_ai_response())
                 

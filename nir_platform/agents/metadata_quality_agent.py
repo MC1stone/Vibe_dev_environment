@@ -63,9 +63,15 @@ class MetadataField:
             if not re.match(self.validation_regex, value):
                 return False, f"Field '{self.display_name}' does not match required pattern"
         
-        # Check possible values
-        if self.possible_values and value not in self.possible_values:
-            return False, f"Field '{self.display_name}' must be one of: {', '.join(self.possible_values)}"
+        # Check possible values (advisory): the enum lists common values
+        # for well-known instruments, but the platform accepts ANY
+        # spectrometer (incl. DIY), so a non-empty free-text value that is
+        # not in the list is still valid - it is just not a 'known' value.
+        # Empty/whitespace-only strings are still rejected for required
+        # fields via the None check above; here we only reject empty strings.
+        if self.possible_values and isinstance(value, str):
+            if not value.strip():
+                return False, f"Field '{self.display_name}' is empty"
         
         return True, ""
     
@@ -185,14 +191,14 @@ class MetadataQualityAgent:
                 "description": "Standard terminology for molecular spectroscopy",
                 "category": "spectroscopy",
                 "required_fields": [
-                    "spectrometer_type", "wavelength_range", "resolution",
-                    "scan_speed", "apodization", "detector_type"
+                    "spectrometer_type", "wavelength_range"
                 ],
                 "optional_fields": [
+                    "resolution", "scan_speed", "apodization", "detector_type",
                     "beam_splitter", "light_source", "sample_preparation",
                     "atmospheric_compensation", "reference_material"
                 ],
-                "weight": 0.25
+                "weight": 0.3
             },
             "ASTM_E1421": {
                 "name": "ASTM E1421 - Standard Guide for Data Fields for Computerized IR Spectroscopy",
@@ -213,15 +219,16 @@ class MetadataQualityAgent:
                 "description": "Standards specific to Near-Infrared spectroscopy",
                 "category": "nir",
                 "required_fields": [
-                    "sample_type", "sample_preparation", "measurement_geometry",
-                    "temperature", "humidity", "measurement_date"
+                    "sample_type", "date"
                 ],
                 "optional_fields": [
+                    "sample_preparation", "measurement_geometry",
+                    "temperature", "humidity",
                     "sample_thickness", "sample_orientation", "reference_measurement",
                     "dark_measurement", "integration_time", "scans_averaged",
                     "spectrometer_serial_number", "calibration_date"
                 ],
-                "weight": 0.2
+                "weight": 0.3
             },
             "Open_Science": {
                 "name": "Open Science Metadata Standards",
@@ -261,18 +268,18 @@ class MetadataQualityAgent:
         fields["title"] = MetadataField(
             name="title",
             display_name="Title",
-            description="Descriptive title of the dataset or measurement",
+            description="Descriptive title of the dataset or measurement (bonus, not required for a single NIR spectrum)",
             data_type="string",
-            required=True,
+            required=False,
             standard="ISO_19115,Open_Science"
         )
         
         fields["description"] = MetadataField(
             name="description",
             display_name="Description",
-            description="Detailed description of the dataset or measurement",
+            description="Detailed description of the dataset or measurement (bonus, not required for a single NIR spectrum)",
             data_type="string",
-            required=True,
+            required=False,
             standard="ISO_19115,Open_Science"
         )
         
@@ -288,9 +295,9 @@ class MetadataQualityAgent:
         fields["identifier"] = MetadataField(
             name="identifier",
             display_name="Identifier",
-            description="Unique identifier for the dataset",
+            description="Unique identifier for the dataset (bonus, not required for a single NIR spectrum)",
             data_type="string",
-            required=True,
+            required=False,
             standard="ISO_19115"
         )
         
@@ -302,7 +309,13 @@ class MetadataQualityAgent:
             data_type="string",
             required=True,
             standard="ASTM_E131,ASTM_E1421",
-            possible_values=["Ocean Optics", "ASD FieldSpec", "Bruker", "DIY Raspberry", "DIY Arduino", "Other"]
+            possible_values=[
+                "Ocean Optics", "ASD FieldSpec", "Bruker",
+                "DIY Raspberry", "DIY Arduino", "Other",
+                # Data-Loader-detected types (lowercase ids)
+                "sparkfun_nir_triad", "ocean_optics", "asd_fieldspec",
+                "diy_raspberry", "diy_arduino",
+            ]
         )
         
         fields["wavelength_range"] = MetadataField(
@@ -320,7 +333,7 @@ class MetadataQualityAgent:
             display_name="Resolution",
             description="Spectral resolution in nm",
             data_type="number",
-            required=True,
+            required=False,
             standard="ASTM_E131",
             unit="nm"
         )
@@ -371,7 +384,7 @@ class MetadataQualityAgent:
             display_name="Sample Preparation",
             description="How the sample was prepared for measurement",
             data_type="string",
-            required=True,
+            required=False,
             standard="NIR_Specific"
         )
         
@@ -380,7 +393,7 @@ class MetadataQualityAgent:
             display_name="Measurement Geometry",
             description="Geometry of the measurement (reflectance, transmittance, etc.)",
             data_type="string",
-            required=True,
+            required=False,
             standard="NIR_Specific",
             possible_values=["Reflectance", "Transmittance", "Absorbance", "Emission", "Other"]
         )
@@ -390,7 +403,7 @@ class MetadataQualityAgent:
             display_name="Temperature",
             description="Temperature during measurement in Celsius",
             data_type="number",
-            required=True,
+            required=False,
             standard="NIR_Specific",
             unit="°C"
         )
@@ -400,7 +413,7 @@ class MetadataQualityAgent:
             display_name="Humidity",
             description="Relative humidity during measurement in %",
             data_type="number",
-            required=True,
+            required=False,
             standard="NIR_Specific",
             unit="%"
         )
@@ -428,9 +441,9 @@ class MetadataQualityAgent:
         fields["license"] = MetadataField(
             name="license",
             display_name="License",
-            description="License under which the data is shared",
+            description="License under which the data is shared (bonus, not required for local analysis)",
             data_type="string",
-            required=True,
+            required=False,
             standard="Open_Science",
             possible_values=["CC-BY", "CC-BY-SA", "CC-BY-NC", "MIT", "Apache-2.0", "GPL-3.0", "Other"]
         )
@@ -438,9 +451,9 @@ class MetadataQualityAgent:
         fields["creator"] = MetadataField(
             name="creator",
             display_name="Creator",
-            description="Person or organization who created the data",
+            description="Person or organization who created the data (bonus, not required for local analysis)",
             data_type="string",
-            required=True,
+            required=False,
             standard="Open_Science"
         )
         
@@ -456,28 +469,29 @@ class MetadataQualityAgent:
         fields["data_availability"] = MetadataField(
             name="data_availability",
             display_name="Data Availability",
-            description="Where and how the data can be accessed",
+            description="Where and how the data can be accessed (bonus, not required for local analysis)",
             data_type="string",
-            required=True,
+            required=False,
             standard="Open_Science"
         )
         
-        # Federated Learning fields
+        # Federated Learning fields (out of scope for now; bonus-only so
+        # their absence never drags a local NIR measurement's grade down).
         fields["data_owner"] = MetadataField(
             name="data_owner",
             display_name="Data Owner",
-            description="Owner of the data",
+            description="Owner of the data (bonus; federated learning is out of scope)",
             data_type="string",
-            required=True,
+            required=False,
             standard="Federated_Learning"
         )
         
         fields["consent_status"] = MetadataField(
             name="consent_status",
             display_name="Consent Status",
-            description="User consent status for federated learning",
+            description="User consent status for federated learning (bonus; out of scope)",
             data_type="string",
-            required=True,
+            required=False,
             standard="Federated_Learning",
             possible_values=["granted", "denied", "pending"]
         )
@@ -485,9 +499,9 @@ class MetadataQualityAgent:
         fields["data_hash"] = MetadataField(
             name="data_hash",
             display_name="Data Hash",
-            description="Hash of the data for integrity verification",
+            description="Hash of the data for integrity verification (bonus; out of scope)",
             data_type="string",
-            required=True,
+            required=False,
             standard="Federated_Learning"
         )
         
@@ -697,17 +711,32 @@ class MetadataQualityAgent:
                 "error": error_message if not is_valid else None
             }
         
-        # Check for unknown fields (not in definitions)
+        # Check for unknown fields (not in definitions). Per-sample data
+        # columns (the wide-NIR export's Brix/Temp/Counter/etc., which are
+        # list-valued) and structural sub-dicts are *data*, not metadata, so
+        # they must not be scored as extra metadata fields - otherwise they
+        # dilute the average and make the grade disagree with the Data
+        # Loader's own rating.
+        _STRUCTURAL = {
+            "standard_metadata", "intensity_matrix", "spectral_columns",
+            "spectrometer_info", "metadata_quality", "data_quality",
+        }
         for field_name in metadata:
-            if field_name not in self.field_definitions:
-                # This is an extra field, give partial credit
-                field_scores[field_name] = {
-                    "score": 0.3,
-                    "valid": True,
-                    "required": False,
-                    "standard": "extra",
-                    "error": None
-                }
+            if field_name in self.field_definitions or field_name in _STRUCTURAL:
+                continue
+            value = metadata[field_name]
+            # Skip per-sample data columns (list/dict values are data, not
+            # scalar metadata fields).
+            if isinstance(value, (list, dict)):
+                continue
+            # This is a genuine extra scalar metadata field, give partial credit
+            field_scores[field_name] = {
+                "score": 0.3,
+                "valid": True,
+                "required": False,
+                "standard": "extra",
+                "error": None
+            }
         
         return field_scores, missing_fields, invalid_fields
     
@@ -845,29 +874,68 @@ class MetadataQualityAgent:
                                   compliance_scores: Dict[str, float],
                                   missing_fields: List[str],
                                   invalid_fields: List[Dict]) -> float:
-        """Calculate overall metadata quality score (0-100)."""
-        # Calculate field score component
-        total_fields = len(field_scores)
-        if total_fields > 0:
-            field_score = sum(f["score"] for f in field_scores.values()) / total_fields * 100
+        """Calculate overall metadata quality score (0-100).
+
+        The headline grade must reflect NIR-relevant metadata completeness,
+        not generic geospatial / open-science / federated fields a single
+        local NIR measurement never has. The NIR-relevant standards
+        (ASTM_E131, ASTM_E1421, NIR_Specific) form the base compliance
+        score; ISO_19115, Open_Science and Federated_Learning are bonus-
+        only (they can raise the score but never drag it below the NIR
+        base). Only NIR-relevant required fields that are missing are
+        penalized; bonus-standard missing fields do not penalize.
+        """
+        # Calculate field score component. Only NIR-relevant fields (the
+        # ASTM / NIR_Specific standards plus the universal 'date') count
+        # toward the headline field score; bonus-standard fields (ISO,
+        # Open Science, Federated) are validated for display/bonus but do
+        # not drag the average down when a local NIR measurement omits them.
+        # Absent optional fields are excluded from the average entirely (a
+        # well-documented measurement that supplies all its required fields
+        # and many optional ones can reach A; absent optionals must not
+        # cap the score at ~50).
+        _NIR_STD_TOKENS = {"ASTM_E131", "ASTM_E1421", "NIR_Specific"}
+        def _is_nir_field(name: str, f: Dict) -> bool:
+            return (any(tok in (f.get("standard") or "") for tok in _NIR_STD_TOKENS)
+                    or name == "date")
+        scored = []
+        for name, f in field_scores.items():
+            if not _is_nir_field(name, f):
+                continue
+            if f.get("required"):
+                scored.append(f["score"])  # required: present(1.0)/absent(0.0)
+            elif f["score"] < 0.6:
+                continue  # optional-absent: neutral, excluded from average
+            else:
+                scored.append(f["score"])  # optional present: 1.0 (valid) / 0.7 (invalid)
+        if scored:
+            field_score = sum(scored) / len(scored) * 100
         else:
             field_score = 0.0
         
-        # Calculate compliance score component
-        total_standards = len(compliance_scores)
-        if total_standards > 0:
-            compliance_score = sum(compliance_scores.values()) / total_standards
-        else:
-            compliance_score = 0.0
+        # Compliance score: NIR-relevant standards form the base; the
+        # generic standards (ISO, Open Science, Federated) are a bonus
+        # that can only add, never subtract.
+        _NIR_STANDARDS = {"ASTM_E131", "ASTM_E1421", "NIR_Specific"}
+        _BONUS_STANDARDS = {"ISO_19115", "Open_Science", "Federated_Learning"}
+        nir_scores = [compliance_scores[s] for s in _NIR_STANDARDS
+                      if s in compliance_scores]
+        bonus_scores = [compliance_scores[s] for s in _BONUS_STANDARDS
+                        if s in compliance_scores]
+        nir_base = (sum(nir_scores) / len(nir_scores)) if nir_scores else 0.0
+        bonus = (sum(bonus_scores) / len(bonus_scores)) if bonus_scores else 0.0
+        compliance_score = nir_base + (bonus * 0.1)  # bonus capped at +10
         
-        # Penalize for missing required fields
+        # Penalize only for missing NIR-relevant required fields (the
+        # bonus-standard fields are already optional and do not appear in
+        # missing_fields).
         missing_penalty = len(missing_fields) * 2.0
         
         # Penalize for invalid fields
         invalid_penalty = len(invalid_fields) * 1.5
         
         # Calculate weighted score
-        # Field score: 40%, Compliance: 40%, Penalties: 20%
+        # Field score: 40%, NIR compliance (+bonus): 40%, Penalties: 20%
         overall_score = (field_score * 0.4 + compliance_score * 0.4) - (missing_penalty + invalid_penalty) * 0.2
         
         # Ensure score is between 0 and 100
@@ -876,28 +944,19 @@ class MetadataQualityAgent:
         return round(overall_score, 2)
     
     def _determine_grade(self, score: float) -> str:
-        """Determine letter grade based on score."""
-        if score >= 95:
-            return "A+"
-        elif score >= 90:
+        """Determine letter grade based on score.
+
+        Thresholds match the Data Loader Agent's rating so the two ratings
+        shown on the detail page agree on the same letter for the same data:
+        A>=90, B>=75, C>=60, D>=40, F<40.
+        """
+        if score >= 90:
             return "A"
-        elif score >= 85:
-            return "A-"
-        elif score >= 80:
-            return "B+"
         elif score >= 75:
             return "B"
-        elif score >= 70:
-            return "B-"
-        elif score >= 65:
-            return "C+"
         elif score >= 60:
             return "C"
-        elif score >= 55:
-            return "C-"
-        elif score >= 50:
-            return "D+"
-        elif score >= 45:
+        elif score >= 40:
             return "D"
         else:
             return "F"

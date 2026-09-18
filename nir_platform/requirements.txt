@@ -13,6 +13,13 @@ scikit-learn>=1.3.0
 
 # Spectral Libraries (optional)
 Pillow>=10.0.0
+# Plotting (HTML report figures / calibration curves)
+matplotlib>=3.7.0
+# Quarto CLI native report rendering: the jupyter kernel needs nbformat
+# (notebook handling) and ipykernel (the kernel itself) in this venv.
+# Without these Quarto falls back to the in-process Python renderer.
+nbformat>=5.9.0
+jupyter>=1.0.0
 
 # Vector Databases
 faiss-cpu>=1.7.4
@@ -32,6 +39,7 @@ python-multipart>=0.0.6
 # File Processing
 python-magic>=0.4.27
 pyzipper>=0.3.6
+Markdown>=3.5.0  # Quarto-to-HTML fallback renderer when Quarto CLI is unavailable
 
 # API Clients
 requests>=2.31.0

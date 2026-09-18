@@ -1,9 +1,20 @@
 {% extends "base.html" %}
+{% load custom_filters %}
 
 {% block title %}{{ page_title|default:"Analysis Details" }}{% endblock %}
 
 {% block content %}
 <div class="fade-in">
+    {% if spectral_data.is_processed and spectral_data.last_analysis_error %}
+    <div class="alert alert-danger d-flex align-items-start" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+        <div>
+            <strong>The last analysis failed.</strong>
+            <pre class="mb-2 mt-2" style="white-space: pre-wrap;">{{ spectral_data.last_analysis_error }}</pre>
+            Use the Re-run Analysis button to retry once the underlying issue is fixed.
+        </div>
+    </div>
+    {% endif %}
     <div class="row mb-4">
         <div class="col-12">
             <nav aria-label="breadcrumb">
@@ -57,9 +68,13 @@
                         
                         <dt class="col-sm-4">Status:</dt>
                         <dd class="col-sm-8">
-                            <span class="badge bg-{% if spectral_data.is_processed %}success{% else %}warning{% endif %}">
-                                {% if spectral_data.is_processed %}Processed{% else %}Pending{% endif %}
-                            </span>
+                            {% if spectral_data.is_processed and spectral_data.last_analysis_error %}
+                                <span class="badge bg-danger">Failed</span>
+                            {% elif spectral_data.is_processed %}
+                                <span class="badge bg-success">Processed</span>
+                            {% else %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% endif %}
                         </dd>
                     </dl>
                 </div>
@@ -102,21 +117,40 @@
         </div>
         <div class="card-footer bg-white">
             <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'analysis_hardware' spectral_data.id %}" class="btn btn-outline-info">
+                    <i class="bi bi-cpu"></i> Hardware
+                </a>
                 <a href="{% url 'analysis_report' spectral_data.id %}" class="btn btn-outline-primary">
                     <i class="bi bi-file-earmark-text"></i> View Report
                 </a>
+                <form method="post" action="" class="d-inline" onsubmit="return confirm('Re-run analysis and regenerate the report? This overwrites the current results.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="rerun_analysis">
+                    <button type="submit" class="btn btn-outline-warning">
+                        <i class="bi bi-arrow-repeat"></i> Re-run Analysis
+                    </button>
+                </form>
                 <a href="{% url 'download_analysis' spectral_data.id %}" class="btn btn-outline-success">
                     <i class="bi bi-download"></i> Download All
                 </a>
                 <a href="{% url 'chat_interface' spectral_data.id %}" class="btn btn-outline-secondary">
                     <i class="bi bi-chat-dots"></i> Chat with AI
                 </a>
+                <form method="post" action="{% url 'delete_analysis' spectral_data.id %}" class="d-inline" onsubmit="return confirm('Delete this analysis and its report? This cannot be undone.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="bi bi-trash"></i> Delete Analysis
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 
     <!-- Processing Status -->
     {% if not spectral_data.is_processed %}
+    {% if analysis_running %}
+    <meta http-equiv="refresh" content="5">
+    {% endif %}
     <div class="card mb-4">
         <div class="card-header">
             <h4><i class="bi bi-hourglass-split"></i> Processing Status</h4>
@@ -127,7 +161,11 @@
             </div>
             <h5>Processing Your Data</h5>
             <p class="text-muted">
+                {% if analysis_running %}
+                An analysis for this data is already running in another request. This page will refresh automatically until it finishes.
+                {% else %}
                 Our AI agents are analyzing your spectral data. This may take a few moments.
+                {% endif %}
             </p>
             <div class="progress mb-3">
                 <div class="progress-bar progress-bar-striped progress-bar-animated" 
@@ -266,6 +304,81 @@
         </div>
     </div>
 
+    <!-- Spectrometer Health -->
+    {% with hw=analysis_results.hardware_info %}
+    {% if hw and hw.spectrometer_type and hw.spectrometer_type != 'unknown' %}
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="bi bi-cpu"></i> Spectrometer Health</h4>
+            <a href="{% url 'analysis_hardware' spectral_data.id %}" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-cpu"></i> Full Hardware Info
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-5">
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-5">Detected device:</dt>
+                        <dd class="col-sm-7">
+                            <strong>{{ hw.spectrometer_type|title }}</strong>
+                            <span class="badge bg-{% if hw.spectrometer_type_confidence == 'high' %}success{% elif hw.spectrometer_type_confidence == 'medium' %}warning{% else %}secondary{% endif %} ms-1">{{ hw.spectrometer_type_confidence }}</span>
+                        </dd>
+                        {% if hw.manufacturer %}
+                        <dt class="col-sm-5">Manufacturer:</dt>
+                        <dd class="col-sm-7">{{ hw.manufacturer }}</dd>
+                        {% endif %}
+                        {% if hw.model %}
+                        <dt class="col-sm-5">Model:</dt>
+                        <dd class="col-sm-7">{{ hw.model }}</dd>
+                        {% endif %}
+                        {% if hw.wavelength_range %}
+                        <dt class="col-sm-5">Wavelength range:</dt>
+                        <dd class="col-sm-7">{{ hw.wavelength_range.0 }} &ndash; {{ hw.wavelength_range.1 }} nm</dd>
+                        {% endif %}
+                        {% if hw.resolution_nm is not None %}
+                        <dt class="col-sm-5">Resolution:</dt>
+                        <dd class="col-sm-7">{{ hw.resolution_nm|floatformat:2 }} nm</dd>
+                        {% endif %}
+                        {% if hw.num_channels is not None %}
+                        <dt class="col-sm-5">Channels:</dt>
+                        <dd class="col-sm-7">{{ hw.num_channels }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+                <div class="col-md-7">
+                    {% with issues=analysis_results.issues_detected %}
+                    {% if issues %}
+                    <h6>Spectrometer issues detected by the Sensor Quality Agent</h6>
+                    <div class="list-group list-group-flush">
+                        {% for issue in issues %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <span class="badge bg-{% if issue.severity == 'high' %}danger{% elif issue.severity == 'medium' %}warning{% else %}info{% endif %} me-1">{{ issue.severity|title }}</span>
+                                    <strong>{{ issue.type|title }}</strong>
+                                    <p class="mb-1 small text-muted">{{ issue.description }}</p>
+                                    {% if issue.recommendation %}
+                                    <p class="mb-0 small"><i class="bi bi-arrow-right-short"></i> {{ issue.recommendation }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-success py-3">
+                        <i class="bi bi-check-circle" style="font-size: 2.5rem;"></i>
+                        <p class="mt-2 mb-0">No spectrometer issues detected.</p>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+
     <!-- Issues and Recommendations -->
     <div class="row">
         <div class="col-md-6 mb-4">
@@ -279,15 +392,31 @@
                         <div class="list-group list-group-flush">
                             {% for issue in issues %}
                             <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
                                         <h6 class="mb-1">
                                             <span class="badge bg-{% if issue.severity == 'high' %}danger{% elif issue.severity == 'medium' %}warning{% else %}info{% endif %}">
                                                 {{ issue.severity|title }}
                                             </span>
                                             {{ issue.type|title }}
                                         </h6>
-                                        <p class="mb-0 small text-muted">{{ issue.description }}</p>
+                                        <p class="mb-1 small text-muted">{{ issue.description }}</p>
+                                        {% if issue.recommendation %}
+                                        <p class="mb-1 small"><i class="bi bi-arrow-right-short"></i> {{ issue.recommendation }}</p>
+                                        {% endif %}
+                                        {% if issue.explanation %}
+                                        <p class="mb-2 small text-body-secondary">{{ issue.explanation }}</p>
+                                        {% endif %}
+                                        {% if issue.solutions %}
+                                        <div class="ps-2 border-start mb-1">
+                                            <h6 class="small fw-semibold mb-1">How to fix it</h6>
+                                            <ul class="small mb-0">
+                                                {% for sol in issue.solutions %}
+                                                <li><strong>{{ sol.title }}.</strong> {{ sol.steps }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -316,15 +445,31 @@
                         <div class="list-group list-group-flush">
                             {% for rec in recommendations %}
                             <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
                                         <h6 class="mb-1">
                                             <span class="badge bg-{% if rec.priority == 'high' %}danger{% elif rec.priority == 'medium' %}warning{% else %}info{% endif %}">
                                                 {{ rec.priority|title }}
                                             </span>
                                             {{ rec.type|title }}
                                         </h6>
-                                        <p class="mb-0 small text-muted">{{ rec.description }}</p>
+                                        <p class="mb-1 small text-muted">{{ rec.description }}</p>
+                                        {% if rec.method %}
+                                        <p class="mb-1 small"><i class="bi bi-gear-wide-connected"></i> Method: {{ rec.method }}{% if rec.parameters %} &mdash; {{ rec.parameters }}{% endif %}</p>
+                                        {% endif %}
+                                        {% if rec.explanation %}
+                                        <p class="mb-2 small text-body-secondary">{{ rec.explanation }}</p>
+                                        {% endif %}
+                                        {% if rec.solutions %}
+                                        <div class="ps-2 border-start mb-1">
+                                            <h6 class="small fw-semibold mb-1">How to apply it</h6>
+                                            <ul class="small mb-0">
+                                                {% for sol in rec.solutions %}
+                                                <li><strong>{{ sol.title }}.</strong> {{ sol.steps }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -343,69 +488,67 @@
         </div>
     </div>
 
-    <!-- Metadata Quality -->
+    <!-- Extracted Header Metadata + Add Missing Fields -->
+    {% with dm=spectral_data.metadata %}
+    {% with sm=dm.standard_metadata %}
+    {% with dmq=dm.metadata_quality %}
     <div class="card mb-4">
-        <div class="card-header">
-            <h4><i class="bi bi-tags-fill"></i> Metadata Quality Assessment</h4>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Extracted Metadata &amp; Data-Loader Analysis</h4>
+            {% if dmq %}
+            <span class="badge bg-{% if dmq.grade == 'A' %}success{% elif dmq.grade == 'B' %}primary{% elif dmq.grade == 'C' %}warning{% else %}danger{% endif %}">
+                Data-Loader rating: {{ dmq.grade }} ({{ dmq.score|floatformat:1 }}%)
+            </span>
+            {% endif %}
         </div>
         <div class="card-body">
-            {% with mq=metadata_quality %}
-            <div class="row">
-                <div class="col-md-6">
-                    <h5>Overall Score</h5>
-                    <div class="d-flex align-items-center mb-4">
-                        <div class="display-4 fw-bold me-3">{{ mq.overall_score|floatformat:1 }}</div>
-                        <div>
-                            <div class="badge bg-{% if mq.grade == 'A+' or mq.grade == 'A' or mq.grade == 'A-' %}success{% elif mq.grade == 'B+' or mq.grade == 'B' or mq.grade == 'B-' %}primary{% elif mq.grade == 'C+' or mq.grade == 'C' or mq.grade == 'C-' %}warning{% else %}danger{% endif %}">
-                                {{ mq.grade }}
-                            </div>
-                            <div class="text-muted small">Grade</div>
-                        </div>
+            {% if sm %}
+            <h5>Metadata extracted from the file header</h5>
+            <p class="small text-muted">The Data Loader Agent parsed the file preamble and reference columns and mapped them onto the standard metadata fields.</p>
+            <dl class="row mb-0">
+                {% for k, v in sm.items %}
+                <dt class="col-sm-4">{{ k|title }}</dt>
+                <dd class="col-sm-8">{{ v|default:"&mdash;" }}</dd>
+                {% endfor %}
+            </dl>
+            {% else %}
+            <p class="text-muted mb-0">No structured metadata was extracted from the file header.</p>
+            {% endif %}
+
+            {% if dmq %}
+            <hr class="my-3">
+            <h5>Proposed metadata rating</h5>
+            <p class="mb-1">
+                <span class="badge bg-{% if dmq.grade == 'A' %}success{% elif dmq.grade == 'B' %}primary{% elif dmq.grade == 'C' %}warning{% else %}danger{% endif %}">{{ dmq.grade }}</span>
+                <strong>{{ dmq.score|floatformat:1 }}%</strong>
+            </p>
+            {% if dmq.missing_fields %}
+            <p class="small text-muted mb-2">{{ dmq.recommendation }}</p>
+            <h6>Missing fields you can add:</h6>
+            <form method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_metadata">
+                <div class="row g-2 mb-3">
+                    {% for field in dmq.missing_fields %}
+                    <div class="col-md-6">
+                        <label class="form-label small mb-0">{{ field|title }}</label>
+                        <input type="text" class="form-control form-control-sm" name="{{ field }}" placeholder="Enter {{ field|title }}">
                     </div>
-                    
-                    <h5>Standards Compliance</h5>
-                    <div class="progress mb-3" style="height: 20px;">
-                        {% for std, score in mq.compliance_scores.items %}
-                        <div class="progress-bar bg-{% if score >= 90 %}success{% elif score >= 70 %}primary{% elif score >= 50 %}warning{% else %}danger{% endif %}" 
-                             role="progressbar" 
-                             style="width: {{ score }}%" 
-                             aria-valuenow="{{ score }}" 
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
-                            {{ std }}: {{ score|floatformat:1 }}%
-                        </div>
-                        {% endfor %}
-                    </div>
+                    {% endfor %}
                 </div>
-                
-                <div class="col-md-6">
-                    <h5>Field Status</h5>
-                    <div class="mb-3">
-                        <span class="badge bg-success me-2">{{ mq.field_scores|length }}</span>
-                        <span>Fields Checked</span>
-                    </div>
-                    <div class="mb-3">
-                        <span class="badge bg-danger me-2">{{ mq.missing_fields|length }}</span>
-                        <span>Missing Required</span>
-                    </div>
-                    <div class="mb-3">
-                        <span class="badge bg-warning me-2">{{ mq.invalid_fields|length }}</span>
-                        <span>Invalid Fields</span>
-                    </div>
-                    
-                    {% if mq.missing_fields %}
-                    <h6>Missing Fields:</h6>
-                    <ul class="mb-0">
-                        {% for field in mq.missing_fields %}
-                        <li>{{ field|title }}</li>
-                        {% endfor %}
-                    </ul>
-                    {% endif %}
-                </div>
-            </div>
-            {% endwith %}
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle"></i> Add metadata &amp; re-run analysis
+                </button>
+            </form>
+            {% else %}
+            <p class="small text-success mb-0">All standard metadata fields are present.</p>
+            {% endif %}
+            {% endif %}
         </div>
     </div>
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
 
     <!-- Calibration -->
     <div class="card mb-4">
@@ -414,6 +557,57 @@
         </div>
         <div class="card-body">
             {% with cal=calibration_results %}
+            {% if cal.analyte_calibration and cal.neural_calibration %}
+            <div class="card border-light mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-bar-chart-steps"></i> Model Comparison: PLS vs Neural Network (MLP)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Model</th>
+                                    <th>R&sup2; (CV)</th>
+                                    <th>RMSE (CV, &deg;Brix)</th>
+                                    <th>Samples</th>
+                                    <th>Outliers removed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <strong>PLS</strong>
+                                        {% if cal.analyte_calibration.r_squared_cv >= cal.neural_calibration.r_squared_cv %}
+                                        <span class="badge bg-success ms-1">Best</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ cal.analyte_calibration.r_squared_cv|floatformat:4 }}</td>
+                                    <td>{{ cal.analyte_calibration.rmse_cv|floatformat:4 }}</td>
+                                    <td>{{ cal.analyte_calibration.num_samples }}</td>
+                                    <td>{{ cal.analyte_calibration.outliers_removed|default:0 }}</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>MLP</strong>
+                                        {% if cal.neural_calibration.r_squared_cv > cal.analyte_calibration.r_squared_cv %}
+                                        <span class="badge bg-success ms-1">Best</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ cal.neural_calibration.r_squared_cv|floatformat:4 }}</td>
+                                    <td>{{ cal.neural_calibration.rmse_cv|floatformat:4 }}</td>
+                                    <td>{{ cal.neural_calibration.num_samples }}</td>
+                                    <td>{{ cal.neural_calibration.outliers_removed|default:0 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="small text-muted mb-0">
+                        Best model by cross-validated R&sup2;: PLS generalises more reliably on small datasets; MLP can capture non-linearity but overfits on few samples.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
             <div class="row">
                 <div class="col-md-6">
                     <h5>Calibration Quality</h5>
@@ -434,6 +628,16 @@
                                 </span>
                             </span>
                         </div>
+                        {% if cal.analyte_calibration %}
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>NIR &rarr; Brix (R&sup2; CV):</span>
+                            <span>
+                                <span class="badge bg-{% if cal.calibration_quality.analyte_quality >= 70 %}success{% elif cal.calibration_quality.analyte_quality >= 40 %}primary{% elif cal.calibration_quality.analyte_quality >= 20 %}warning{% else %}danger{% endif %}">
+                                    {{ cal.calibration_quality.analyte_quality|floatformat:1 }}%
+                                </span>
+                            </span>
+                        </div>
+                        {% endif %}
                         <div class="d-flex justify-content-between">
                             <span>Overall:</span>
                             <span>
@@ -457,6 +661,53 @@
                         <dd class="col-sm-7">{{ cal.wavelength_calibration.num_points }}</dd>
                     </dl>
                     {% endif %}
+                    
+                    {% if cal.analyte_calibration %}
+                    <h5 class="mt-3">NIR &rarr; Brix Calibration</h5>
+                    <p class="small text-muted mb-2">{{ cal.analyte_calibration.method }} &middot; {{ cal.analyte_calibration.notes }}</p>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Analyte:</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.analyte }}</dd>
+                        <dt class="col-sm-5">Samples:</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.num_samples }}</dd>
+                        <dt class="col-sm-5">Features:</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.num_features }} channels</dd>
+                        <dt class="col-sm-5">Components:</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.num_components }}</dd>
+                        <dt class="col-sm-5">Brix range:</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.brix_range.0|floatformat:2 }} &ndash; {{ cal.analyte_calibration.brix_range.1|floatformat:2 }} °Brix</dd>
+                        <dt class="col-sm-5">R&sup2; (CV):</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.r_squared_cv|floatformat:4 }}</dd>
+                        <dt class="col-sm-5">RMSE (CV):</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.rmse_cv|floatformat:4 }} °Brix</dd>
+                        <dt class="col-sm-5">RMSE (cal):</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.rmse_cal|floatformat:4 }} °Brix</dd>
+                        <dt class="col-sm-5">Preprocessing:</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.preprocessing|default:"raw"|upper }}</dd>
+                        <dt class="col-sm-5">Outliers removed:</dt>
+                        <dd class="col-sm-7">{{ cal.analyte_calibration.outliers_removed|default:0 }} ({{ cal.analyte_calibration.outlier_method|default:"none" }}){% if cal.analyte_calibration.outlier_indices %} &mdash; indices: {{ cal.analyte_calibration.outlier_indices|join:", " }}{% endif %}</dd>
+                    </dl>
+                    {% if cal.neural_calibration %}
+                    <h5 class="mt-3">Neural Network (MLP) Calibration</h5>
+                    <p class="small text-muted mb-2">{{ cal.neural_calibration.method }}</p>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Architecture:</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.hidden_layer_sizes|join:',' }} hidden layers</dd>
+                        <dt class="col-sm-5">Samples:</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.num_samples }}</dd>
+                        <dt class="col-sm-5">R&sup2; (CV):</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.r_squared_cv|floatformat:4 }}</dd>
+                        <dt class="col-sm-5">RMSE (CV):</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.rmse_cv|floatformat:4 }} °Brix</dd>
+                        <dt class="col-sm-5">R&sup2; (cal):</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.r_squared_cal|floatformat:4 }}</dd>
+                        <dt class="col-sm-5">RMSE (cal):</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.rmse_cal|floatformat:4 }} °Brix</dd>
+                        <dt class="col-sm-5">Outliers removed:</dt>
+                        <dd class="col-sm-7">{{ cal.neural_calibration.outliers_removed|default:0 }}</dd>
+                    </dl>
+                    {% endif %}
+                    {% endif %}
                 </div>
                 
                 <div class="col-md-6">
@@ -476,7 +727,7 @@
                                 <tr>
                                     <td>{{ param|title }}</td>
                                     <td>{{ info.current|default:"N/A" }}</td>
-                                    <td>{{ info.recommended|default:"N/A" }} {{ info.unit|default:"", }}</td>
+                                    <td>{{ info.recommended|default:"N/A" }} {{ info.unit|default:"" }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -525,12 +776,4 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
-<script>
-    // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
-</script>
-{% endblock %}
+{% block extra_js %}{% endblock %}

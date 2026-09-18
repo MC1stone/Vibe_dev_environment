@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title|default:"Compare Analyses" }}{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'analyses_overview' %}">Analyses</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Compare</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2><i class="bi bi-arrow-left-right"></i> Compare Analyses</h2>
+            <p class="text-muted">Side-by-side comparison of results and detection of comparable measurements already executed.</p>
+        </div>
+    </div>
+
+    <!-- Selection form -->
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0"><i class="bi bi-list-check"></i> Select analyses to compare</h5></div>
+        <div class="card-body">
+            <form method="get" action="{% url 'compare_analyses' %}">
+                {% if all_analyses %}
+                <div class="row">
+                    {% for a in all_analyses %}
+                    <div class="col-md-6 col-lg-4 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="ids" value="{{ a.id }}" id="c_{{ a.id }}" {% if a.id in selected_ids %}checked{% endif %}>
+                            <label class="form-check-label" for="c_{{ a.id }}">
+                                {{ a.original_filename|truncatechars:35 }}
+                                <small class="text-muted d-block">{{ a.spectrometer_type }} · {{ a.upload_date|date:'Y-m-d' }}</small>
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-arrow-left-right"></i> Compare</button>
+                {% else %}
+                <p class="text-muted mb-0">No analyses available. <a href="{% url 'upload_file' %}">Upload data</a> first.</p>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    {% if comparison_rows %}
+    <!-- Side-by-side comparison -->
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0"><i class="bi bi-table"></i> Side-by-side metrics ({{ comparison_rows|length }} selected)</h5></div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:18%;">Metric</th>
+                            {% for a in comparison_rows %}
+                            <th>{{ a.original_filename|truncatechars:20 }}<br><small class="text-muted">{{ a.spectrometer_type }}</small></th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><th>Uploaded</th>{% for a in comparison_rows %}<td>{{ a.upload_date|date:'Y-m-d H:i' }}</td>{% endfor %}</tr>
+                        <tr><th>Channels</th>{% for a in comparison_rows %}<td>{{ a.wavelength_count|default:'-' }}</td>{% endfor %}</tr>
+                        <tr><th>Samples</th>{% for a in comparison_rows %}<td>{{ a.sample_count|default:'-' }}</td>{% endfor %}</tr>
+                        <tr><th>Brix range</th>{% for a in comparison_rows %}<td>{% if a.brix_range %}{{ a.brix_range.0|floatformat:1 }} - {{ a.brix_range.1|floatformat:1 }}{% else %}-{% endif %}</td>{% endfor %}</tr>
+                        <tr><th>Overall quality</th>{% for a in comparison_rows %}<td>{{ a.overall_quality_score|default:'-'|floatformat:1 }}</td>{% endfor %}</tr>
+                        <tr><th>Data quality</th>{% for a in comparison_rows %}<td>{{ a.data_quality_score|default:'-'|floatformat:1 }}</td>{% endfor %}</tr>
+                        <tr><th>Calibration quality</th>{% for a in comparison_rows %}<td>{{ a.calibration_quality_score|default:'-'|floatformat:1 }}</td>{% endfor %}</tr>
+                        <tr><th>Calibration R²cv</th>{% for a in comparison_rows %}<td>{% if a.calibration_r2_cv is not None %}{{ a.calibration_r2_cv|floatformat:3 }}{% else %}-{% endif %}</td>{% endfor %}</tr>
+                        <tr><th>Calibration RMSEcv</th>{% for a in comparison_rows %}<td>{% if a.calibration_rmse_cv is not None %}{{ a.calibration_rmse_cv|floatformat:3 }}{% else %}-{% endif %}</td>{% endfor %}</tr>
+                        <tr><th>Status</th>{% for a in comparison_rows %}<td>{% if a.is_processed %}<span class="badge bg-success">Done</span>{% else %}<span class="badge bg-warning">Pending</span>{% endif %}</td>{% endfor %}</tr>
+                        <tr><th>Open</th>{% for a in comparison_rows %}<td><a href="{% url 'analysis_detail' a.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a></td>{% endfor %}</tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparable measurements (vector DB) -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-search"></i> Comparable measurements already executed</h5>
+            <span class="badge bg-secondary">backend: {{ comparable.backend|default:'-' }}</span>
+        </div>
+        <div class="card-body">
+            {% if comparable and comparable.count %}
+            <p class="text-muted">Most similar past measurements to <strong>{{ base_id|truncatechars:12 }}</strong> (cosine similarity &ge; 0.5, same spectrometer). These are candidates for combined recalibration.</p>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead><tr><th>File</th><th>Spectrometer</th><th>Similarity</th><th>Brix range</th><th>Quality</th><th>Open</th></tr></thead>
+                    <tbody>
+                        {% for h in comparable.hits %}
+                        <tr>
+                            <td>{{ h.original_filename|truncatechars:30 }}</td>
+                            <td>{{ h.spectrometer_type }}</td>
+                            <td><span class="badge bg-info">{{ h.similarity|floatformat:3 }}</span></td>
+                            <td>{% if h.brix_range %}{{ h.brix_range.0|floatformat:1 }} - {{ h.brix_range.1|floatformat:1 }}{% else %}-{% endif %}</td>
+                            <td>{{ h.quality_score|default:'-'|floatformat:1 }}</td>
+                            <td><a href="{% url 'analysis_detail' h.analysis_id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <a href="{% url 'recalibrate' %}?ids={{ base_id }}{% for h in comparable.hits %}&ids={{ h.analysis_id }}{% endfor %}" class="btn btn-success btn-sm">
+                <i class="bi bi-calculator"></i> Recalculate calibration with these
+            </a>
+            {% else %}
+            <p class="text-muted mb-0">{{ comparable.note|default:"No comparable measurements found." }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    {% if all_analyses %}
+    <div class="alert alert-info"><i class="bi bi-info-circle"></i> Select 2+ analyses above and click Compare.</div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

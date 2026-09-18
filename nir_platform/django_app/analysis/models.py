@@ -30,6 +30,11 @@ class SpectralData(models.Model):
     # Processing status
     is_processed = models.BooleanField(default=False)
     processing_date = models.DateTimeField(null=True, blank=True)
+    # Last analysis error. Non-empty means the most recent run FAILED (so
+    # is_processed is the result of a failed attempt, not a successful one).
+    # Cleared on a successful run / re-run. Lets the UI distinguish "done
+    # with a report" from "ran but failed" without retrying every reload.
+    last_analysis_error = models.TextField(blank=True, default='')
     
     # Quality scores
     data_quality_score = models.FloatField(null=True, blank=True)
@@ -60,16 +65,21 @@ class SpectralData(models.Model):
         return f"{self.original_filename} ({self.upload_date})"
     
     def get_quality_grade(self):
-        """Get quality grade based on overall score."""
+        """Get quality grade based on overall score.
+
+        Thresholds match the Data Loader Agent and Metadata Quality Agent so
+        every rating shown in the UI agrees on the same letter for the same
+        data: A>=90, B>=75, C>=60, D>=40, F<40.
+        """
         if self.overall_quality_score is None:
             return "N/A"
         if self.overall_quality_score >= 90:
             return "A"
-        elif self.overall_quality_score >= 80:
+        elif self.overall_quality_score >= 75:
             return "B"
-        elif self.overall_quality_score >= 70:
-            return "C"
         elif self.overall_quality_score >= 60:
+            return "C"
+        elif self.overall_quality_score >= 40:
             return "D"
         else:
             return "F"
