@@ -297,6 +297,81 @@
         </div>
     </div>
 
+    <!-- Spectrometer Health -->
+    {% with hw=analysis_results.hardware_info %}
+    {% if hw and hw.spectrometer_type and hw.spectrometer_type != 'unknown' %}
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="bi bi-cpu"></i> Spectrometer Health</h4>
+            <a href="{% url 'analysis_hardware' spectral_data.id %}" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-cpu"></i> Full Hardware Info
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-5">
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-5">Detected device:</dt>
+                        <dd class="col-sm-7">
+                            <strong>{{ hw.spectrometer_type|title }}</strong>
+                            <span class="badge bg-{% if hw.spectrometer_type_confidence == 'high' %}success{% elif hw.spectrometer_type_confidence == 'medium' %}warning{% else %}secondary{% endif %} ms-1">{{ hw.spectrometer_type_confidence }}</span>
+                        </dd>
+                        {% if hw.manufacturer %}
+                        <dt class="col-sm-5">Manufacturer:</dt>
+                        <dd class="col-sm-7">{{ hw.manufacturer }}</dd>
+                        {% endif %}
+                        {% if hw.model %}
+                        <dt class="col-sm-5">Model:</dt>
+                        <dd class="col-sm-7">{{ hw.model }}</dd>
+                        {% endif %}
+                        {% if hw.wavelength_range %}
+                        <dt class="col-sm-5">Wavelength range:</dt>
+                        <dd class="col-sm-7">{{ hw.wavelength_range.0 }} &ndash; {{ hw.wavelength_range.1 }} nm</dd>
+                        {% endif %}
+                        {% if hw.resolution_nm is not None %}
+                        <dt class="col-sm-5">Resolution:</dt>
+                        <dd class="col-sm-7">{{ hw.resolution_nm|floatformat:2 }} nm</dd>
+                        {% endif %}
+                        {% if hw.num_channels is not None %}
+                        <dt class="col-sm-5">Channels:</dt>
+                        <dd class="col-sm-7">{{ hw.num_channels }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+                <div class="col-md-7">
+                    {% with issues=analysis_results.issues_detected %}
+                    {% if issues %}
+                    <h6>Spectrometer issues detected by the Sensor Quality Agent</h6>
+                    <div class="list-group list-group-flush">
+                        {% for issue in issues %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <span class="badge bg-{% if issue.severity == 'high' %}danger{% elif issue.severity == 'medium' %}warning{% else %}info{% endif %} me-1">{{ issue.severity|title }}</span>
+                                    <strong>{{ issue.type|title }}</strong>
+                                    <p class="mb-1 small text-muted">{{ issue.description }}</p>
+                                    {% if issue.recommendation %}
+                                    <p class="mb-0 small"><i class="bi bi-arrow-right-short"></i> {{ issue.recommendation }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-success py-3">
+                        <i class="bi bi-check-circle" style="font-size: 2.5rem;"></i>
+                        <p class="mt-2 mb-0">No spectrometer issues detected.</p>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+
     <!-- Issues and Recommendations -->
     <div class="row">
         <div class="col-md-6 mb-4">
