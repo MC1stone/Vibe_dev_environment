@@ -121,9 +121,13 @@ Reihenfolge nach Abhängigkeit; jeder Schritt wird gemäß
 - [x] Erster Adapter: DIY-Matchbox (`devices/diy_matchbox.py`, USB-Kamera).
 - [x] Zweiter Adapter: ESP32-S3-Kameraspektrometer (`devices/esp32_s3_camera.py`, MQTT,
       Payload-Parsing gemäß `HANDHELD/mqtt/topic-spec.md`).
-- [x] Testmatrix `tests/test_s4_spectrometer_adapters.py`: 15/15 grün (Kontrakt, Registry,
-      Capture-Payload → einheitliches Schema, Fehlerbehandlung, Lifecycle).
-      Verifikation: py_compile + 15/15 Tests + S3-Regression 7/7 grün.
+- [x] Dritter Adapter: SparkFun Triad (`devices/sparkfun_triad.py`, Qwiic/I²C,
+      AS7262+AS7263+ML8511, 18 Kanäle 410–940 nm gemäß der Labordaten in
+      `data/raw/T4-T5_ALLE_mit_Brix_2.txt`, Spalten A_410–L_940).
+- [x] Testmatrix `tests/test_s4_spectrometer_adapters.py`: 26/26 grün (Kontrakt, Registry,
+      Capture-Payload → einheitliches Schema, Fehlerbehandlung, Lifecycle,
+      Triad-Payload-Varianten).
+      Verifikation: py_compile + 26/26 Tests + S3-Regression 7/7 grün.
 - Offen für spätere Schritte: kommerzielle Geräte (NIR, UV-Vis, Raman, FTIR) als weitere
       Adapter; echter MQTT-Broker-Worker (Acquisition-Layer) zur Live-Anbindung.
 
