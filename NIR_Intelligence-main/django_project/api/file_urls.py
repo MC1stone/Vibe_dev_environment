@@ -19,25 +19,25 @@ from .file_views import (
 
 urlpatterns = [
     # File listing and details
-    path('files/', FileListView.as_view(), name='file-list'),
-    path('files/<uuid:file_id>/', FileDetailView.as_view(), name='file-detail'),
+    path('', FileListView.as_view(), name='file-list'),
+    path('<uuid:file_id>/', FileDetailView.as_view(), name='file-detail'),
     
     # File upload
-    path('files/upload/', FileUploadView.as_view(), name='file-upload'),
+    path('upload/', FileUploadView.as_view(), name='file-upload'),
     
     # File deletion
-    path('files/<uuid:file_id>/delete/', FileDeleteView.as_view(), name='file-delete'),
-    path('files/delete-multiple/', MultipleFileDeleteView.as_view(), name='file-delete-multiple'),
+    path('<uuid:file_id>/delete/', FileDeleteView.as_view(), name='file-delete'),
+    path('delete-multiple/', MultipleFileDeleteView.as_view(), name='file-delete-multiple'),
     
     # File download
-    path('files/<uuid:file_id>/download/', FileDownloadView.as_view(), name='file-download'),
+    path('<uuid:file_id>/download/', FileDownloadView.as_view(), name='file-download'),
     
     # File analysis
-    path('files/<uuid:file_id>/analyze/', FileAnalyzeView.as_view(), name='file-analyze'),
-    path('files/<uuid:file_id>/crew-analysis/', FileCrewAnalysisView.as_view(), name='file-crew-analysis'),
-    path('files/analyze-multiple/', MultipleFileAnalyzeView.as_view(), name='file-analyze-multiple'),
+    path('<uuid:file_id>/analyze/', FileAnalyzeView.as_view(), name='file-analyze'),
+    path('<uuid:file_id>/crew-analysis/', FileCrewAnalysisView.as_view(), name='file-crew-analysis'),
+    path('analyze-multiple/', MultipleFileAnalyzeView.as_view(), name='file-analyze-multiple'),
     
     # File categories and statistics
-    path('files/categories/', FileCategoryView.as_view(), name='file-categories'),
-    path('files/statistics/', FileStatisticsView.as_view(), name='file-statistics'),
+    path('categories/', FileCategoryView.as_view(), name='file-categories'),
+    path('statistics/', FileStatisticsView.as_view(), name='file-statistics'),
 ]
