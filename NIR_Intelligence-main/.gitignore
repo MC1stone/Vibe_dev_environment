@@ -33,3 +33,4 @@ staticfiles/
 
 # Quarto specific
 _quarto.yml
+data/processed/reports/

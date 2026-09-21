@@ -578,7 +578,10 @@ class NIRAnalysisCrew:
             # Step 1: Spectral Analysis
             self.logger.info("Performing spectral analysis...")
             spectral_context = {
-                "spectral_data": request.spectral_data,
+                "spectral_data": {
+                    **request.spectral_data,
+                    "sample_id": request.sample_id,
+                },
                 "sample_id": request.sample_id,
                 "metadata": request.metadata,
             }

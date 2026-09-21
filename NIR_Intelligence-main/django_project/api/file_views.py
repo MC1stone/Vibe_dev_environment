@@ -553,6 +553,136 @@ class FileAnalyzeView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class FileCrewAnalysisView(APIView):
+    """Run the full CrewAI analysis pipeline (agents + report) on an uploaded file.
+
+    Bridges the Generic File API (S3 format-agnostic loader) with the
+    OP6 NIRAnalysisCrew: loads the stored file, converts the unified
+    spectral schema to the crew's wavelengths/intensities contract and
+    runs analyze_sample including the comprehensive HTML report.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, file_id):
+        try:
+            file = GenericFile.objects.get(id=file_id, user=request.user)
+
+            file_path = file.get_file_path()
+            if not file_path or not os.path.exists(file_path):
+                return Response({
+                    'success': False,
+                    'error': 'File not found on server',
+                    'message': 'The file does not exist on the server'
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            from agents.data_preparation_agent import EnhancedDataPreparationAgent
+
+            loader = EnhancedDataPreparationAgent(
+                input_directory=os.path.dirname(file_path),
+                output_directory=tempfile.mkdtemp(prefix='crew_bridge_'),
+            )
+            spectral = loader._load_spectral_data(file_path)
+            if not spectral or spectral.get('data') is None or len(spectral.get('data', [])) == 0:
+                return Response({
+                    'success': False,
+                    'error': 'Not a parseable spectral file',
+                    'message': 'The file could not be parsed as spectral data (S3 loader)'
+                }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+            df = spectral.get('data')
+            wavelength_column = spectral.get('wavelength_column')
+            intensity_column = spectral.get('intensity_column')
+            if wavelength_column not in df.columns or intensity_column not in df.columns:
+                return Response({
+                    'success': False,
+                    'error': 'Spectral columns not found',
+                    'message': 'Wavelength/intensity columns missing in parsed data'
+                }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+            wavelengths = [float(v) for v in df[wavelength_column].tolist()]
+            intensities = [float(v) for v in df[intensity_column].tolist()]
+
+            from agents.nir_analysis_crew import (
+                NIRAnalysisCrew, CrewConfiguration, AnalysisRequest, AnalysisMode,
+            )
+            from agents.reporting_agent import ReportType, ReportFormat
+
+            config = CrewConfiguration(
+                enable_crewai=False,
+                temp_dir=tempfile.mkdtemp(prefix='crew_'),
+                output_dir=str(Path(settings.BASE_DIR) / 'output' / 'analysis'),
+            )
+            crew = NIRAnalysisCrew(config)
+            request_obj = AnalysisRequest(
+                sample_id=str(file.id),
+                spectral_data={'wavelengths': wavelengths, 'intensities': intensities},
+                metadata={
+                    'file_name': file.name,
+                    'file_extension': file.file_extension,
+                    **(spectral.get('metadata') or {}),
+                },
+                file_paths=[file_path],
+                analysis_mode=AnalysisMode.STANDARD,
+                report_type=ReportType.COMPREHENSIVE,
+                report_format=ReportFormat.HTML,
+                include_calibration=bool(request.data.get('include_calibration', True)),
+                user_id=str(request.user.id),
+            )
+            result = crew.analyze_sample(request_obj)
+
+            summary = crew.get_analysis_summary(result)
+            reports = []
+            for report in result.generated_reports:
+                reports.append({
+                    'report_id': report.report_id,
+                    'report_type': report.report_type.value if hasattr(report.report_type, 'value') else str(report.report_type),
+                    'format': report.format.value if hasattr(report.format, 'value') else str(report.format),
+                    'file_path': report.file_path,
+                    'status': report.status.value if hasattr(report.status, 'value') else str(report.status),
+                })
+
+            file.analysis_results = {
+                **(file.analysis_results or {}),
+                'crew_analysis': {
+                    'request_id': result.request_id,
+                    'overall_quality_score': result.overall_quality_score,
+                    'recommendations': result.recommendations,
+                    'warnings': result.warnings,
+                    'errors': result.errors,
+                    'processing_time': result.processing_time,
+                },
+            }
+            file.is_analyzed = True
+            file.analyzed_at = datetime.now()
+            file.processing_status = 'analyzed'
+            file.save()
+
+            return Response({
+                'success': True,
+                'request_id': result.request_id,
+                'overall_quality_score': result.overall_quality_score,
+                'recommendations': result.recommendations,
+                'warnings': result.warnings,
+                'errors': result.errors,
+                'reports': reports,
+                'message': 'CrewAI analysis completed'
+            })
+
+        except GenericFile.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'File not found',
+                'message': 'The requested file does not exist or you do not have permission to access it'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f'Error running crew analysis: {str(e)}', exc_info=True)
+            return Response({
+                'success': False,
+                'error': str(e),
+                'message': 'Error running CrewAI analysis'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class MultipleFileAnalyzeView(APIView):
     """Analyze multiple files"""
     permission_classes = [IsAuthenticated]

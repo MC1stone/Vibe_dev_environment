@@ -819,8 +819,10 @@ function renderFilesTable(files) {
             '<td>' + quality + '</td>' +
             '<td class="small">' + escapeHtml(created) + '</td>' +
             '<td>' +
-            '<button class="btn btn-outline-primary btn-sm" onclick="analyzeFile(\'' + file.id + '\')">' +
+            '<button class="btn btn-outline-primary btn-sm" onclick="analyzeFile(\'' + file.id + '\')" title="Quick analyze">' +
             '<i class="bi bi-play-circle"></i></button> ' +
+            '<button class="btn btn-outline-warning btn-sm" onclick="crewAnalyzeFile(\'' + file.id + '\')" title="CrewAI analysis with report">' +
+            '<i class="bi bi-people"></i></button> ' +
             '<button class="btn btn-outline-success btn-sm" onclick="downloadFile(\'' + file.id + '\')">' +
             '<i class="bi bi-download"></i></button> ' +
             '<button class="btn btn-outline-danger btn-sm" onclick="deleteFile(\'' + file.id + '\')">' +
@@ -1113,6 +1115,39 @@ function analyzeFile(fileId) {
         }
     })
     .catch(error => alert('Analysis failed: ' + error.message));
+}
+
+// Run the full CrewAI analysis pipeline (agents + comprehensive report)
+function crewAnalyzeFile(fileId) {
+    fetch('/api/files/' + fileId + '/crew-analysis/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (response.status === 401 || response.status === 403) {
+            throw new Error('Please log in to run the crew analysis.');
+        }
+        return response.json().catch(() => ({}));
+    })
+    .then(data => {
+        if (data.success) {
+            let msg = 'CrewAI analysis completed (quality: ' +
+                Math.round(data.overall_quality_score) + ').';
+            if (data.reports && data.reports.length > 0) {
+                msg += '\nReport: ' + data.reports[0].file_path;
+            }
+            alert(msg);
+            loadFiles();
+        } else {
+            alert('Crew analysis failed: ' + (data.error || data.message || 'unknown error'));
+        }
+    })
+    .catch(error => alert('Crew analysis failed: ' + error.message));
 }
 
 // Download a file

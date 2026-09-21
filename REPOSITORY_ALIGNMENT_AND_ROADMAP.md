@@ -313,6 +313,30 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 ### OP3a — Echter flwr-Client-Server-Betrieb (S9) — OFFEN
 - FederatedLearningService-Kern an den Flower-Transport
   (`services/flower_server.py`) gegen laufende Container anbinden.
+
+### OP7 — Upload → Crew-Analyse → Quarto-Bericht (PR-#1-Ziel im Leading-Projekt) — ✅ ERLEDIGT
+- **Kontext:** PR #1 fixte die Pipeline im eingefrorenen Legacy-Ansatz
+  `nir_platform/` (S1/G3-Verstoß). Das eigentliche Ziel — funktionierende
+  Upload→Analyse→Bericht-Kette — wurde als OP7 ins Leading-Projekt
+  `NIR_Intelligence-main/` portiert und mit den OP6-CrewAI-Agenten
+  umgesetzt.
+- **Gefundene und gefixte Pipeline-Bugs (Leading-Projekt):**
+  `SpectrometerIssue.INVALID` fehlte als Enum-Member (spectral agent
+  crashte im Quality-Assessment), Crew übergab `sample_id` nicht im
+  spectral-Contract (Validierung schlug fehl).
+- **Bridge:** `FileCrewAnalysisView` (`api/file_views.py`) + Route
+  `files/<uuid:file_id>/crew-analysis/` — lädt die hochgeladene Datei
+  über den S3-formatagnostischen Loader (`EnhancedDataPreparationAgent`),
+  überführt das einheitliche Spektral-Schema in den Crew-Contract und
+  führt `NIRAnalysisCrew.analyze_sample` inkl. Comprehensive-Quarto-
+  Bericht aus; Ergebnisse werden auf dem GenericFile-Record persistiert.
+- **UI:** `files.html` — Crew-Analysis-Button pro Datei (neben Quick-Analyze).
+- Testmatrix `tests/test_op7_crew_pipeline_bridge.py`: 23/23 grün
+  (S3-Loader→Crew, Berichtserzeugung, Enum-/Contract-Regressionen,
+  Django-Wiring, UI, OP6-Fabrik). Vollregression: S3–S9, OP1–OP6 grün
+  (355 Tests insgesamt); `manage.py check` ohne Befunde. CI um OP7 erweitert.
+- PR #1 (Legacy-`nir_platform/`-Ansatz) bleibt davon unberührt offen;
+  Entscheidung über Schließen/Merge liegt beim Head of Development.
 ### OP4 — Online-Update-Lookups + CI (S7) — ✅ ERLEDIGT
 - `services/update_lookup.py`: `UpdateLookupService` — PyPI-Lookups
   (`/pypi/{name}/json`, yanked/Pre-Release-Filterung) und Docker-Hub-Tag-
