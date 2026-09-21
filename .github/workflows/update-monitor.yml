@@ -1,0 +1,40 @@
+name: Update monitor
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  update-report:
+    name: Online update report (PyPI/Docker Hub)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: NIR_Intelligence-main
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests packaging
+
+      - name: Run online update check
+        run: |
+          python scripts/check_updates.py --project-root . \
+            --compose-files docker-compose.yml docker-compose.prod.yml \
+            --online
+
+      - name: Upload update report
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-report
+          path: NIR_Intelligence-main/reports/update_report_*.qmd
+          if-no-files-found: warn

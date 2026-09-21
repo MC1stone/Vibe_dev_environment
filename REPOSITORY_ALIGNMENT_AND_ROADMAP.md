@@ -313,9 +313,22 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 ### OP3a — Echter flwr-Client-Server-Betrieb (S9) — OFFEN
 - FederatedLearningService-Kern an den Flower-Transport
   (`services/flower_server.py`) gegen laufende Container anbinden.
-### OP4 — Online-Update-Lookups + CI (S7) — OFFEN
-- PyPI/Docker-Hub-Lookups im Update-Monitor (benötigt Netz);
-  GitHub-Actions-Workflow für die Testmatrizen.
+### OP4 — Online-Update-Lookups + CI (S7) — ✅ ERLEDIGT
+- `services/update_lookup.py`: `UpdateLookupService` — PyPI-Lookups
+  (`/pypi/{name}/json`, yanked/Pre-Release-Filterung) und Docker-Hub-Tag-
+  Lookups (stabile semver-Tags, Registry-Normalisierung inkl. private
+  Registries/localhost); HTTP-Transport injizierbar (OP2-Pattern), jede
+  Netzstörung degradiert graceful auf das Offline-Verhalten (S7-Garantie).
+- `services/update_monitor.py`: `ComponentEntry.available` (Upstream-Version)
+  in Dataclass, `to_dict` und Quarto-Bericht; Spaltenreihenfolge
+  rückwärtskompatibel zum S7-Kontrakt.
+- `scripts/check_updates.py`: `--online`-Flag — reichert den Report um
+  PyPI/Docker-Hub-Lookups an; offline weiterhin Exit 0.
+- GitHub-Actions-CI: `.github/workflows/ci.yml` (push/PR auf main, alle 12
+  Testmatrizen + `manage.py check`) und `.github/workflows/update-monitor.yml`
+  (wöchentlicher Schedule + `workflow_dispatch`, Online-Report als Artifact).
+- Testmatrix `tests/test_op4_update_lookups.py`: 34/34 grün; Regressionen
+  S3–S9, OP1–OP3, OP6 grün (332 Tests insgesamt).
 
 ### OP6 — CrewAI-Agenten: Implementierung + Hintergrundbetrieb — ✅ ERLEDIGT
 - Die neun Stub-Agenten (sensor_quality, statistical_analysis,

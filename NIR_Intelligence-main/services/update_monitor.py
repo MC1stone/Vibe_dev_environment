@@ -20,6 +20,7 @@ class ComponentEntry:
     kind: str  # 'pip' or 'docker'
     declared: str  # specifier as written in the manifest (e.g. '>=1.9.0', 'latest')
     installed: Optional[str] = None
+    available: Optional[str] = None
     update_available: Optional[bool] = None
     note: Optional[str] = None
 
@@ -29,6 +30,7 @@ class ComponentEntry:
             "kind": self.kind,
             "declared": self.declared,
             "installed": self.installed,
+            "available": self.available,
             "update_available": self.update_available,
             "note": self.note,
         }
@@ -217,18 +219,18 @@ class UpdateMonitorService:
             "",
             "## pip components",
             "",
-            "| Package | Declared | Installed | Update flagged | Note |",
-            "|---|---|---|---|---|",
+            "| Package | Declared | Installed | Update flagged | Upstream latest | Note |",
+            "|---|---|---|---|---|---|",
         ]
         for c in report.components:
             if c.kind == "pip":
                 flagged = "yes" if c.update_available else ("n/a" if c.update_available is None else "no")
-                lines.append(f"| {c.name} | {c.declared} | {c.installed or '-'} | {flagged} | {c.note or ''} |")
+                lines.append(f"| {c.name} | {c.declared} | {c.installed or '-'} | {flagged} | {c.available or '-'} | {c.note or ''} |")
         lines += ["", "## Docker images", "",
-                  "| Image | Tag | Note |", "|---|---|---|"]
+                  "| Image | Tag | Upstream latest | Note |", "|---|---|---|---|"]
         for c in report.components:
             if c.kind == "docker":
-                lines.append(f"| {c.name} | {c.declared} | {c.note or ''} |")
+                lines.append(f"| {c.name} | {c.declared} | {c.available or '-'} | {c.note or ''} |")
         lines += [
             "",
             "## Handlungsempfehlungen",
