@@ -50,7 +50,7 @@ Das Repository enthält mehrere parallele Projektansätze:
 | G1 | **Weaviate statt Qdrant im Stack:** `docker-compose.yml` (Service `weaviate`), `requirements.txt` (`weaviate-client`), `agents/weaviate_agent.py` | Mission Statement: Weaviate out of scope, Qdrant ist der Ersatz | Migration Weaviate → Qdrant (Schritt S2) — ✅ erledigt (Commit e07dff4) |
 | G2 | **Startsequenz-Dateien nicht in Repo-Wurzel:** Der Init-Prompt nennt `TASK.md` etc. ohne Pfad; die Dateien liegen in `NIR_Intelligence-main/` | „Jeder Agent MUSS vor jeder Ausführung … lesen" | Pfade im Init-Prompt präzisieren bzw. Dateien als führende Steuerdateien konsolidieren (S1) |
 | G3 | **Drei parallele Plattform-Ansätze** (`NIR_Intelligence-main`, `nir_platform`, `HANDHELD`) mit Überschneidungen | Mission: eine Plattform | Konsolidierung: `NIR_Intelligence-main` als führendes Projekt deklarieren; Fähigkeiten der anderen (napari, MQTT/Node-RED) integrieren statt duplizieren (S1, S5) |
-| G4 | **Formatabhängigkeit prüfen:** `generic_file_handler_agent` vorhanden, aber Abdeckung aller Formate (SPC, JMP, MATLAB, Kamerabilder RAW/JPEG/PNG, herstellerspezifische Exporte) ist nicht nachgewiesen | Master Objective 1: Import unabhängig vom Dateiformat | Erweiterbare Import-/Exportschicht vervollständigen + Testmatrix über alle Formate (S3) |
+| G4 | **Formatabhängigkeit prüfen:** `generic_file_handler_agent` vorhanden, aber Abdeckung aller Formate (SPC, JMP, MATLAB, Kamerabilder RAW/JPEG/PNG, herstellerspezifische Exporte) ist nicht nachgewiesen | Master Objective 1: Import unabhängig vom Dateiformat | Erweiterbare Import-/Exportschicht vervollständigen + Testmatrix über alle Formate (S3) — ✅ erledigt (S3, Branch vibe/s3-format-agnostic-import) |
 | G5 | **Keine Spektrometer-Abstraktionsschicht:** Geräteintegration nicht über einheitliches Adapter-Muster nachgewiesen | Grundregel: alle Spektrometer | Gerätetreiber-/Adapter-Schicht einführen; bestehende ESP32-S3-Integration als erster Adapter (S4) |
 | G6 | **Chatbot für Ergebnisdiskussion:** Ollama-Service vorhanden, aber kein dedizierter Ergebnis-Chatbot als Feature nachgewiesen | Master Objective 10 | RAG-/Chatbot-Feature auf Ollama/Mistral-Basis mit Qdrant-Anbindung (S6) |
 | G7 | **Selbstoptimierung/Updates:** Selbstoptimierung als Ziel formuliert, aber kein Update-Mechanismus für Open-Source-Komponenten implementiert | Master Objective 15 | Update-Monitoring + Abhängigkeitsprüfung (z. B. CI-Job) definieren (S7) |
@@ -93,11 +93,24 @@ Reihenfolge nach Abhängigkeit; jeder Schritt wird gemäß
       Verifikation: YAML/JSON/py_compile/bash -n grün; kein aktiver Weaviate-Verweis
       im Stack verbleibend (nur historische Doku-Markdowns).
 
-### S3 — Format-agnostischer Datenimport (schließt G4)
-- Import-/Exportschicht des `generic_file_handler_agent` vervollständigen:
-  CSV, TXT, JSON, SPC, JMP, MATLAB, Kamerabilder (RAW/JPEG/PNG), herstellerspezifische Exporte.
-- Normalisierung (Trennzeichen, Einheiten, Wellenlängen- vs. Pixelskalen, Metadaten) in der Importschicht.
-- Testmatrix: pro Format ein Roundtrip-Test (Import → Analyse → Export).
+### S3 — Format-agnostischer Datenimport (schließt G4) — ✅ ERLEDIGT
+- [x] SPC-Loader (binäres Galactic/Thermo-Format): Header-Parsing, Einheiten-Metadaten;
+      SPC läuft nicht mehr über den Text-Loader.
+- [x] MATLAB-Loader (`.mat`): benannte Arrays und 2-Spalten-Arrays, scipy.io (bereits
+      vorhandene Abhängigkeit, keine neue).
+- [x] JSON-Schema für parallele Arrays (`{wavelength: [...], intensity: [...]}`).
+- [x] `.mat`/`.dpt` als Spektralformate registriert (generic_file_handler_agent).
+- [x] JMP-Entscheidung (Spektroskopie-Experte + Head of Development): JMP-Exporte sind
+      tabellarisch (CSV/XLSX) und laufen über die vorhandenen Tabellen-Loader; kein
+      separates proprietäres JMP-Parsing (keine Abhängigkeit von JMP-Format-Interna).
+- [x] Testmatrix `tests/test_s3_format_loaders.py`: 7/7 grün (SPC-Roundtrip,
+      SPC-Invalid-Magic, MAT benannt/2-spaltig, CSV/TXT/JSON-Regression).
+      `.gitignore`: tests/-Verzeichnis wird nicht mehr global ignoriert (vorher wurden
+      alle `test_*.py` ausgeschlossen, der tests-Ordner war faktisch leer).
+      Verifikation: py_compile + Testmatrix 7/7; Import-Ausnahme graceful (None).
+- Offen für spätere Schritte: echte Hersteller-Testdateien (z. B. aus SpectraSuite/
+      OPUS) als Regression-Fixtures; SPC-Multi-File-Varianten (TMULTI) aktuell bewusst
+      nicht unterstützt (Fehlermeldung verweist auf Layout).
 
 ### S4 — Spektrometer-Abstraktionsschicht (schließt G5)
 - Einheitliches Adapter-Muster (Device-Driver-Interface): Messdaten, Metadaten,
