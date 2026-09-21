@@ -53,7 +53,7 @@ prometheus-client>=0.16.0
 # - pytorch, torchvision (require specific system libraries)
 # - pyopenms, nmrglue (require system-level scientific libraries)
 # - crewai, langchain (have Python version compatibility issues)
-# - django-saml2, social-auth-app-django (have dependency issues)
+# - django-saml2 (renamed to djangosaml2), social-auth-app-django (have dependency issues)
 # - ollama (better installed on host)
 # - ansible and related (not needed in container)
 
