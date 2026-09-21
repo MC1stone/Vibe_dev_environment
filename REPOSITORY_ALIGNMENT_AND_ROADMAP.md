@@ -223,9 +223,32 @@ Reihenfolge nach Abhängigkeit; jeder Schritt wird gemäß
       Kurssynchronisation der Django-Benutzer (users sync, saml); didaktische
       Lerninhalte (Sache des E-Learning-Spezialisten, nicht der Plattform).
 
-### S9 — Federated Learning ausbauen
-- Flower-Clients für verteilte Spektrometer-Setups; Datenschutzprüfung
-  (nur Modellaktualisierungen, keine Rohdaten) und non-IID-Strategie.
+### S9 — Federated Learning ausbauen — ✅ ERLEDIGT
+- [x] `services/federated_learning_service.py`: framework-unabhängiger
+      Federated-Learning-Kern für verteilte Spektrometer-Setups —
+      Clients trainieren lokal (Ridge-Update) und teilen **ausschließlich
+      Modellaktualisierungen** (`ModelUpdate`: Parameter, Anzahl Beispiele,
+      Gruppe, Metriken — keine Rohdaten; `PrivacyAuditor` prüft den Vertrag
+      pro Runde).
+- [x] `NonIIDSharder`: Spektren werden pro Spektrometer-/Probengruppe
+      geshardet (z. B. sparkfun_triad, esp32_s3_camera, diy_matchbox) —
+      jeder Client erhält nur seine eigene Gruppe = realistisches
+      non-IID-Szenario des NIR-Labors.
+- [x] `FedAvgAggregator`: FedAvg (beispielgewichtet) und FedProx
+      (Proximal-Term mit μ, globalen Parameter-Blend) auf numpy-Basis;
+      flwr bleibt der Produktions-Transport (`services/flower_server.py`,
+      `agents/flower_agent.py`, Compose-Service flower_server, flwr>=1.4.0).
+- [x] `FederatedLearningService`: Runden-Orchestrierung (Lokaltraining →
+      Aggregation → Privacy-Audit), Runden-Historie, Konvergenz über mehrere
+      Runden nachgewiesen (Distanz zum gepoolten Optimum sinkt).
+- [x] Testmatrix `tests/test_s9_federated_learning.py`: 28/28 grün
+      (Sharding, Privacy-Vertrag, FedAvg/FedProx-Semantik, Multi-Runden-
+      Konvergenz, Fehlerfälle, Compose/Requirements-Integration,
+      S4/S5/S8-Regressionsspot-Checks).
+      Verifikation: py_compile + 28/28 Tests + S3–S8-Regressionen grün.
+- Offen für die Zielumgebung: echter flwr-Client-Server-Betrieb über den
+      Compose-Service (benötigt laufende Container); Anbindung des Kerns an
+      echte Kalibrationsmodelle (S7-Optimierungsprotokoll).
 
 ---
 
