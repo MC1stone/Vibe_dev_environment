@@ -86,10 +86,13 @@ class RagContextBuilder:
     reachable; falls back to the locally provided analysis summary otherwise.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None,
+                 embedding_service: Any = None):
         self.config = config or {}
         self.collection_name = self.config.get("collection_name", RAG_COLLECTION)
         self._qdrant_state: Optional[Dict[str, Any]] = None
+        self.embedding_service = embedding_service
+        self.rag_top_k = int(self.config.get("rag_top_k", 5))
 
     def build(self, question: str, analysis_results: Optional[List[Dict[str, Any]]] = None,
               documents: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
@@ -111,6 +114,24 @@ class RagContextBuilder:
                          for d in documents]
             context_parts.append("Documentation:\n" + "\n".join(doc_lines))
             sources.append("documents")
+
+        if self.embedding_service is not None:
+            try:
+                search_result = self.embedding_service.search_texts(
+                    question, top_k=self.rag_top_k)
+                rag_texts = []
+                for hit in search_result.get("hits", []):
+                    payload = hit.get("payload", {}) or {}
+                    text = payload.get("text", "")
+                    if text:
+                        rag_texts.append(
+                            f"[rag:score={hit.get('score', 0):.3f}] {text[:2000]}")
+                if rag_texts:
+                    context_parts.append("Qdrant RAG results:\n" + "\n".join(rag_texts))
+                    sources.append("qdrant_rag")
+                    used_qdrant = True
+            except Exception as exc:
+                logger.warning("Qdrant RAG retrieval failed, continuing without: %s", exc)
 
         return {
             "context": "\n\n".join(context_parts),

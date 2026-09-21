@@ -252,6 +252,45 @@ Reihenfolge nach Abhängigkeit; jeder Schritt wird gemäß
 
 ---
 
+## 5. Zielumgebungs-Offenpunkte (nach lokaler Verifikation)
+
+Die lokale Verifikation auf dem Zielrechner (Debian) ist abgeschlossen:
+alle Services laufen, Mistral geladen, ILIAS installiert. Dabei entstanden
+die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
+#15 (Ollama-Healthcheck). Verbleibende Offenpunkte nach Priorität:
+
+### OP1 — Qdrant-Embedding-Pipeline (S5/S6) — ✅ ERLEDIGT
+- [x] `services/embedding_service.py`: Ollama-Embeddings (`/api/embeddings`,
+      `nomic-embed-text:latest`) + `QdrantEmbeddingStore` (Collection-anlegen
+      mit Dimensionserkennung, Upsert, top-k-Suche über `query_points`),
+      `EmbeddingService`-Pipeline (index_texts / index_analysis_results /
+      search_texts), `InMemoryEmbeddingStore` für Tests/Offline-Demos.
+- [x] `RagContextBuilder` (S6) an die Pipeline angebunden: injizierbarer
+      `embedding_service` — liefert echtes Qdrant-RAG als Chat-Kontext
+      (`qdrant_rag`-Quelle), bei Ausfall graceful ohne Absturz.
+- [x] Testmatrix `tests/test_op1_embedding_pipeline.py`: 29/29 grün;
+      Regressionen S3–S9 grün (186 Tests insgesamt).
+- Offen (Zielumgebung): `ollama pull nomic-embed-text` auf dem Rechner,
+      Indizierung echter Quarto-Reports im Betrieb.
+
+### OP2 — ILIAS-API-Token-Flow (S8) — OFFEN
+- Echter OAuth2/REST-Flow gegen den laufenden ILIAS-Container
+  (`ilias_integration_agent.py`), Lernpfad-Sync gegen echte Kurs-IDs.
+
+### OP3 — Echter flwr-Client-Server-Betrieb (S9) — OFFEN
+- FederatedLearningService-Kern an den Flower-Transport
+  (`services/flower_server.py`) gegen laufende Container anbinden.
+
+### OP4 — Online-Update-Lookups + CI (S7) — OFFEN
+- PyPI/Docker-Hub-Lookups im Update-Monitor (benötigt Netz);
+  GitHub-Actions-Workflow für die Testmatrizen.
+
+### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
+- Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
+  (NIR, UV-Vis, Raman, FTIR) nach Laborente.
+
+---
+
 ## 4. Abgleichs-Regel (bindend)
 
 Vor jedem Entwicklungsschritt gilt:

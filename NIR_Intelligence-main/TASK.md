@@ -4,53 +4,58 @@
 
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: Roadmap Complete — Local Environment Setup & Target-Environment Testing
+## Current Task: Target-Environment Open Points (OP1-OP5)
 
 ### Objective
 
-All roadmap steps S1-S9 and gaps G1-G8 are completed. The next phase is to
-update and verify the platform on the local development machine (real docker
-runtime, running Ollama/Mistral, Qdrant, ILIAS) before tackling the remaining
-target-environment open points.
+The local verification on the target machine is complete (all services
+running, Mistral loaded, ILIAS installed; fixes PR #12-#15 merged). The
+remaining target-environment open points are worked through by priority;
+OP1 (Qdrant embedding pipeline) is implemented and verified.
 
 ### Predecessors
 
-- S1-S9: COMPLETED (steering, Qdrant, format-agnostic import, spectrometer
-  adapters, similarity + napari, chatbot, update monitoring, ILIAS container,
-  federated learning core)
-- G1-G8: CLOSED (G8: `framework/` declared as reference skeleton)
+- S1-S9 + G1-G8: COMPLETED
+- Local target-environment verification: COMPLETED (PR #12-#15)
+- OP1 Qdrant embedding pipeline: COMPLETED (this task)
 
 ### Scope
 
-- Local setup guide for the development machine (`docs/LOCAL_SETUP.md`)
-- Local verification of the full docker-compose stack (dev profile)
+- `services/embedding_service.py`: Ollama embeddings + Qdrant store
+  (collection management, upsert, top-k search), EmbeddingService
+  pipeline, InMemoryEmbeddingStore for offline tests
+- `RagContextBuilder` (S6) wired to the pipeline: real Qdrant RAG as
+  chat context, graceful degradation when unreachable
 
 ### Out of Scope
 
-- Target-environment open points (real flwr operation, Qdrant embedding
-  pipeline, ILIAS OAuth2, online update lookups, commercial spectrometer
-  adapters, CI workflows) — follow after local verification
+- OP2 ILIAS API token flow, OP3 real flwr operation, OP4 online update
+  lookups + CI, OP5 MQTT worker + commercial adapters (follow-up tasks)
+- Embedding of raw spectra (text only - analysis results, docs)
+- Frontend chat UI
 
 ### Deliverables
 
-1. `docs/LOCAL_SETUP.md` — step-by-step local setup and verification guide
-2. G8 closed in `REPOSITORY_ALIGNMENT_AND_ROADMAP.md`
+1. `services/embedding_service.py`
+2. `tests/test_op1_embedding_pipeline.py` (29/29 green)
+3. RagContextBuilder integration with regression coverage
 
 ### Success Criteria
 
-- Setup guide verified against the actual compose services, ports, and
-  environment files (no invented paths/ports)
-- Guide covers: prerequisites, update, env setup, stack startup, health
-  checks, test matrices, first local analysis, shutdown/reset
+- Text -> vector -> Qdrant upsert -> top-k search roundtrip works
+- RagContextBuilder uses `qdrant_rag` source when the pipeline is
+  available and degrades gracefully when it is not
+- No new hard dependencies (requests + qdrant-client already declared)
+- All test matrices green (S3-S9 + OP1: 186 tests)
 
 ### Timeline
 
 - S1-S9 + G1-G8: COMPLETED
-- Local setup guide: THIS TASK
-- Target-environment open points: NEXT (after local verification)
+- Local verification: COMPLETED
+- OP1: COMPLETED
+- OP2-OP5: NEXT
 
 ### Dependencies
 
-- Docker Engine + Compose v2 on the target machine
-- ~30-50 GB free disk for images/volumes (Ollama Mistral model ~4-8 GB)
-- No new Python dependencies
+- Ollama embedding model (`nomic-embed-text`) on the target machine for
+  real embeddings; stubs cover all offline tests
