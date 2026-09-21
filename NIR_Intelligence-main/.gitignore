@@ -21,8 +21,10 @@ output/
 venv/
 .env
 
-# Test files
+# Test files (scratch), but keep the real test suite
 test_*.py
+!tests/**
+!tests/**/test_*.py
 
 # Django specific
 *.sqlite3
