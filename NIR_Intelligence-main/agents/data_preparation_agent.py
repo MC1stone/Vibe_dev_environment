@@ -84,7 +84,7 @@ class EnhancedDataPreparationAgent(BaseAgent):
     """Enhanced agent for preparing NIR spectroscopy data with comprehensive quality assessment"""
 
     # Supported file extensions
-    SPECTRAL_EXTENSIONS = [".csv", ".json", ".h5", ".jdx", ".spc", ".txt"]
+    SPECTRAL_EXTENSIONS = [".csv", ".json", ".h5", ".jdx", ".spc", ".txt", ".mat"]
     METADATA_EXTENSIONS = [".json", ".xml", ".yaml", ".yml"]
     IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"]
     AUDIO_EXTENSIONS = [".wav", ".mp3"]
@@ -302,8 +302,12 @@ class EnhancedDataPreparationAgent(BaseAgent):
                 return self._load_json_spectral(file_path)
             elif file_ext == ".h5":
                 return self._load_hdf5_spectral(file_path)
-            elif file_ext in (".jdx", ".spc", ".txt"):
+            elif file_ext in (".jdx", ".txt"):
                 return self._load_text_spectral(file_path)
+            elif file_ext == ".spc":
+                return self._load_spc_spectral(file_path)
+            elif file_ext == ".mat":
+                return self._load_mat_spectral(file_path)
             else:
                 self.log_error(f"Unsupported spectral file format: {file_ext}", 
                              ErrorSeverity.MEDIUM, {"file": file_path})
@@ -415,6 +419,10 @@ class EnhancedDataPreparationAgent(BaseAgent):
                 df = pd.DataFrame(data['spectra'])
             elif 'data' in data:
                 df = pd.DataFrame(data['data'])
+            elif 'wavelength' in data and 'intensity' in data \
+                    and isinstance(data['wavelength'], list) and isinstance(data['intensity'], list):
+                df = pd.DataFrame({'wavelength': data['wavelength'],
+                                   'intensity': data['intensity']})
             else:
                 df = pd.DataFrame([data])
         else:
@@ -474,6 +482,159 @@ class EnhancedDataPreparationAgent(BaseAgent):
         except ImportError:
             self.log_error("HDF5 support not available (h5py not installed)", 
                          ErrorSeverity.MEDIUM)
+            return None
+
+    def _load_spc_spectral(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Load spectral data from binary SPC file (Galactic/Thermo format)"""
+        import struct
+
+        try:
+            with open(file_path, 'rb') as f:
+                header = f.read(32)
+                if len(header) < 32:
+                    self.log_error(f"SPC file too short: {file_path}", ErrorSeverity.MEDIUM)
+                    return None
+
+                flags = struct.unpack('<B', header[1:2])[0]
+                version = header[2:4].decode('ascii', errors='ignore')
+                if version != "SP":
+                    self.log_error(f"Invalid SPC magic: {version!r} in {file_path}", ErrorSeverity.MEDIUM)
+                    return None
+
+                f.seek(32)
+                f_header = f.read(120)
+                if len(f_header) < 120:
+                    self.log_error(f"SPC subheader truncated: {file_path}", ErrorSeverity.MEDIUM)
+                    return None
+
+                data_layout = struct.unpack('<h', f_header[2:4])[0]
+                if data_layout != -1:
+                    self.log_error(
+                        f"Unsupported SPC data layout {data_layout} (multi-file/variable) in {file_path}",
+                        ErrorSeverity.MEDIUM)
+                    return None
+
+                f.seek(176)
+                x_units_code = struct.unpack('<B', f.read(1))[0]
+                y_units_code = struct.unpack('<B', f.read(1))[0]
+                f.seek(190)
+                wplanes = struct.unpack('<l', f.read(4))[0]
+                f.seek(224)
+                x_start = struct.unpack('<d', f.read(8))[0]
+                f.seek(236)
+                x_end = struct.unpack('<d', f.read(8))[0]
+                f.seek(244)
+                n_points = struct.unpack('<l', f.read(4))[0]
+
+                if n_points <= 0:
+                    self.log_error(f"SPC reports no data points: {file_path}", ErrorSeverity.MEDIUM)
+                    return None
+
+                f.seek(512)
+                y_values = np.frombuffer(f.read(n_points * 4), dtype='<f4')
+                if y_values.size != n_points:
+                    self.log_error(f"SPC data truncated: expected {n_points}, got {y_values.size}",
+                                   ErrorSeverity.MEDIUM)
+                    return None
+
+                wavelengths = np.linspace(x_start, x_end, n_points)
+                df = pd.DataFrame({"wavelength": wavelengths, "intensity": y_values.astype(np.float64)})
+
+                x_unit_names = {0: "arbitrary", 1: "wavenumber (cm-1)", 2: "micrometers",
+                                3: "nanometers", 4: "seconds", 5: "minutes", 6: "hertz",
+                                7: "kilohertz", 8: "megahertz", 9: "gigahertz"}
+                y_unit_names = {0: "arbitrary", 1: "interference", 2: "relative", 3: "counts",
+                                4: "volts", 5: "millivolts", 6: "absorbance (OD)",
+                                7: "percent", 8: "intensity", 9: "relative intensity"}
+
+                return {
+                    "data": df,
+                    "source_file": file_path,
+                    "format": ".spc",
+                    "wavelength_column": "wavelength",
+                    "intensity_column": "intensity",
+                    "metadata": {
+                        "spc_version": version,
+                        "spc_flags": flags,
+                        "x_units": x_unit_names.get(x_units_code, f"code {x_units_code}"),
+                        "y_units": y_unit_names.get(y_units_code, f"code {y_units_code}"),
+                        "x_start": x_start,
+                        "x_end": x_end,
+                        "num_data_points": int(n_points),
+                        "wplanes": int(wplanes),
+                    }
+                }
+
+        except Exception as e:
+            self.log_error(f"Failed to load SPC file {file_path}: {str(e)}", ErrorSeverity.MEDIUM)
+            return None
+
+    def _load_mat_spectral(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Load spectral data from MATLAB .mat file"""
+        try:
+            from scipy.io import loadmat
+
+            mat = loadmat(file_path)
+            arrays = {k: np.asarray(v) for k, v in mat.items()
+                      if not k.startswith('__') and isinstance(v, np.ndarray)}
+
+            if not arrays:
+                self.log_error(f"No numeric arrays in MATLAB file: {file_path}", ErrorSeverity.MEDIUM)
+                return None
+
+            wavelength = None
+            intensity = None
+            for name, arr in arrays.items():
+                name_lower = name.lower()
+                if any(p in name_lower for p in ('wavelength', 'wave', 'lambda', 'nm', 'wavenumber')):
+                    wavelength = arr
+                elif any(p in name_lower for p in ('intensity', 'absorbance', 'reflectance',
+                                                   'transmittance', 'value')):
+                    intensity = arr
+
+            if wavelength is None or intensity is None:
+                two_dim = [a for a in arrays.values() if a.ndim == 2 and a.shape[1] == 2]
+                if not two_dim:
+                    two_dim = [a for a in arrays.values() if a.ndim == 2]
+                if two_dim:
+                    arr = two_dim[0]
+                    wavelength = arr[:, 0]
+                    intensity = arr[:, 1]
+                else:
+                    largest = max(arrays.values(), key=lambda a: a.size)
+                    if largest.ndim == 2 and largest.shape[1] >= 2:
+                        wavelength = largest[:, 0]
+                        intensity = largest[:, 1]
+
+            if wavelength is None or intensity is None:
+                self.log_error(
+                    f"Could not identify wavelength/intensity arrays in MATLAB file: {file_path}",
+                    ErrorSeverity.MEDIUM, {"available_arrays": list(arrays.keys())})
+                return None
+
+            wavelength = np.ravel(wavelength)
+            intensity = np.ravel(intensity)
+            if wavelength.size != intensity.size:
+                self.log_error(
+                    f"MATLAB arrays have unequal length ({wavelength.size} vs {intensity.size}): {file_path}",
+                    ErrorSeverity.MEDIUM)
+                return None
+
+            df = pd.DataFrame({"wavelength": wavelength, "intensity": intensity})
+
+            return {
+                "data": df,
+                "source_file": file_path,
+                "format": ".mat",
+                "wavelength_column": "wavelength",
+                "intensity_column": "intensity",
+                "metadata": {
+                    "matlab_arrays": {k: list(v.shape) for k, v in arrays.items()},
+                }
+            }
+
+        except Exception as e:
+            self.log_error(f"Failed to load MATLAB file {file_path}: {str(e)}", ErrorSeverity.MEDIUM)
             return None
 
     def _load_text_spectral(self, file_path: str) -> Dict[str, Any]:
