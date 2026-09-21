@@ -197,8 +197,31 @@ Reihenfolge nach Abhängigkeit; jeder Schritt wird gemäß
       (benötigt Netz) und ein GitHub-Actions-Workflow als CI-Job (kein CI
       bisher im Repo).
 
-### S8 — ILIAS-Lernszenarien vertiefen
-- Lernpfade/Lernziele für das NIR-Labor als ILIAS-Kurse; Synchronisation mit Django-Plattform.
+### S8 — ILIAS-Lernszenarien vertiefen — ✅ ERLEDIGT
+- [x] **ILIAS läuft in einem eigenen Docker-Container**: Service `ilias`
+      (Community-Image `srsolutions/ilias:9-php8.2-apache`, gepinnter Tag;
+      Port 8080→80; `ILIAS_AUTO_SETUP`; Env-konfiguriert; Healthcheck in
+      prod) in `docker-compose.yml` + `docker-compose.prod.yml`.
+- [x] Dedicated MariaDB `ilias_db` (mariadb:10.11, utf8mb4) — ILIAS benötigt
+      zwingend MySQL/MariaDB; Volumes `ilias_data`, `ilias_extradata`,
+      `ilias_db_data` registriert; beide Dienste im `nir_network`.
+- [x] `services/ilias_learning_service.py`: Lernpfad-Modell
+      (`LearningPath` → `LearningModule` → `LearningObjective`, Bloom-Level),
+      `ILIASCourseBuilder` (ILIAS-Objekttypen `crs`/`lobj`),
+      `ILIASLearningService.sync_learning_path` (Kurs + Lernziele, injizierbarer
+      Transport, `SyncOutcome`), Verfügbarkeits-Status ohne Absturz.
+- [x] Django-API: `api/ilias_views.py` (POST learning-paths/sync: 400/201/502,
+      GET status) + `api/ilias_urls.py`; Route `api/ilias/` registriert.
+- [x] Testmatrix `tests/test_s8_ilias_integration.py`: 26/26 grün
+      (Lernpfad-Modell, Payload-Building, Sync mit Stub-Transport in 4 Varianten,
+      Unreachable-Graceful, Django-Wiring, Compose-Topologie dev+prod,
+      Image-Pinning, S6-Regressionsspot-Check).
+      Verifikation: py_compile + 26/26 Tests + S3–S7-Regressionen grün +
+      S7-Update-Monitor erkennt die neuen Images (22 Docker-Komponenten).
+- Offen für die Zielumgebung: echter ILIAS-API-Token-Flow (OAuth2 im
+      `ilias_integration_agent.py` vorhanden, benötigt laufenden ILIAS);
+      Kurssynchronisation der Django-Benutzer (users sync, saml); didaktische
+      Lerninhalte (Sache des E-Learning-Spezialisten, nicht der Plattform).
 
 ### S9 — Federated Learning ausbauen
 - Flower-Clients für verteilte Spektrometer-Setups; Datenschutzprüfung
