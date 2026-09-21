@@ -19,7 +19,7 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: "nir_user"
-      POSTGRES_PASSWORD: "Kooky0-Hatching1-Mullets2-Ninetieth7-Shimmer6-Crayon4-Flashily2"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-nir_password_change_me}"
       POSTGRES_DB: "nir_mistral"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -139,11 +139,11 @@ services:
       - PYTHONPATH=/app:/app/agents
       - DJANGO_SETTINGS_MODULE=nir_web.settings
       - DEBUG=1
-      - DATABASE_URL=postgres://nir_user:Kooky0-Hatching1-Mullets2-Ninetieth7-Shimmer6-Crayon4-Flashily2@postgresql:5432/nir_mistral
+      - DATABASE_URL=postgres://nir_user:${POSTGRES_PASSWORD:-nir_password_change_me}@postgresql:5432/nir_mistral
       - DJANGO_DB_ENGINE=postgresql
       - DJANGO_DB_NAME=nir_mistral
       - DJANGO_DB_USER=nir_user
-      - DJANGO_DB_PASSWORD=Kooky0-Hatching1-Mullets2-Ninetieth7-Shimmer6-Crayon4-Flashily2
+      - DJANGO_DB_PASSWORD=${POSTGRES_PASSWORD:-nir_password_change_me}
       - DJANGO_DB_HOST=postgresql
       - DJANGO_DB_PORT=5432
       - NIR_FRAMEWORK_PATH=/app

@@ -41,7 +41,7 @@ User reported:
 postgresql:
   environment:
     POSTGRES_USER: "nir_user"          # Was: "postgres"
-    POSTGRES_PASSWORD: "Kooky0-Hatching1-Mullets2-Ninetieth7-Shimmer6-Crayon4-Flashily2"
+    POSTGRES_PASSWORD: "CHANGE_ME_LOCALLY"
     POSTGRES_DB: "nir_mistral"         # Was: "postgres"
 
 # Modified django_app service to run migrations on startup:
@@ -312,7 +312,7 @@ docker-compose exec django_app psql -h postgresql -U nir_user -d nir_mistral -c 
 Host: postgresql
 Port: 5432
 User: nir_user
-Password: Kooky0-Hatching1-Mullets2-Ninetieth7-Shimmer6-Crayon4-Flashily2
+Password: CHANGE_ME_LOCALLY
 Database: nir_mistral
 ```
 
@@ -322,7 +322,7 @@ Database: nir_mistral
 DJANGO_DB_ENGINE=postgresql
 DJANGO_DB_NAME=nir_mistral
 DJANGO_DB_USER=nir_user
-DJANGO_DB_PASSWORD=Kooky0-Hatching1-Mullets2-Ninetieth7-Shimmer6-Crayon4-Flashily2
+DJANGO_DB_PASSWORD=CHANGE_ME_LOCALLY
 DJANGO_DB_HOST=postgresql
 DJANGO_DB_PORT=5432
 ```
