@@ -34,11 +34,11 @@ BACKUP CONTENTS
    User: nir_user
 {% endif %}
 
-{% if databases.weaviate.enabled and docker.enabled %}
-4. Weaviate Database
-   File: weaviate_backup.tar.gz
-   Description: Complete Weaviate vector database
-   Data: /var/lib/weaviate
+{% if databases.qdrant.enabled and docker.enabled %}
+4. Qdrant Database
+   File: qdrant_backup.tar.gz
+   Description: Complete Qdrant vector database
+   Data: /qdrant/storage
 {% endif %}
 
 ========================================
@@ -70,10 +70,10 @@ To restore this backup:
    cat postgresql_backup.sql | docker exec -i nir_postgresql psql -U nir_user -d nir_mistral
 {% endif %}
 
-{% if databases.weaviate.enabled and docker.enabled %}
-5. Restore Weaviate database:
-   cat weaviate_backup.tar.gz | docker exec -i nir_weaviate tar xzf - -C /
-   docker restart nir_weaviate
+{% if databases.qdrant.enabled and docker.enabled %}
+5. Restore Qdrant database:
+   cat qdrant_backup.tar.gz | docker exec -i nir_qdrant tar xzf - -C /
+   docker restart nir_qdrant
 {% endif %}
 
 6. Restart framework service:

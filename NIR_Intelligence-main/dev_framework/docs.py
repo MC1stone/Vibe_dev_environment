@@ -356,7 +356,7 @@ class DocsGenerator:
         lines.append("- **Master Orchestrator**: Central coordination and quality control")
         lines.append("- **Data Agents**: Data preparation, metadata management, sensor quality")
         lines.append("- **Analysis Agents**: Statistical analysis, neural networks, calibration")
-        lines.append("- **Storage Agents**: Weaviate, FAISS, PostgreSQL for data storage")
+        lines.append("- **Storage Agents**: Qdrant, FAISS, PostgreSQL for data storage")
         lines.append("- **Integration Agents**: Django, MCP, ILIAS, Quarto, Flower")
         lines.append("")
         
@@ -871,9 +871,9 @@ class DocsGenerator:
         lines.append("POSTGRES_PASSWORD=secure_password")
         lines.append("POSTGRES_DB=nir_metadata")
         lines.append("")
-        lines.append("# Weaviate configuration")
-        lines.append("WEAVIATE_HOST=localhost")
-        lines.append("WEAVIATE_PORT=8080")
+        lines.append("# Qdrant configuration")
+        lines.append("QDRANT_HOST=localhost")
+        lines.append("QDRANT_PORT=6333")
         lines.append("```")
         lines.append("")
         

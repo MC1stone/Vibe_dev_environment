@@ -46,11 +46,11 @@ scrape_configs:
     metrics_path: '/metrics'
     # Note: You need to install redis_exporter for this to work
 
-  # Weaviate
-  - job_name: 'weaviate'
+  # Qdrant
+  - job_name: 'qdrant'
     static_configs:
-      - targets: ['weaviate:8080']
-    metrics_path: '/v1/.well-known/metrics'
+      - targets: ['qdrant:6333']
+    metrics_path: '/metrics'
 
   # Ollama
   - job_name: 'ollama'

@@ -202,7 +202,7 @@
     "supported_tools": [
       "docker",
       "postgresql",
-      "weaviate",
+      "qdrant",
       "faiss",
       "django",
       "quarto",

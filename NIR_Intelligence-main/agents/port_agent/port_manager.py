@@ -332,7 +332,7 @@ class PortManager:
         # Default port ranges
         self._default_ranges = [
             PortRange(start=8000, end=8050, description="Django/Development"),
-            PortRange(start=8080, end=8090, description="Weaviate/HTTP Services"),
+            PortRange(start=6333, end=6343, description="Qdrant/HTTP Services"),
             PortRange(start=9000, end=9100, description="General Services"),
             PortRange(start=10000, end=11000, description="Extended Range"),
         ]

@@ -33,7 +33,7 @@ from .statistical_analysis_agent import StatisticalAnalysisAgent
 
 # Import all agent classes for easy access
 from .uvx_agent import UVXAgent
-from .weaviate_agent import WeaviateAgent
+from .qdrant_agent import QdrantAgent
 from .generic_file_handler_agent import GenericFileHandlerAgent
 
 # Agent registry for dynamic loading
@@ -47,7 +47,7 @@ AGENT_REGISTRY = {
     "statistical_analysis_agent": StatisticalAnalysisAgent,
     "neural_network_agent": NeuralNetworkAgent,
     "calibration_agent": CalibrationAgent,
-    "weaviate_agent": WeaviateAgent,
+    "qdrant_agent": QdrantAgent,
     "faiss_agent": FaissAgent,
     "postgresql_agent": PostgreSQLAgent,
     "django_agent": DjangoAgent,

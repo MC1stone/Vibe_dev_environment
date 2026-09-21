@@ -319,7 +319,7 @@ djangorestframework==3.14.0
 psycopg2-binary==2.9.9
 python-dotenv==1.0.0
 flwr==1.0.0
-weaviate-client==3.23.0
+qdrant-client==1.9.0
 pandas==2.0.3
 numpy==1.24.3
 scikit-learn==1.3.0

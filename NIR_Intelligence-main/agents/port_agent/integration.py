@@ -41,7 +41,7 @@ class FrameworkPortConfig:
     # Default ports from agent_config.yaml
     DEFAULT_PORTS = {
         "django": 8000,
-        "weaviate": 8080,
+        "qdrant": 6333,
         "postgresql": 5432,
         "mcp_server": 8081,
         "flower": 5555,
@@ -55,7 +55,7 @@ class FrameworkPortConfig:
     # Port ranges for different service types
     PORT_RANGES = {
         "django": {"start": 8000, "end": 8050, "description": "Django Services"},
-        "weaviate": {"start": 8080, "end": 8090, "description": "Weaviate/HTTP Services"},
+        "qdrant": {"start": 6333, "end": 6343, "description": "Qdrant/HTTP Services"},
         "database": {"start": 5432, "end": 5450, "description": "Database Services"},
         "monitoring": {"start": 9000, "end": 9100, "description": "Monitoring Services"},
         "api": {"start": 8500, "end": 8600, "description": "API Services"},
@@ -304,7 +304,7 @@ class PortConflictResolver:
         """Determine the service type for an agent"""
         service_types = {
             "django_agent": "django",
-            "weaviate_agent": "weaviate",
+            "qdrant_agent": "qdrant",
             "postgresql_agent": "database",
             "mcp_agent": "api",
             "flower_agent": "monitoring",

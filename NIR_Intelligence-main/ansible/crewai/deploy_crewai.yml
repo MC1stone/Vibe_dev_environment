@@ -45,7 +45,7 @@
       - gunicorn
       - uvicorn
       - flower
-      - weaviate-client
+      - qdrant-client
       - faiss-cpu
       - crewai
 

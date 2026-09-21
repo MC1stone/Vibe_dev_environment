@@ -133,7 +133,7 @@ function check_deployment() {
     
     # Check if services are running (if already deployed)
     echo -e "${YELLOW}Checking service status...${NC}"
-    ansible -i "$INVENTORY_FILE" all -a "systemctl list-units --type=service | grep -E '(django|port_agent|weaviate|postgres)'" -b 2>/dev/null || true
+    ansible -i "$INVENTORY_FILE" all -a "systemctl list-units --type=service | grep -E '(django|port_agent|qdrant|postgres)'" -b 2>/dev/null || true
     
     echo -e "${GREEN}Deployment check complete.${NC}"
 }

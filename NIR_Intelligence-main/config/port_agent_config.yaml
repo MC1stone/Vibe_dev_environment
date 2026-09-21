@@ -33,10 +33,10 @@ port_agent:
       end: 8050
       description: "Django Services"
       
-    weaviate:
-      start: 8080
-      end: 8090
-      description: "Weaviate/HTTP Services"
+    qdrant:
+      start: 6333
+      end: 6343
+      description: "Qdrant/HTTP Services"
       
     database:
       start: 5432
@@ -81,7 +81,7 @@ framework_integration:
   # Agents that need port management
   managed_agents:
     - django_agent
-    - weaviate_agent
+    - qdrant_agent
     - postgresql_agent
     - mcp_agent
     - flower_agent

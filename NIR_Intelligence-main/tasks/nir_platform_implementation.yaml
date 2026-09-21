@@ -58,7 +58,7 @@ phases:
   - name: database_integration
     description: Store results in vector and relational databases
     agents:
-      - weaviate_agent
+      - qdrant_agent
       - faiss_agent
       - postgresql_agent
     mandatory: true
@@ -151,7 +151,7 @@ agents:
       - Quality assessment
     dependencies: [data_preparation_agent]
 
-  weaviate_agent:
+  qdrant_agent:
     role: Vector database management
     responsibilities:
       - Embedding storage
@@ -181,7 +181,7 @@ agents:
       - Backend development
       - API creation
       - User management
-    dependencies: [postgresql_agent, weaviate_agent, faiss_agent]
+    dependencies: [postgresql_agent, qdrant_agent, faiss_agent]
 
   mcp_agent:
     role: Tool integration

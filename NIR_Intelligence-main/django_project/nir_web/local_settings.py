@@ -149,7 +149,7 @@ PORT_AGENT_URL = f"http://localhost:{PORT_AGENT_PORT}"
 FRAMEWORK_PORTS = {
     'django': 8000,
     'port_agent': 8001,
-    'weaviate': 8080,
+    'qdrant': 6333,
     'redis': 6379,
     'elasticsearch': 9200,
     'postgresql': 5432,
@@ -161,7 +161,7 @@ AGENT_PORTS = {
     'port_agent': 8001,
     'research_agent': 8002,
     'analysis_agent': 8003,
-    'weaviate_agent': 8081,
+    'qdrant_agent': 6333,
 }
 
 # Logging Configuration

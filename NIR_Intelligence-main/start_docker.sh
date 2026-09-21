@@ -189,11 +189,11 @@ else
     echo "⚠️  Django application health check failed"
 fi
 
-# Test Weaviate
-if curl -s -f http://localhost:8080/v1/.well-known/ready > /dev/null 2>&1; then
-    echo "✅ Weaviate is healthy"
+# Test Qdrant
+if curl -s -f http://localhost:6333/healthz > /dev/null 2>&1; then
+    echo "✅ Qdrant is healthy"
 else
-    echo "⚠️  Weaviate health check failed"
+    echo "⚠️  Qdrant health check failed"
 fi
 
 # Test Ollama
@@ -216,7 +216,7 @@ echo ""
 echo "🌐 Access the application at:"
 echo "   - Web Application: http://localhost:8000"
 echo "   - Admin Panel: http://localhost:8000/admin"
-echo "   - Weaviate: http://localhost:8080"
+echo "   - Qdrant: http://localhost:6333"
 echo "   - Ollama: http://localhost:11434"
 echo "   - Redis: http://localhost:6379"
 echo "   - Flower Server: http://localhost:5555"

@@ -63,7 +63,7 @@ COPY . .
 ENV PYTHONPATH=/app
 ENV DJANGO_SETTINGS_MODULE=nir_web.settings
 ENV DATABASE_URL=postgres://nir_user:${POSTGRES_PASSWORD}@postgres:5432/nir_mistral
-ENV WEAVIATE_URL=http://weaviate:8080
+ENV QDRANT_URL=http://qdrant:6333
 ENV OLLAMA_URL=http://ollama:11434
 ENV REDIS_URL=redis://redis:6379/0
 ENV QUARTO_PATH=/usr/bin/quarto
