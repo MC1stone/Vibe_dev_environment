@@ -116,7 +116,28 @@ django.setup()
 from api.file_urls import urlpatterns
 paths = [str(p.pattern) for p in urlpatterns]
 check('T5a crew-analysis route registered',
-      'files/<uuid:file_id>/crew-analysis/' in paths)
+      '<uuid:file_id>/crew-analysis/' in paths)
+
+from django.urls import resolve, Resolver404
+
+for _path, _name in [
+    ('/api/files/', 'file-list'),
+    ('/api/files/upload/', 'file-upload'),
+    ('/api/files/categories/', 'file-categories'),
+    ('/api/files/statistics/', 'file-statistics'),
+    ('/api/files/delete-multiple/', 'file-delete-multiple'),
+    ('/api/files/analyze-multiple/', 'file-analyze-multiple'),
+    ('/api/files/00000000-0000-0000-0000-000000000000/crew-analysis/', 'file-crew-analysis'),
+    ('/api/files/00000000-0000-0000-0000-000000000000/analyze/', 'file-analyze'),
+    ('/api/files/00000000-0000-0000-0000-000000000000/download/', 'file-download'),
+    ('/api/files/00000000-0000-0000-0000-000000000000/delete/', 'file-delete'),
+]:
+    try:
+        match = resolve(_path)
+        check(f'T5f {_path} resolves', match.view_name == _name,
+              f'{match.view_name}')
+    except Resolver404:
+        check(f'T5f {_path} resolves', False, 'Resolver404')
 from api.file_views import FileCrewAnalysisView
 check('T5b FileCrewAnalysisView importable', FileCrewAnalysisView is not None)
 view_source = (DJANGO_DIR / 'api' / 'file_views.py').read_text()
