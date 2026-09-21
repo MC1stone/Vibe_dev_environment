@@ -47,7 +47,7 @@ Das Repository enthält mehrere parallele Projektansätze:
 
 | # | Befund | Abweichung zum Mission Statement | Maßnahme |
 |---|---|---|---|
-| G1 | **Weaviate statt Qdrant im Stack:** `docker-compose.yml` (Service `weaviate`), `requirements.txt` (`weaviate-client`), `agents/weaviate_agent.py` | Mission Statement: Weaviate out of scope, Qdrant ist der Ersatz | Migration Weaviate → Qdrant (Schritt S2) |
+| G1 | **Weaviate statt Qdrant im Stack:** `docker-compose.yml` (Service `weaviate`), `requirements.txt` (`weaviate-client`), `agents/weaviate_agent.py` | Mission Statement: Weaviate out of scope, Qdrant ist der Ersatz | Migration Weaviate → Qdrant (Schritt S2) — ✅ erledigt (Commit e07dff4) |
 | G2 | **Startsequenz-Dateien nicht in Repo-Wurzel:** Der Init-Prompt nennt `TASK.md` etc. ohne Pfad; die Dateien liegen in `NIR_Intelligence-main/` | „Jeder Agent MUSS vor jeder Ausführung … lesen" | Pfade im Init-Prompt präzisieren bzw. Dateien als führende Steuerdateien konsolidieren (S1) |
 | G3 | **Drei parallele Plattform-Ansätze** (`NIR_Intelligence-main`, `nir_platform`, `HANDHELD`) mit Überschneidungen | Mission: eine Plattform | Konsolidierung: `NIR_Intelligence-main` als führendes Projekt deklarieren; Fähigkeiten der anderen (napari, MQTT/Node-RED) integrieren statt duplizieren (S1, S5) |
 | G4 | **Formatabhängigkeit prüfen:** `generic_file_handler_agent` vorhanden, aber Abdeckung aller Formate (SPC, JMP, MATLAB, Kamerabilder RAW/JPEG/PNG, herstellerspezifische Exporte) ist nicht nachgewiesen | Master Objective 1: Import unabhängig vom Dateiformat | Erweiterbare Import-/Exportschicht vervollständigen + Testmatrix über alle Formate (S3) |
@@ -77,13 +77,21 @@ Reihenfolge nach Abhängigkeit; jeder Schritt wird gemäß
       (MQTT, napari werden integriert, nicht weiterentwickelt);
       `framework/` ist Referenz-Gerüst (G8) und wird nicht aktiv weiterentwickelt.
 
-### S2 — Migration Weaviate → Qdrant (schließt G1)
-- `docker-compose.yml`: Weaviate-Service durch Qdrant-Service ersetzen (Volume migrieren/leeren Start).
-- `requirements.txt`: `weaviate-client` → `qdrant-client`.
-- `agents/weaviate_agent.py` → `agents/qdrant_agent.py` (Embedding-Speicherung,
-  Semantic Search, Similarity Search).
-- Alle Aufrufer des Weaviate-Agents umstellen; t2t-transformers-Container prüfen
-  (Embedding-Erzeugung ggf. lokal/Ollama-seitig lösen).
+### S2 — Migration Weaviate → Qdrant (schließt G1) — ✅ ERLEDIGT (Commit e07dff4)
+- [x] `docker-compose.yml`: Qdrant-Service (Ports 6333/6334) ersetzt Weaviate und
+      t2v-transformers; `docker-compose.prod.yml` inkl. Healthcheck migriert.
+- [x] `requirements*.txt`: `qdrant-client>=1.9.0` ersetzt `weaviate-client`.
+- [x] `agents/qdrant_agent.py` ersetzt `agents/weaviate_agent.py`; Registry und
+      Orchestrator umgestellt.
+- [x] Alle Aufrufer umgestellt: Django-Healthcheck, `local_settings.py`, Port-Agent,
+      Prometheus, Dockerfile-Env, `.env*`-Dateien.
+- [x] Deployment-Schicht migriert: Ansible-Playbooks (Docker-Deploy, Bare-Metal-Deploy,
+      Backup), Templates, Inventory, Group-Vars; Start-/Test-/Monitor-Skripte.
+- [x] Embedding-Pipeline-Entscheidung: t2v-transformers-Container entfällt; Qdrant speichert
+      nur Vektoren — Embedding-Erzeugung erfolgt anwendungsseitig, detaillierte Anbindung
+      folgt in S6 (Ergebnis-Chatbot).
+      Verifikation: YAML/JSON/py_compile/bash -n grün; kein aktiver Weaviate-Verweis
+      im Stack verbleibend (nur historische Doku-Markdowns).
 
 ### S3 — Format-agnostischer Datenimport (schließt G4)
 - Import-/Exportschicht des `generic_file_handler_agent` vervollständigen:
