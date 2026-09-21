@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}NIR Intelligence - Chatbot{% endblock %}
+
+{% block content %}
+<section class="o-section">
+    <div class="o-container">
+        <div class="c-page-header">
+            <div>
+                <h1 class="c-page-header__title">
+                    <i class="bi bi-chat-dots"></i> Analysis Chatbot
+                </h1>
+                <p class="c-page-header__subtitle">
+                    Discuss your analysis results with the local Ollama/Mistral chatbot (S6) with Qdrant RAG context (OP1)
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="c-button c-button--outline-primary" onclick="refreshChatbotStatus()">
+                    <i class="bi bi-arrow-clockwise c-button__icon"></i>
+                    <span class="c-button__text">Status</span>
+                </button>
+                <button class="c-button c-button--secondary" onclick="clearChat()">
+                    <i class="bi bi-trash c-button__icon"></i>
+                    <span class="c-button__text">Clear Chat</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="c-card h-100">
+                    <div class="c-card__header">
+                        <h2 class="c-card__title mb-0"><i class="bi bi-chat-left-text"></i> Conversation</h2>
+                    </div>
+                    <div class="c-card__body">
+                        <div id="chatMessages" style="height: 480px; overflow-y: auto;" class="d-flex flex-column gap-3 mb-3">
+                            <div class="text-center text-muted py-lg">
+                                <i class="bi bi-robot" style="font-size: 3rem;"></i>
+                                <p class="mt-2 mb-0">Ask a question about your analysis results,<br>
+                                    e.g. "Which analysis results are available?"</p>
+                            </div>
+                        </div>
+                        <div id="chatTyping" class="text-muted small mb-2" style="display: none;">
+                            <span class="spinner-border spinner-border-sm me-1"></span> Thinking...
+                        </div>
+                        <div class="d-flex gap-2">
+                            <input type="text" class="c-form-control" id="chatInput"
+                                   placeholder="Ask about your analysis results..."
+                                   onkeydown="if (event.key === 'Enter') sendChatMessage();">
+                            <button class="c-button c-button--primary" onclick="sendChatMessage()">
+                                <i class="bi bi-send c-button__icon"></i>
+                                <span class="c-button__text">Send</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="c-card h-100">
+                    <div class="c-card__header">
+                        <h2 class="c-card__title mb-0"><i class="bi bi-info-circle"></i> Chatbot Status</h2>
+                    </div>
+                    <div class="c-card__body">
+                        <div id="chatbotStatusBox">
+                            <div class="text-center py-lg">
+                                <div class="c-loading-overlay__spinner" style="width: 2rem; height: 2rem; border-width: 0.2rem;"></div>
+                                <p class="mt-sm text-muted mb-0">Loading status...</p>
+                            </div>
+                        </div>
+                        <hr>
+                        <h3 class="h6">RAG sources of the last answer</h3>
+                        <div id="lastRagSources" class="text-muted small">
+                            <p class="mb-0">No answer yet.</p>
+                        </div>
+                        <hr>
+                        <h3 class="h6">Context options</h3>
+                        <div class="c-form-check">
+                            <input class="c-checkbox" type="checkbox" id="attachAnalysisResults" checked>
+                            <label class="c-checkbox__label" for="attachAnalysisResults">
+                                Attach recent analysis results
+                            </label>
+                        </div>
+                        <p class="text-muted small mb-0">
+                            When checked, the latest analysis results are sent along with your
+                            question so the chatbot can discuss them (S6). Qdrant RAG context
+                            (OP1) is added automatically by the service when available.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+function getCsrfToken() {
+    const name = 'csrftoken';
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.startsWith(name + '=')) {
+            return decodeURIComponent(cookie.substring(name.length + 1));
+        }
+    }
+    return '';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
+function renderMessage(role, content) {
+    const box = document.getElementById('chatMessages');
+    const wrapper = document.createElement('div');
+    const isUser = role === 'user';
+    wrapper.className = 'd-flex ' + (isUser ? 'justify-content-end' : 'justify-content-start');
+    const bubble = document.createElement('div');
+    bubble.className = isUser
+        ? 'bg-primary text-white rounded p-3'
+        : 'bg-light rounded p-3';
+    bubble.style.maxWidth = '80%';
+    bubble.innerHTML = isUser ? escapeHtml(content) : content;
+    wrapper.appendChild(bubble);
+    box.appendChild(wrapper);
+    box.scrollTop = box.scrollHeight;
+}
+
+function clearChat() {
+    const box = document.getElementById('chatMessages');
+    box.innerHTML = '<div class="text-center text-muted py-lg">' +
+        '<i class="bi bi-robot" style="font-size: 3rem;"></i>' +
+        '<p class="mt-2 mb-0">Chat cleared. Ask a new question.</p></div>';
+    document.getElementById('lastRagSources').innerHTML = '<p class="mb-0">No answer yet.</p>';
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    renderMessage('user', question);
+
+    const typing = document.getElementById('chatTyping');
+    typing.style.display = 'block';
+
+    const payload = { question: question };
+    if (document.getElementById('attachAnalysisResults').checked) {
+        payload.analysis_results = window.nirAnalysisResults || [];
+    }
+
+    fetch('/api/chatbot/message/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json().catch(() => ({})))
+    .then(data => {
+        typing.style.display = 'none';
+        if (data.degraded) {
+            renderMessage('assistant',
+                '<div class="text-danger"><i class="bi bi-exclamation-triangle"></i> ' +
+                escapeHtml(data.error || 'Chatbot unavailable (Ollama not reachable).') +
+                '</div>');
+            return;
+        }
+        if (data.answer) {
+            renderMessage('assistant', escapeHtml(data.answer).replace(/\n/g, '<br>'));
+            renderRagSources(data.rag_sources || []);
+        } else {
+            renderMessage('assistant', '<span class="text-danger">Unexpected response: ' +
+                escapeHtml(JSON.stringify(data)) + '</span>');
+        }
+    })
+    .catch(error => {
+        typing.style.display = 'none';
+        renderMessage('assistant', '<span class="text-danger">Request failed: ' +
+            escapeHtml(error.message) + '</span>');
+    });
+}
+
+function renderRagSources(sources) {
+    const box = document.getElementById('lastRagSources');
+    if (!sources.length) {
+        box.innerHTML = '<p class="mb-0">No RAG sources used.</p>';
+        return;
+    }
+    box.innerHTML = sources.map(function(source) {
+        const isQdrant = source === 'qdrant_rag';
+        const badge = isQdrant ? 'bg-success' : 'bg-secondary';
+        const label = isQdrant ? 'Qdrant RAG (OP1)' : source;
+        return '<span class="badge ' + badge + ' me-1 mb-1">' + escapeHtml(label) + '</span>';
+    }).join('');
+}
+
+function refreshChatbotStatus() {
+    const box = document.getElementById('chatbotStatusBox');
+    fetch('/api/chatbot/status/', {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json().catch(() => ({})))
+    .then(data => {
+        const available = data.available !== false && !data.error;
+        const ollama = data.ollama_url || data.model || '';
+        box.innerHTML =
+            '<p class="mb-1"><span class="badge ' + (available ? 'bg-success' : 'bg-danger') + '">' +
+            (available ? 'available' : 'unavailable') + '</span></p>' +
+            '<p class="text-muted small mb-1">Model: ' + escapeHtml(data.model || 'mistral:latest') + '</p>' +
+            '<p class="text-muted small mb-0">Ollama: ' + escapeHtml(ollama || 'http://ollama:11434') + '</p>' +
+            (data.qdrant ? '<p class="text-muted small mb-0">Qdrant: ' + escapeHtml(String(data.qdrant)) + '</p>' : '');
+    })
+    .catch(error => {
+        box.innerHTML = '<div class="alert alert-danger mb-0">Status unavailable: ' +
+            escapeHtml(error.message) + '</div>';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', refreshChatbotStatus);
+</script>
+{% endblock %}

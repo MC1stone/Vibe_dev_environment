@@ -268,10 +268,7 @@ def upload_view(request):
         Rendered template with upload form
     """
     try:
-        return render(request, 'upload_files.html', {
-            'page_title': 'Upload Files for Analysis',
-            'page_description': 'Upload spectral data files to start a new analysis workflow'
-        })
+        return HttpResponseRedirect('/files/')
         
     except Exception as e:
         logger.error(f"Error displaying upload view: {str(e)}", exc_info=True)

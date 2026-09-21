@@ -704,10 +704,132 @@ function initializeFilesPage() {
     setupFileInput();
 }
 
+// Get CSRF token from cookie (required for authenticated POST requests)
+function getCsrfToken() {
+    const name = 'csrftoken';
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.startsWith(name + '=')) {
+            return decodeURIComponent(cookie.substring(name.length + 1));
+        }
+    }
+    return '';
+}
+
 // Load files from server
 function loadFiles() {
-    // This will be implemented in files.js
-    console.log('Loading files...');
+    fetch('/api/files/', {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        if (response.status === 401 || response.status === 403) {
+            showFilesError('Please log in to view your files.');
+            return null;
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (!data) return;
+        if (!data.success) {
+            showFilesError(data.error || data.message || 'Failed to load files');
+            return;
+        }
+        renderFileStats(data.statistics || {});
+        renderFilesGallery(data.files || []);
+        renderFilesTable(data.files || []);
+    })
+    .catch(error => showFilesError('Error loading files: ' + error));
+}
+
+function showFilesError(message) {
+    const gallery = document.getElementById('filesGallery');
+    if (gallery) {
+        gallery.innerHTML = '<div class="col-12"><div class="alert alert-danger">' +
+            escapeHtml(message) + '</div></div>';
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
+function renderFileStats(stats) {
+    const set = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+    set('totalFiles', stats.total || 0);
+    set('validFiles', stats.valid || 0);
+    set('invalidFiles', stats.invalid || 0);
+    set('totalStorage', formatFileSize(stats.total_size || 0));
+}
+
+function renderFilesGallery(files) {
+    const gallery = document.getElementById('filesGallery');
+    if (!gallery) return;
+    gallery.innerHTML = '';
+    if (!files.length) {
+        gallery.innerHTML = '<div class="col-12 text-center py-lg"><p class="text-muted">' +
+            'No files uploaded yet. Use the upload button to add spectral data files.</p></div>';
+        return;
+    }
+    files.slice(0, 12).forEach(function(file) {
+        const category = file.file_category || 'unknown';
+        const icon = fileTypeIcons[category] || 'bi-file-earmark';
+        const color = fileTypeColors[category] || '#6c757d';
+        const card = document.createElement('div');
+        card.className = 'col-md-4 col-6';
+        card.innerHTML =
+            '<div class="c-card h-100">' +
+            '<div class="c-card__body text-center">' +
+            '<i class="bi ' + icon + '" style="color: ' + color + '; font-size: 2.5rem;"></i>' +
+            '<h3 class="h6 mt-2 mb-1">' + escapeHtml(file.name || file.original_filename) + '</h3>' +
+            '<p class="text-muted small mb-2">' + escapeHtml(formatFileSize(file.file_size || 0)) + '</p>' +
+            '<span class="badge bg-secondary">' + escapeHtml(category) + '</span>' +
+            '</div></div>';
+        gallery.appendChild(card);
+    });
+}
+
+function renderFilesTable(files) {
+    const tbody = document.getElementById('filesTable');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (!files.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-lg text-muted">No files uploaded yet.</td></tr>';
+    }
+    files.forEach(function(file) {
+        const row = document.createElement('tr');
+        const category = file.file_category || 'unknown';
+        const icon = fileTypeIcons[category] || 'bi-file-earmark';
+        const quality = file.is_valid
+            ? '<span class="badge bg-success">valid</span>'
+            : '<span class="badge bg-danger">invalid</span>';
+        const created = file.created_at ? new Date(file.created_at).toLocaleString() : '';
+        row.innerHTML =
+            '<td><input type="checkbox" class="file-checkbox" value="' + escapeHtml(file.id) + '"></td>' +
+            '<td><i class="bi ' + icon + '"></i> ' + escapeHtml(file.name || file.original_filename) + '</td>' +
+            '<td>' + escapeHtml(file.file_extension || '') + '</td>' +
+            '<td>' + escapeHtml(category) + '</td>' +
+            '<td>' + escapeHtml(formatFileSize(file.file_size || 0)) + '</td>' +
+            '<td>' + quality + '</td>' +
+            '<td class="small">' + escapeHtml(created) + '</td>' +
+            '<td>' +
+            '<button class="btn btn-outline-primary btn-sm" onclick="analyzeFile(\'' + file.id + '\')">' +
+            '<i class="bi bi-play-circle"></i></button> ' +
+            '<button class="btn btn-outline-success btn-sm" onclick="downloadFile(\'' + file.id + '\')">' +
+            '<i class="bi bi-download"></i></button> ' +
+            '<button class="btn btn-outline-danger btn-sm" onclick="deleteFile(\'' + file.id + '\')">' +
+            '<i class="bi bi-trash"></i></button>' +
+            '</td>';
+        tbody.appendChild(row);
+    });
+    const countEl = document.getElementById('filesCount');
+    if (countEl) countEl.textContent = files.length + ' files';
 }
 
 // Setup drag and drop functionality
@@ -819,9 +941,9 @@ function toggleSelectAll() {
     checkboxes.forEach(cb => cb.checked = checkbox.checked);
 }
 
-// Load more files
+// Load more files (all files are currently rendered; placeholder for pagination)
 function loadMoreFiles() {
-    console.log('Loading more files...');
+    loadFiles();
 }
 
 // Refresh files
@@ -831,7 +953,32 @@ function refreshFiles() {
 
 // Delete selected files
 function deleteSelectedFiles() {
-    console.log('Deleting selected files...');
+    const selected = Array.from(document.querySelectorAll('.file-checkbox:checked')).map(cb => cb.value);
+    if (!selected.length) {
+        alert('Please select at least one file.');
+        return;
+    }
+    if (!confirm('Delete ' + selected.length + ' file(s)?')) return;
+    fetch('/api/files/delete-multiple/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ file_ids: selected })
+    })
+    .then(response => response.json().catch(() => ({})))
+    .then(data => {
+        if (data.success) {
+            alert('Deleted ' + (data.deleted_count || selected.length) + ' file(s).');
+            loadFiles();
+        } else {
+            alert('Delete failed: ' + (data.error || data.message || 'unknown error'));
+        }
+    })
+    .catch(error => alert('Delete failed: ' + error.message));
 }
 
 // Export files list
@@ -841,27 +988,168 @@ function exportFilesList() {
 
 // Quick analyze selected
 function quickAnalyzeSelected() {
-    console.log('Quick analyzing selected files...');
+    const selected = Array.from(document.querySelectorAll('.file-checkbox:checked')).map(cb => cb.value);
+    if (!selected.length) {
+        alert('Please select at least one file to analyze.');
+        return;
+    }
+    fetch('/api/files/analyze-multiple/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ file_ids: selected })
+    })
+    .then(response => response.json().catch(() => ({})))
+    .then(data => {
+        if (data.success) {
+            alert('Analyzed ' + (data.analyzed_count || selected.length) + ' file(s).');
+            loadFiles();
+        } else {
+            alert('Analysis failed: ' + (data.error || data.message || 'unknown error'));
+        }
+    })
+    .catch(error => alert('Analysis failed: ' + error.message));
 }
 
-// Upload files
+// Upload files via the Generic File API
 function uploadFiles() {
-    console.log('Uploading files...');
+    const fileInput = document.getElementById('fileInput');
+    const files = fileInput ? fileInput.files : null;
+    if (!files || files.length === 0) {
+        alert('Please select at least one file to upload.');
+        return;
+    }
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+    }
+    const fileName = document.getElementById('fileName');
+    if (fileName && fileName.value) formData.append('file_name', fileName.value);
+    const fileCategory = document.getElementById('fileCategory');
+    if (fileCategory) formData.append('file_category', fileCategory.value);
+    const description = document.getElementById('fileDescription');
+    if (description && description.value) formData.append('description', description.value);
+    const tags = document.getElementById('fileTags');
+    if (tags && tags.value) formData.append('tags', tags.value);
+    const autoAnalyze = document.getElementById('autoAnalyze');
+    formData.append('auto_analyze', autoAnalyze && autoAnalyze.checked ? 'true' : 'false');
+
+    const uploadBtn = document.querySelector('#uploadFileModal .btn-primary');
+    if (uploadBtn) uploadBtn.disabled = true;
+
+    fetch('/api/files/upload/', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+        headers: { 'X-CSRFToken': getCsrfToken() }
+    })
+    .then(response => {
+        if (response.status === 401 || response.status === 403) {
+            throw new Error('Please log in to upload files.');
+        }
+        return response.json().catch(() => ({}));
+    })
+    .then(data => {
+        if (uploadBtn) uploadBtn.disabled = false;
+        if (data.success) {
+            const modalEl = document.getElementById('uploadFileModal');
+            if (modalEl && window.bootstrap) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+            const count = data.count || 0;
+            alert('Uploaded ' + count + ' file(s).' +
+                  (data.errors && data.errors.length ? ' Errors: ' + data.errors.join('; ') : ''));
+            resetUploadForm();
+            loadFiles();
+        } else {
+            alert('Upload failed: ' + (data.error || data.message || 'unknown error'));
+        }
+    })
+    .catch(error => {
+        if (uploadBtn) uploadBtn.disabled = false;
+        alert('Upload failed: ' + error.message);
+    });
 }
 
-// Analyze current file
+function resetUploadForm() {
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) fileInput.value = '';
+    const preview = document.getElementById('filePreview');
+    if (preview) preview.innerHTML = '';
+    ['fileName', 'fileDescription', 'fileTags'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+}
+
+// Analyze a single file via the Generic File API
+function analyzeFile(fileId) {
+    fetch('/api/files/' + fileId + '/analyze/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (response.status === 401 || response.status === 403) {
+            throw new Error('Please log in to analyze files.');
+        }
+        return response.json().catch(() => ({}));
+    })
+    .then(data => {
+        if (data.success) {
+            alert('Analysis started/completed for file ' + fileId + '.');
+            loadFiles();
+        } else {
+            alert('Analysis failed: ' + (data.error || data.message || 'unknown error'));
+        }
+    })
+    .catch(error => alert('Analysis failed: ' + error.message));
+}
+
+// Download a file
+function downloadFile(fileId) {
+    window.location.href = '/api/files/' + fileId + '/download/';
+}
+
+// Delete a single file
+function deleteFile(fileId) {
+    if (!confirm('Delete this file?')) return;
+    fetch('/api/files/' + fileId + '/delete/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json().catch(() => ({})))
+    .then(data => {
+        if (data.success) {
+            loadFiles();
+        } else {
+            alert('Delete failed: ' + (data.error || data.message || 'unknown error'));
+        }
+    })
+    .catch(error => alert('Delete failed: ' + error.message));
+}
+
+// Analyze current file (first selected)
 function analyzeCurrentFile() {
-    console.log('Analyzing current file...');
-}
-
-// Download file
-function downloadFile() {
-    console.log('Downloading file...');
-}
-
-// Confirm delete
-function confirmDelete() {
-    console.log('Confirming delete...');
+    const selected = document.querySelector('.file-checkbox:checked');
+    if (selected) {
+        analyzeFile(selected.value);
+    } else {
+        alert('Please select a file first.');
+    }
 }
 
 // Initialize when page loads
