@@ -3,6 +3,12 @@
 > **Verbindliche Anweisung:** Lies diesen Prompt vollständig, bevor irgendein Entwicklungsschritt
 > begonnen wird. Initialisiere zuerst das Development Agent Framework, plane dann die Aufgabe,
 > und erst danach darf Code geschrieben, geändert oder gelöscht werden.
+>
+> **Mission Statement (Pflichtlektüre):** Lies vor jedem Session-Beginn zusätzlich die Datei
+> `MISSION_STATEMENT.md` vollständig, analysiere sie und setze sie entsprechend um. Sie definiert
+> Mission, Master Objectives, Technologie-Stack, verpflichtende Startsequenz, Agentensystem,
+> Iterationsregel und Abschlussbericht der NIR Intelligence Platform (NIR-IP) und ist für alle
+> Agenten bindend.
 
 ---
 
@@ -48,15 +54,24 @@ Führe diese Schritte in fester Reihenfolge aus:
 1. **Kontext laden:** Repository-Status (`git status`, Branch, letzte Commits), README,
    bestehende Framework-Dokumentation (`framework/`), relevante Issues/Tasks und die
    konkrete Nutzeranforderung lesen.
-2. **Anforderung erfassen:** Die Aufgabe in einem Satz zusammenfassen. Explizite und
+2. **Mission Statement lesen und umsetzen:** `MISSION_STATEMENT.md` vollständig lesen, analysieren
+   und für die anstehende Aufgabe ableiten, welche Master Objectives, Agenten und Regeln
+   betroffen sind. Danach gemäß verpflichtender Startsequenz des Mission Statements
+   `TASK.md`, `task_definition.yaml` und `system_manifest.json` einlesen. Fehlt eine dieser
+   drei Dateien, ist sie vor der Implementierung zu erstellen bzw. zu aktualisieren.
+3. **Anforderung erfassen:** Die Aufgabe in einem Satz zusammenfassen. Explizite und
    implizite Anforderungen sowie Nicht-Ziele (was ausdrücklich NICHT gefordert ist) notieren.
-3. **Agenten initialisieren:** Alle unten definierten Agenten aktivieren. Jeder Agent erhält
-   seine Rolle, seine Verantwortlichkeiten und seine Akzeptanzkriterien.
-4. **Kick-off (Kopf des Head of Development):** Der Head of Development priorisiert die
+4. **Agenten initialisieren:** Alle unten definierten Agenten aktivieren. Jeder Agent erhält
+   seine Rolle, seine Verantwortlichkeiten und seine Akzeptanzkriterien. Gemäß `MISSION_STATEMENT.md`
+   sind zusätzlich die fachlichen System-Agenten (Data Preparation, Sensor Quality, Statistical
+   Analysis, Neural Network, Calibration, Metadata, Weaviate, FAISS, PostgreSQL, Django, MCP,
+   Quarto, Flower) in ihrer Rolle zu berücksichtigen; der Neural Network Agent ist verpflichtend
+   aktiv und läuft immer parallel zur statistischen Analyse.
+5. **Kick-off (Kopf des Head of Development):** Der Head of Development priorisiert die
    Aufgabe, teilt sie den Agenten zu und legt den minimalen Lösungsumfang fest.
-5. **Entwicklungszyklus starten:** Erst nach Freigabe durch den Head of Development
+6. **Entwicklungszyklus starten:** Erst nach Freigabe durch den Head of Development
    beginnt die Umsetzung.
-6. **Abschlussprüfung:** Der Zyklus endet erst, wenn alle Agenten keine Fehler, Warnungen
+7. **Abschlussprüfung:** Der Zyklus endet erst, wenn alle Agenten keine Fehler, Warnungen
    oder Change-Requests mehr melden und die Definition of Done erfüllt ist.
 
 ---
@@ -191,7 +206,13 @@ Fertigstellung (Commit mit fokussierter, begründeter Änderung)
 ```
 
 **Wiederholungsregel:** Der Zyklus wird so lange durchlaufen, bis kein Agent mehr Fehler,
-Warnungen oder Change-Requests meldet.
+Warnungen oder Change-Requests meldet — gemäß Iterationsregel des Mission Statements bis:
+
+```
+ERRORS = 0
+CRITICAL_WARNINGS = 0
+OPEN_CHANGE_REQUESTS = 0
+```
 
 ---
 
@@ -224,6 +245,10 @@ Eine Entwicklungseinheit ist erst fertig, wenn:
 - [ ] Änderungen sind dokumentiert (bei Bedarf als Quarto-/Dokumentationsupdate gemäß
       Repository-Konventionen).
 - [ ] Das Ergebnis wurde als fokussierter Commit übergeben.
+- [ ] Bei Analysen wurde der Abschlussbericht gemäß `MISSION_STATEMENT.md` erstellt:
+      Metadatenanalyse, Metadatenbewertung, Sensoranalyse, statistische Analyse,
+      neuronale Netzwerkanalyse, Kalibrationsvergleich, Wellenlängenvergleich,
+      Similarity-Analyse, Optimierungsprotokoll, Gesamtergebnis, Handlungsempfehlungen.
 
 ---
 
@@ -232,11 +257,13 @@ Eine Entwicklungseinheit ist erst fertig, wenn:
 Beantworte vor dem ersten Code-Schritt schriftlich:
 
 1. Was genau ist gefordert — und was ausdrücklich nicht?
-2. Welche Agenten sind betroffen, und was ist ihr minimaler Beitrag?
-3. Welche Tests muss der Tester Agent mindestens vorsehen?
-4. Welche bestehende Lösung im Repository kann wiederverwendet werden?
-5. Welches Risiko besteht für Code Creep, und wie wird es verhindert?
-6. Sind die beiden Grundregeln erfüllt — unterstützt die Lösung **alle Dateiformate**
+2. Welche Master Objectives des Mission Statements (`MISSION_STATEMENT.md`) sind betroffen,
+   und wie trägt die Lösung dazu bei?
+3. Welche Agenten sind betroffen, und was ist ihr minimaler Beitrag?
+4. Welche Tests muss der Tester Agent mindestens vorsehen?
+5. Welche bestehende Lösung im Repository kann wiederverwendet werden?
+6. Welches Risiko besteht für Code Creep, und wie wird es verhindert?
+7. Sind die beiden Grundregeln erfüllt — unterstützt die Lösung **alle Dateiformate**
    und **alle Spektrometer**, oder enthält sie eine Form-/Geräte-Beschränkung?
 
-Erst wenn alle sechs Fragen beantwortet sind, beginnt die Umsetzung.
+Erst wenn alle sieben Fragen beantwortet sind, beginnt die Umsetzung.
