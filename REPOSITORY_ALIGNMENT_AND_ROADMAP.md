@@ -51,7 +51,7 @@ Das Repository enthält mehrere parallele Projektansätze:
 | G2 | **Startsequenz-Dateien nicht in Repo-Wurzel:** Der Init-Prompt nennt `TASK.md` etc. ohne Pfad; die Dateien liegen in `NIR_Intelligence-main/` | „Jeder Agent MUSS vor jeder Ausführung … lesen" | Pfade im Init-Prompt präzisieren bzw. Dateien als führende Steuerdateien konsolidieren (S1) |
 | G3 | **Drei parallele Plattform-Ansätze** (`NIR_Intelligence-main`, `nir_platform`, `HANDHELD`) mit Überschneidungen | Mission: eine Plattform | Konsolidierung: `NIR_Intelligence-main` als führendes Projekt deklarieren; Fähigkeiten der anderen (napari, MQTT/Node-RED) integrieren statt duplizieren (S1, S5) |
 | G4 | **Formatabhängigkeit prüfen:** `generic_file_handler_agent` vorhanden, aber Abdeckung aller Formate (SPC, JMP, MATLAB, Kamerabilder RAW/JPEG/PNG, herstellerspezifische Exporte) ist nicht nachgewiesen | Master Objective 1: Import unabhängig vom Dateiformat | Erweiterbare Import-/Exportschicht vervollständigen + Testmatrix über alle Formate (S3) — ✅ erledigt (S3, Branch vibe/s3-format-agnostic-import) |
-| G5 | **Keine Spektrometer-Abstraktionsschicht:** Geräteintegration nicht über einheitliches Adapter-Muster nachgewiesen | Grundregel: alle Spektrometer | Gerätetreiber-/Adapter-Schicht einführen; bestehende ESP32-S3-Integration als erster Adapter (S4) |
+| G5 | **Keine Spektrometer-Abstraktionsschicht:** Geräteintegration nicht über einheitliches Adapter-Muster nachgewiesen | Grundregel: alle Spektrometer | Gerätetreiber-/Adapter-Schicht einführen; bestehende ESP32-S3-Integration als erster Adapter (S4) — ✅ erledigt (S4, Branch vibe/s4-spectrometer-abstraction) |
 | G6 | **Chatbot für Ergebnisdiskussion:** Ollama-Service vorhanden, aber kein dedizierter Ergebnis-Chatbot als Feature nachgewiesen | Master Objective 10 | RAG-/Chatbot-Feature auf Ollama/Mistral-Basis mit Qdrant-Anbindung (S6) |
 | G7 | **Selbstoptimierung/Updates:** Selbstoptimierung als Ziel formuliert, aber kein Update-Mechanismus für Open-Source-Komponenten implementiert | Master Objective 15 | Update-Monitoring + Abhängigkeitsprüfung (z. B. CI-Job) definieren (S7) |
 | G8 | **`framework/` unvollständig:** Nur Backend-/Frontend-Skills implementiert, Rest ist Skeleton | Init-Prompt referenziert Framework-Dokumentation | Entweder vervollständigen oder als Referenz deklarieren und nicht als aktive Komponente (S1) |
@@ -112,11 +112,20 @@ Reihenfolge nach Abhängigkeit; jeder Schritt wird gemäß
       OPUS) als Regression-Fixtures; SPC-Multi-File-Varianten (TMULTI) aktuell bewusst
       nicht unterstützt (Fehlermeldung verweist auf Layout).
 
-### S4 — Spektrometer-Abstraktionsschicht (schließt G5)
-- Einheitliches Adapter-Muster (Device-Driver-Interface): Messdaten, Metadaten,
-  Kalibrationsparameter, Gerätestatus.
-- Erste Adapter: DIY-Matchbox, ESP32-S3-Kameraspektrometer (MQTT-Anbindung aus `HANDHELD/mqtt` übernehmen).
-- Danach kommerzielle Geräte (NIR, UV-Vis, Raman, FTIR) als weitere Adapter.
+### S4 — Spektrometer-Abstraktionsschicht (schließt G5) — ✅ ERLEDIGT
+- [x] Einheitliches Adapter-Muster `devices/base_spectrometer.py`: abstrakter Kontrakt mit
+      Messdaten (einheitliches Spektral-Schema aus S3), Metadaten, Kalibrationsparametern,
+      Gerätestatus (DeviceStatus-Enum), Capabilities (Wellenlängenbereich, Auflösung, Detektor).
+- [x] Registry `devices/registry.py`: MODEL_ID-basierte Registrierung; neue Spektrometer-
+      modelle integrieren ohne Änderung des Plattform-Kerns (Grundregel 2 operativ).
+- [x] Erster Adapter: DIY-Matchbox (`devices/diy_matchbox.py`, USB-Kamera).
+- [x] Zweiter Adapter: ESP32-S3-Kameraspektrometer (`devices/esp32_s3_camera.py`, MQTT,
+      Payload-Parsing gemäß `HANDHELD/mqtt/topic-spec.md`).
+- [x] Testmatrix `tests/test_s4_spectrometer_adapters.py`: 15/15 grün (Kontrakt, Registry,
+      Capture-Payload → einheitliches Schema, Fehlerbehandlung, Lifecycle).
+      Verifikation: py_compile + 15/15 Tests + S3-Regression 7/7 grün.
+- Offen für spätere Schritte: kommerzielle Geräte (NIR, UV-Vis, Raman, FTIR) als weitere
+      Adapter; echter MQTT-Broker-Worker (Acquisition-Layer) zur Live-Anbindung.
 
 ### S5 — Integration napari-Visualisierung & Spektrenvergleich
 - napari-App aus `HANDHELD/napari_app` in die Plattform integrieren (Visualisierung,
