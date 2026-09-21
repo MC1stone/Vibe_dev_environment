@@ -27,7 +27,7 @@ agents:
       docker_compose_file: "docker-compose.yml"
       network_name: "nir_network"
       services:
-        - "weaviate"
+        - "qdrant"
         - "postgresql"
         - "faiss"
         - "mcp_server"
@@ -110,7 +110,7 @@ agents:
         r2: 0.80
         rmse: 0.1
 
-  weaviate_agent:
+  qdrant_agent:
     enabled: true
     version: "1.0.0"
     params:
@@ -248,7 +248,7 @@ agents:
       tools_orchestration:
         docker: true
         postgresql: true
-        weaviate: true
+        qdrant: true
         faiss: true
         django: true
         quarto: true
@@ -267,7 +267,7 @@ dependencies:
   - "agents.statistical_analysis_agent.StatisticalAnalysisAgent"
   - "agents.neural_network_agent.NeuralNetworkAgent"
   - "agents.calibration_agent.CalibrationAgent"
-  - "agents.weaviate_agent.WeaviateAgent"
+  - "agents.qdrant_agent.QdrantAgent"
   - "agents.faiss_agent.FaissAgent"
   - "agents.postgresql_agent.PostgreSQLAgent"
   - "agents.django_agent.DjangoAgent"
@@ -286,7 +286,7 @@ execution_order:
   - "sensor_quality_agent"
   - ["statistical_analysis_agent", "neural_network_agent"]
   - "calibration_agent"
-  - ["weaviate_agent", "faiss_agent", "postgresql_agent"]
+  - ["qdrant_agent", "faiss_agent", "postgresql_agent"]
   - "django_agent"
   - "mcp_agent"
   - "ilias_agent"

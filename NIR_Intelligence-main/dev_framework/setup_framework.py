@@ -78,7 +78,7 @@ per-file-ignores =
 profile = black
 line_length = 120
 known_first_party = agents, scripts, dev_framework
-known_third_party = crewai, tensorflow, keras, torch, pandas, numpy, scipy, scikit-learn, weaviate, faiss, postgres, django, fastapi, pytest
+known_third_party = crewai, tensorflow, keras, torch, pandas, numpy, scipy, scikit-learn, qdrant, faiss, postgres, django, fastapi, pytest
 """,
             'mypy.ini': """[mypy]
 python_version = 3.12

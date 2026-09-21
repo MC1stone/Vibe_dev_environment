@@ -51,12 +51,12 @@ if [ "{{ databases.postgresql.enabled }}" = "true" ]; then
     fi
 fi
 
-if [ "{{ databases.weaviate.enabled }}" = "true" ]; then
-    if docker ps | grep -q nir_weaviate; then
-        echo "✅ Weaviate container is running"
+if [ "{{ databases.qdrant.enabled }}" = "true" ]; then
+    if docker ps | grep -q nir_qdrant; then
+        echo "✅ Qdrant container is running"
     else
-        echo "⚠️  Weaviate container not found. Starting..."
-        docker-compose -f docker-compose.yml up -d nir_weaviate || true
+        echo "⚠️  Qdrant container not found. Starting..."
+        docker-compose -f docker-compose.yml up -d nir_qdrant || true
     fi
 fi
 

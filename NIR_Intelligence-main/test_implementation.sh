@@ -81,7 +81,7 @@ DATABASES = {
 
 # ILIAS Integration
 ILIAS = {
-    'BASE_URL': 'http://localhost:8080',  # Local test ILIAS
+    'BASE_URL': 'http://localhost:6333',  # Local test ILIAS
     'API_KEY': 'test_api_key',
     'API_SECRET': 'test_api_secret',
     'SSO_ENABLED': False,  # Disabled for testing
@@ -394,20 +394,20 @@ services:
       timeout: 5s
       retries: 5
 
-  # Test Weaviate Vector Database
-  weaviate:
-    image: semitechnologies/weaviate:1.23.0
-    container_name: nir_weaviate_test
+  # Test Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: nir_qdrant_test
     environment:
       QUERY_DEFAULTS_LIMIT: 25
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
-      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      PERSISTENCE_DATA_PATH: "/qdrant/storage"
       DEFAULT_VECTORIZER_MODULE: "none"
       ENABLE_MODULES: ""
     ports:
       - "8080:8080"
     volumes:
-      - nir_test_weaviate_data:/var/lib/weaviate
+      - nir_test_qdrant_data:/qdrant/storage
 
   # Test ILIAS (simulated)
   ilias:
@@ -422,7 +422,7 @@ services:
 
 volumes:
   nir_test_postgres_data:
-  nir_test_weaviate_data:
+  nir_test_qdrant_data:
 EOF
 
 # Create test script for server
@@ -476,7 +476,7 @@ except Exception as e:
 echo ""
 echo "Server test environment is ready!"
 echo "Access the server at: http://localhost:8000"
-echo "Access Weaviate at: http://localhost:8080"
+echo "Access Qdrant at: http://localhost:6333"
 echo "Access test ILIAS at: http://localhost:8081"
 EOF
 
@@ -686,7 +686,7 @@ echo "=========================================="
 echo ""
 echo "Test Environment Summary:"
 echo "- Server: http://localhost:8000"
-echo "- Weaviate: http://localhost:8080"
+echo "- Qdrant: http://localhost:6333"
 echo "- Test ILIAS: http://localhost:8081"
 echo "- PostgreSQL: localhost:5432"
 echo ""
@@ -723,7 +723,7 @@ echo "  Client: bash nir_test_env/test_client.sh"
 echo ""
 echo "The test environment includes:"
 echo "  ✓ PostgreSQL database"
-echo "  ✓ Weaviate vector database"
+echo "  ✓ Qdrant vector database"
 echo "  ✓ Simulated ILIAS instance"
 echo "  ✓ Sample spectral data"
 echo "  ✓ Automated deployment scripts"

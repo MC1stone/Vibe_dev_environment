@@ -28,7 +28,7 @@
     "sensor_quality_agent",
     ["statistical_analysis_agent", "neural_network_agent"],
     "calibration_agent",
-    ["weaviate_agent", "faiss_agent", "postgresql_agent"],
+    ["qdrant_agent", "faiss_agent", "postgresql_agent"],
     "django_agent",
     "mcp_agent",
     "quarto_agent",

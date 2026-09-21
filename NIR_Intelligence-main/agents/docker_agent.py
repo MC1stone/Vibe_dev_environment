@@ -18,7 +18,7 @@ class DockerAgent(BaseAgent):
         self.dependencies = ["docker", "docker-compose"]
         self.docker_compose_file = kwargs.get("docker_compose_file", "docker-compose.yml")
         self.network_name = kwargs.get("network_name", "nir_network")
-        self.services = kwargs.get("services", ["weaviate", "postgresql", "faiss", "mcp_server"])
+        self.services = kwargs.get("services", ["qdrant", "postgresql", "faiss", "mcp_server"])
         self.timeout = kwargs.get("timeout", 300)
         self.skip_if_unavailable = kwargs.get("skip_if_unavailable", False)
         self.debug_mode = kwargs.get("debug", False)

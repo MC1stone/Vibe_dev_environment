@@ -5,9 +5,9 @@ echo "🔧 Fixing Docker issues for NIR Intelligence Platform"
 
 # 1. Clean up completely
 echo "🧹 Complete cleanup..."
-docker stop nir_postgresql_test nir_weaviate_test nir_ilias_test 2>/dev/null
-docker rm -f nir_postgresql_test nir_weaviate_test nir_ilias_test 2>/dev/null
-docker volume rm nir_test_postgres_data nir_test_weaviate_data 2>/dev/null
+docker stop nir_postgresql_test nir_qdrant_test nir_ilias_test 2>/dev/null
+docker rm -f nir_postgresql_test nir_qdrant_test nir_ilias_test 2>/dev/null
+docker volume rm nir_test_postgres_data nir_test_qdrant_data 2>/dev/null
 docker network rm nir_test_network 2>/dev/null
 
 # 2. Kill port processes
@@ -47,17 +47,17 @@ services:
     networks:
       - nir_test_network
 
-  weaviate:
-    image: semitechnologies/weaviate:1.23.0
-    container_name: nir_weaviate_test
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: nir_qdrant_test
     environment:
       QUERY_DEFAULTS_LIMIT: 25
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
-      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      PERSISTENCE_DATA_PATH: "/qdrant/storage"
     ports:
       - "8080:8080"
     volumes:
-      - nir_test_weaviate_data:/var/lib/weaviate
+      - nir_test_qdrant_data:/qdrant/storage
     restart: unless-stopped
     networks:
       - nir_test_network
@@ -76,7 +76,7 @@ services:
 
 volumes:
   nir_test_postgres_data:
-  nir_test_weaviate_data:
+  nir_test_qdrant_data:
 
 networks:
   nir_test_network:
@@ -109,14 +109,14 @@ else
 
         docker network create nir_test_network 2>/dev/null
 
-        docker run -d --name nir_weaviate_test \
+        docker run -d --name nir_qdrant_test \
           -e QUERY_DEFAULTS_LIMIT=25 \
           -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true \
           -p 8080:8080 \
-          -v nir_test_weaviate_data:/var/lib/weaviate \
+          -v nir_test_qdrant_data:/qdrant/storage \
           --restart unless-stopped \
           --network nir_test_network \
-          semitechnologies/weaviate:1.23.0
+          qdrant/qdrant:latest
 
         docker run -d --name nir_ilias_test \
           -p 8081:8081 \

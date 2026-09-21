@@ -7,7 +7,7 @@
 # - Python environment and dependencies
 # - Docker and container runtime
 # - DeveloperAgent Framework deployment
-# - Database services (PostgreSQL, Weaviate, FAISS)
+# - Database services (PostgreSQL, Qdrant, FAISS)
 # - Monitoring and logging
 # - Security hardening
 #
@@ -446,27 +446,20 @@
           - name: "{{ docker.network_name }}"
       when: databases.postgresql.enabled and docker.enabled
       
-    - name: Deploy Weaviate with Docker
+    - name: Deploy Qdrant with Docker
       community.docker.docker_container:
-        name: nir_weaviate
-        image: semitechnologies/weaviate:{{ databases.weaviate.version }}
+        name: nir_qdrant
+        image: qdrant/qdrant:{{ databases.qdrant.version }}
         state: started
         restart_policy: unless-stopped
         ports:
-          - "{{ databases.weaviate.port }}:8080"
-          - "50051:50051"
+          - "{{ databases.qdrant.port }}:6333"
+          - "6334:6334"
         volumes:
-          - "{{ databases.weaviate.storage }}:/var/lib/weaviate"
-        env:
-          QUERY_DEFAULTS_LIMIT: 25
-          AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
-          PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
-          DEFAULT_VECTORIZER_MODULE: "text2vec-transformers"
-          ENABLE_MODULES: "text2vec-transformers,generative-transformers"
-          TRANSFORMERS_INFERENCE_API: "http://localhost:8080"
+          - "{{ databases.qdrant.storage }}:/qdrant/storage"
         networks:
           - name: "{{ docker.network_name }}"
-      when: databases.weaviate.enabled and docker.enabled
+      when: databases.qdrant.enabled and docker.enabled
 
 ---
 # Phase 7: Monitoring Setup
@@ -596,7 +589,7 @@
           - Framework: http://{{ ansible_host }}:{{ framework.port }}
           - API: http://{{ ansible_host }}:{{ services.api.port }}
           - PostgreSQL: {{ ansible_host }}:{{ databases.postgresql.port }}
-          - Weaviate: http://{{ ansible_host }}:{{ databases.weaviate.port }}
+          - Qdrant: http://{{ ansible_host }}:{{ databases.qdrant.port }}
           - Prometheus: http://{{ ansible_host }}:{{ monitoring.prometheus.port }}
           - Grafana: http://{{ ansible_host }}:{{ monitoring.grafana.port }}
           

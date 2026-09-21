@@ -8,7 +8,7 @@ echo ""
 
 # Test 1: Check Docker containers
 echo "1. Testing Docker Environment..."
-docker ps -a | grep -E "(nir_postgresql|nir_weaviate|nir_ilias)" > /dev/null 2>&1
+docker ps -a | grep -E "(nir_postgresql|nir_qdrant|nir_ilias)" > /dev/null 2>&1
 if [ $? -eq 0 ]; then
     echo "✓ Docker containers found"
 else
@@ -28,13 +28,13 @@ else
     exit 1
 fi
 
-# Test 3: Check Weaviate
-echo "3. Testing Weaviate Vector Database..."
-curl -s http://localhost:8080/v1/.well-known/ready > /dev/null
+# Test 3: Check Qdrant
+echo "3. Testing Qdrant Vector Database..."
+curl -s http://localhost:6333/healthz > /dev/null
 if [ $? -eq 0 ]; then
-    echo "✓ Weaviate is ready"
+    echo "✓ Qdrant is ready"
 else
-    echo "✗ Weaviate is not ready"
+    echo "✗ Qdrant is not ready"
     exit 1
 fi
 
@@ -100,7 +100,7 @@ echo "=========================================="
 echo ""
 echo "Test Environment Summary:"
 echo "- PostgreSQL: localhost:5432"
-echo "- Weaviate: http://localhost:8080"
+echo "- Qdrant: http://localhost:6333"
 echo "- ILIAS: http://localhost:8081"
 echo "- Sample data: nir_test_env/server/data/raw/"
 echo ""

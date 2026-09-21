@@ -107,7 +107,7 @@ print("5. Testing ILIAS Integration Configuration...")
 try:
     # Test configuration structure
     ilias_config = {
-        'BASE_URL': 'http://localhost:8080',
+        'BASE_URL': 'http://localhost:6333',
         'API_KEY': 'test_api_key',
         'API_SECRET': 'test_api_secret',
         'SSO_ENABLED': False,
@@ -170,7 +170,7 @@ echo "✓ Data processing pipeline tested"
 echo "✓ ILIAS integration configuration validated"
 echo "✓ Federated learning configuration validated"
 echo ""
-echo "Note: Docker-based services (PostgreSQL, Weaviate, ILIAS)"
+echo "Note: Docker-based services (PostgreSQL, Qdrant, ILIAS)"
 echo "would be tested in a Docker-enabled environment."
 echo ""
 echo "To run Docker tests when Docker is available:"

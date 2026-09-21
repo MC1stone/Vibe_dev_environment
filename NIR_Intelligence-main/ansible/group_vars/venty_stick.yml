@@ -77,11 +77,11 @@ databases:
     storage: "/opt/nir_mistral/data/postgresql"
     memory_limit: "1GB"
     
-  weaviate:
+  qdrant:
     enabled: true
-    version: "1.23"
-    port: 8081
-    storage: "/opt/nir_mistral/data/weaviate"
+    version: "latest"
+    port: 6333
+    storage: "/opt/nir_mistral/data/qdrant"
     memory_limit: "2GB"
     
   faiss:
@@ -132,7 +132,7 @@ security:
       - 8080 # Framework
       - 8000 # API
       - 5432 # PostgreSQL
-      - 8081 # Weaviate
+      - 6333 # Qdrant
       - 9090 # Monitoring
     
   fail2ban:

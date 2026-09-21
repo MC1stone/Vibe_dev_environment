@@ -21,19 +21,19 @@ services:
     networks:
       - nir_test_network
 
-  weaviate:
-    image: semitechnologies/weaviate:1.23.0
-    container_name: nir_weaviate_test
+  qdrant:
+    image: semitechnologies/qdrant:1.23.0
+    container_name: nir_qdrant_test
     environment:
       QUERY_DEFAULTS_LIMIT: 25
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
-      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      PERSISTENCE_DATA_PATH: "/qdrant/storage"
       DEFAULT_VECTORIZER_MODULE: "none"
       ENABLE_MODULES: ""
     ports:
-      - "8080:8080"
+      - "6333:6333"
     volumes:
-      - nir_test_weaviate_data:/var/lib/weaviate
+      - nir_test_qdrant_data:/qdrant/storage
     healthcheck:
       test: ["CMD", "wget", "--spider", "localhost:8080/v1/meta"]
       interval: 10s
@@ -58,7 +58,7 @@ services:
 
 volumes:
   nir_test_postgres_data:
-  nir_test_weaviate_data:
+  nir_test_qdrant_data:
 
 networks:
   nir_test_network:

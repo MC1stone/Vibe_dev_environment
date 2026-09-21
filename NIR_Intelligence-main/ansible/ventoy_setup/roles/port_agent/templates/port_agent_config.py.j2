@@ -45,7 +45,7 @@ class PortAgentConfig:
     FRAMEWORK_PORTS = {
         "django": {{ django_port }},
         "port_agent": {{ port_agent_port }},
-        "weaviate": 8080,
+        "qdrant": 6333,
         "redis": 6379,
         "elasticsearch": 9200,
         "postgresql": 5432,
@@ -57,7 +57,7 @@ class PortAgentConfig:
         "port_agent": {{ port_agent_port }},
         "research_agent": 8002,
         "analysis_agent": 8003,
-        "weaviate_agent": 8081,
+        "qdrant_agent": 6333,
     }
     
     # Network configuration

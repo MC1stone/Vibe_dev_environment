@@ -28,7 +28,7 @@ services:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-change-me-in-production}
       - DJANGO_ALLOWED_HOSTS=*
       - DATABASE_URL=postgres://nir_user:${POSTGRES_PASSWORD}@postgres:5432/nir_mistral
-      - WEAVIATE_URL=http://weaviate:8080
+      - QDRANT_URL=http://qdrant:6333
       - OLLAMA_URL=http://ollama:11434
       - REDIS_URL=redis://redis:6379/0
       - QUARTO_ENABLED=True
@@ -40,7 +40,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      weaviate:
+      qdrant:
         condition: service_started
       ollama:
         condition: service_started
@@ -68,7 +68,7 @@ services:
       - PYTHONPATH=/app
       - DJANGO_SETTINGS_MODULE=nir_web.settings
       - DATABASE_URL=postgres://nir_user:${POSTGRES_PASSWORD}@postgres:5432/nir_mistral
-      - WEAVIATE_URL=http://weaviate:8080
+      - QDRANT_URL=http://qdrant:6333
       - OLLAMA_URL=http://ollama:11434
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
@@ -123,25 +123,20 @@ services:
       timeout: 5s
       retries: 5
 
-  # Weaviate Vector Database
-  weaviate:
-    image: cr.weaviate.io/semitechnologies/weaviate:1.23.0
-    container_name: nir_mistral_weaviate
+  # Qdrant Vector Database (replaces out-of-scope Weaviate)
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: nir_mistral_qdrant
     restart: unless-stopped
     ports:
-      - "8080:8080"
-    environment:
-      QUERY_DEFAULTS_LIMIT: 25
-      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
-      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
-      DEFAULT_VECTORIZER_MODULE: 'none'
-      CLUSTER_HOSTNAME: 'node1'
+      - "6333:6333"
+      - "6334:6334"
     volumes:
-      - weaviate_data:/var/lib/weaviate
+      - qdrant_data:/qdrant/storage
     networks:
       - nir_network
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/v1/.well-known/ready"]
+      test: ["CMD-SHELL", "bash -c ':< /dev/tcp/localhost/6333'"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -308,7 +303,7 @@ networks:
 volumes:
   postgres_data:
     driver: local
-  weaviate_data:
+  qdrant_data:
     driver: local
   ollama_data:
     driver: local

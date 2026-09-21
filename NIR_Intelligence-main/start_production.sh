@@ -307,9 +307,9 @@ function run_healthcheck() {
     echo -e "${YELLOW}Checking PostgreSQL...${NC}"
     $compose_cmd exec postgresql pg_isready -U nir_user -d nir_metadata || echo "PostgreSQL health check failed"
     
-    # Check Weaviate
-    echo -e "${YELLOW}Checking Weaviate...${NC}"
-    $compose_cmd exec weaviate curl -X GET http://localhost:8080/v1/.well-known/ready || echo "Weaviate health check failed"
+    # Check Qdrant
+    echo -e "${YELLOW}Checking Qdrant...${NC}"
+    $compose_cmd exec qdrant curl -X GET http://localhost:6333/healthz || echo "Qdrant health check failed"
     
     # Check Ollama
     echo -e "${YELLOW}Checking Ollama...${NC}"
@@ -353,7 +353,7 @@ function show_access_info() {
     echo "🔌 Service Ports:"
     echo "   - Django:    8000"
     echo "   - PostgreSQL: 5432"
-    echo "   - Weaviate:  8080"
+    echo "   - Qdrant:  6333"
     echo "   - FAISS:     8081"
     echo "   - Ollama:    11434"
     echo "   - Redis:     6379"

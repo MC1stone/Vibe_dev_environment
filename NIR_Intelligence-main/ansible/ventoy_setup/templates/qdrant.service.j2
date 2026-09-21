@@ -1,0 +1,16 @@
+[Unit]
+Description=Qdrant Vector Database
+After=network.target
+
+[Service]
+User={{ service_user }}
+Group={{ service_group }}
+WorkingDirectory=/opt/qdrant
+ExecStart=/opt/qdrant/qdrant --host 0.0.0.0 --port {{ qdrant_port }}
+Restart=always
+RestartSec=5
+StandardOutput=file:/opt/{{ project_name }}/logs/qdrant.log
+StandardError=file:/opt/{{ project_name }}/logs/qdrant_error.log
+
+[Install]
+WantedBy=multi-user.target

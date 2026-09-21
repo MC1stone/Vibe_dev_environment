@@ -17,7 +17,7 @@
     # Service ports
     django_port: 8000
     port_agent_port: 8001
-    weaviate_port: 8081
+    qdrant_port: 6333
     postgres_port: 5432
     prometheus_port: 9090
     grafana_port: 3000
@@ -81,28 +81,28 @@
             encoding: "UTF-8"
             state: present
             
-    - name: Install and configure Weaviate
+    - name: Install and configure Qdrant
       block:
-        - name: Download Weaviate
+        - name: Download Qdrant
           get_url:
-            url: "https://github.com/weaviate/weaviate/releases/download/v1.23.0/weaviate-v1.23.0-linux-amd64.tar.gz"
-            dest: "/tmp/weaviate.tar.gz"
+            url: "https://github.com/qdrant/qdrant/releases/latest/download/qdrant-x86_64-unknown-linux-gnu.tar.gz"
+            dest: "/tmp/qdrant.tar.gz"
             
-        - name: Extract Weaviate
+        - name: Extract Qdrant
           unarchive:
-            src: "/tmp/weaviate.tar.gz"
-            dest: "/opt/"
+            src: "/tmp/qdrant.tar.gz"
+            dest: "/opt/qdrant"
             remote_src: yes
             
-        - name: Create Weaviate service
+        - name: Create Qdrant service
           template:
-            src: templates/weaviate.service.j2
-            dest: /etc/systemd/system/weaviate.service
+            src: templates/qdrant.service.j2
+            dest: /etc/systemd/system/qdrant.service
             mode: '0644'
             
-        - name: Start Weaviate service
+        - name: Start Qdrant service
           systemd:
-            name: weaviate
+            name: qdrant
             state: started
             enabled: yes
             daemon_reload: yes
@@ -156,11 +156,11 @@
           register: port_agent_health
           ignore_errors: yes
           
-        - name: Check Weaviate
+        - name: Check Qdrant
           uri:
-            url: "http://localhost:{{ weaviate_port }}/v1/.well-known/ready"
+            url: "http://localhost:{{ qdrant_port }}/healthz"
             return_content: yes
-          register: weaviate_health
+          register: qdrant_health
           ignore_errors: yes
           
         - name: Check PostgreSQL
@@ -180,13 +180,13 @@
           ============================================
           Django Server: {{ '✅ HEALTHY' if django_health.status == 200 else '❌ DOWN' }}
           Port Agent: {{ '✅ HEALTHY' if port_agent_health.status == 200 else '❌ DOWN' }}
-          Weaviate: {{ '✅ HEALTHY' if weaviate_health.status == 200 else '❌ DOWN' }}
+          Qdrant: {{ '✅ HEALTHY' if qdrant_health.status == 200 else '❌ DOWN' }}
           PostgreSQL: {{ '✅ HEALTHY' if postgres_health is success else '❌ DOWN' }}
           
           Access Points:
           - Django: http://{{ ansible_host }}:{{ django_port }}
           - Port Agent: http://{{ ansible_host }}:{{ port_agent_port }}
-          - Weaviate: http://{{ ansible_host }}:{{ weaviate_port }}
+          - Qdrant: http://{{ ansible_host }}:{{ qdrant_port }}
           - Prometheus: http://{{ ansible_host }}:{{ prometheus_port }}
           - Grafana: http://{{ ansible_host }}:{{ grafana_port }}
           

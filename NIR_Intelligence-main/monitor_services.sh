@@ -101,7 +101,7 @@ declare -A SERVICES=(
     ["web"]="Django Web Application"
     ["postgresql"]="PostgreSQL Database"
     ["postgres"]="PostgreSQL Database"
-    ["weaviate"]="Weaviate Vector Database"
+    ["qdrant"]="Qdrant Vector Database"
     ["faiss"]="Faiss Similarity Search"
     ["ollama"]="Ollama AI Service"
     ["redis"]="Redis Cache"
@@ -136,7 +136,7 @@ echo "----------------------------"
 declare -A PORTS=(
     ["8000"]="Django Web Application"
     ["5432"]="PostgreSQL Database"
-    ["8080"]="Weaviate Vector Database"
+    ["6333"]="Qdrant Vector Database"
     ["8081"]="Faiss Similarity Search"
     ["11434"]="Ollama AI Service"
     ["6379"]="Redis Cache"
@@ -170,7 +170,7 @@ echo "-----------------------------"
 # Define HTTP endpoints to check
 declare -A ENDPOINTS=(
     ["http://localhost:8000/health/"]="Django Health Check"
-    ["http://localhost:8080/v1/.well-known/ready"]="Weaviate Health"
+    ["http://localhost:6333/healthz"]="Qdrant Health"
     ["http://localhost:11434/api/tags"]="Ollama API"
     ["http://localhost:8081/health"]="Faiss Health"
     ["http://localhost:5556/health"]="Flower Management"
@@ -218,10 +218,10 @@ if check_port "localhost" "5432" "PostgreSQL"; then
 fi
 
 # AI Services
-if check_port "localhost" "8080" "Weaviate"; then
-    echo -e "${BLUE}🔹 Weaviate:${NC}"
-    echo "   URL: http://localhost:8080"
-    echo "   Health: http://localhost:8080/v1/.well-known/ready"
+if check_port "localhost" "6333" "Qdrant"; then
+    echo -e "${BLUE}🔹 Qdrant:${NC}"
+    echo "   URL: http://localhost:6333"
+    echo "   Health: http://localhost:6333/healthz"
     echo ""
 fi
 

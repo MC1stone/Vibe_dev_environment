@@ -24,7 +24,7 @@ pyopenms>=2.7.0
 nmrglue>=0.6
 
 # Database and storage
-weaviate-client>=4.0.0
+qdrant-client>=1.9.0
 faiss-cpu>=1.7.4
 psycopg2-binary>=2.9.6
 sqlalchemy>=2.0.0

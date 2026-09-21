@@ -3,43 +3,60 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: System Implementation and Testing
+## Current Task: Qdrant Migration (Roadmap Step S2)
 
 ### Objective
-Implement and test the core functionality of the NIR Intelligence Platform multi-agent system.
+Replace Weaviate with Qdrant as the vector database for embedding storage,
+semantic search and similarity search across the entire platform stack.
+
+### Predecessor
+S1 (Consolidation & Steering) is COMPLETED: this project is the Single Source of
+Truth; the mandatory startup files have been updated to reference Qdrant.
 
 ### Scope
-- Implement all 15 agent classes
-- Fix configuration issues
-- Create missing mandatory files
-- Test basic functionality
-- Ensure agent orchestration works
+- Replace the Weaviate service in `docker-compose.yml` (and prod compose) with a Qdrant service
+- Replace `weaviate-client` with `qdrant-client` in `requirements.txt`
+- Migrate `agents/weaviate_agent.py` to `agents/qdrant_agent.py`
+  (embedding storage, semantic search, similarity search)
+- Update all callers of the Weaviate agent to the Qdrant agent
+- Review the t2v-transformers container (embedding generation may move to
+  Ollama-side or local inference)
+
+### Out of Scope
+- No changes to FAISS (spectrum/peak comparison stays on FAISS)
+- No changes to PostgreSQL, Django, MCP, Flower or Quarto components
+- No refactoring of unrelated code
 
 ### Deliverables
-1. **Agent Implementations**: All 15 agents with basic functionality
-2. **Configuration**: Updated agent_config.yaml with correct dependencies
-3. **Mandatory Files**: TASK.md, task_definition.yaml, system_manifest.json
-4. **Testing**: Basic functionality test of the orchestrator
+1. **docker-compose.yml / docker-compose.prod.yml**: Qdrant service replaces Weaviate
+2. **requirements.txt**: `qdrant-client` replaces `weaviate-client`
+3. **agents/qdrant_agent.py**: full replacement of the Weaviate agent functionality
+4. **Callers updated**: no remaining imports/references to the Weaviate agent
+5. **Embedding pipeline decision**: documented handling of embedding generation
 
 ### Success Criteria
-- All agents can be imported and instantiated
-- Orchestrator can initialize all agents
-- Basic execution flow works without critical errors
-- Configuration files are consistent
+- No references to Weaviate remain in the active platform stack
+  (compose files, requirements, agents, callers)
+- Qdrant service starts and is reachable within the Docker network
+- Agent can be imported and instantiated without errors
+- Embedding storage, semantic search and similarity search work against Qdrant
 - System can run in non-Docker mode for testing
 
 ### Timeline
-- Agent Implementation: COMPLETED
-- Configuration Fixes: COMPLETED
-- Mandatory Files: IN PROGRESS
-- Testing: PENDING
+- Steering files (S1): COMPLETED
+- Compose migration: PENDING
+- Python client migration: PENDING
+- Agent migration: PENDING
+- Caller updates: PENDING
+- Verification: PENDING
 
 ### Dependencies
 - Python 3.12+
-- Core libraries (pandas, numpy, scikit-learn)
+- `qdrant-client` (pip)
+- Qdrant Docker image
 - Agent-specific dependencies as defined in requirements.txt
 
 ### Notes
+- Weaviate is out of scope per MISSION_STATEMENT.md; Qdrant is the replacement
 - Docker is optional for basic testing
-- Full functionality requires all dependencies from requirements.txt
 - Agents use simulated data for testing purposes

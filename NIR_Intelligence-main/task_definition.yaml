@@ -123,7 +123,7 @@ metrics:
 database:
 
 vector:
-- weaviate
+- qdrant
 - faiss
 
 relational:

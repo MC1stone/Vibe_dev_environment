@@ -71,12 +71,12 @@
       when: databases.postgresql.enabled and docker.enabled
       ignore_errors: yes
 
-    - name: Backup Weaviate data
+    - name: Backup Qdrant data
       ansible.builtin.command: |
-        docker exec nir_weaviate /bin/sh -c 'tar czf - /var/lib/weaviate' > {{ storage.backups_dir }}/{{ backup_name }}/weaviate_backup.tar.gz
+        docker exec nir_qdrant /bin/sh -c "tar czf - /qdrant/storage" > {{ storage.backups_dir }}/{{ backup_name }}/qdrant_backup.tar.gz
       args:
-        creates: "{{ storage.backups_dir }}/{{ backup_name }}/weaviate_backup.tar.gz"
-      when: databases.weaviate.enabled and docker.enabled
+        creates: "{{ storage.backups_dir }}/{{ backup_name }}/qdrant_backup.tar.gz"
+      when: databases.qdrant.enabled and docker.enabled
       ignore_errors: yes
 
     - name: Create backup manifest
