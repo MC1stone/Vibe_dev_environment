@@ -47,6 +47,8 @@ class FileTypeInfo(Enum):
     HDF5 = (".h5", FileCategory.SPECTRAL, ["application/x-hdf5"])
     JDX = (".jdx", FileCategory.SPECTRAL, ["chemical/x-jcamp-dx"])
     SPC = (".spc", FileCategory.SPECTRAL, ["application/octet-stream"])
+    MAT = (".mat", FileCategory.SPECTRAL, ["application/x-matlab-data"])
+    DPT = (".dpt", FileCategory.SPECTRAL, ["text/plain"])
     TXT = (".txt", FileCategory.TEXT, ["text/plain"])
     
     # Tabular data
@@ -261,7 +263,7 @@ class GenericFileHandlerAgent(BaseAgent):
 
     # Supported file extensions by category
     SUPPORTED_EXTENSIONS = {
-        FileCategory.SPECTRAL: ['.csv', '.json', '.h5', '.jdx', '.spc', '.txt'],
+        FileCategory.SPECTRAL: ['.csv', '.json', '.h5', '.jdx', '.spc', '.txt', '.mat', '.dpt'],
         FileCategory.TABULAR: ['.csv', '.xlsx', '.xls', '.parquet', '.feather'],
         FileCategory.TEXT: ['.txt', '.json', '.xml', '.yaml', '.yml', '.md'],
         FileCategory.IMAGE: ['.png', '.jpg', '.jpeg', '.gif', '.tiff', '.webp', '.svg'],
@@ -369,7 +371,7 @@ class GenericFileHandlerAgent(BaseAgent):
             HandlerCapability(
                 handler_name="spectral_handler",
                 supported_categories=[FileCategory.SPECTRAL],
-                supported_extensions=['.csv', '.json', '.h5', '.jdx', '.spc'],
+                supported_extensions=['.csv', '.json', '.h5', '.jdx', '.spc', '.txt', '.mat', '.dpt'],
                 can_extract_metadata=True,
                 can_analyze_content=True,
                 can_generate_report=True,
