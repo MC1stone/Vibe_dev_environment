@@ -174,7 +174,7 @@ docker compose ps --format "table {{.Service}}\t{{.Status}}\t{{.Ports}}"
    werden automatisch erkannt; Geräteadapter (S4) parsen MQTT-/Qwiic-Payloads
    im einheitlichen Spektral-Schema.
 4. Chatbot (S6): `POST http://localhost:8000/api/chatbot/message/` mit
-   `{"message": "Welche Analyseergebnisse liegen vor?"}` — nutzt Ollama/Mistral
+   `{"question": "Welche Analyseergebnisse liegen vor?"}` — nutzt Ollama/Mistral
    (Container muss das Modell aus 4.3 geladen haben, sonst `degraded`).
 5. ILIAS (S8): <http://localhost:8080> — erstmaliges Setup gemäß
    Container-Konsole; danach Lernpfad-Sync über
