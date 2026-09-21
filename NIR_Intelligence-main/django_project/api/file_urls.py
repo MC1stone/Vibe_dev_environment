@@ -11,6 +11,7 @@ from .file_views import (
     MultipleFileDeleteView,
     FileDownloadView,
     FileAnalyzeView,
+    FileCrewAnalysisView,
     MultipleFileAnalyzeView,
     FileCategoryView,
     FileStatisticsView
@@ -33,6 +34,7 @@ urlpatterns = [
     
     # File analysis
     path('files/<uuid:file_id>/analyze/', FileAnalyzeView.as_view(), name='file-analyze'),
+    path('files/<uuid:file_id>/crew-analysis/', FileCrewAnalysisView.as_view(), name='file-crew-analysis'),
     path('files/analyze-multiple/', MultipleFileAnalyzeView.as_view(), name='file-analyze-multiple'),
     
     # File categories and statistics

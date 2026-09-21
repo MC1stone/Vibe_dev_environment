@@ -36,6 +36,7 @@ class SpectrometerIssue(Enum):
     LOW_SIGNAL = "low_signal"
     SPIKES = "spikes"
     NON_LINEARITY = "non_linearity"
+    INVALID = "invalid"
 
 
 @dataclass
