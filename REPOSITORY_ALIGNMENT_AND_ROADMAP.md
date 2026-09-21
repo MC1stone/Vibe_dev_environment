@@ -52,7 +52,7 @@ Das Repository enthält mehrere parallele Projektansätze:
 | G3 | **Drei parallele Plattform-Ansätze** (`NIR_Intelligence-main`, `nir_platform`, `HANDHELD`) mit Überschneidungen | Mission: eine Plattform | Konsolidierung: `NIR_Intelligence-main` als führendes Projekt deklarieren; Fähigkeiten der anderen (napari, MQTT/Node-RED) integrieren statt duplizieren (S1, S5) |
 | G4 | **Formatabhängigkeit prüfen:** `generic_file_handler_agent` vorhanden, aber Abdeckung aller Formate (SPC, JMP, MATLAB, Kamerabilder RAW/JPEG/PNG, herstellerspezifische Exporte) ist nicht nachgewiesen | Master Objective 1: Import unabhängig vom Dateiformat | Erweiterbare Import-/Exportschicht vervollständigen + Testmatrix über alle Formate (S3) — ✅ erledigt (S3, Branch vibe/s3-format-agnostic-import) |
 | G5 | **Keine Spektrometer-Abstraktionsschicht:** Geräteintegration nicht über einheitliches Adapter-Muster nachgewiesen | Grundregel: alle Spektrometer | Gerätetreiber-/Adapter-Schicht einführen; bestehende ESP32-S3-Integration als erster Adapter (S4) — ✅ erledigt (S4, Branch vibe/s4-spectrometer-abstraction) |
-| G6 | **Chatbot für Ergebnisdiskussion:** Ollama-Service vorhanden, aber kein dedizierter Ergebnis-Chatbot als Feature nachgewiesen | Master Objective 10 | RAG-/Chatbot-Feature auf Ollama/Mistral-Basis mit Qdrant-Anbindung (S6) |
+| G6 | **Chatbot für Ergebnisdiskussion:** Ollama-Service vorhanden, aber kein dedizierter Ergebnis-Chatbot als Feature nachgewiesen | Master Objective 10 | RAG-/Chatbot-Feature auf Ollama/Mistral-Basis mit Qdrant-Anbindung (S6) — ✅ erledigt (S6, Branch vibe/s6-chatbot) |
 | G7 | **Selbstoptimierung/Updates:** Selbstoptimierung als Ziel formuliert, aber kein Update-Mechanismus für Open-Source-Komponenten implementiert | Master Objective 15 | Update-Monitoring + Abhängigkeitsprüfung (z. B. CI-Job) definieren (S7) |
 | G8 | **`framework/` unvollständig:** Nur Backend-/Frontend-Skills implementiert, Rest ist Skeleton | Init-Prompt referenziert Framework-Dokumentation | Entweder vervollständigen oder als Referenz deklarieren und nicht als aktive Komponente (S1) |
 
@@ -151,9 +151,27 @@ Reihenfolge nach Abhängigkeit; jeder Schritt wird gemäß
 - Offen für S6: Embedding-Pipeline (Ollama/Mistral) und Qdrant-RAG für den
       Ergebnis-Chatbot; Django-Frontend-Anbindung der Visualisierung.
 
-### S6 — Ergebnis-Chatbot (Master Objective 10)
-- Chatbot auf Ollama/Mistral:latest mit Qdrant-RAG über Analyseergebnisse und
-  Dokumentation; Anbindung im Django-Frontend.
+### S6 — Ergebnis-Chatbot (Master Objective 10) — ✅ ERLEDIGT
+- [x] `services/chatbot_service.py`: `ChatbotService` auf Ollama/Mistral:latest
+      (`/api/chat`, `ollama>=0.1.0` bereits in requirements.txt); System-Prompt mit
+      NIR-IP-Identität; RAG-Kontext aus Analyseergebnissen (AgentOutput-Stil) und
+      Dokumentation; keine Chatverlauf-Persistenz (Turns werden pro Request
+      übergeben — bewusstes Anti-Creep).
+- [x] `RagContextBuilder`: Kontext aus Analyseergebnissen + Quarto-Dokumenten;
+      Qdrant-Anbindung über `QdrantSimilarityService` (S5), Status-Reporting
+      ohne Absturz;_embedding-Pipeline folgt mit laufendem Qdrant.
+- [x] Django-Anbindung: `api/chatbot_views.py` (POST message, GET status;
+      400 bei fehlender Frage, 503 im Degraded-Fall) + `api/chatbot_urls.py`;
+      Route `api/chatbot/` in `nir_web/urls.py` registriert.
+- [x] Graceful Degradation: Ollama nicht erreichbar → `degraded=True` + Fehler,
+      kein Absturz; Qdrant nicht erreichbar → Chatbot antwortet ohne RAG-Kontext.
+- [x] Testmatrix `tests/test_s6_chatbot.py`: 17/17 grün (Prompt-Komposition,
+      Antwort-Parsing mit Stub-Client, Degraded-Pfade, URL-Wiring,
+      S5-Regressionsspot-Check). Verifikation: py_compile + 17/17 Tests +
+      S3 7/7 + S4 26/26 + S5 16/16 Regressionen grün.
+- Offen für spätere Schritte: echte Embedding-Indizierung der Quarto-Reports
+      in Qdrant (benötigt laufenden Qdrant + Embedding-Modell); Django-Frontend-
+      Chat-UI (aktuell API-Endpoint ohne Frontend-Seite).
 
 ### S7 — Selbstoptimierung & Update-Monitoring (Master Objective 15)
 - CI-Job/Skript: Prüfung genutzter Open-Source-Komponenten (Docker-Images, pip-Pakete)
