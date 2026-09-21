@@ -249,7 +249,7 @@ services:
       - MYSQL_PASSWORD=${ILIAS_DB_PASSWORD:-ilias_change_me}
     volumes:
       - ilias_db_data:/var/lib/mysql
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --innodb_strict_mode=0
+    command: --character-set-server=utf8 --collation-server=utf8_general_ci --innodb_strict_mode=0
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root --password=$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
