@@ -97,6 +97,9 @@ urlpatterns = [
     # Crew AI API
     path('api/crewai/', include('api.crewai_urls')),
     
+    # Chatbot API (roadmap S6, MO 10)
+    path('api/chatbot/', include('api.chatbot_urls')),
+    
     # Quarto Report API
     path('api/reports/generate/spectral/', generate_spectral_report, name='generate-spectral-report'),
     path('api/reports/generate/metadata/', generate_metadata_report, name='generate-metadata-report'),

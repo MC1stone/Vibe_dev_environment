@@ -4,78 +4,68 @@
 
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: Spectrum Similarity & napari Integration (Roadmap Step S5)
+## Current Task: Result Chatbot on Ollama/Mistral with Qdrant RAG (Roadmap Step S6)
 
 ### Objective
 
-Compare incoming spectra against a reference set (nearest-neighbour search)
-and integrate the napari headless visualization server into the platform
-topology, fulfilling Master Objectives 11, 13 and 14.
+Provide a chatbot for discussing analysis results (Master Objective 10),
+backed by Ollama (mistral:latest) with RAG context from analysis results
+and documentation, wired into the Django API.
 
 ### Predecessors
 
-- S1 (Consolidation & Steering): COMPLETED
-- S2 (Qdrant Migration, G1): COMPLETED
-- S3 (Format-agnostic Import, G4): COMPLETED - unified spectral data schema
-- S4 (Spectrometer Abstraction, G5): COMPLETED - device adapters
-  (DIY matchbox, ESP32-S3, SparkFun Triad) emit the unified schema
+- S1-S5: COMPLETED (steering, Qdrant migration, format-agnostic import,
+  spectrometer adapters, similarity engine + napari integration)
 
 ### Scope
 
-- `services/spectrum_similarity.py`: SpectrumSimilarityEngine with FAISS
-  backend (when installed) and exact numpy fallback; QdrantSimilarityService
-  as optional embedding backend (operational with S6)
-- `services/napari_server/`: headless napari server integrated from
-  `HANDHELD/napari_app` (integration, not further development of HANDHELD)
-- `docker-compose.yml` / `docker-compose.prod.yml`: napari_server service
-  (port 8002, MQTT environment, nir_network)
-- `agents/faiss_agent.py` / `agents/qdrant_agent.py`: wired to the real
-  similarity engine instead of placeholder simulation
-- Test matrix `tests/test_s5_spectrum_similarity.py`
+- `services/chatbot_service.py`: ChatbotService (Ollama /api/chat),
+  OllamaChatClient, RagContextBuilder, ChatMessage helper
+- Django API: `api/chatbot_views.py` (POST message, GET status),
+  `api/chatbot_urls.py`, route `api/chatbot/` in `nir_web/urls.py`
+- Test matrix `tests/test_s6_chatbot.py` (stubbed Ollama client,
+  no network required)
 
 ### Out of Scope
 
-- Text/embedding model pipeline (follows in S6 with the Ollama chatbot)
-- GUI development for napari (headless server only, per HANDHELD source)
-- Changes to `HANDHELD/` itself (source only, per G3 consolidation rule)
-- Django frontend visualization UI (follows with S6/Django integration)
+- Chat history persistence (turns passed per request)
+- Streaming responses
+- Frontend chat UI page (API endpoint only in this step)
+- Real embedding indexing of Quarto reports into Qdrant (requires a
+  running Qdrant instance and embedding model)
 
 ### Deliverables
 
-1. `services/spectrum_similarity.py`: similarity engine + Qdrant service
-2. `services/napari_server/` (app.py, Dockerfile, requirements.txt)
-3. Compose integration (both files) with napari_server on port 8002
-4. FAISS/Qdrant agents executing real operations via the engine
-5. Test matrix 16/16 green + S3/S4 regressions green
+1. `services/chatbot_service.py`
+2. `django_project/api/chatbot_views.py` + `chatbot_urls.py`
+3. Route registration in `django_project/nir_web/urls.py`
+4. Test matrix 17/17 green + regressions S3/S4/S5 green
 
 ### Success Criteria
 
-- Identical spectrum is found with distance ~0 as best match
-- Ranking of references is correct for L2 and cosine metrics
-- Engine works without FAISS installed (numpy fallback, same results)
-- Qdrant connection state is reported gracefully (never crashes)
-- S4 adapter output (SparkFun Triad 18-channel spectra) is directly comparable
-- napari_server present in both compose files and joins nir_network
-- docker compose config parses as valid YAML
+- Message composition: system prompt (NIR-IP identity) + RAG context +
+  history + question
+- Ollama response parsed correctly (stubbed client)
+- Ollama unreachable -> degraded result (503 at the API level), no crash
+- Qdrant unreachable -> chatbot answers without RAG context
+- Route `api/chatbot/` registered in the Django URL configuration
+- No new dependencies (`ollama>=0.1.0` already in requirements.txt)
 
 ### Timeline
 
-- S1-S4: COMPLETED
-- Similarity engine: COMPLETED
-- napari integration (service + compose): COMPLETED
-- Agent wiring: COMPLETED
-- Verification (16/16 + regressions): COMPLETED
+- S1-S5: COMPLETED
+- Chatbot service: COMPLETED
+- Django API wiring: COMPLETED
+- Verification (17/17 + regressions): COMPLETED
 
 ### Dependencies
 
-- Python 3.12+, numpy, pandas
-- faiss-cpu (optional; exact numpy fallback when absent)
-- qdrant-client (optional in S5; required for S6 embedding pipeline)
-- Docker (optional for testing the compose topology)
+- Python 3.12+, requests
+- Ollama service (docker-compose, port 11434), model mistral:latest
+- Qdrant (optional for RAG context; graceful without)
 
 ### Notes
 
-- All engine inputs/outputs use the unified spectral schema from S3
-- HANDHELD/napari_app remains untouched; the integrated copy lives in
-  services/napari_server (G3: integrate instead of duplicate development)
-- Agents use simulated data for testing purposes
+- RAG context sources: analysis results (AgentOutput style) and
+  documentation (Quarto report texts)
+- Qdrant embedding retrieval is wired via QdrantSimilarityService (S5)
