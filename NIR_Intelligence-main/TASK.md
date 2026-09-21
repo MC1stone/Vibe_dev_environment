@@ -4,68 +4,72 @@
 
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: Result Chatbot on Ollama/Mistral with Qdrant RAG (Roadmap Step S6)
+## Current Task: Self-Optimization & Update Monitoring (Roadmap Step S7)
 
 ### Objective
 
-Provide a chatbot for discussing analysis results (Master Objective 10),
-backed by Ollama (mistral:latest) with RAG context from analysis results
-and documentation, wired into the Django API.
+Monitor the open-source components used by the platform (pip packages,
+Docker images) for updates and provide an Optuna-based optimization
+protocol for calibrations (Master Objective 15, plus MO 8/9).
 
 ### Predecessors
 
-- S1-S5: COMPLETED (steering, Qdrant migration, format-agnostic import,
-  spectrometer adapters, similarity engine + napari integration)
+- S1-S6: COMPLETED (steering, Qdrant migration, format-agnostic import,
+  spectrometer adapters, similarity engine + napari, result chatbot)
 
 ### Scope
 
-- `services/chatbot_service.py`: ChatbotService (Ollama /api/chat),
-  OllamaChatClient, RagContextBuilder, ChatMessage helper
-- Django API: `api/chatbot_views.py` (POST message, GET status),
-  `api/chatbot_urls.py`, route `api/chatbot/` in `nir_web/urls.py`
-- Test matrix `tests/test_s6_chatbot.py` (stubbed Ollama client,
-  no network required)
+- `services/update_monitor.py`: UpdateMonitorService - scans
+  requirements*.txt manifests and docker-compose images, detects local
+  installed versions, flags specifier violations, recommends pinning
+  for 'latest' tags
+- `scripts/check_updates.py`: CLI for CI jobs and manual runs
+  (--json, --no-report, --compose-files); renders a Quarto .qmd report
+- `services/calibration_optimization.py`: CalibrationOptimizationService
+  with OptimizationProtocol (trials, best params/score, methods PLS/PCR/
+  SVM/RandomForest/XGBoost/CNN); Optuna optional (deferred when missing)
 
 ### Out of Scope
 
-- Chat history persistence (turns passed per request)
-- Streaming responses
-- Frontend chat UI page (API endpoint only in this step)
-- Real embedding indexing of Quarto reports into Qdrant (requires a
-  running Qdrant instance and embedding model)
+- Auto-updates of packages or images (updates stay deliberate decisions)
+- Network-based registry/PyPI lookups (local-manifest based only)
+- GitHub Actions CI workflow (no CI exists in the repo yet)
+- Calibration model training itself (protocol only; models follow
+  with the calibration agent extension)
 
 ### Deliverables
 
-1. `services/chatbot_service.py`
-2. `django_project/api/chatbot_views.py` + `chatbot_urls.py`
-3. Route registration in `django_project/nir_web/urls.py`
-4. Test matrix 17/17 green + regressions S3/S4/S5 green
+1. `services/update_monitor.py`
+2. `scripts/check_updates.py` (CLI)
+3. `services/calibration_optimization.py`
+4. Test matrix 27/27 green + regressions S3-S6 green
 
 ### Success Criteria
 
-- Message composition: system prompt (NIR-IP identity) + RAG context +
-  history + question
-- Ollama response parsed correctly (stubbed client)
-- Ollama unreachable -> degraded result (503 at the API level), no crash
-- Qdrant unreachable -> chatbot answers without RAG context
-- Route `api/chatbot/` registered in the Django URL configuration
-- No new dependencies (`ollama>=0.1.0` already in requirements.txt)
+- All requirements*.txt manifests parsed (comments/markers skipped)
+- Compose images extracted with tag detection ('latest' vs pinned)
+- Installed versions detected without network access
+- Specifier semantics: satisfied -> no flag, violated -> flag,
+  'latest' -> no offline decision
+- Quarto .qmd report rendered with summary, tables, recommendations
+- CLI runs end-to-end (summary and --json modes)
+- Optuna study completes when installed; graceful deferral otherwise
+- Default calibration methods match the mission statement
 
 ### Timeline
 
-- S1-S5: COMPLETED
-- Chatbot service: COMPLETED
-- Django API wiring: COMPLETED
-- Verification (17/17 + regressions): COMPLETED
+- S1-S6: COMPLETED
+- Update monitor + CLI: COMPLETED
+- Calibration optimization protocol: COMPLETED
+- Verification (27/27 + regressions): COMPLETED
 
 ### Dependencies
 
-- Python 3.12+, requests
-- Ollama service (docker-compose, port 11434), model mistral:latest
-- Qdrant (optional for RAG context; graceful without)
+- Python 3.12+ (packaging, importlib.metadata from stdlib)
+- optuna (optional, already in requirements.txt)
+- Quarto (optional, for rendering the .qmd report)
 
 ### Notes
 
-- RAG context sources: analysis results (AgentOutput style) and
-  documentation (Quarto report texts)
-- Qdrant embedding retrieval is wired via QdrantSimilarityService (S5)
+- No auto-update: the report recommends, deployment decides
+- Registry/PyPI online lookups are a target-environment extension
