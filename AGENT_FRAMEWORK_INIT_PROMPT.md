@@ -9,6 +9,12 @@
 > Mission, Master Objectives, Technologie-Stack, verpflichtende Startsequenz, Agentensystem,
 > Iterationsregel und Abschlussbericht der NIR Intelligence Platform (NIR-IP) und ist für alle
 > Agenten bindend.
+>
+> **Repository-Abgleich & Roadmap (Pflichtlektüre):** Lies zusätzlich
+> `REPOSITORY_ALIGNMENT_AND_ROADMAP.md`. Sie gleicht das Mission Statement mit dem aktuellen
+> Repository-Stand ab (Lücken G1–G8), plant die nächsten Entwicklungsschritte (S1–S9) und
+> legt fest, dass jeder Entwicklungsschritt Teil dieser Roadmap sein muss — andernfalls ist vor
+> der Umsetzung die Freigabe des Head of Development und ein Roadmap-Update erforderlich.
 
 ---
 
@@ -57,22 +63,27 @@ Führe diese Schritte in fester Reihenfolge aus:
 2. **Mission Statement lesen und umsetzen:** `MISSION_STATEMENT.md` vollständig lesen, analysieren
    und für die anstehende Aufgabe ableiten, welche Master Objectives, Agenten und Regeln
    betroffen sind. Danach gemäß verpflichtender Startsequenz des Mission Statements
-   `TASK.md`, `task_definition.yaml` und `system_manifest.json` einlesen. Fehlt eine dieser
-   drei Dateien, ist sie vor der Implementierung zu erstellen bzw. zu aktualisieren.
-3. **Anforderung erfassen:** Die Aufgabe in einem Satz zusammenfassen. Explizite und
+   `TASK.md`, `task_definition.yaml` und `system_manifest.json` einlesen (aktuell im führenden
+   Projekt unter `NIR_Intelligence-main/`). Fehlt eine dieser drei Dateien, ist sie vor der
+   Implementierung zu erstellen bzw. zu aktualisieren.
+3. **Repository-Abgleich und Planung:** `REPOSITORY_ALIGNMENT_AND_ROADMAP.md` lesen und prüfen:
+   Welche Lücken (G1–G8) und geplanten Schritte (S1–S9) betrifft die anstehende Aufgabe?
+   Ist die Aufgabe nicht in der Roadmap enthalten, vor der Umsetzung Freigabe beim Head of
+   Development einholen und die Roadmap aktualisieren.
+4. **Anforderung erfassen:** Die Aufgabe in einem Satz zusammenfassen. Explizite und
    implizite Anforderungen sowie Nicht-Ziele (was ausdrücklich NICHT gefordert ist) notieren.
-4. **Agenten initialisieren:** Alle unten definierten Agenten aktivieren. Jeder Agent erhält
+5. **Agenten initialisieren:** Alle unten definierten Agenten aktivieren. Jeder Agent erhält
    seine Rolle, seine Verantwortlichkeiten und seine Akzeptanzkriterien. Gemäß `MISSION_STATEMENT.md`
    sind zusätzlich die fachlichen System-Agenten (Data Preparation, Sensor Quality, Statistical
    Analysis, Neural Network, Calibration, Metadata, Qdrant, FAISS, PostgreSQL, Django, MCP,
    Quarto, Flower) in ihrer Rolle zu berücksichtigen; der Neural Network Agent ist verpflichtend
    aktiv und läuft immer parallel zur statistischen Analyse. Weaviate ist out of scope — Qdrant
    ist der Ersatz für Vektor-/Embedding-Speicherung und Similarity Search.
-5. **Kick-off (Kopf des Head of Development):** Der Head of Development priorisiert die
+6. **Kick-off (Kopf des Head of Development):** Der Head of Development priorisiert die
    Aufgabe, teilt sie den Agenten zu und legt den minimalen Lösungsumfang fest.
-6. **Entwicklungszyklus starten:** Erst nach Freigabe durch den Head of Development
+7. **Entwicklungszyklus starten:** Erst nach Freigabe durch den Head of Development
    beginnt die Umsetzung.
-7. **Abschlussprüfung:** Der Zyklus endet erst, wenn alle Agenten keine Fehler, Warnungen
+8. **Abschlussprüfung:** Der Zyklus endet erst, wenn alle Agenten keine Fehler, Warnungen
    oder Change-Requests mehr melden und die Definition of Done erfüllt ist.
 
 ---
