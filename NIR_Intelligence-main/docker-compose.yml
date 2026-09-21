@@ -44,6 +44,48 @@ services:
     networks:
       - nir_network
 
+  # ILIAS e-learning platform in its own container (roadmap S8)
+  ilias:
+    image: srsolutions/ilias:9-php8.2-apache
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - ILIAS_AUTO_SETUP=${ILIAS_AUTO_SETUP:-1}
+      - ILIAS_DB_USER=${ILIAS_DB_USER:-ilias}
+      - ILIAS_DB_PASSWORD=${ILIAS_DB_PASSWORD:-ilias_change_me}
+      - ILIAS_DB_NAME=${ILIAS_DB_NAME:-ilias_nir}
+      - ILIAS_DB_HOST=ilias_db
+      - ILIAS_DB_PORT=3306
+      - ILIAS_CLIENT_ID=${ILIAS_CLIENT_ID:-nir_ip}
+      - ILIAS_HTTP_PATH=${ILIAS_HTTP_PATH:-http://localhost:8080}
+      - ILIAS_ROOT_USER_LOGIN=${ILIAS_ROOT_USER_LOGIN:-root}
+      - ILIAS_ROOT_USER_PASSWORD=${ILIAS_ROOT_USER_PASSWORD:-ilias_root_change_me}
+      - ILIAS_OVERWRITE_DB_CONFIG=${ILIAS_OVERWRITE_DB_CONFIG:-0}
+      - TZ=${TZ:-Europe/Berlin}
+    volumes:
+      - ilias_data:/var/www/html
+      - ilias_extradata:/var/iliasdata
+    depends_on:
+      - ilias_db
+    networks:
+      - nir_network
+
+  # MariaDB dedicated to ILIAS (ILIAS requires MySQL/MariaDB)
+  ilias_db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${ILIAS_MYSQL_ROOT_PASSWORD:-ilias_root_change_me}
+      - MYSQL_DATABASE=${ILIAS_DB_NAME:-ilias_nir}
+      - MYSQL_USER=${ILIAS_DB_USER:-ilias}
+      - MYSQL_PASSWORD=${ILIAS_DB_PASSWORD:-ilias_change_me}
+    volumes:
+      - ilias_db_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - nir_network
+
   # Napari headless visualization server (roadmap S5, integrated from HANDHELD/napari_app)
   napari_server:
     build: ./services/napari_server
@@ -174,4 +216,10 @@ volumes:
   ollama_data:
     driver: local
   redis_data:
+    driver: local
+  ilias_data:
+    driver: local
+  ilias_extradata:
+    driver: local
+  ilias_db_data:
     driver: local

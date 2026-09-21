@@ -100,6 +100,9 @@ urlpatterns = [
     # Chatbot API (roadmap S6, MO 10)
     path('api/chatbot/', include('api.chatbot_urls')),
     
+    # ILIAS learning path API (roadmap S8)
+    path('api/ilias/', include('api.ilias_urls')),
+    
     # Quarto Report API
     path('api/reports/generate/spectral/', generate_spectral_report, name='generate-spectral-report'),
     path('api/reports/generate/metadata/', generate_metadata_report, name='generate-metadata-report'),
