@@ -154,6 +154,27 @@ services:
     networks:
       - nir_network
 
+  # Background crew runner (OP6): the agent crew operates the platform
+  # interfaces (Django, PostgreSQL, Qdrant, ILIAS, MCP) in the background.
+  background_crew:
+    build:
+      context: .
+      dockerfile: Dockerfile.django
+    working_dir: /app
+    command: python scripts/background_crew_runner.py
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app:/app/agents
+      - DJANGO_DB_HOST=postgresql
+      - DJANGO_DB_PORT=5432
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - nir_network
+
   # Quarto Documentation Server (disabled - using host installation)
   # quarto_server:
   #   image: quartobio/quarto-cli:1.3.0

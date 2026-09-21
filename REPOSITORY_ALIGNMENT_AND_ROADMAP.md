@@ -317,6 +317,22 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - PyPI/Docker-Hub-Lookups im Update-Monitor (benötigt Netz);
   GitHub-Actions-Workflow für die Testmatrizen.
 
+### OP6 — CrewAI-Agenten: Implementierung + Hintergrundbetrieb — ✅ ERLEDIGT
+- Die neun Stub-Agenten (sensor_quality, statistical_analysis,
+  neural_network, calibration, metadata, postgresql, django, mcp, ilias)
+  sind real implementiert: echte Berechnungen (numpy/scipy/sklearn) und
+  echte Schnittstellen-Calls mit dokumentiertem Degraded-Status statt
+  simulierter Werte.
+- `NIRAnalysisCrew` registriert alle 16 Missions-Agenten als CrewAI-Agents
+  mit Tool-Bindings (`_agent_tool`-Factory, JSON-Kontrakt); ohne
+  installiertes crewai-Paket läuft die Crew im Standalone-Modus weiter.
+- `scripts/background_crew_runner.py` + docker-compose-Service
+  `background_crew`: die Agenten bedienen die Plattform-Schnittstellen
+  (Django, PostgreSQL, Qdrant, ILIAS, MCP) im Hintergrund in Runden
+  (Standard-Intervall 300s, Status in `output/crew_background_state.json`).
+- Verifikation: `tests/test_op6_crewai_agents.py` 51/51 grün;
+  Regressionen S3–S9, OP1–OP3 grün, `manage.py check` ohne Befunde.
+
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.

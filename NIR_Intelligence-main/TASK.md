@@ -4,7 +4,7 @@
 
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: Target-Environment Open Points (OP1-OP5)
+## Current Task: Target-Environment Open Points (OP1-OP6)
 
 ### Objective
 
@@ -12,8 +12,8 @@ The local verification on the target machine is complete (all services
 running, Mistral loaded, ILIAS installed; fixes PR #12-#15 merged). The
 remaining target-environment open points are worked through by priority;
 OP1 (Qdrant embedding pipeline, PR #16), OP2 (ILIAS API token flow,
-PR #18) and OP3 (platform UI: upload, chatbot, ILIAS) are implemented
-and verified.
+PR #18), OP3 (platform UI: upload, chatbot, ILIAS, PR #19) and OP6
+(CrewAI agent implementation) are implemented and verified.
 
 ### Predecessors
 
@@ -21,6 +21,14 @@ and verified.
 - Local target-environment verification: COMPLETED (PR #12-#15)
 - OP1 Qdrant embedding pipeline: COMPLETED (PR #16)
 - OP2 ILIAS API token flow: COMPLETED (PR #18)
+- OP3 Platform UI: COMPLETED (PR #19)
+- OP6 CrewAI agents: real implementations of the previously stubbed
+  agents (sensor quality, statistics, neural networks, calibration,
+  metadata, PostgreSQL, Django, MCP, ILIAS), full CrewAI crew (16 agents
+  with tool bindings) and the background crew runner
+  (`scripts/background_crew_runner.py`, docker-compose service
+  `background_crew`) - the agents operate the platform interfaces in
+  the background.
 
 ### Scope
 
