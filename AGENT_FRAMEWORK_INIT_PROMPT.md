@@ -64,9 +64,10 @@ Führe diese Schritte in fester Reihenfolge aus:
 4. **Agenten initialisieren:** Alle unten definierten Agenten aktivieren. Jeder Agent erhält
    seine Rolle, seine Verantwortlichkeiten und seine Akzeptanzkriterien. Gemäß `MISSION_STATEMENT.md`
    sind zusätzlich die fachlichen System-Agenten (Data Preparation, Sensor Quality, Statistical
-   Analysis, Neural Network, Calibration, Metadata, Weaviate, FAISS, PostgreSQL, Django, MCP,
+   Analysis, Neural Network, Calibration, Metadata, Qdrant, FAISS, PostgreSQL, Django, MCP,
    Quarto, Flower) in ihrer Rolle zu berücksichtigen; der Neural Network Agent ist verpflichtend
-   aktiv und läuft immer parallel zur statistischen Analyse.
+   aktiv und läuft immer parallel zur statistischen Analyse. Weaviate ist out of scope — Qdrant
+   ist der Ersatz für Vektor-/Embedding-Speicherung und Similarity Search.
 5. **Kick-off (Kopf des Head of Development):** Der Head of Development priorisiert die
    Aufgabe, teilt sie den Agenten zu und legt den minimalen Lösungsumfang fest.
 6. **Entwicklungszyklus starten:** Erst nach Freigabe durch den Head of Development

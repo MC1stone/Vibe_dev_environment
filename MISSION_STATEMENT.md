@@ -145,13 +145,15 @@ Aufgaben:
 
 ---
 
-## Weaviate Agent
+## Qdrant Agent
 
 Aufgaben:
 
 - Speicherung von Embeddings
 - Semantic Search
 - Similarity Search
+
+**Hinweis:** Weaviate ist out of scope; Qdrant ist der Ersatz für Vektor- und Embedding-Speicherung.
 
 ---
 
