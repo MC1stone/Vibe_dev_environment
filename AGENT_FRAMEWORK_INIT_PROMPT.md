@@ -18,6 +18,27 @@ NIR-Spektroskopie-Plattform (DIY-Spektrometer, ESP32-S3-Hardware), Datenanalyse
 (Python/napari/Quarto), Web-Plattform (Django), E-Learning-Integration (ILIAS) und
 Federated Learning (Flower).
 
+### Grundregeln des Projekts (bindend)
+
+1. **Alle Dateiformate:** Die Plattform muss spektrale Daten in **allen gängigen und
+   auftretenden Dateiformaten** verarbeiten können — Import, Export und Analyse
+   (z. B. CSV, TXT, JSON, SPC, JMP, MATLAB-Matrixformate, Bildformate von
+   Kameraspektrometern wie RAW/JPEG/PNG, herstellerspezifische Exporte). Neue
+   Formate werden über eine erweiterbare Import-/Exportschicht integriert, ohne
+   bestehende Formate zu brechen.
+2. **Alle Spektrometer:** Die Plattform unterstützt **alle Spektrometer-Typen und
+   -modelle** — vom DIY-Matchbox-Spektrometer über ESP32-S3-basierte Kameraspektrometer
+   bis zu kommerziellen Geräten (z. B. NIR-, UV-Vis-, Raman-, FTIR-Spektrometer).
+   Geräteintegration erfolgt über eine einheitliche Abstraktionsschicht
+   (Gerätetreiber-/Adapter-Muster), sodass neue Modelle ohne Umbau des Kerns
+   hinzugefügt werden können.
+
+Diese zwei Grundregeln gelten für alle Agenten und alle Entwicklungsschritte:
+Kein Agent darf Formate oder Geräte hard-codieren oder auf ein einzelnes
+Format/Modell beschränken. Bei jedem Entwurf prüft der Head of Development,
+ob die Lösung formatabhängig oder geräteabhängig wäre — und lehnt solche
+Lösungen ab, außer die Anforderung verlangt ausdrücklich eine Einschränkung.
+
 ---
 
 ## 2. Initialisierungsprotokoll (bei jedem Entwicklungsbeginn)
@@ -94,6 +115,10 @@ Führe diese Schritte in fester Reihenfolge aus:
   - Physikalische Plausibilität von Mess-, Vorverarbeitungs- und Auswertungsschritten prüfen
   - Auf referenzmaterial im Repository (Anleitungen, Handbücher, Berichte) stützen
   - Fachlich unzulässige Vereinfachungen zurückweisen und Alternativen vorschlagen
+  - Sicherstellen, dass spektroskopische Verarbeitung für **alle Spektrometer-Typen**
+    (NIR, UV-Vis, Raman, FTIR, DIY/Kamera-basiert) korrekt bleibt: Auflösung,
+    Wellenlängenbereich und Kalibration gerätespezifisch behandeln, ohne geräte-
+    spezifische Logik zu hard-codieren
 - **Akzeptanzkriterium:** Keine spektroskopische Logik geht ohne fachliche Freigabe dieses
   Agenten in die Umsetzung.
 
@@ -106,6 +131,10 @@ Führe diese Schritte in fester Reihenfolge aus:
   Begründung; Methoden nicht wechseln, ohne den Nachweis zu erbringen
   - Validierung: Train/Test-Trennung, Überanpassung und Datenlecks aktiv prüfen
   - Ergebnisse so dokumentieren, dass Fachfremde sie nachvollziehen können
+  - **Formatagnostische Datenverarbeitung:** Pipelines und Auswertungen funktionieren
+    für **alle unterstützten Dateiformate**; Format-Spezifika (Trennzeichen, Einheiten,
+    Wellenlängen- vs. Pixel-Skalen, Metadaten) werden in der Import-/Exportschicht
+    normalisiert, nicht in der Analyse-Logik
 - **Akzeptanzkriterium:** Jede analytische Aussage ist methodisch begründet und reproduzierbar.
 
 ### 3.6 E-Learning-Spezialist (Lernszenarien in ILIAS)
@@ -207,5 +236,7 @@ Beantworte vor dem ersten Code-Schritt schriftlich:
 3. Welche Tests muss der Tester Agent mindestens vorsehen?
 4. Welche bestehende Lösung im Repository kann wiederverwendet werden?
 5. Welches Risiko besteht für Code Creep, und wie wird es verhindert?
+6. Sind die beiden Grundregeln erfüllt — unterstützt die Lösung **alle Dateiformate**
+   und **alle Spektrometer**, oder enthält sie eine Form-/Geräte-Beschränkung?
 
-Erst wenn alle fünf Fragen beantwortet sind, beginnt die Umsetzung.
+Erst wenn alle sechs Fragen beantwortet sind, beginnt die Umsetzung.
