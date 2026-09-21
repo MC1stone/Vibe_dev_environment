@@ -173,7 +173,7 @@ docker compose ps --format "table {{.Service}}\t{{.Status}}\t{{.Ports}}"
 3. Import läuft über den format-agnostischen Loader (S3): CSV/TXT/JSON/SPC/MAT
    werden automatisch erkannt; Geräteadapter (S4) parsen MQTT-/Qwiic-Payloads
    im einheitlichen Spektral-Schema.
-4. Chatbot (S6): `POST http://localhost:8000/api/chatbot/` mit
+4. Chatbot (S6): `POST http://localhost:8000/api/chatbot/message/` mit
    `{"message": "Welche Analyseergebnisse liegen vor?"}` — nutzt Ollama/Mistral
    (Container muss das Modell aus 4.3 geladen haben, sonst `degraded`).
 5. ILIAS (S8): <http://localhost:8080> — erstmaliges Setup gemäß
