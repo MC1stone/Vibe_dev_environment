@@ -63,13 +63,19 @@ Das Repository enthält mehrere parallele Projektansätze:
 Reihenfolge nach Abhängigkeit; jeder Schritt wird gemäß
 `AGENT_FRAMEWORK_INIT_PROMPT.md` (inkl. Startsequenz und Iterationsregel) ausgeführt.
 
-### S1 — Konsolidierung & Steuerung (Grundlage, zuerst)
-- `NIR_Intelligence-main/` als führendes Projekt (Single Source of Truth) deklarieren.
-- Startsequenz-Dateien (`TASK.md`, `task_definition.yaml`, `system_manifest.json`)
-  an zentraler Stelle führen und im Init-Prompt mit konkreten Pfaden verankern.
-- `TASK.md` auf die aktuelle Aufgabe (S2) umschreiben.
-- Verhältnis zu `nir_platform/`, `HANDHELD/`, `framework/` dokumentieren
-  (integrieren / einfrieren / Referenz).
+### S1 — Konsolidierung & Steuerung (Grundlage, zuerst) — ✅ ERLEDIGT
+- [x] `NIR_Intelligence-main/` als führendes Projekt (Single Source of Truth) deklarieren
+      (verankert in `AGENTS.md` und Init-Prompt).
+- [x] Startsequenz-Dateien (`TASK.md`, `task_definition.yaml`, `system_manifest.json`)
+      als führende Steuerdateien bestätigt; Pfade im Init-Prompt verankert.
+- [x] `TASK.md` auf die aktuelle Aufgabe (S2 Qdrant-Migration) umgeschrieben.
+- [x] Weaviate-Referenzen aus den Steuerdateien entfernt (`task_definition.yaml`,
+      `system_manifest.json`); G1 damit in den Steuerdateien vorbereitet.
+- [x] Verhältnis zu `nir_platform/`, `HANDHELD/`, `framework/` dokumentiert:
+      `AGENTS.md` erklärt `NIR_Intelligence-main` zur Single Source of Truth;
+      `nir_platform/` und `HANDHELD/` werden gemäß S4/S5 auf Quellen reduziert
+      (MQTT, napari werden integriert, nicht weiterentwickelt);
+      `framework/` ist Referenz-Gerüst (G8) und wird nicht aktiv weiterentwickelt.
 
 ### S2 — Migration Weaviate → Qdrant (schließt G1)
 - `docker-compose.yml`: Weaviate-Service durch Qdrant-Service ersetzen (Volume migrieren/leeren Start).

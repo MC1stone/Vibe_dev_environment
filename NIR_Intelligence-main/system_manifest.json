@@ -36,7 +36,7 @@
 "neural_network_agent": true,
 "calibration_agent": true,
 "metadata_agent": true,
-"weaviate_agent": true,
+"qdrant_agent": true,
 "faiss_agent": true,
 "postgresql_agent": true,
 "django_agent": true,
@@ -51,7 +51,7 @@
 "purpose": "metadata_storage"
 },
 
-"weaviate": {
+"qdrant": {
 "enabled": true,
 "purpose": "vector_database"
 },
