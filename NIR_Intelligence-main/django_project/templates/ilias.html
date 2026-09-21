@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}NIR Intelligence - ILIAS E-Learning{% endblock %}
+
+{% block content %}
+<section class="o-section">
+    <div class="o-container">
+        <div class="c-page-header">
+            <div>
+                <h1 class="c-page-header__title">
+                    <i class="bi bi-mortarboard"></i> ILIAS E-Learning
+                </h1>
+                <p class="c-page-header__subtitle">
+                    Synchronize NIR laboratory learning paths to the ILIAS container (S8) with OAuth2 authentication (OP2)
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="c-button c-button--outline-primary" onclick="refreshIliasStatus()">
+                    <i class="bi bi-arrow-clockwise c-button__icon"></i>
+                    <span class="c-button__text">Refresh Status</span>
+                </button>
+                <a class="c-button c-button--secondary" href="http://localhost:8080" target="_blank">
+                    <i class="bi bi-box-arrow-up-right c-button__icon"></i>
+                    <span class="c-button__text">Open ILIAS</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="c-card h-100">
+                    <div class="c-card__header">
+                        <h2 class="c-card__title mb-0"><i class="bi bi-activity"></i> ILIAS Status</h2>
+                    </div>
+                    <div class="c-card__body">
+                        <div id="iliasStatusBox">
+                            <div class="text-center py-lg">
+                                <div class="c-loading-overlay__spinner" style="width: 2rem; height: 2rem; border-width: 0.2rem;"></div>
+                                <p class="mt-sm text-muted mb-0">Loading status...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="c-card h-100">
+                    <div class="c-card__header">
+                        <h2 class="c-card__title mb-0"><i class="bi bi-diagram-3"></i> Learning Path Sync</h2>
+                    </div>
+                    <div class="c-card__body">
+                        <p class="text-muted small">
+                            Creates an ILIAS course with learning objectives from the module
+                            definition below and syncs it to the ILIAS container.
+                        </p>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="c-form-label">Course title</label>
+                                <input type="text" class="c-form-control" id="pathTitle"
+                                       value="NIR Spectroscopy Laboratory">
+                            </div>
+                            <div class="col-12">
+                                <label class="c-form-label">Description</label>
+                                <textarea class="c-form-control" id="pathDescription" rows="2"
+                                          placeholder="Short description of the learning path...">Practical training in NIR spectroscopy: calibration, validation, and chemometrics.</textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="c-form-label">Target group</label>
+                                <input type="text" class="c-form-control" id="pathTargetGroup" value="students">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="c-form-label">Module title</label>
+                                <input type="text" class="c-form-control" id="moduleTitle"
+                                       value="Kalibration und Validierung">
+                            </div>
+                            <div class="col-12">
+                                <label class="c-form-label">Learning objectives (one per line)</label>
+                                <textarea class="c-form-control" id="moduleObjectives" rows="4">Explain PLS regression basics
+Perform a calibration with reference values
+Validate the model with an independent set</textarea>
+                            </div>
+                        </div>
+                        <button class="c-button c-button--primary mt-3" onclick="syncLearningPath()">
+                            <i class="bi bi-arrow-repeat c-button__icon"></i>
+                            <span class="c-button__text">Sync to ILIAS</span>
+                        </button>
+                        <div id="syncResult" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+function getCsrfToken() {
+    const name = 'csrftoken';
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.startsWith(name + '=')) {
+            return decodeURIComponent(cookie.substring(name.length + 1));
+        }
+    }
+    return '';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
+function refreshIliasStatus() {
+    const box = document.getElementById('iliasStatusBox');
+    fetch('/api/ilias/status/', {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json().catch(() => ({})))
+    .then(data => {
+        const available = data.available === true;
+        box.innerHTML =
+            '<p class="mb-1"><span class="badge ' + (available ? 'bg-success' : 'bg-warning') + '">' +
+            (available ? 'ILIAS reachable' : 'ILIAS not reachable') + '</span></p>' +
+            '<p class="text-muted small mb-1">URL: ' + escapeHtml(data.ilias_url || '-') + '</p>' +
+            '<p class="text-muted small mb-0">Client: ' + escapeHtml(data.client_id || '-') + '</p>';
+    })
+    .catch(error => {
+        box.innerHTML = '<div class="alert alert-danger mb-0">Status unavailable: ' +
+            escapeHtml(error.message) + '</div>';
+    });
+}
+
+function syncLearningPath() {
+    const title = document.getElementById('pathTitle').value.trim();
+    const objectives = document.getElementById('moduleObjectives').value
+        .split('\n').map(function(line) { return line.trim(); })
+        .filter(function(line) { return line.length > 0; });
+    const payload = {
+        title: title,
+        description: document.getElementById('pathDescription').value.trim(),
+        target_group: document.getElementById('pathTargetGroup').value.trim() || 'students',
+        modules: [{
+            title: document.getElementById('moduleTitle').value.trim(),
+            objectives: objectives.map(function(objective) {
+                return { title: objective, description: '', target_level: 'apply' };
+            })
+        }]
+    };
+    const resultBox = document.getElementById('syncResult');
+    resultBox.innerHTML = '<div class="alert alert-info">Syncing learning path...</div>';
+
+    fetch('/api/ilias/learning-paths/sync/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json().catch(() => ({})))
+    .then(data => {
+        if (data.success) {
+            resultBox.innerHTML =
+                '<div class="alert alert-success mb-0">' +
+                '<i class="bi bi-check-circle"></i> Learning path synced to ILIAS.<br>' +
+                '<span class="small">Course: ' + escapeHtml(data.course_title || title) +
+                (data.course_ref_id ? ' (ref_id ' + escapeHtml(String(data.course_ref_id)) + ')' : '') +
+                ' &middot; ' + escapeHtml(String(data.modules_synced || 0)) + ' module(s)</span></div>';
+        } else {
+            resultBox.innerHTML =
+                '<div class="alert alert-danger mb-0"><i class="bi bi-x-circle"></i> Sync failed.<br>' +
+                '<span class="small">' +
+                escapeHtml((data.errors && data.errors.length) ? data.errors.join('; ') : (data.error || 'unknown error')) +
+                '</span></div>';
+        }
+    })
+    .catch(error => {
+        resultBox.innerHTML = '<div class="alert alert-danger mb-0">Sync failed: ' +
+            escapeHtml(error.message) + '</div>';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', refreshIliasStatus);
+</script>
+{% endblock %}

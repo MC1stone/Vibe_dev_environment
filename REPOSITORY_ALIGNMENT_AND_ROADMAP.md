@@ -289,7 +289,28 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - Der echte ILIAS-Container muss OAuth2/REST erst aktiviert haben; bis
   dahin bleibt der unauthentisierte S8-Stub-Flow funktionsfähig.
 
-### OP3 — Echter flwr-Client-Server-Betrieb (S9) — OFFEN
+### OP3 — Plattform-UI: Upload, Chatbot, ILIAS (G3/G4) — ✅ ERLEDIGT
+- **Upload repariert:** `files.html` — `uploadFiles()` poste via FormData an
+  `POST /api/files/upload/` (CSRF via Cookie), `loadFiles()` lade Statistiken+
+  Galerie+Tabelle via `GET /api/files/`; Analyze (single/multiple), Delete
+  (single/multiple), Download ans Backend gebunden. Kaputtes
+  `upload_files.html` (defekte Template-Tags, ungeroutet) entfernt;
+  `upload_view` leitet auf `/files/` weiter.
+- **Chatbot-UI (S6):** neues `chatbot.html` (Chat-Verlauf, Eingabe,
+  degraded-Handling, `qdrant_rag`-Quellen-Anzeige) → `POST
+  /api/chatbot/message/` mit `question`-Feld; Status-Panel via `GET
+  /api/chatbot/status/`; Route `/chatbot/` + Nav-Eintrag.
+- **ILIAS-UI (S8):** neues `ilias.html` (Lernpfad-Sync-Formular → `POST
+  /api/ilias/learning-paths/sync/`, Status → `GET /api/ilias/status/`,
+  Link zum ILIAS-Container); Route `/ilias/` + Nav-Eintrag.
+- Testmatrix `tests/test_op3_platform_ui.py`: 40/40 grün (echte
+  Django-Template-Engine-Kompilierung + Routing-/Contract-Checks);
+  `manage.py check` ohne Befunde; Regressionen S3–S9 + OP1–OP2 grün
+  (287 Tests insgesamt).
+- Offen (Zielumgebung): End-to-End-Klick im Browser nach `git pull`
+  (Upload einer CSV → Auto-Analyse → Chatbot-Frage).
+
+### OP3a — Echter flwr-Client-Server-Betrieb (S9) — OFFEN
 - FederatedLearningService-Kern an den Flower-Transport
   (`services/flower_server.py`) gegen laufende Container anbinden.
 ### OP4 — Online-Update-Lookups + CI (S7) — OFFEN
