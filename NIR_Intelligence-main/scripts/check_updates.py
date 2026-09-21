@@ -26,6 +26,8 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="print report as JSON")
     parser.add_argument("--no-report", action="store_true",
                         help="skip Quarto report rendering")
+    parser.add_argument("--online", action="store_true",
+                        help="query PyPI/Docker Hub for the latest upstream versions")
     args = parser.parse_args()
 
     monitor = create_update_monitor(config={
@@ -33,6 +35,14 @@ def main() -> int:
         "compose_files": args.compose_files,
     })
     report = monitor.scan()
+
+    if args.online:
+        from services.update_lookup import create_update_lookup
+        lookup = create_update_lookup()
+        enriched = lookup.enrich_report(report.components)
+        if not args.json:
+            print(f"  online lookups:  {enriched} components enriched "
+                  f"(PyPI/Docker Hub)")
 
     if args.json:
         print(json.dumps(report.to_dict(), indent=2))

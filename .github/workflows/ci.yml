@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-matrices:
+    name: Offline test matrices
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: NIR_Intelligence-main
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install minimal test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest numpy pandas scipy scikit-learn pyyaml django pillow requests packaging djangorestframework djangorestframework-simplejwt django-cors-headers
+
+      - name: Run offline test matrices (S3-S9, OP1-OP3, OP6)
+        run: |
+          python tests/test_s3_format_loaders.py
+          python tests/test_s4_spectrometer_adapters.py
+          python tests/test_s5_spectrum_similarity.py
+          python tests/test_s6_chatbot.py
+          python tests/test_s7_update_monitoring.py
+          python tests/test_s8_ilias_integration.py
+          python tests/test_s9_federated_learning.py
+          python tests/test_op1_embedding_pipeline.py
+          python tests/test_op2_ilias_token_flow.py
+          python tests/test_op3_platform_ui.py
+          python tests/test_op6_crewai_agents.py
+          python tests/test_op4_update_lookups.py
+
+      - name: Django system check
+        run: python django_project/manage.py check

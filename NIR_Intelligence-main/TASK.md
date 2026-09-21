@@ -12,8 +12,8 @@ The local verification on the target machine is complete (all services
 running, Mistral loaded, ILIAS installed; fixes PR #12-#15 merged). The
 remaining target-environment open points are worked through by priority;
 OP1 (Qdrant embedding pipeline, PR #16), OP2 (ILIAS API token flow,
-PR #18), OP3 (platform UI: upload, chatbot, ILIAS, PR #19) and OP6
-(CrewAI agent implementation) are implemented and verified.
+PR #18), OP3 (platform UI, PR #19), OP6 (CrewAI agent implementation)
+and OP4 (online update lookups + CI) are implemented and verified.
 
 ### Predecessors
 
@@ -22,8 +22,8 @@ PR #18), OP3 (platform UI: upload, chatbot, ILIAS, PR #19) and OP6
 - OP1 Qdrant embedding pipeline: COMPLETED (PR #16)
 - OP2 ILIAS API token flow: COMPLETED (PR #18)
 - OP3 Platform UI: COMPLETED (PR #19)
-- OP6 CrewAI agents: real implementations of the previously stubbed
-  agents (sensor quality, statistics, neural networks, calibration,
+- OP6 CrewAI agents: COMPLETED - real implementations of the previously
+  stubbed agents (sensor quality, statistics, neural networks, calibration,
   metadata, PostgreSQL, Django, MCP, ILIAS), full CrewAI crew (16 agents
   with tool bindings) and the background crew runner
   (`scripts/background_crew_runner.py`, docker-compose service
@@ -32,53 +32,44 @@ PR #18), OP3 (platform UI: upload, chatbot, ILIAS, PR #19) and OP6
 
 ### Scope
 
-- `django_project/templates/files.html`: real upload wiring
-  (uploadFiles -> POST /api/files/upload/ with FormData + CSRF,
-  loadFiles -> GET /api/files/ with statistics, gallery and table,
-  analyze single/multiple, delete single/multiple, download)
-- `django_project/templates/chatbot.html` (new): chat UI for the S6
-  chatbot (POST /api/chatbot/message/ with question field, degraded
-  handling, rag_sources display, status panel)
-- `django_project/templates/ilias.html` (new): ILIAS learning path
-  sync UI (POST /api/ilias/learning-paths/sync/, status, link to the
-  ILIAS container)
-- Routes /chatbot/ and /ilias/ plus navigation entries in base.html;
-  broken upload_files.html removed; upload_view redirects to /files/
+- `services/update_lookup.py` (new): `UpdateLookupService` - PyPI and
+  Docker Hub lookups with an injectable HTTP transport (OP2 pattern);
+  yanked/pre-release filtering for PyPI, stable semver tags for Docker
+  Hub, registry normalization (library namespace, private registries,
+  localhost); every network failure degrades gracefully to the offline
+  behaviour (S7 guarantee).
+- `services/update_monitor.py`: `ComponentEntry.available` (latest
+  upstream version) in the dataclass, `to_dict` and the Quarto report;
+  the report column order stays backward compatible with the S7 test
+  contract.
+- `scripts/check_updates.py`: new `--online` flag enriches the report
+  with PyPI/Docker Hub lookups; offline runs keep exit code 0.
+- `.github/workflows/ci.yml` (new): CI job running all 12 offline test
+  matrices plus `manage.py check` on pushes/PRs to main.
+- `.github/workflows/update-monitor.yml` (new): weekly scheduled
+  (`workflow_dispatch`-triggerable) online update report; the report is
+  uploaded as an artifact.
 
 ### Out of Scope
 
-- OP3a real flwr operation, OP4 online update lookups + CI, OP5 MQTT
-  worker + commercial adapters (follow-up tasks)
-- New backend endpoints (existing APIs are used unchanged)
-- JS frameworks/build tooling (vanilla JS like the other templates)
+- OP3a real flwr operation, OP5 MQTT worker + commercial adapters
+  (follow-up tasks)
+- Auto-updates: updates remain deliberate deployment decisions (no
+  auto-update, S7 rule)
 
 ### Deliverables
 
-1. Working file upload + analysis + delete/download in files.html
-2. Chatbot UI page /chatbot/
-3. ILIAS UI page /ilias/
-4. tests/test_op3_platform_ui.py (40/40 green)
+1. `services/update_lookup.py` with injectable transport and graceful
+   offline degradation
+2. `scripts/check_updates.py --online` enriching the update report
+3. CI workflow running the 12 test matrices on every push/PR
+4. Scheduled online update report workflow
+5. `tests/test_op4_update_lookups.py` (34/34 green)
 
 ### Success Criteria
 
-- File upload reaches the Generic File API with CSRF and auth handling
-- The files page renders real statistics, gallery and table from the API
-- Chatbot page sends question payloads and shows degraded/rag state
-- ILIAS page syncs learning paths and shows the sync outcome
-- All templates compile with the real Django template engine
-- All test matrices green (S3-S9 + OP1-OP3: 287 tests)
-
-### Timeline
-
-- S1-S9 + G1-G8: COMPLETED
-- Local verification: COMPLETED
-- OP1: COMPLETED (PR #16)
-- OP2: COMPLETED (PR #18)
-- OP3: COMPLETED (this task)
-- OP3a/OP4/OP5: NEXT
-
-### Dependencies
-
-- Logged-in Django user for upload/analyze (API requires
-  IsAuthenticated); chatbot UI needs the Mistral model in the Ollama
-  container; ILIAS UI needs the ILIAS container reachable
+- Online lookups produce the latest upstream version per component and
+  flag outdated components without touching the offline S7 behaviour
+- Every network failure path degrades gracefully (no crash, exit 0)
+- CI runs the full offline test suite green on GitHub Actions
+- All existing test matrices stay green (no regressions)
