@@ -82,7 +82,7 @@ services:
       - MYSQL_PASSWORD=${ILIAS_DB_PASSWORD:-ilias_change_me}
     volumes:
       - ilias_db_data:/var/lib/mysql
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --innodb_strict_mode=0
     networks:
       - nir_network
 
