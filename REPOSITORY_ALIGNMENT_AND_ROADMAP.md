@@ -53,7 +53,7 @@ Das Repository enthält mehrere parallele Projektansätze:
 | G4 | **Formatabhängigkeit prüfen:** `generic_file_handler_agent` vorhanden, aber Abdeckung aller Formate (SPC, JMP, MATLAB, Kamerabilder RAW/JPEG/PNG, herstellerspezifische Exporte) ist nicht nachgewiesen | Master Objective 1: Import unabhängig vom Dateiformat | Erweiterbare Import-/Exportschicht vervollständigen + Testmatrix über alle Formate (S3) — ✅ erledigt (S3, Branch vibe/s3-format-agnostic-import) |
 | G5 | **Keine Spektrometer-Abstraktionsschicht:** Geräteintegration nicht über einheitliches Adapter-Muster nachgewiesen | Grundregel: alle Spektrometer | Gerätetreiber-/Adapter-Schicht einführen; bestehende ESP32-S3-Integration als erster Adapter (S4) — ✅ erledigt (S4, Branch vibe/s4-spectrometer-abstraction) |
 | G6 | **Chatbot für Ergebnisdiskussion:** Ollama-Service vorhanden, aber kein dedizierter Ergebnis-Chatbot als Feature nachgewiesen | Master Objective 10 | RAG-/Chatbot-Feature auf Ollama/Mistral-Basis mit Qdrant-Anbindung (S6) — ✅ erledigt (S6, Branch vibe/s6-chatbot) |
-| G7 | **Selbstoptimierung/Updates:** Selbstoptimierung als Ziel formuliert, aber kein Update-Mechanismus für Open-Source-Komponenten implementiert | Master Objective 15 | Update-Monitoring + Abhängigkeitsprüfung (z. B. CI-Job) definieren (S7) |
+| G7 | **Selbstoptimierung/Updates:** Selbstoptimierung als Ziel formuliert, aber kein Update-Mechanismus für Open-Source-Komponenten implementiert | Master Objective 15 | Update-Monitoring + Abhängigkeitsprüfung (z. B. CI-Job) definieren (S7) — ✅ erledigt (S7, Branch vibe/s7-update-monitoring) |
 | G8 | **`framework/` unvollständig:** Nur Backend-/Frontend-Skills implementiert, Rest ist Skeleton | Init-Prompt referenziert Framework-Dokumentation | Entweder vervollständigen oder als Referenz deklarieren und nicht als aktive Komponente (S1) |
 
 ---
@@ -173,10 +173,29 @@ Reihenfolge nach Abhängigkeit; jeder Schritt wird gemäß
       in Qdrant (benötigt laufenden Qdrant + Embedding-Modell); Django-Frontend-
       Chat-UI (aktuell API-Endpoint ohne Frontend-Seite).
 
-### S7 — Selbstoptimierung & Update-Monitoring (Master Objective 15)
-- CI-Job/Skript: Prüfung genutzter Open-Source-Komponenten (Docker-Images, pip-Pakete)
-  auf Updates; Bericht als Quarto-Dokument.
-- Optimierungsprotokoll für Kalibrationen (Optuna ist bereits in `requirements.txt`).
+### S7 — Selbstoptimierung & Update-Monitoring (Master Objective 15) — ✅ ERLEDIGT
+- [x] `services/update_monitor.py`: UpdateMonitorService — scannt alle
+      `requirements*.txt`-Manifeste und docker-compose-Images; lokale
+      installierte Versionen werden erkannt (importlib.metadata, kein Netz);
+      Specifier-Verstoß → Flag; `latest`-Tags → Pinning-Empfehlung.
+- [x] `scripts/check_updates.py`: CLI für CI-Job/manuelle Läufe
+      (`--json`, `--no-report`, `--compose-files`); rendert Quarto-Bericht
+      (`.qmd`, Summary + Komponenten-Tabellen + Handlungsempfehlungen).
+- [x] `services/calibration_optimization.py`: Optuna-Optimierungsprotokoll
+      (`OptimizationProtocol` mit Trials, Best-Params, Best-Score, Methoden
+      PLS/PCR/SVM/RandomForest/XGBoost/CNN gemäß Mission Statement);
+      Optuna optional — ohne Installation → `deferred`, kein Absturz.
+- [x] Kein Auto-Update: Updates bleiben bewusste Deployment-Entscheidungen
+      (Bericht + Empfehlungen statt Eingriff).
+- [x] Testmatrix `tests/test_s7_update_monitoring.py`: 27/27 grün
+      (Manifest-Parsing, Image-Extraktion, Specifier-Semantik, Scan über das
+      echte Projekt, Quarto-Rendering, CLI-End-to-End inkl. --json,
+      Optuna-Deferral, S5/S6-Regressionsspot-Checks).
+      Verifikation: py_compile + 27/27 Tests + S3 7/7 + S4 26/26 + S5 16/16 +
+      S6 17/17 Regressionen grün.
+- Offen für die Zielumgebung: Anbindung an echte Registry-/PyPI-Indexe
+      (benötigt Netz) und ein GitHub-Actions-Workflow als CI-Job (kein CI
+      bisher im Repo).
 
 ### S8 — ILIAS-Lernszenarien vertiefen
 - Lernpfade/Lernziele für das NIR-Labor als ILIAS-Kurse; Synchronisation mit Django-Plattform.
