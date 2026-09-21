@@ -139,12 +139,17 @@ class ILIASLearningService:
             return False
 
     def sync_learning_path(self, path: LearningPath,
-                           transport: Optional[Any] = None) -> SyncOutcome:
+                           transport: Optional[Any] = None,
+                           course_ref_id: Optional[Any] = None) -> SyncOutcome:
         """Create course + learning objectives in ILIAS.
 
         transport: optional callable(method, url, **kwargs) -> response-like
         object with .status_code/.json(); injected by tests. Defaults to the
         requests session against the configured ILIAS URL.
+        course_ref_id: optional real ILIAS course ref_id (OP2). When given,
+        no new course is created; the modules are synced into the existing
+        course identified by this ref_id (e.g. resolved beforehand via
+        IliasApiClient.find_course_ref_id_by_title).
         """
         outcome = SyncOutcome(success=False, course_title=path.title)
         if not path.modules:
@@ -154,13 +159,16 @@ class ILIASLearningService:
         caller = transport or self._default_transport
 
         try:
-            course_payload = ILIASCourseBuilder.build_course_payload(path)
-            response = caller("POST", f"{self.ilias_url}/api/v1/courses", json=course_payload)
-            if getattr(response, "status_code", 500) not in (200, 201):
-                outcome.errors.append(
-                    f"course creation failed (status {getattr(response, 'status_code', '?')})")
-                return outcome
-            course_ref_id = response.json().get("ref_id")
+            if course_ref_id is None:
+                course_payload = ILIASCourseBuilder.build_course_payload(path)
+                response = caller("POST", f"{self.ilias_url}/api/v1/courses", json=course_payload)
+                if getattr(response, "status_code", 500) not in (200, 201):
+                    outcome.errors.append(
+                        f"course creation failed (status {getattr(response, 'status_code', '?')})")
+                    return outcome
+                course_ref_id = response.json().get("ref_id")
+            else:
+                course_ref_id = course_ref_id
             path.ilias_ref_id = str(course_ref_id) if course_ref_id is not None else None
             outcome.course_ref_id = path.ilias_ref_id
 
@@ -197,3 +205,21 @@ class ILIASLearningService:
 def create_ilias_learning_service(config: Optional[Dict[str, Any]] = None) -> ILIASLearningService:
     """Factory used by the ILIAS agent / Django layer"""
     return ILIASLearningService(config=config)
+
+
+def create_authenticated_ilias_service(config: Optional[Dict[str, Any]] = None) -> ILIASLearningService:
+    """ILIAS learning service wired to an authenticated API transport (OP2).
+
+    Builds an IliasApiClient (OAuth2 token flow via services/ilias_api_service.py)
+    and exposes it as the sync transport, so learning path syncs carry a
+    Bearer Authorization header. The token client config comes from the same
+    config dict (ilias_url, client_id, client_secret, grant_type, ...).
+    """
+    from services.ilias_api_service import create_ilias_api_client
+
+    service = ILIASLearningService(config=config)
+    api_client = create_ilias_api_client(config=config)
+    service.api_client = api_client
+    service.session = None
+    service._default_transport = api_client.request
+    return service

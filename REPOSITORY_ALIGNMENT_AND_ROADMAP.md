@@ -273,14 +273,25 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - Offen (Zielumgebung): `ollama pull nomic-embed-text` auf dem Rechner,
       Indizierung echter Quarto-Reports im Betrieb.
 
-### OP2 — ILIAS-API-Token-Flow (S8) — OFFEN
-- Echter OAuth2/REST-Flow gegen den laufenden ILIAS-Container
-  (`ilias_integration_agent.py`), Lernpfad-Sync gegen echte Kurs-IDs.
+### OP2 — ILIAS-API-Token-Flow (S8) — ✅ ERLEDIGT- Neue `services/ilias_api_service.py`: `IliasTokenClient`
+  (OAuth2-Token-Fetch via `POST /oauth2/token`, konfigurierbarer Grant
+  — `client_credentials` (Default), `authorization_code`, `refresh_token` —,
+  Expiry-Tracking, Refresh) und `IliasApiClient` (authentisierter
+  Transport mit `Authorization: Bearer`, 401-Retry mit Token-Refresh,
+  Kurs-Lookup `find_course_ref_id_by_title` für echte Kurs-IDs).- `ILIASLearningService` (S8) erweitert: `sync_learning_path(..., course_ref_id=...)`
+  synced Module in bestehende Kurse (echte Kurs-IDs), keine Neuanlage;
+  `create_authenticated_ilias_service()` verkabelt Learning-Service mit
+  dem authentifizierten API-Transport. Unauthentisierter S8-Pfad
+  unverändert (rückwärtskompatibel).- Testmatrix `tests/test_op2_ilias_token_flow.py`: 31/31 grün;
+  Regressionen S3–S9 + OP1 grün (207 Tests insgesamt).- Offen (Zielumgebung): OAuth2-Client + REST-API in ILIAS-Installation
+  aktivieren (Admin → Web Services / OAuth2), Client-Credentials in Env
+  setzen (`ILIAS_API_CLIENT_ID/SECRET`), Sync gegen echte Kurs-IDs testen.
+- Der echte ILIAS-Container muss OAuth2/REST erst aktiviert haben; bis
+  dahin bleibt der unauthentisierte S8-Stub-Flow funktionsfähig.
 
 ### OP3 — Echter flwr-Client-Server-Betrieb (S9) — OFFEN
 - FederatedLearningService-Kern an den Flower-Transport
   (`services/flower_server.py`) gegen laufende Container anbinden.
-
 ### OP4 — Online-Update-Lookups + CI (S7) — OFFEN
 - PyPI/Docker-Hub-Lookups im Update-Monitor (benötigt Netz);
   GitHub-Actions-Workflow für die Testmatrizen.
