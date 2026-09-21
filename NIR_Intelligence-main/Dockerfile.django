@@ -29,7 +29,7 @@ RUN mkdir -p /app/media /app/logs /app/reports /app/uploads /app/data /app/scrip
 # Set environment variables
 ENV PYTHONPATH=/app:/app/agents
 ENV DJANGO_SETTINGS_MODULE=nir_web.settings
-ENV DATABASE_URL=postgres://nir_user:Kooky0-Hatching1-Mullets2-Ninetieth7-Shimmer6-Crayon4-Flashily2@postgresql:5432/nir_mistral
+ENV DATABASE_URL=postgres://nir_user:nir_password_change_me@postgresql:5432/nir_mistral
 ENV QDRANT_URL=http://qdrant:6333
 ENV OLLAMA_URL=http://ollama:11434
 ENV REDIS_URL=redis://redis:6379/0

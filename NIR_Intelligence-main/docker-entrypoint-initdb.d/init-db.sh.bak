@@ -15,7 +15,7 @@ $PSQL --username "$POSTGRES_USER" --dbname "postgres" <<-EOSQL
     DO \$\$
     BEGIN
         IF NOT EXISTS (SELECT FROM pg_catalog.pg_user WHERE usename = 'nir_user') THEN
-            CREATE USER nir_user WITH PASSWORD 'Kooky0-Hatching1-Mullets2-Ninetieth7-Shimmer6-Crayon4-Flashily2';
+            CREATE USER nir_user WITH PASSWORD 'CHANGE_ME_LOCALLY';
         END IF;
     END
     \$\$;
