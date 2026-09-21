@@ -26,10 +26,21 @@ except ImportError:
 
 from .base_agent import AgentOutput, AgentStatus, BaseAgent, ErrorSeverity
 from .calibration_agent import CalibrationAgent
+from .data_preparation_agent import EnhancedDataPreparationAgent as DataPreparationAgent
+from .django_agent import DjangoAgent
+from .faiss_agent import FaissAgent
 from .flower_agent import FlowerAgent
+from .ilias_agent import ILIASAgent
+from .mcp_agent import MCPAgent
 from .metadata_quality_agent import MetadataQualityAgent, MetadataQualityResult
+from .neural_network_agent import NeuralNetworkAgent
+from .postgresql_agent import PostgreSQLAgent
+from .qdrant_agent import QdrantAgent
+from .quarto_agent import QuartoAgent
 from .reporting_agent import GeneratedReport, ReportFormat, ReportingAgent, ReportType
+from .sensor_quality_agent import SensorQualityAgent
 from .spectral_analysis_agent import SpectralAnalysisAgent, SpectralAnalysisResult
+from .statistical_analysis_agent import StatisticalAnalysisAgent
 
 
 class AnalysisMode(Enum):
@@ -106,19 +117,27 @@ class NIRAnalysisCrew:
     """
     Main CrewAI orchestration for NIR spectral analysis.
 
-    This crew coordinates multiple agents to perform comprehensive analysis:
+    This crew coordinates the full agent system of the mission statement:
     1. Spectral Analysis Agent - Analyzes spectral data quality
-    2. Metadata Quality Agent - Assesses metadata completeness and standards compliance
-    3. Reporting Agent - Generates Quarto reports
-    4. Calibration Agent - Handles spectrometer calibration
-    5. Flower Agent - Manages federated learning (optional)
+    2. Sensor Quality Agent - Drift, noise and instrument monitoring
+    3. Statistical Analysis Agent - PCA, PLS, PCR, ANOVA, clustering
+    4. Neural Network Agent - CNN, MLP, Autoencoder (parallel to statistics)
+    5. Metadata Quality Agent - Metadata completeness and standards compliance
+    6. Calibration Agent - Spectrometer calibration and optimization
+    7. Reporting Agent - Quarto reports
+    8. Flower Agent - Federated learning (optional)
+
+    Background service agents (Data Preparation, Qdrant, FAISS, PostgreSQL,
+    Django, MCP, ILIAS, Quarto) are wired as CrewAI agents with tools so the
+    crew can operate the platform interfaces ("the agents run the application
+    in the background").
     """
 
     def __init__(self, config: Optional[CrewConfiguration] = None):
         self.config = config or CrewConfiguration()
         self.logger = logging.getLogger("NIRAnalysisCrew")
 
-        # Initialize agents
+        # Initialize analysis agents
         self.spectral_agent = SpectralAnalysisAgent()
         self.metadata_agent = MetadataQualityAgent()
         self.reporting_agent = ReportingAgent(
@@ -126,6 +145,19 @@ class NIRAnalysisCrew:
         )
         self.calibration_agent = CalibrationAgent()
         self.flower_agent = FlowerAgent() if self.config.enable_federated_learning else None
+
+        # Background service agents operating the platform interfaces
+        self.sensor_quality_agent = SensorQualityAgent()
+        self.statistical_analysis_agent = StatisticalAnalysisAgent()
+        self.neural_network_agent = NeuralNetworkAgent()
+        self.data_preparation_agent = DataPreparationAgent()
+        self.qdrant_agent = QdrantAgent()
+        self.faiss_agent = FaissAgent()
+        self.postgresql_agent = PostgreSQLAgent()
+        self.django_agent = DjangoAgent()
+        self.mcp_agent = MCPAgent()
+        self.ilias_agent = ILIASAgent()
+        self.quarto_agent = QuartoAgent()
 
         # CrewAI components (if available)
         self.crewai_agents = []
@@ -144,10 +176,33 @@ class NIRAnalysisCrew:
         self.logger.info(f"CrewAI available: {CREWAI_AVAILABLE and self.config.enable_crewai}")
         self.logger.info(f"Federated learning enabled: {self.config.enable_federated_learning}")
 
+    def _agent_tool(self, base_agent, description):
+        """Wrap a real platform agent as a CrewAI-compatible tool function.
+
+        The tool accepts a JSON context dict and executes the underlying
+        agent implementation (no simulated values).
+        """
+        def tool(context_json: str = "{}") -> str:
+            import json as _json
+
+            try:
+                context = _json.loads(context_json) if context_json else {}
+            except (ValueError, TypeError):
+                context = {}
+            output = base_agent.execute(context)
+            return _json.dumps({
+                "agent": output.agent_name,
+                "status": output.status.name if hasattr(output.status, "name") else str(output.status),
+                "data": output.data,
+                "errors": [e.message for e in output.errors],
+            }, default=str)
+        tool.__doc__ = description
+        tool.__name__ = f"{base_agent.name.lower()}_tool"
+        return tool
+
     def _initialize_crewai(self):
-        """Initialize CrewAI agents and crew"""
+        """Initialize the full CrewAI agent crew with real platform tools."""
         try:
-            # Create CrewAI agents
             spectral_agent = Agent(
                 role="NIR Spectral Analysis Expert",
                 goal="Analyze NIR spectral data for quality, issues, and provide parameter recommendations",
@@ -158,11 +213,54 @@ class NIRAnalysisCrew:
                     "signal-to-noise ratio assessment, and providing actionable recommendations "
                     "for improving spectrometer parameters."
                 ),
-                tools=[],  # Tools will be added dynamically
+                tools=[self._agent_tool(
+                    self.spectral_agent,
+                    "Analyze NIR spectral data quality. Input: JSON with spectral_data.")],
                 verbose=True,
                 allow_delegation=False,
             )
-
+            sensor_quality_agent = Agent(
+                role="Sensor Quality Monitor",
+                goal="Detect sensor drift, noise, offsets and instrument degradation",
+                backstory=(
+                    "You are an instrument monitoring specialist for NIR spectrometers. "
+                    "You quantify drift, baseline offsets and noise against reference "
+                    "spectra and raise warnings before measurements degrade."
+                ),
+                tools=[self._agent_tool(
+                    self.sensor_quality_agent,
+                    "Run drift/noise/offset checks. Input: JSON with spectra and thresholds.")],
+                verbose=True,
+                allow_delegation=False,
+            )
+            statistical_agent = Agent(
+                role="Chemometrics Statistician",
+                goal="Run PCA, PLS, PCR, ANOVA and cluster analysis on spectral data",
+                backstory=(
+                    "You are a chemometrics expert applying multivariate statistics to "
+                    "NIR spectra: PCA for structure, PLS/PCR for quantification, ANOVA "
+                    "for group differences and clustering for sample grouping."
+                ),
+                tools=[self._agent_tool(
+                    self.statistical_analysis_agent,
+                    "Run statistical analyses. Input: JSON with spectra and reference_values.")],
+                verbose=True,
+                allow_delegation=False,
+            )
+            neural_network_agent = Agent(
+                role="Neural Network Specialist",
+                goal="Train CNN, MLP and Autoencoder models in parallel to the statistical analysis",
+                backstory=(
+                    "You are a deep learning specialist for spectroscopy data. You always "
+                    "run your models in parallel to the chemometrics analysis and compare "
+                    "model performance (R2) with the statistical methods."
+                ),
+                tools=[self._agent_tool(
+                    self.neural_network_agent,
+                    "Train neural network models. Input: JSON with spectra, reference_values, models.")],
+                verbose=True,
+                allow_delegation=False,
+            )
             metadata_agent = Agent(
                 role="Metadata Quality Assessment Specialist",
                 goal="Extract, validate, and assess metadata quality against established standards",
@@ -172,11 +270,120 @@ class NIRAnalysisCrew:
                     "You can extract metadata from various file formats, validate structure, "
                     "and provide comprehensive quality assessments with recommendations."
                 ),
-                tools=[],
+                tools=[self._agent_tool(
+                    self.metadata_agent,
+                    "Assess metadata quality. Input: JSON with metadata, sample_id, file_paths.")],
                 verbose=True,
                 allow_delegation=False,
             )
-
+            data_preparation_agent = Agent(
+                role="Data Preparation Engineer",
+                goal="Import, clean, normalize and perform outlier analysis on spectral data",
+                backstory=(
+                    "You are a data engineer for spectroscopy pipelines. You import files "
+                    "in any format, clean and normalize spectra and flag outliers before "
+                    "any analysis runs."
+                ),
+                tools=[self._agent_tool(
+                    self.data_preparation_agent,
+                    "Prepare spectral data. Input: JSON with input_directory or file_paths.")],
+                verbose=True,
+                allow_delegation=False,
+            )
+            calibration_agent = Agent(
+                role="Spectrometer Calibration Specialist",
+                goal="Perform spectrometer calibration and optimization",
+                backstory=(
+                    "You are an expert in spectrometer calibration with knowledge of "
+                    "various calibration methods (PLS, PCR, SVM, etc.). Your expertise includes "
+                    "calibration curve generation, performance validation, and parameter optimization."
+                ),
+                tools=[self._agent_tool(
+                    self.calibration_agent,
+                    "Calibrate models. Input: JSON with spectra and reference_values.")],
+                verbose=True,
+                allow_delegation=False,
+            )
+            qdrant_agent = Agent(
+                role="Vector Database Operator",
+                goal="Store embeddings and answer semantic and similarity searches via Qdrant",
+                backstory=(
+                    "You operate the Qdrant vector database of the platform: you manage "
+                    "the nir_spectra collection, store embeddings and execute semantic "
+                    "and similarity searches."
+                ),
+                tools=[self._agent_tool(
+                    self.qdrant_agent,
+                    "Check/operate Qdrant. Input: JSON with host, port, collection_name.")],
+                verbose=True,
+                allow_delegation=False,
+            )
+            faiss_agent = Agent(
+                role="Similarity Search Operator",
+                goal="Compare spectra and peaks and run nearest-neighbour searches",
+                backstory=(
+                    "You operate the FAISS similarity engine: spectrum comparison, peak "
+                    "comparison and nearest-neighbour lookups against reference sets."
+                ),
+                tools=[self._agent_tool(
+                    self.faiss_agent,
+                    "Find similar spectra. Input: JSON with reference_spectra, query_spectrum, top_k.")],
+                verbose=True,
+                allow_delegation=False,
+            )
+            postgresql_agent = Agent(
+                role="Relational Database Operator",
+                goal="Manage metadata and relational storage in PostgreSQL",
+                backstory=(
+                    "You operate the platform PostgreSQL database: health checks, "
+                    "metadata queries and inserts for the relational storage layer."
+                ),
+                tools=[self._agent_tool(
+                    self.postgresql_agent,
+                    "Operate PostgreSQL. Input: JSON with operation (health|query|insert), sql, params.")],
+                verbose=True,
+                allow_delegation=False,
+            )
+            django_agent = Agent(
+                role="Platform Application Operator",
+                goal="Operate the Django UI, backend APIs and user management",
+                backstory=(
+                    "You operate the Django web application of the platform: health "
+                    "checks, endpoint probing and API operations for users and data."
+                ),
+                tools=[self._agent_tool(
+                    self.django_agent,
+                    "Operate the Django app. Input: JSON with operation (health|endpoints), base_url.")],
+                verbose=True,
+                allow_delegation=False,
+            )
+            mcp_agent = Agent(
+                role="Tool Integration and Interface Operator",
+                goal="Handle tool integration and external interfaces of the platform",
+                backstory=(
+                    "You are the MCP integration specialist: you probe and integrate "
+                    "the platform tools (Qdrant, FAISS, Ollama, ILIAS, Django) and report "
+                    "which interfaces are operational."
+                ),
+                tools=[self._agent_tool(
+                    self.mcp_agent,
+                    "Probe platform tool integrations. Input: JSON with operation (status), tools.")],
+                verbose=True,
+                allow_delegation=False,
+            )
+            ilias_agent = Agent(
+                role="E-Learning Platform Operator",
+                goal="Synchronize NIR learning paths and courses to ILIAS",
+                backstory=(
+                    "You operate the ILIAS e-learning integration: status checks, course "
+                    "listings and learning path synchronization for NIR laboratory teaching."
+                ),
+                tools=[self._agent_tool(
+                    self.ilias_agent,
+                    "Operate ILIAS. Input: JSON with operation (status|list_courses|sync_learning_path).")],
+                verbose=True,
+                allow_delegation=False,
+            )
             reporting_agent = Agent(
                 role="Scientific Report Generator",
                 goal="Generate comprehensive Quarto reports from analysis results",
@@ -186,36 +393,67 @@ class NIRAnalysisCrew:
                     "visualizing spectral data, and presenting complex results in "
                     "clear, professional formats suitable for scientific publication."
                 ),
-                tools=[],
+                tools=[self._agent_tool(
+                    self.reporting_agent,
+                    "Generate reports. Input: JSON with report_type, format, sample_id, data.")],
                 verbose=True,
                 allow_delegation=False,
             )
-
-            calibration_agent = Agent(
-                role="Spectrometer Calibration Specialist",
-                goal="Perform spectrometer calibration and optimization",
+            quarto_agent = Agent(
+                role="Documentation Specialist",
+                goal="Produce complete documentation, diagrams and reports with Quarto",
                 backstory=(
-                    "You are an expert in spectrometer calibration with knowledge of "
-                    "various calibration methods (PLS, PCR, SVM, etc.). Your expertise includes "
-                    "calibration curve generation, performance validation, and parameter optimization."
+                    "You are the documentation specialist of the platform: you render "
+                    "Quarto documents, diagrams and reports for analyses and workflows."
                 ),
-                tools=[],
+                tools=[self._agent_tool(
+                    self.quarto_agent,
+                    "Render Quarto documents. Input: JSON with operation (generate|preview), report_type, data.")],
                 verbose=True,
                 allow_delegation=False,
             )
 
-            self.crewai_agents = [spectral_agent, metadata_agent, reporting_agent, calibration_agent]
+            self.crewai_agents = [
+                data_preparation_agent,
+                spectral_agent,
+                sensor_quality_agent,
+                statistical_agent,
+                neural_network_agent,
+                metadata_agent,
+                calibration_agent,
+                qdrant_agent,
+                faiss_agent,
+                postgresql_agent,
+                django_agent,
+                mcp_agent,
+                ilias_agent,
+                reporting_agent,
+                quarto_agent,
+            ]
+            if self.flower_agent is not None:
+                flower_agent = Agent(
+                    role="Federated Learning Coordinator",
+                    goal="Coordinate federated learning rounds and aggregate models",
+                    backstory=(
+                        "You coordinate Flower federated learning: server/client mode, "
+                        "training rounds and privacy-preserving model aggregation."
+                    ),
+                    tools=[self._agent_tool(
+                        self.flower_agent,
+                        "Operate federated learning. Input: JSON with operation (status|start_server|...).")],
+                    verbose=True,
+                    allow_delegation=False,
+                )
+                self.crewai_agents.append(flower_agent)
 
             # Create crew
             self.crew = Crew(agents=self.crewai_agents, tasks=[], process=Process.sequential, verbose=True)
-
-            self.logger.info("CrewAI agents and crew initialized successfully")
-
+            self.logger.info(
+                f"CrewAI crew initialized with {len(self.crewai_agents)} agents (real tool bindings)")
         except Exception as e:
             self.logger.error(f"Error initializing CrewAI: {e}")
             self.crewai_agents = []
             self.crew = None
-
     def _generate_request_id(self) -> str:
         """Generate unique request ID"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
