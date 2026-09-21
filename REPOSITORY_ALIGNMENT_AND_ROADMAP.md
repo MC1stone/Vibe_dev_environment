@@ -131,10 +131,25 @@ Reihenfolge nach Abhängigkeit; jeder Schritt wird gemäß
 - Offen für spätere Schritte: kommerzielle Geräte (NIR, UV-Vis, Raman, FTIR) als weitere
       Adapter; echter MQTT-Broker-Worker (Acquisition-Layer) zur Live-Anbindung.
 
-### S5 — Integration napari-Visualisierung & Spektrenvergleich
-- napari-App aus `HANDHELD/napari_app` in die Plattform integrieren (Visualisierung,
-  Vergleich neuer Spektren mit vorhandenen; Master Objectives 11, 13, 14).
-- FAISS (Nearest-Neighbour/Spektrumvergleich) und Qdrant (Embedding-Ähnlichkeit) anbinden.
+### S5 — Integration napari-Visualisierung & Spektrenvergleich — ✅ ERLEDIGT
+- [x] `services/spectrum_similarity.py`: Vergleichs-Engine (Nearest-Neighbour)
+      mit FAISS-Backend (falls installiert) und exaktem numpy-Fallback;
+      Ein-/Ausgabe ausschließlich im einheitlichen Spektral-Schema aus S3;
+      QdrantSimilarityService als optionales Embedding-Backend (operativ mit S6).
+- [x] napari-Server aus `HANDHELD/napari_app` integriert als
+      `services/napari_server/` (Headless-FastAPI, Port 8002, MQTT `spectral/#`);
+      `HANDHELD/` bleibt unangetastet (G3-Regel: integrieren statt duplizieren).
+- [x] `docker-compose.yml` + `docker-compose.prod.yml`: `napari_server`-Service
+      (Build aus `services/napari_server`, nir_network, MQTT-Env-Variablen).
+- [x] FAISS/Qdrant-Agents an die echte Engine angebunden statt Platzhalter-
+      Simulation (`agents/faiss_agent.py`, `agents/qdrant_agent.py`, v1.1.0).
+- [x] Testmatrix `tests/test_s5_spectrum_similarity.py`: 16/16 grün
+      (Selbstmatch ~0, Ranking L2/Kosinus, numpy-Fallback, Edge Cases,
+      S4-Adapter-Kompatibilität inkl. SparkFun Triad 18 Kanäle, Qdrant-Graceful,
+      Compose-Integration). Verifikation: py_compile + 16/16 Tests +
+      S3-Regression 7/7 + S4-Regression 26/26 + YAML-Parse beider Compose-Dateien.
+- Offen für S6: Embedding-Pipeline (Ollama/Mistral) und Qdrant-RAG für den
+      Ergebnis-Chatbot; Django-Frontend-Anbindung der Visualisierung.
 
 ### S6 — Ergebnis-Chatbot (Master Objective 10)
 - Chatbot auf Ollama/Mistral:latest mit Qdrant-RAG über Analyseergebnisse und
