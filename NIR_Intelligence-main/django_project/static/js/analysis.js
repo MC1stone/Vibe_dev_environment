@@ -205,71 +205,55 @@ function updateAnalysisOptions() {
 }
 
 function startAnalysis() {
-    const analysisName = document.getElementById('analysisName').value;
-    const sampleId = document.getElementById('sampleId').value;
-    const analysisType = document.getElementById('analysisType').value;
-    const analysisMode = document.getElementById('analysisMode').value;
-    const privacyLevel = document.getElementById('privacyLevel').value;
-    const reportFormat = document.getElementById('reportFormat').value;
-    const description = document.getElementById('analysisDescription').value;
-    
-    if (!analysisName || !sampleId || !analysisType) {
-        showError('Please fill in all required fields.');
-        return;
-    }
-    
-    showLoading();
-    
-    // Prepare the analysis request for Crew AI
-    const analysisRequest = {
-        sample_id: sampleId,
-        analysis_mode: analysisMode,
-        privacy_level: privacyLevel,
-        report_type: analysisType,
-        report_format: reportFormat,
-        include_calibration: true,
-        include_federated_learning: false,
-        metadata: {
-            analysis_name: analysisName,
-            description: description,
-            user_id: 'current_user' // This would be replaced with actual user ID
-        }
-    };
-    
+    // The single consolidated workflow: data quality + spectral analysis +
+    // statistics + neural networks + one comprehensive report.
+    const sampleId = (document.getElementById('sampleId') && document.getElementById('sampleId').value)
+        || (fileUploadData && fileUploadData.fileName)
+        || 'workflow_sample_' + Date.now();
+
     // Spectral data comes from the uploaded file (no demo data)
-    if (fileUploadData) {
-        analysisRequest.spectral_data = fileUploadData;
-    } else {
-        hideLoading();
+    if (!fileUploadData) {
         showError('Please upload a spectrum file first (.json, .csv or .txt).');
         return;
     }
-    
+
+    showLoading();
+    setWorkflowStep(2);
+
+    const analysisRequest = {
+        sample_id: sampleId,
+        analysis_mode: 'standard',
+        privacy_level: 'local_only',
+        report_type: 'comprehensive',
+        report_format: 'html',
+        include_calibration: true,
+        include_federated_learning: false,
+        metadata: {
+            analysis_name: 'Complete Analysis Workflow',
+            description: 'Single workflow: upload, data quality, spectral analysis, statistics, complete report',
+            source_file: fileUploadData.fileName || 'upload'
+        },
+        spectral_data: fileUploadData
+    };
+
     currentAnalysisRequest = analysisRequest;
-    
-    // Send to Crew AI API
+
     axios.post('/api/crewai/analysis/start/', analysisRequest)
         .then(function(response) {
             hideLoading();
             const result = response.data;
-            
+
             if (result.success) {
-                showSuccess('Analysis started successfully!');
-                document.getElementById('newAnalysisForm').reset();
-                bootstrap.Modal.getInstance(document.getElementById('newAnalysisModal')).hide();
-                
-                // Store the request ID for tracking
+                showSuccess('Analysis started - the crew is running all agents.');
                 currentAnalysisRequest.request_id = result.request_id;
-                
-                // Refresh data and show results
+                setWorkflowStep(3);
                 loadAnalysisData();
-                
-                // Show results after a short delay to allow processing
+
                 setTimeout(() => {
                     viewAnalysisResults(result.request_id);
                 }, 2000);
             } else {
-                showError('Failed to start analysis: ' + (result.error || 'Unknown error'));
+                showError('Failed to start analysis: ' + (result.error || 'Unknown'));
             }
         })
         .catch(function(error) {
@@ -279,55 +263,9 @@ function startAnalysis() {
         });
 }
 
-function startQuickAnalysis() {
-    const analysisType = document.getElementById('quickAnalysisType').value;
-    
-    // Quick analysis runs on the uploaded file (no demo data)
-    if (!fileUploadData) {
-        showError('Please upload a spectrum file first (.json, .csv or .txt).');
-        return;
-    }
-    
-    showLoading();
-    
-    // Prepare quick analysis request
-    const quickRequest = {
-        sample_id: 'quick_sample_' + Date.now(),
-        analysis_mode: 'standard',
-        privacy_level: 'local_only',
-        report_type: analysisType,
-        report_format: 'html',
-        include_calibration: true,
-        include_federated_learning: false,
-        metadata: {
-            analysis_name: 'Quick Analysis - ' + new Date().toLocaleTimeString(),
-            description: 'Quick analysis performed via dashboard'
-        },
-        spectral_data: fileUploadData
-    };
-    
-    axios.post('/api/crewai/analysis/start/', quickRequest)
-        .then(function(response) {
-            hideLoading();
-            const result = response.data;
-            
-            if (result.success) {
-                showSuccess('Quick analysis started!');
-                loadAnalysisData();
-                
-                // Show results after processing
-                setTimeout(() => {
-                    viewAnalysisResults(result.request_id);
-                }, 2000);
-            } else {
-                showError('Failed to start quick analysis: ' + (result.error || 'Unknown error'));
-            }
-        })
-        .catch(function(error) {
-            console.error('Error starting quick analysis:', error);
-            hideLoading();
-            showError('Failed to start quick analysis. Please try again.');
-        });
+// The workflow entry point wired to the single Run button.
+function runCompleteWorkflow() {
+    startAnalysis();
 }
 
 function handleFileUpload(event) {
@@ -342,7 +280,16 @@ function handleFileUpload(event) {
         try {
             const content = e.target.result;
             fileUploadData = parseSpectrumFile(content, file.name);
+            fileUploadData.fileName = file.name;
             showSuccess('File uploaded: ' + file.name);
+            const info = document.getElementById('uploadedFileInfo');
+            if (info) {
+                const n = (fileUploadData.wavelengths || []).length;
+                info.textContent = file.name + ' - ' + n + ' data points parsed. Ready to run the workflow.';
+            }
+            const runBtn = document.getElementById('runWorkflowBtn');
+            if (runBtn) runBtn.disabled = false;
+            setWorkflowStep(1);
         } catch (error) {
             console.error('Error parsing spectrum file:', error);
             showError('Failed to parse spectrum file. Please check the format.');
@@ -428,24 +375,66 @@ function viewAnalysisResults(requestId) {
         });
 }
 
+// Mark a workflow step in the stepper (1..5); steps before it are done.
+function setWorkflowStep(step) {
+    const steps = document.querySelectorAll('#workflowSteps .workflow-step');
+    steps.forEach(function(el) {
+        const n = parseInt(el.getAttribute('data-step'), 10);
+        el.classList.toggle('is-done', n < step);
+        el.classList.toggle('is-active', n === step);
+    });
+}
+
+// Show the workflow results panels and link to the complete report.
+function showWorkflowReport(result) {
+    const row = document.getElementById('workflowResultsRow');
+    if (row) row.classList.remove('d-none');
+    const note = document.getElementById('workflowProgressNote');
+    if (note) note.classList.add('d-none');
+    setWorkflowStep(5);
+
+    const reports = (result.reports || (result.summary && result.summary.reports) || []);
+    const linkArea = document.getElementById('reportLinkArea');
+    const openBtn = document.getElementById('openReportBtn');
+    if (reports.length > 0) {
+        if (linkArea) linkArea.innerHTML = 'Complete report generated: <strong>' + escapeHtml(reports[0].report_id) + '</strong>';
+        if (openBtn) openBtn.disabled = false;
+    } else if (linkArea) {
+        linkArea.textContent = 'No report was generated for this analysis.';
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text == null ? '' : String(text);
+    return div.innerHTML;
+}
+
 function displayAnalysisResults(result) {
     hideLoading();
     
     // Update basic information
-    document.getElementById('resultAnalysisName').textContent = result.sample_id || 'N/A';
-    document.getElementById('resultAnalysisType').textContent = result.report_type || result.analysis_type || 'Unknown';
-    document.getElementById('resultSampleId').textContent = result.sample_id || 'N/A';
-    document.getElementById('resultStatus').innerHTML = '<span class="c-badge c-badge--success">Completed</span>';
-    document.getElementById('resultCompleted').textContent = formatDate(result.timestamp);
-    document.getElementById('resultProcessingTime').textContent = (result.processing_time || 0).toFixed(2) + 's';
+    const nameEl = document.getElementById('resultAnalysisName');
+    if (nameEl) nameEl.textContent = result.sample_id || 'N/A';
+    const typeEl = document.getElementById('resultAnalysisType');
+    if (typeEl) typeEl.textContent = result.report_type || result.analysis_type || 'Unknown';
+    const sampleEl = document.getElementById('resultSampleId');
+    if (sampleEl) sampleEl.textContent = result.sample_id || 'N/A';
+    const statusEl = document.getElementById('resultStatus');
+    if (statusEl) statusEl.innerHTML = '<span class="c-badge c-badge--success">Completed</span>';
+    const completedEl = document.getElementById('resultCompleted');
+    if (completedEl) completedEl.textContent = formatDate(result.timestamp);
+    const timeEl = document.getElementById('resultProcessingTime');
+    if (timeEl) timeEl.textContent = (result.processing_time || 0).toFixed(2) + 's';
     
     // Update summary (object from the crew, rendered as key facts)
     const summary = result.summary || {};
-    document.getElementById('resultSummary').innerHTML = formatSummaryText(summary, result);
+    const summaryEl = document.getElementById('resultSummary');
+    if (summaryEl) summaryEl.innerHTML = formatSummaryText(summary, result);
     
     // Update quality scores
     const qualityScores = document.getElementById('qualityScores');
-    qualityScores.innerHTML = '';
+    if (qualityScores) qualityScores.innerHTML = '';
     
     if (result.overall_quality_score !== undefined && result.overall_quality_score !== null) {
         qualityScores.innerHTML += `
@@ -510,14 +499,13 @@ function displayAnalysisResults(result) {
     
     // Update detailed results
     const resultData = document.getElementById('resultData');
-    resultData.innerHTML = formatResultsData(result);
+    if (resultData) resultData.innerHTML = formatResultsData(result);
     
     // Create chart from the real spectral data submitted to the crew
     createAnalysisChart(result);
     
-    // Show the results modal
-    const modal = new bootstrap.Modal(document.getElementById('analysisResultsModal'));
-    modal.show();
+    // The consolidated workflow page shows the results inline instead of a modal
+    showWorkflowReport(result);
 }
 
 function formatSummaryText(summary, result) {
@@ -713,6 +701,7 @@ function formatResultsData(result) {
 
 function createAnalysisChart(result) {
     const ctx = document.getElementById('analysisChart');
+    if (!ctx) return;
     
     // Destroy existing chart if it exists
     if (analysisChart) {

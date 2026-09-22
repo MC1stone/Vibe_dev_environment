@@ -785,7 +785,12 @@ class NIRAnalysisCrew:
                 "report_type": request.report_type.value,
                 "format": request.report_format.value,
                 "sample_id": request.sample_id,
-                "data": report_data,
+                "data": {
+                    **report_data,
+                    "analysis_mode": request.analysis_mode.value,
+                    "privacy_level": request.privacy_level.value,
+                    "include_calibration": request.include_calibration,
+                },
             }
 
             report_output = self.reporting_agent.execute(report_context)

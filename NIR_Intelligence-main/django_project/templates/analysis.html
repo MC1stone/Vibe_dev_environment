@@ -1,47 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
-
-
-{% block title %}Spectral Analysis - NIR_Mistral Framework{% endblock %}
+{% block title %}Analysis Workflow - NIR_Mistral Framework{% endblock %}
 
 {% block extra_css %}
 <style>
-    .analysis-method-card {
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border: 2px solid transparent;
-        border-radius: 8px;
-        padding: 16px;
-        background: white;
-    }
-    
-    .analysis-method-card:hover {
-        border-color: var(--color-primary);
-        box-shadow: 0 4px 12px rgba(122, 185, 41, 0.15);
-        transform: translateY(-2px);
-    }
-    
-    .method-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        margin-bottom: 12px;
-    }
-    
-    .method-content h6 {
-        margin-bottom: 4px;
-        font-weight: 600;
-    }
-    
-    .method-content p {
-        margin-bottom: 0;
-        color: var(--color-text-muted);
-    }
-    
     .crewai-status {
         display: inline-flex;
         align-items: center;
@@ -52,7 +14,7 @@
         font-size: 0.875rem;
         color: var(--color-primary);
     }
-    
+
     .crewai-status .status-dot {
         width: 8px;
         height: 8px;
@@ -60,36 +22,72 @@
         border-radius: 50%;
         animation: pulse 2s infinite;
     }
-    
+
     @keyframes pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.5; }
     }
-    
-    .progress-container {
-        position: relative;
-        height: 8px;
-        background: var(--color-background);
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    
-    .progress-bar-animated {
-        animation: progress-stripe 1s linear infinite;
-    }
-    
-    @keyframes progress-stripe {
-        0% { background-position: 1rem 0; }
-        100% { background-position: 0 0; }
-    }
-    
+
     .drop-zone {
         transition: all 0.3s ease;
     }
-    
+
     .drop-zone:hover, .drop-zone.drag-over {
         border-color: var(--color-primary);
         background-color: rgba(122, 185, 41, 0.05);
+    }
+
+    /* Single workflow stepper: Upload -> Quality -> Spectral -> Statistics -> Report */
+    .workflow-steps {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        counter-reset: step;
+    }
+
+    .workflow-step {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        background: var(--color-background, #f5f5f5);
+        color: var(--color-text-muted, #666);
+        font-weight: 600;
+        font-size: 0.875rem;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+
+    .workflow-step .step-number {
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.08);
+        font-size: 0.75rem;
+    }
+
+    .workflow-step.is-active {
+        border-color: var(--color-primary, #7ab929);
+        background: rgba(122, 185, 41, 0.1);
+        color: var(--color-primary-dark, #225933);
+    }
+
+    .workflow-step.is-active .step-number {
+        background: var(--color-primary, #7ab929);
+        color: #fff;
+    }
+
+    .workflow-step.is-done {
+        color: var(--color-primary, #7ab929);
+    }
+
+    .workflow-step.is-done .step-number {
+        background: var(--color-primary, #7ab929);
+        color: #fff;
     }
 </style>
 {% endblock %}
@@ -101,10 +99,10 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
                 <h1 class="c-page-header__title text-white mb-0">
-                    <i class="bi bi-calculator"></i> Spectral Analysis
+                    <i class="bi bi-diagram-3"></i> Analysis Workflow
                 </h1>
                 <p class="c-page-header__subtitle text-white opacity-75 mb-0">
-                    Advanced NIR Spectroscopy Analysis using Crew AI Agents
+                    One workflow: Upload &rarr; Data Quality &rarr; Spectral Analysis &rarr; Statistics &rarr; Complete Report
                 </p>
             </div>
             <div class="d-flex gap-2">
@@ -112,176 +110,139 @@
                     <span class="status-dot"></span>
                     <span>Crew AI Ready</span>
                 </div>
-                <button class="c-button c-button--white" onclick="refreshAnalysis()">
-                    <i class="bi bi-arrow-clockwise c-button__icon"></i>
-                    <span class="c-button__text">Refresh</span>
-                </button>
-                <button class="c-button c-button--secondary" data-bs-toggle="modal" data-bs-target="#newAnalysisModal">
-                    <i class="bi bi-plus c-button__icon"></i>
-                    <span class="c-button__text">New Analysis</span>
-                </button>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Analysis Methods Section -->
+<!-- The one workflow -->
 <section class="o-section">
     <div class="o-container">
-        <h2 class="c-card__title mb-xl">
-            <i class="bi bi-gear"></i> Available Analysis Methods
-        </h2>
-        
-        <div class="row g-4">
-            <!-- Spectral Analysis -->
-            <div class="col-md-3 col-6">
-                <div class="analysis-method-card" onclick="selectAnalysisMethod('spectral_analysis')">
-                    <div class="method-icon" style="background: rgba(122, 185, 41, 0.1); color: var(--color-primary);">
-                        <i class="bi bi-graph-up"></i>
-                    </div>
-                    <div class="method-content">
-                        <h6>Spectral Analysis</h6>
-                        <p>Comprehensive NIR spectral data processing and quality assessment</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Metadata Quality -->
-            <div class="col-md-3 col-6">
-                <div class="analysis-method-card" onclick="selectAnalysisMethod('metadata_quality')">
-                    <div class="method-icon" style="background: rgba(34, 89, 51, 0.1); color: var(--color-primary-dark);">
-                        <i class="bi bi-check-circle"></i>
-                    </div>
-                    <div class="method-content">
-                        <h6>Metadata Quality</h6>
-                        <p>Assess and validate metadata completeness and accuracy</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Calibration -->
-            <div class="col-md-3 col-6">
-                <div class="analysis-method-card" onclick="selectAnalysisMethod('calibration')">
-                    <div class="method-icon" style="background: rgba(168, 208, 101, 0.1); color: var(--color-primary-light);">
-                        <i class="bi bi-tools"></i>
-                    </div>
-                    <div class="method-content">
-                        <h6>Calibration</h6>
-                        <p>Spectrometer calibration and performance validation</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Comprehensive Analysis -->
-            <div class="col-md-3 col-6">
-                <div class="analysis-method-card" onclick="selectAnalysisMethod('comprehensive')">
-                    <div class="method-icon" style="background: rgba(90, 138, 63, 0.1); color: #5a8a3f;">
-                        <i class="bi bi-stars"></i>
-                    </div>
-                    <div class="method-content">
-                        <h6>Comprehensive</h6>
-                        <p>Complete analysis with all agents and detailed reporting</p>
-                    </div>
-                </div>
-            </div>
+        <!-- Stepper -->
+        <div class="workflow-steps mb-xl" id="workflowSteps">
+            <span class="workflow-step is-active" data-step="1"><span class="step-number">1</span> Upload</span>
+            <span class="workflow-step" data-step="2"><span class="step-number">2</span> Data Quality</span>
+            <span class="workflow-step" data-step="3"><span class="step-number">3</span> Spectral Analysis</span>
+            <span class="workflow-step" data-step="4"><span class="step-number">4</span> Statistics</span>
+            <span class="workflow-step" data-step="5"><span class="step-number">5</span> Complete Report</span>
         </div>
-    </div>
-</section>
 
-<!-- Quick Analysis Section -->
-<section class="o-section o-section--light">
-    <div class="o-container">
-        <h2 class="c-card__title mb-xl">
-            <i class="bi bi-lightning-charge"></i> Quick Analysis
-        </h2>
-        
         <div class="row g-4">
-            <div class="col-md-6">
-                <div class="c-card h-100">
+            <!-- Step 1: Upload -->
+            <div class="col-12">
+                <div class="c-card">
                     <div class="c-card__header">
-                        <h3 class="c-card__title mb-0">Upload & Analyze</h3>
+                        <h3 class="c-card__title mb-0"><i class="bi bi-cloud-arrow-up"></i> Step 1: Upload Dataset</h3>
                     </div>
                     <div class="c-card__body">
                         <div class="drop-zone" id="dropZone">
                             <i class="bi bi-cloud-arrow-up" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 1rem;"></i>
-                            <p class="mb-0">Drag & drop spectrum files here or click to browse</p>
+                            <p class="mb-0">Drag &amp; drop a spectrum file here or click to browse (.csv, .txt, .json, .h5)</p>
                             <input type="file" id="fileInput" accept=".csv,.txt,.json,.h5,.hdf5" style="display: none;" onchange="handleFileUpload(event)">
                         </div>
-                        
-                        <div class="d-flex gap-2 mb-3 mt-3">
-                            <select class="c-form-control" id="quickAnalysisType" style="flex-grow: 1;">
-                                <option value="spectral_analysis">Spectral Analysis</option>
-                                <option value="metadata_quality">Metadata Quality</option>
-                                <option value="comprehensive">Comprehensive</option>
-                            </select>
-                            <button class="c-button c-button--primary" onclick="startQuickAnalysis()">
-                                <i class="bi bi-play c-button__icon"></i>
-                                <span class="c-button__text">Analyze</span>
+                        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+                            <div id="uploadedFileInfo" class="text-muted">
+                                No file selected yet.
+                            </div>
+                            <button class="c-button c-button--primary" id="runWorkflowBtn" onclick="runCompleteWorkflow()" disabled>
+                                <i class="bi bi-play-fill c-button__icon"></i>
+                                <span class="c-button__text">Run Complete Analysis</span>
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <div class="col-md-6">
-                <div class="c-card h-100">
+
+            <!-- Steps 2-4: live agent results -->
+            <div class="col-12">
+                <div class="c-card">
                     <div class="c-card__header">
-                        <h3 class="c-card__title mb-0">Crew AI Status</h3>
+                        <h3 class="c-card__title mb-0"><i class="bi bi-clipboard-data"></i> Workflow Progress</h3>
                     </div>
                     <div class="c-card__body">
-                        <div class="row g-3">
-                            <div class="col-6">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-shrink-0">
-                                        <span class="c-badge c-badge--success rounded-circle p-2 d-inline-flex align-items-center justify-content-center">
-                                            <i class="bi bi-check"></i>
-                                        </span>
+                        <div id="workflowProgressNote" class="text-muted mb-3">
+                            Upload a dataset and run the workflow to see the agent results here.
+                        </div>
+                        <div class="row g-4 d-none" id="workflowResultsRow">
+                            <div class="col-md-4">
+                                <div class="c-card h-100">
+                                    <div class="c-card__header">
+                                        <h6 class="mb-0"><i class="bi bi-check-circle"></i> Data Quality</h6>
                                     </div>
-                                    <div class="flex-grow-1 ms-sm">
-                                        <h6 class="mb-0">Crew AI</h6>
-                                        <small class="text-muted" id="crewaiStatus">Loading...</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-shrink-0">
-                                        <span class="c-badge c-badge--success rounded-circle p-2 d-inline-flex align-items-center justify-content-center">
-                                            <i class="bi bi-robot"></i>
-                                        </span>
-                                    </div>
-                                    <div class="flex-grow-1 ms-sm">
-                                        <h6 class="mb-0">Agents</h6>
-                                        <small class="text-muted" id="agentsAvailable">0 available</small>
+                                    <div class="c-card__body">
+                                        <div id="sensorQualityResults"></div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-6">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-shrink-0">
-                                        <span class="c-badge c-badge--info rounded-circle p-2 d-inline-flex align-items-center justify-content-center">
-                                            <i class="bi bi-hourglass-split"></i>
-                                        </span>
+                            <div class="col-md-4">
+                                <div class="c-card h-100">
+                                    <div class="c-card__header">
+                                        <h6 class="mb-0"><i class="bi bi-graph-up"></i> Spectral Analysis</h6>
                                     </div>
-                                    <div class="flex-grow-1 ms-sm">
-                                        <h6 class="mb-0">Analyses</h6>
-                                        <small class="text-muted" id="totalAnalyses">0 total</small>
+                                    <div class="c-card__body">
+                                        <canvas id="analysisChart" height="260"></canvas>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-6">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-shrink-0">
-                                        <span class="c-badge c-badge--warning rounded-circle p-2 d-inline-flex align-items-center justify-content-center">
-                                            <i class="bi bi-clock"></i>
-                                        </span>
+                            <div class="col-md-4">
+                                <div class="c-card h-100">
+                                    <div class="c-card__header">
+                                        <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Statistics</h6>
                                     </div>
-                                    <div class="flex-grow-1 ms-sm">
-                                        <h6 class="mb-0">Avg Time</h6>
-                                        <small class="text-muted" id="avgProcessingTime">0s</small>
+                                    <div class="c-card__body">
+                                        <div id="statisticalResults"></div>
                                     </div>
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="c-card h-100">
+                                    <div class="c-card__header">
+                                        <h6 class="mb-0"><i class="bi bi-cpu"></i> Neural Network</h6>
+                                    </div>
+                                    <div class="c-card__body">
+                                        <div id="neuralNetworkResults"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="c-card h-100">
+                                    <div class="c-card__header">
+                                        <h6 class="mb-0"><i class="bi bi-star"></i> Quality Scores</h6>
+                                    </div>
+                                    <div class="c-card__body">
+                                        <div class="row g-3" id="qualityScores"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: the complete report -->
+            <div class="col-12">
+                <div class="c-card">
+                    <div class="c-card__header">
+                        <h3 class="c-card__title mb-0"><i class="bi bi-file-earmark-text"></i> Step 5: Complete Report</h3>
+                    </div>
+                    <div class="c-card__body">
+                        <p class="text-muted">
+                            The final Quarto report contains all results in detail: quality assessment,
+                            spectral and statistical evaluation, the measured data, charts, and the
+                            analysis source code.
+                        </p>
+                        <div id="reportLinkArea" class="text-muted mb-3">
+                            The report link appears here once the workflow has finished.
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="c-button c-button--primary" id="openReportBtn" onclick="viewReport()" disabled>
+                                <i class="bi bi-file-earmark-text c-button__icon"></i>
+                                <span class="c-button__text">Open Complete Report</span>
+                            </button>
+                            <a href="/jobs/" class="c-button c-button--outline-secondary">
+                                <i class="bi bi-list-check c-button__icon"></i>
+                                <span class="c-button__text">Analysis History</span>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -290,47 +251,11 @@
     </div>
 </section>
 
-<!-- Active Analysis Jobs -->
-<section class="o-section">
-    <div class="o-container">
-        <div class="d-flex justify-content-between align-items-center mb-xl">
-            <h2 class="c-card__title mb-0">
-                <i class="bi bi-hourglass-split"></i> Active Analysis Jobs
-            </h2>
-            <span class="c-badge c-badge--primary" id="activeJobsCount">0</span>
-        </div>
-        
-        <div class="c-card">
-            <div class="c-card__body p-0">
-                <div class="table-responsive">
-                    <table class="c-table c-table--hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Job ID</th>
-                                <th>Analysis Type</th>
-                                <th>Sample</th>
-                                <th>Status</th>
-                                <th>Progress</th>
-                                <th>Started</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="activeJobsTableBody">
-                            <tr>
-                                <td colspan="7" class="text-center py-lg">
-                                    <div class="c-loading-overlay__spinner" style="width: 2rem; height: 2rem; border-width: 0.2rem;"></div>
-                                    <p class="mt-sm text-muted">Loading active jobs...</p>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+<!-- Analysis Results Detail -->
+<div class="d-none" id="resultSummary"></div>
+<div class="d-none" id="resultData"></div>
 
-<!-- Recent Analysis Results -->
+<!-- recent results keep their grid for the history view -->
 <section class="o-section o-section--light">
     <div class="o-container">
         <div class="d-flex justify-content-between align-items-center mb-xl">
@@ -342,220 +267,11 @@
                 <span class="c-button__text">View All</span>
             </a>
         </div>
-        
+
         <div class="row g-4" id="recentResultsGrid">
-            <!-- Results will be loaded here -->
         </div>
     </div>
 </section>
-
-<!-- New Analysis Modal -->
-<div class="modal fade" id="newAnalysisModal" tabindex="-1" aria-labelledby="newAnalysisModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="newAnalysisModalLabel">
-                    <i class="bi bi-plus"></i> New Spectral Analysis
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="newAnalysisForm">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="c-form-label required">Analysis Name</label>
-                            <input type="text" class="c-form-control" id="analysisName" placeholder="e.g., Sample Batch 001" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="c-form-label required">Sample ID</label>
-                            <input type="text" class="c-form-control" id="sampleId" placeholder="Unique sample identifier" required>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="c-form-label required">Analysis Type</label>
-                            <select class="c-form-control" id="analysisType" required onchange="updateAnalysisOptions()">
-                                <option value="">Select analysis type...</option>
-                                <option value="spectral_analysis">Spectral Analysis</option>
-                                <option value="metadata_quality">Metadata Quality</option>
-                                <option value="calibration">Calibration</option>
-                                <option value="comprehensive">Comprehensive</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="c-form-label required">Analysis Mode</label>
-                            <select class="c-form-control" id="analysisMode">
-                                <option value="standard">Standard</option>
-                                <option value="comprehensive">Comprehensive</option>
-                                <option value="quick">Quick</option>
-                                <option value="batch">Batch</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="c-form-label">Privacy Level</label>
-                            <select class="c-form-control" id="privacyLevel">
-                                <option value="local_only">Local Only</option>
-                                <option value="public_federated">Public Federated</option>
-                                <option value="private_federated">Private Federated</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="c-form-label">Report Format</label>
-                            <select class="c-form-control" id="reportFormat">
-                                <option value="html">HTML</option>
-                                <option value="pdf">PDF</option>
-                                <option value="md">Markdown</option>
-                                <option value="qmd">Quarto</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-12">
-                            <label class="c-form-label">Description</label>
-                            <textarea class="c-form-control" id="analysisDescription" rows="3" placeholder="Brief description of the analysis..."></textarea>
-                        </div>
-                        
-                        <div class="col-12" id="analysisOptionsContainer"></div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Cancel
-                </button>
-                <button type="button" class="btn btn-primary" onclick="startAnalysis()">
-                    <i class="bi bi-play"></i> Start Analysis
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Analysis Results Modal -->
-<div class="modal fade" id="analysisResultsModal" tabindex="-1" aria-labelledby="analysisResultsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="analysisResultsModalLabel">
-                    <i class="bi bi-graph-up"></i> Analysis Results
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <div class="c-card mb-3">
-                            <div class="c-card__header">
-                                <h6 class="mb-0">Analysis Information</h6>
-                            </div>
-                            <div class="c-card__body">
-                                <dl class="row">
-                                    <dt class="col-sm-4">Analysis Name:</dt>
-                                    <dd class="col-sm-8" id="resultAnalysisName"></dd>
-                                    <dt class="col-sm-4">Analysis Type:</dt>
-                                    <dd class="col-sm-8" id="resultAnalysisType"></dd>
-                                    <dt class="col-sm-4">Sample ID:</dt>
-                                    <dd class="col-sm-8" id="resultSampleId"></dd>
-                                    <dt class="col-sm-4">Status:</dt>
-                                    <dd class="col-sm-8" id="resultStatus"></dd>
-                                    <dt class="col-sm-4">Completed:</dt>
-                                    <dd class="col-sm-8" id="resultCompleted"></dd>
-                                    <dt class="col-sm-4">Processing Time:</dt>
-                                    <dd class="col-sm-8" id="resultProcessingTime"></dd>
-                                </dl>
-                            </div>
-                        </div>
-                        
-                        <div class="c-card">
-                            <div class="c-card__header">
-                                <h6 class="mb-0">Summary</h6>
-                            </div>
-                            <div class="c-card__body">
-                                <div id="resultSummary"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="c-card mt-3">
-                            <div class="c-card__header">
-                                <h6 class="mb-0">Quality Scores</h6>
-                            </div>
-                            <div class="c-card__body">
-                                <div class="row g-3" id="qualityScores"></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="c-card h-100">
-                            <div class="c-card__header">
-                                <h6 class="mb-0">Spectral Visualization</h6>
-                            </div>
-                            <div class="c-card__body">
-                                <canvas id="analysisChart" height="400"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mt-3 g-4">
-                    <div class="col-md-4">
-                        <div class="c-card h-100">
-                            <div class="c-card__header">
-                                <h6 class="mb-0"><i class="bi bi-activity"></i> Sensor Quality Agent</h6>
-                            </div>
-                            <div class="c-card__body">
-                                <div id="sensorQualityResults"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="c-card h-100">
-                            <div class="c-card__header">
-                                <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Statistical Analysis Agent</h6>
-                            </div>
-                            <div class="c-card__body">
-                                <div id="statisticalResults"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="c-card h-100">
-                            <div class="c-card__header">
-                                <h6 class="mb-0"><i class="bi bi-cpu"></i> Neural Network Agent</h6>
-                            </div>
-                            <div class="c-card__body">
-                                <div id="neuralNetworkResults"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <div class="c-card">
-                            <div class="c-card__header">
-                                <h6 class="mb-0">Detailed Results</h6>
-                            </div>
-                            <div class="c-card__body">
-                                <div id="resultData"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Close
-                </button>
-                <button type="button" class="btn btn-primary" onclick="viewReport()">
-                    <i class="bi bi-file-earmark-text"></i> View Report
-                </button>
-                <button type="button" class="btn btn-primary" onclick="exportAnalysisResults()">
-                    <i class="bi bi-download"></i> Export Results
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 {% block extra_js %}
 <script src="{% static 'js/analysis.js' %}"></script>

@@ -338,60 +338,126 @@ This comprehensive report combines spectral analysis and metadata quality assess
 ## Spectral Analysis Results
 
 ### Quality Assessment
+
 - **Quality Score**: `r params$spectral_quality_score` (`r params$spectral_quality_grade`)
 - **Wavelength Range**: `r params$wavelength_range[1]` - `r params$wavelength_range[2]` nm
 - **Data Points**: `r params$data_points`
 
 ### Detected Issues
-`r ifelse(length(params$spectral_issues) > 0, paste("- ", params$spectral_issues, collapse = "\\n- "), "No spectral issues detected")`
+
+`r ifelse(length(params$spectral_issues) > 0, paste("- ", params$spectral_issues, collapse = "\n- "), "No spectral issues detected")`
 
 ## Metadata Quality Results
 
 ### Overall Quality
+
 - **Score**: `r params$metadata_quality_score` (`r params$metadata_quality_grade`)
 - **Completeness**: `r params$metadata_completeness_score`%
 - **Accuracy**: `r params$metadata_accuracy_score`%
 - **Consistency**: `r params$metadata_consistency_score`%
 
 ### Standards Compliance
+
 `r for (standard in names(params$metadata_standards)) {
-  cat("- **", standard, "**: ", round(params$metadata_standards[[standard]], 1), "%\\n")
+  cat("- **", standard, "**: ", round(params$metadata_standards[[standard]], 1), "%\n")
 }`
 
 ## Combined Recommendations
 
 ### Spectral Recommendations
-`r ifelse(length(params$spectral_recommendations) > 0, paste("- ", params$spectral_recommendations, collapse = "\\n- "), "No spectral recommendations")`
+
+`r ifelse(length(params$spectral_recommendations) > 0, paste("- ", params$spectral_recommendations, collapse = "\n- "), "No spectral recommendations")`
 
 ### Metadata Recommendations
-`r ifelse(length(params$metadata_recommendations) > 0, paste("- ", params$metadata_recommendations, collapse = "\\n- "), "No metadata recommendations")`
+
+`r ifelse(length(params$metadata_recommendations) > 0, paste("- ", params$metadata_recommendations, collapse = "\n- "), "No metadata recommendations")`
 
 ## Data Visualization
 
 ### Spectral Data
+
 ```{r}
 if (exists("params$wavelengths") && exists("params$intensities")) {
-  plot(params$wavelengths, params$intensities, type = "l", 
-       xlab = "Wavelength (nm)", ylab = "Intensity", 
-       main = "Spectral Data", col = "blue")
+  plot(params$wavelengths, params$intensities, type = "l",
+        xlab = "Wavelength (nm)", ylab = "Intensity",
+        main = "Spectral Data")
 }
 ```
 
-### Quality Metrics
-```{r}
-# Create quality metrics table
-quality_data <- data.frame(
-  Metric = c("Spectral Quality", "Metadata Quality", "Completeness", "Accuracy", "Consistency"),
-  Score = c(params$spectral_quality_score, params$metadata_quality_score, 
-            params$metadata_completeness_score, params$metadata_accuracy_score, params$metadata_consistency_score),
-  Grade = c(params$spectral_quality_grade, params$metadata_quality_grade, 
-            ifelse(params$metadata_completeness_score >= 75, "Good", "Needs Improvement"),
-            ifelse(params$metadata_accuracy_score >= 75, "Good", "Needs Improvement"),
-            ifelse(params$metadata_consistency_score >= 75, "Good", "Needs Improvement"))
-)
+## Data
 
-print(xtable(quality_data), type = "html")
+### Measured Data Points
+
+```{r}
+spectral_df <- data.frame(
+  Wavelength_nm = params$wavelengths,
+  Intensity = params$intensities
+)
+print(head(spectral_df, n = 50))
 ```
+
+## Evaluation Results
+
+### Sensor Quality Assessment
+
+```{r}
+sensor_quality <- params$sensor_quality_results
+if (!is.null(sensor_quality)) {
+  cat("Status: ", sensor_quality$status, "\n")
+  cat("Overall Quality Score: ", round(sensor_quality$overall_quality_score, 3), "\n")
+  cat("Drift detected: ", sensor_quality$drift_detected, "\n")
+  cat("Offset detected: ", sensor_quality$offset_detected, "\n")
+  cat("Noise level: ", round(sensor_quality$noise_level, 4), "\n")
+}
+```
+
+### Statistical Analysis
+
+```{r}
+statistical <- params$statistical_analysis_results
+if (!is.null(statistical)) {
+  cat("Methods applied: ", paste(statistical$methods_applied, collapse = ", "), "\n")
+  cat("Samples: ", statistical$num_samples, "\n")
+  cat("Data points: ", statistical$data_points, "\n")
+}
+```
+
+### Neural Network Evaluation
+
+```{r}
+neural <- params$neural_network_results
+if (!is.null(neural)) {
+  cat("Status: ", neural$status, "\n")
+  if (!is.null(neural$r2_score)) cat("R2 Score: ", round(neural$r2_score, 3), "\n")
+  if (!is.null(neural$reconstruction_mse)) cat("Reconstruction MSE: ", round(neural$reconstruction_mse, 4), "\n")
+  if (!is.null(neural$anomalies_detected)) cat("Anomalies detected: ", neural$anomalies_detected, "\n")
+}
+```
+
+## Source Code
+
+### Analysis Source Code
+
+The complete Python source code of the agents used for this analysis is included below for reproducibility.
+
+```
+`r params$analysis_source_code`
+```
+
+## Appendix
+
+### Processing Parameters
+
+```{r}
+analysis_params <- list(
+  analysis_mode = params$analysis_mode,
+  report_type = params$report_type,
+  privacy_level = params$privacy_level,
+  include_calibration = params$include_calibration
+)
+str(analysis_params)
+```
+
 """
 
     def _get_comparison_template(self) -> str:
@@ -762,6 +828,57 @@ print(names(params))
             ]
             data["spectral_recommendations"] = spectral.get("recommendations", [])
             data["metadata_recommendations"] = metadata.get("recommendations", [])
+
+        # Evaluation results from the OP6 agents for the evaluation section
+        data.setdefault("sensor_quality_results", data.get("sensor_quality_results", {}))
+        data.setdefault("statistical_analysis_results", data.get("statistical_analysis_results", {}))
+        data.setdefault("neural_network_results", data.get("neural_network_results", {}))
+        # Processing parameters for the appendix
+        data.setdefault("analysis_mode", data.get("analysis_mode", "standard"))
+        data.setdefault("report_type", data.get("report_type", "comprehensive"))
+        data.setdefault("privacy_level", data.get("privacy_level", "local_only"))
+        data.setdefault("include_calibration", data.get("include_calibration", True))
+        # Analysis source code for reproducibility
+        source_code = "\n".join(self._collect_analysis_source_code())
+        # Escape inline Quarto/R markers so embedded backticks cannot break
+        # the code fence in the template.
+        source_code = source_code.replace("`", "'")
+        data.setdefault("analysis_source_code", source_code)
+
+
+    def _collect_analysis_source_code(self) -> List[str]:
+        """Collect the Python source of the analysis agents for the report.
+
+        Embeds the real source files used by the crew so the report is
+        reproducible: spectral analysis, data preparation, statistics,
+        neural networks, sensor quality and metadata quality assessment.
+        """
+        import inspect
+
+        source_lines: List[str] = []
+        candidate_modules = []
+        try:
+            from agents import (spectral_analysis_agent, statistical_analysis_agent,
+                                neural_network_agent, sensor_quality_agent,
+                                metadata_quality_agent, data_preparation_agent)
+            candidate_modules = [spectral_analysis_agent, statistical_analysis_agent,
+                                 neural_network_agent, sensor_quality_agent,
+                                 metadata_quality_agent, data_preparation_agent]
+        except ImportError:
+            try:
+                from agents import spectral_analysis_agent as _sa
+                candidate_modules = [_sa]
+            except ImportError:
+                candidate_modules = []
+
+        for module in candidate_modules:
+            try:
+                source_lines.append(f"# ===== {module.__name__} =====")
+                source_lines.extend(inspect.getsource(module).splitlines())
+                source_lines.append("")
+            except OSError:
+                continue
+        return source_lines
 
     def _prepare_comparison_data(self, data: Dict[str, Any]):
         """Prepare comparison data for template"""

@@ -616,8 +616,8 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="bi bi-x"></i> Close
                 </button>
-                <button type="button" class="btn btn-primary" onclick="analyzeCurrentFile()">
-                    <i class="bi bi-play-circle"></i> Analyze File
+                <button type="button" class="btn btn-primary" onclick="crewAnalyzeCurrentFile()">
+                    <i class="bi bi-people"></i> Run Complete Analysis
                 </button>
                 <button type="button" class="btn btn-primary" onclick="downloadFile()">
                     <i class="bi bi-download"></i> Download
@@ -819,11 +819,9 @@ function renderFilesTable(files) {
             '<td>' + quality + '</td>' +
             '<td class="small">' + escapeHtml(created) + '</td>' +
             '<td>' +
-            '<button class="btn btn-outline-primary btn-sm" onclick="analyzeFile(\'' + file.id + '\')" title="Quick analyze">' +
-            '<i class="bi bi-play-circle"></i></button> ' +
-            '<button class="btn btn-outline-warning btn-sm" onclick="crewAnalyzeFile(\'' + file.id + '\')" title="CrewAI analysis with report">' +
+            '<button class="btn btn-outline-warning btn-sm" onclick="crewAnalyzeFile(\'' + file.id + '\')" title="Run complete analysis workflow with report">' +
             '<i class="bi bi-people"></i></button> ' +
-            '<button class="btn btn-outline-info btn-sm" onclick="openCrewReport(\'' + file.id + '\')" title="Open CrewAI report">' +
+            '<button class="btn btn-outline-info btn-sm" onclick="openCrewReport(\'' + file.id + '\')" title="Open report">' +
             '<i class="bi bi-file-earmark-text"></i></button> ' +
             '<button class="btn btn-outline-success btn-sm" onclick="downloadFile(\'' + file.id + '\')">' +
             '<i class="bi bi-download"></i></button> ' +
@@ -1191,10 +1189,10 @@ function deleteFile(fileId) {
 }
 
 // Analyze current file (first selected)
-function analyzeCurrentFile() {
+function crewAnalyzeCurrentFile() {
     const selected = document.querySelector('.file-checkbox:checked');
     if (selected) {
-        analyzeFile(selected.value);
+        crewAnalyzeFile(selected.value);
     } else {
         alert('Please select a file first.');
     }
