@@ -4,6 +4,7 @@
 import io
 import json
 import os
+import re
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime
@@ -376,13 +377,18 @@ class EnhancedDataPreparationAgent(BaseAgent):
         rows_with_two = int((np.isfinite(values).sum(axis=1) >= 2).sum())
         return rows_with_two / len(df)
 
+    _SPLIT_ORDER = (';', '\t', ',', r'\s+')
+
     def _mixed_delimiter_fallback(self, file_path: str) -> Optional[pd.DataFrame]:
         """Rebuild a table from lines with inconsistent delimiters.
 
-        Each line is split on ';' when it contains one, otherwise on ','.
-        The fields are re-joined with tabs so downstream column detection
-        and numeric coercion (which handles European number formats) work
-        unchanged. Returns None when the file cannot be read this way.
+        Hand-edited DIY exports mix delimiters per line (comma header,
+        ';'-separated metadata rows, tab- or space-separated numeric rows).
+        Each line is split on the first delimiter it contains, tried in
+        order ';', tab, ',', whitespace runs. The fields are re-joined with
+        tabs so downstream column detection and numeric coercion (which
+        handles European number formats) work unchanged. Returns None when
+        the file cannot be read this way.
         """
         try:
             with open(file_path, "r", encoding="utf-8", errors="replace") as f:
@@ -391,10 +397,17 @@ class EnhancedDataPreparationAgent(BaseAgent):
                 return None
             rows = []
             for ln in lines:
-                if ";" in ln:
-                    fields = [fld.strip() for fld in ln.split(";")]
-                else:
-                    fields = [fld.strip() for fld in ln.split(",")]
+                fields = None
+                for sep in self._SPLIT_ORDER:
+                    if sep == r'\s+':
+                        if re.search(r'\s', ln):
+                            fields = re.split(r'\s+', ln.strip())
+                            break
+                    elif sep in ln:
+                        fields = [fld.strip() for fld in ln.split(sep)]
+                        break
+                if fields is None:
+                    fields = [ln.strip()]
                 rows.append(fields)
             width = max(len(r) for r in rows)
             rows = [r + [""] * (width - len(r)) for r in rows]
