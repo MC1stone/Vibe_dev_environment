@@ -319,6 +319,63 @@ class EnhancedDataPreparationAgent(BaseAgent):
                          ErrorSeverity.MEDIUM)
             return None
 
+    @staticmethod
+    def _normalise_decimal_string(value: Any) -> Optional[str]:
+        """Normalise a European-formatted number to a plain float string.
+
+        Handles the combinations DIY spectrometer exports actually produce:
+        '15200' | '15.200' (EN thousands) | '0,123' (DE decimal) |
+        '15.200,00' (DE thousands + decimal) | '15 200' (space/NBSP
+        thousands). Returns None when the value is not numeric text.
+        """
+        if value is None or isinstance(value, (int, float, np.integer, np.floating)):
+            return value if not isinstance(value, bool) else None
+        text = str(value).strip()
+        if not text:
+            return None
+        last_comma = text.rfind(',')
+        last_dot = text.rfind('.')
+        if last_comma > last_dot:
+            # German format: ',' is the decimal separator
+            text = text.replace('.', '').replace(',', '.')
+        elif last_dot > last_comma:
+            # English format: '.' is the decimal separator; strip thousands
+            # separators only when the pattern matches ('.', groups of 3 or
+            # space/NBSP groups of 3).
+            parts = text.split('.')
+            if len(parts) > 1 and all(len(p) == 3 for p in parts[1:]):
+                text = ''.join(parts)
+        if text.count(' ') or '\u202f' in text or '\xa0' in text:
+            compact = text.replace('\u202f', '').replace('\xa0', '')
+            if ' ' in compact and all(
+                len(p) == 3 for p in compact.split(' ')[1:]
+            ):
+                text = compact.replace(' ', '')
+            else:
+                text = compact
+        return text
+
+    @staticmethod
+    def _score_delimiter_parse(df: Optional[pd.DataFrame]) -> float:
+        """Rate how plausibly a CSV parse produced real spectral columns.
+
+        A delimiter mismatch splits every row into fragments ('900;15200' in
+        one cell). pandas can still type such fragments as numeric (often
+        NaN), so dtype alone is not a signal. Score by fraction of rows
+        where at least two columns hold finite numbers.
+        """
+        if df is None or df.empty or df.shape[1] < 2:
+            return -1.0
+        # Tolerant numeric view of every column: metadata rows ('Daten')
+        # coerce to NaN, European number formats parse via the normaliser.
+        coerced = df.apply(lambda col: pd.to_numeric(
+            col.map(EnhancedDataPreparationAgent._normalise_decimal_string)
+            if not pd.api.types.is_numeric_dtype(col)
+            else col, errors='coerce'))
+        values = coerced.to_numpy(dtype=float, na_value=np.nan)
+        rows_with_two = int((np.isfinite(values).sum(axis=1) >= 2).sum())
+        return rows_with_two / len(df)
+
     def _load_csv_spectral(self, file_path: str) -> Dict[str, Any]:
         """Load spectral data from CSV file"""
         df = None
@@ -333,25 +390,23 @@ class EnhancedDataPreparationAgent(BaseAgent):
             )
 
         # German/European CSV exports often use ';' as delimiter and ',' as
-        # the decimal separator. Retry when the comma parse failed outright or
-        # produced no numeric columns.
-        needs_semicolon = df is None or df.select_dtypes(include=[np.number]).empty
-        if needs_semicolon:
-            try:
-                semicolon_df = pd.read_csv(file_path, sep=';', decimal=',')
-                # Accept when numeric columns parse OR the file splits into at
-                # least two columns: header/metadata rows ('Daten', units) keep
-                # columns as object dtype, and the crew-analysis view converts
-                # values tolerantly and skips non-numeric rows.
-                has_numeric = not semicolon_df.select_dtypes(include=[np.number]).empty
-                if has_numeric or len(semicolon_df.columns) >= 2:
-                    df = semicolon_df
-                    self.logger.info(
-                        "CSV used ';' delimiter with ',' decimals; re-parsed: %s",
-                        file_path,
-                    )
-            except Exception as e:
-                self.logger.warning(f"CSV re-parse with ';' delimiter failed: {e}")
+        # the decimal separator. The comma parse of such a file can still
+        # 'succeed' with garbage numeric columns (fragments like '900;15200'
+        # or NaN from '15.200,00'), so compare BOTH parses by the fraction of
+        # rows with at least two finite numeric cells and keep the better one.
+        comma_score = self._score_delimiter_parse(df)
+        semicolon_df = None
+        try:
+            semicolon_df = pd.read_csv(file_path, sep=';', decimal=',')
+        except Exception as e:
+            self.logger.warning(f"CSV re-parse with ';' delimiter failed: {e}")
+        semicolon_score = self._score_delimiter_parse(semicolon_df)
+        if semicolon_score > comma_score:
+            df = semicolon_df
+            self.logger.info(
+                "CSV used ';' delimiter (comma score %.2f, semicolon score %.2f); re-parsed: %s",
+                comma_score, semicolon_score, file_path,
+            )
 
         if df is None:
             raise pd.errors.ParserError(f"Could not parse CSV: {file_path}")
@@ -416,15 +471,16 @@ class EnhancedDataPreparationAgent(BaseAgent):
             intensity_col = df.columns[1]
         
         # Convert spectral columns to numeric. German exports use ',' as the
-        # decimal separator ('0,123'); normalise before coercion so the values
-        # parse instead of collapsing to NaN.
+        # decimal separator ('0,123') and '.' or space as thousands
+        # separators ('15.200,00', '15 200'); normalise before coercion so
+        # the values parse instead of collapsing to NaN.
         if wavelength_col and intensity_col:
             for spectral_col in (wavelength_col, intensity_col):
                 if not pd.api.types.is_numeric_dtype(df[spectral_col]):
                     df[spectral_col] = (
                         df[spectral_col]
                         .astype('string')
-                        .str.replace(',', '.', regex=False)
+                        .map(self._normalise_decimal_string)
                     )
                 df[spectral_col] = pd.to_numeric(df[spectral_col], errors='coerce')
         

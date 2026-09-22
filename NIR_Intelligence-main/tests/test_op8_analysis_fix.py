@@ -307,7 +307,7 @@ check('T9g native no-JS choose-file label present',
 view_src_t10 = (DJANGO_DIR / 'api' / 'file_views.py').read_text()
 check('T10a view converts spectral values tolerantly (no float() crash)',
       'def _to_float(value):' in view_src_t10
-      and "replace(',', '.')" in view_src_t10)
+      and '_normalise_decimal_string' in view_src_t10)
 check('T10b non-numeric rows are skipped, not fatal',
       'wl is None or it is None' in view_src_t10
       and 'numeric_pairs.append' in view_src_t10)
@@ -359,7 +359,7 @@ check('T11b loader knows German column names',
       "'wellenlaenge'" in loader_src and "'intensitaet'" in loader_src
       and "'messung'" in loader_src)
 check('T11c loader normalises comma decimals before numeric coercion',
-      "str.replace(',', '.', regex=False)" in loader_src)
+      '_normalise_decimal_string' in loader_src)
 
 german_csv_path = Path(tempfile.mkdtemp(prefix='op8fix_t11_')) / 'german_spectrum.csv'
 german_csv_path.write_text(
@@ -389,6 +389,80 @@ if _german_df is not None:
 check('T11d German CSV parses end-to-end in the loader',
       len(_german_pairs) == 5 and _german_pairs[0] == (900.0, 0.123),
       f'pairs={_german_pairs}')
+
+# ------------- T12: European number formats in DIY exports -------------
+# Reported failure: semicolon files with German thousands separators
+# ('46.000,00') or commas inside the header made the comma-parse look
+# 'numeric' so the semicolon retry never fired, and every row coerced to
+# NaN -> 'No finite spectral values' in the crew analysis view.
+
+def _load_pairs(csv_text):
+    tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.csv',
+                                      delete=False, encoding='utf-8')
+    tmp.write(csv_text)
+    tmp.close()
+    try:
+        loader_t12 = _DPA(
+            input_directory=os.path.dirname(tmp.name),
+            output_directory=tempfile.mkdtemp(prefix='op8fix_t12_'))
+        spectral_t12 = loader_t12._load_spectral_data(tmp.name)
+        if not spectral_t12 or spectral_t12.get('data') is None:
+            return None
+        df_t12 = spectral_t12['data']
+        wc, ic = spectral_t12['wavelength_column'], spectral_t12['intensity_column']
+        if wc not in df_t12.columns or ic not in df_t12.columns:
+            return None
+        pairs_t12 = []
+        for w, i in zip(df_t12[wc].tolist(), df_t12[ic].tolist()):
+            try:
+                wf, itf = float(w), float(i)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(wf) and math.isfinite(itf):
+                pairs_t12.append((wf, itf))
+        return pairs_t12
+    finally:
+        os.unlink(tmp.name)
+
+_pairs_de_thousands = _load_pairs(
+    'Wellenlänge (nm);Intensität\n'
+    '900;15.200,00\n'
+    '925;18.450,00\n'
+    '1300;46.000,00\n')
+check('T12a German thousands separators parse (46.000,00 -> 46000)',
+      _pairs_de_thousands is not None and len(_pairs_de_thousands) == 3
+      and _pairs_de_thousands[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_de_thousands}')
+
+_pairs_header_comma = _load_pairs(
+    'Wellenlänge (nm);Intensität (counts, ADU)\n'
+    '900;15200\n'
+    '925;18450\n'
+    '1300;46000\n')
+check('T12b comma inside header does not suppress ; delimiter',
+      _pairs_header_comma is not None and len(_pairs_header_comma) == 3
+      and _pairs_header_comma[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_header_comma}')
+
+_pairs_space_thousands = _load_pairs(
+    'Wellenlänge;Intensität\n'
+    '900;15 200\n'
+    '925;18 450\n'
+    '1300;46 000\n')
+check('T12c space thousands separators (15 200 -> 15200)',
+      _pairs_space_thousands is not None and len(_pairs_space_thousands) == 3
+      and _pairs_space_thousands[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_space_thousands}')
+
+_pairs_en_commas = _load_pairs(
+    'wavelength,intensity\n'
+    '900,15200.0\n'
+    '925,18450.0\n'
+    '1300,46000.0\n')
+check('T12d plain comma-delimited English CSV still parses',
+      _pairs_en_commas is not None and len(_pairs_en_commas) == 3
+      and _pairs_en_commas[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_en_commas}')
 
 # ---------------------------------------------------------------- summary
 print()
