@@ -147,6 +147,8 @@ services:
       - DJANGO_DB_HOST=postgresql
       - DJANGO_DB_PORT=5432
       - NIR_FRAMEWORK_PATH=/app
+      - OLLAMA_URL=http://ollama:11434
+      - NIR_LLM_MODEL=${NIR_LLM_MODEL:-mistral}
       - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,::1,*
     depends_on:
       postgresql:

@@ -26,7 +26,11 @@ seaborn>=0.12.0
 plotly>=5.14.0
 
 # Multi-agent framework (minimal version)
-# crewai>=0.1.0  # Has dependency issues, install on host
+# Multi-agent framework: crewai drives the 15-agent crew on the local
+# Ollama LLM (mission statement stack). Modern releases install cleanly
+# on Python 3.12; the analysis view degrades gracefully when the package
+# or the Ollama endpoint is unavailable.
+crewai>=0.80.0
 # langchain>=0.0.300  # Has Python version issues, install on host
 
 # Federated learning
@@ -52,7 +56,7 @@ prometheus-client>=0.16.0
 # - tensorflow, keras (require CUDA/cuDNN)
 # - pytorch, torchvision (require specific system libraries)
 # - pyopenms, nmrglue (require system-level scientific libraries)
-# - crewai, langchain (have Python version compatibility issues)
+# - langchain (older releases had Python version issues)
 # - django-saml2 (renamed to djangosaml2), social-auth-app-django (have dependency issues)
 # - ollama (better installed on host)
 # - ansible and related (not needed in container)
