@@ -376,6 +376,34 @@ class EnhancedDataPreparationAgent(BaseAgent):
         rows_with_two = int((np.isfinite(values).sum(axis=1) >= 2).sum())
         return rows_with_two / len(df)
 
+    def _mixed_delimiter_fallback(self, file_path: str) -> Optional[pd.DataFrame]:
+        """Rebuild a table from lines with inconsistent delimiters.
+
+        Each line is split on ';' when it contains one, otherwise on ','.
+        The fields are re-joined with tabs so downstream column detection
+        and numeric coercion (which handles European number formats) work
+        unchanged. Returns None when the file cannot be read this way.
+        """
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                lines = [ln.rstrip("\r\n") for ln in f if ln.strip()]
+            if not lines:
+                return None
+            rows = []
+            for ln in lines:
+                if ";" in ln:
+                    fields = [fld.strip() for fld in ln.split(";")]
+                else:
+                    fields = [fld.strip() for fld in ln.split(",")]
+                rows.append(fields)
+            width = max(len(r) for r in rows)
+            rows = [r + [""] * (width - len(r)) for r in rows]
+            buf = io.StringIO("\n".join("\t".join(r) for r in rows))
+            return pd.read_csv(buf, sep="\t", dtype="string")
+        except Exception as e:
+            self.logger.warning(f"CSV mixed-delimiter re-parse failed: {e}")
+            return None
+
     def _load_csv_spectral(self, file_path: str) -> Dict[str, Any]:
         """Load spectral data from CSV file"""
         df = None
@@ -407,6 +435,22 @@ class EnhancedDataPreparationAgent(BaseAgent):
                 "CSV used ';' delimiter (comma score %.2f, semicolon score %.2f); re-parsed: %s",
                 comma_score, semicolon_score, file_path,
             )
+
+        # Mixed-delimiter exports (e.g. hand-edited DIY files): a comma
+        # header line but ';'-separated data rows defeats BOTH parses. As a
+        # last resort, split each line on ';' when present, else on ',', and
+        # rebuild a tab-separated table. Only used when no parse produced
+        # usable rows.
+        if max(comma_score, semicolon_score) <= 0:
+            mixed_df = self._mixed_delimiter_fallback(file_path)
+            if mixed_df is not None:
+                mixed_score = self._score_delimiter_parse(mixed_df)
+                if mixed_score > 0:
+                    df = mixed_df
+                    self.logger.info(
+                        "CSV had mixed delimiters; re-parsed per line: %s",
+                        file_path,
+                    )
 
         if df is None:
             raise pd.errors.ParserError(f"Could not parse CSV: {file_path}")
