@@ -23,7 +23,8 @@ try:
     CREWAI_AVAILABLE = True
 except ImportError:
     CREWAI_AVAILABLE = False
-    print("Warning: CrewAI not available. NIR Analysis Crew will work in standalone mode.")
+    print("Warning: CrewAI not available. NIR Analysis Crew will work in standalone mode.",
+          file=sys.stderr)
 
 from .base_agent import AgentOutput, AgentStatus, BaseAgent, ErrorSeverity
 from .calibration_agent import CalibrationAgent
@@ -371,7 +372,8 @@ class NIRAnalysisCrew:
                 ),
                 tools=[self._agent_tool(
                     self.mcp_agent,
-                    "Probe platform tool integrations. Input: JSON with operation (status), tools.")],
+                    "Operate platform interfaces and tool integration. Input: JSON with "
+                    "operation (status|interfaces|ingest), tools, file_path (for ingest).")],
                 verbose=True,
                 allow_delegation=False,
             )
