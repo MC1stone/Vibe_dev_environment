@@ -277,6 +277,15 @@ check('T8q Files page: one analysis action per file (quick analyze removed)',
       'analyzeFile(' not in files_row_buttons
       and 'crewAnalyzeFile(' in files_tpl)
 
+check('T9a upload listeners attach before any ajax loader runs',
+      analysis_js.index('setupEventListeners();') < analysis_js.index('loadCrewAIStatus()'),
+      'init order must wire the drop zone first')
+check('T9b status loaders are wrapped so failures cannot kill the workflow',
+      'const safe = function(fn)' in analysis_js
+      and 'safe(loadCrewAIStatus)()' in analysis_js)
+check('T9c chart creation survives a missing Chart.js CDN',
+      "typeof Chart === 'undefined'" in analysis_js)
+
 # ---------------------------------------------------------------- summary
 print()
 failed = [name for name, ok in results if not ok]
