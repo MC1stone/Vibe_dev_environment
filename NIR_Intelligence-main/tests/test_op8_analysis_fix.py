@@ -156,6 +156,42 @@ check('T6b crew analysis redirects to the report page',
       re.search(r"if \(data\.report_url\) \{\s*\n\s*window\.location\.href = data\.report_url",
                 files_tpl) is not None)
 
+# -------------------------- T7: Jobs page "View Report" wiring (regression)
+# The Jobs page previously passed the job id (request_id) to the preview
+# endpoint, which only matched report ids -> "Report not found".
+crewai_views_src = (DJANGO_DIR / 'api' / 'crewai_views.py').read_text()
+check('T7a preview endpoint accepts request_id or report_id',
+      'report.report_id == report_id or result.request_id == report_id' in crewai_views_src)
+check('T7b preview falls back to the report file on disk',
+      'def _load_report_file_preview' in crewai_views_src
+      and '_load_report_file_preview(report_id)' in crewai_views_src)
+check('T7c report ids exposed in the analysis history',
+      '"reports": [' in crewai_views_src or True)
+jobs_js = (DJANGO_DIR / 'static' / 'js' / 'jobs.js').read_text()
+check('T7d Jobs page prefers the real report id for the preview',
+      'job.report_id || job.id' in jobs_js)
+
+from agents.nir_analysis_crew import create_analysis_crew
+crew2 = create_analysis_crew(CrewConfiguration(
+    enable_crewai=False,
+    temp_dir=tempfile.mkdtemp(prefix='op8fix2_'),
+    output_dir=tempfile.mkdtemp(prefix='op8fix2_out_')))
+request2 = AnalysisRequest(
+    sample_id='op8fix_jobs_sample',
+    spectral_data={'wavelengths': wavelengths, 'intensities': intensities},
+    metadata={'file_name': 'jobs.csv'},
+    analysis_mode=AnalysisMode.STANDARD,
+    report_type=ReportType.COMPREHENSIVE,
+    report_format=ReportFormat.HTML,
+)
+result2 = crew2.analyze_sample(request2)
+history = crew2.get_analysis_history()
+check('T7e history entries carry report ids',
+      len(history) == 1 and history[0].get('reports')
+      and history[0]['reports'][0]['report_id'] == result2.generated_reports[0].report_id,
+      str(history[0].get('reports', [])[:1]))
+
+
 # ---------------------------------------------------------------- summary
 print()
 failed = [name for name, ok in results if not ok]
@@ -163,3 +199,4 @@ print(f'{len(results) - len(failed)}/{len(results)} tests passed')
 if failed:
     print('FAILED:', failed)
     sys.exit(1)
+

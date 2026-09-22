@@ -1087,6 +1087,17 @@ class NIRAnalysisCrew:
                     "processing_time": result.processing_time,
                     "privacy_level": result.privacy_level.value,
                     "reports_generated": len(result.generated_reports),
+                    "reports": [
+                        {
+                            "report_id": report.report_id,
+                            "report_type": report.report_type.value,
+                            "format": report.format.value,
+                            "file_path": report.file_path,
+                            "status": report.status.value,
+                            "preview_available": report.preview_available,
+                        }
+                        for report in result.generated_reports
+                    ],
                     "errors": len(result.errors),
                     "warnings": len(result.warnings),
                     "sensor_quality_status": (

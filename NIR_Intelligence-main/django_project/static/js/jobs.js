@@ -108,6 +108,9 @@ function loadJobs() {
                         description: crewaiJob.summary || 'Crew AI analysis job',
                         sample_id: crewaiJob.sample_id,
                         is_crewai: true,
+                        report_id: crewaiJob.reports && crewaiJob.reports.length > 0
+                            ? crewaiJob.reports[0].report_id
+                            : null,
                         crewai_data: crewaiJob
                     };
                     allJobs.push(job);
@@ -951,8 +954,11 @@ function viewJobReport(jobId) {
     }
     
     if (job.is_crewai && job.crewai_data) {
-        // For Crew AI jobs, use the report preview endpoint
-        window.open('/api/crewai/reports/preview/?report_id=' + job.id, '_blank');
+        // For Crew AI jobs, use the report preview endpoint. Prefer the real
+        // report id; fall back to the request id, which the endpoint also
+        // accepts, and finally serve the stored report file from disk.
+        const reportId = job.report_id || job.id;
+        window.open('/api/crewai/reports/preview/?report_id=' + encodeURIComponent(reportId), '_blank');
     } else {
         // For regular jobs
         window.open('/api/jobs/' + jobId + '/report/', '_blank');
