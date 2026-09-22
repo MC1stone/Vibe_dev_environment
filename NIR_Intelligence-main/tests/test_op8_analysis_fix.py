@@ -540,6 +540,30 @@ check('T12g mixed delimiters (comma header, ; rows) parse',
       and _pairs_mixed[-1] == (1300.0, 46000.0),
       f'pairs={_pairs_mixed}')
 
+# T12h/T12i: the fallback must also handle tab- and space-separated
+# numeric rows behind the comma header (second live failure shape).
+_pairs_tab_rows = _load_pairs(
+    'wavelength,intensity\n'
+    'Daten;passt\n'
+    '900\t15200\n'
+    '925\t18450\n'
+    '1300\t46000\n')
+check('T12h mixed delimiters: tab-separated rows parse',
+      _pairs_tab_rows is not None and len(_pairs_tab_rows) == 3
+      and _pairs_tab_rows[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_tab_rows}')
+
+_pairs_space_rows = _load_pairs(
+    'wavelength,intensity\n'
+    'Daten;passt\n'
+    '900 15200\n'
+    '925 18450\n'
+    '1300 46000\n')
+check('T12i mixed delimiters: space-separated rows parse',
+      _pairs_space_rows is not None and len(_pairs_space_rows) == 3
+      and _pairs_space_rows[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_space_rows}')
+
 # ---------------------------------------------------------------- summary
 print()
 failed = [name for name, ok in results if not ok]
