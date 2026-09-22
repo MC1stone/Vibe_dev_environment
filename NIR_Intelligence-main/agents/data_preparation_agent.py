@@ -321,7 +321,40 @@ class EnhancedDataPreparationAgent(BaseAgent):
 
     def _load_csv_spectral(self, file_path: str) -> Dict[str, Any]:
         """Load spectral data from CSV file"""
-        df = pd.read_csv(file_path)
+        df = None
+        try:
+            df = pd.read_csv(file_path)
+        except pd.errors.EmptyDataError:
+            raise
+        except Exception as comma_error:
+            self.logger.warning(
+                "CSV parse with ',' delimiter failed (%s); trying ';' delimiter",
+                comma_error,
+            )
+
+        # German/European CSV exports often use ';' as delimiter and ',' as
+        # the decimal separator. Retry when the comma parse failed outright or
+        # produced no numeric columns.
+        needs_semicolon = df is None or df.select_dtypes(include=[np.number]).empty
+        if needs_semicolon:
+            try:
+                semicolon_df = pd.read_csv(file_path, sep=';', decimal=',')
+                # Accept when numeric columns parse OR the file splits into at
+                # least two columns: header/metadata rows ('Daten', units) keep
+                # columns as object dtype, and the crew-analysis view converts
+                # values tolerantly and skips non-numeric rows.
+                has_numeric = not semicolon_df.select_dtypes(include=[np.number]).empty
+                if has_numeric or len(semicolon_df.columns) >= 2:
+                    df = semicolon_df
+                    self.logger.info(
+                        "CSV used ';' delimiter with ',' decimals; re-parsed: %s",
+                        file_path,
+                    )
+            except Exception as e:
+                self.logger.warning(f"CSV re-parse with ';' delimiter failed: {e}")
+
+        if df is None:
+            raise pd.errors.ParserError(f"Could not parse CSV: {file_path}")
 
         # Some spectrometer exports write backslash-escaped quotes inside
         # quoted fields ("\"") which is not valid RFC 4180 quoting. pandas
@@ -347,8 +380,12 @@ class EnhancedDataPreparationAgent(BaseAgent):
         wavelength_col = None
         intensity_col = None
         
-        wavelength_patterns = ['wavelength', 'wave', 'lambda', 'nm', 'wavenumber']
-        intensity_patterns = ['intensity', 'absorbance', 'reflectance', 'transmittance', 'value']
+        # English + German DIY spectrometer exports (Wellenlaenge, Messung, ...)
+        wavelength_patterns = ['wavelength', 'wave', 'lambda', 'nm', 'wavenumber',
+                                'wellenlaenge', 'wellenlänge', 'messung']
+        intensity_patterns = ['intensity', 'absorbance', 'reflectance', 'transmittance', 'value',
+                              'intensitaet', 'intensität', 'absorption', 'reflexion',
+                              'transmission', 'rohwert', 'signal']
         
         # Identify spectral columns
         for col in df.columns:
@@ -378,10 +415,18 @@ class EnhancedDataPreparationAgent(BaseAgent):
         if not intensity_col and len(df.columns) >= 2:
             intensity_col = df.columns[1]
         
-        # Convert spectral columns to numeric
+        # Convert spectral columns to numeric. German exports use ',' as the
+        # decimal separator ('0,123'); normalise before coercion so the values
+        # parse instead of collapsing to NaN.
         if wavelength_col and intensity_col:
-            df[wavelength_col] = pd.to_numeric(df[wavelength_col], errors='coerce')
-            df[intensity_col] = pd.to_numeric(df[intensity_col], errors='coerce')
+            for spectral_col in (wavelength_col, intensity_col):
+                if not pd.api.types.is_numeric_dtype(df[spectral_col]):
+                    df[spectral_col] = (
+                        df[spectral_col]
+                        .astype('string')
+                        .str.replace(',', '.', regex=False)
+                    )
+                df[spectral_col] = pd.to_numeric(df[spectral_col], errors='coerce')
         
         # Extract metadata from non-spectral columns
         metadata = {}
