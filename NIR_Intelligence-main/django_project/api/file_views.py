@@ -618,23 +618,55 @@ class FileCrewAnalysisView(APIView):
                 except (TypeError, ValueError):
                     return None
 
-            numeric_pairs = []
-            for wl_raw, it_raw in zip(wavelengths_raw, intensities_raw):
-                wl = _to_float(wl_raw)
-                it = _to_float(it_raw)
-                if wl is None or it is None:
-                    continue
-                if math.isfinite(wl) and math.isfinite(it):
-                    numeric_pairs.append((wl, it))
+            def _column_pairs(wl_col, it_col):
+                pairs = []
+                for wl_raw, it_raw in zip(df[wl_col].tolist(), df[it_col].tolist()):
+                    wl = _to_float(wl_raw)
+                    it = _to_float(it_raw)
+                    if wl is None or it is None:
+                        continue
+                    if math.isfinite(wl) and math.isfinite(it):
+                        pairs.append((wl, it))
+                return pairs
+
+            numeric_pairs = _column_pairs(wavelength_column, intensity_column)
+
+            # The loader picks columns by name patterns and heuristics; exotic
+            # exports (unexpected column names, transposed tables, extra
+            # metadata columns) can defeat that guess. When the chosen pair
+            # yields nothing usable, scan ALL column pairs and keep the one
+            # with the most finite (wavelength, intensity) rows.
+            if not numeric_pairs:
+                best_pairs, best_wl_col, best_it_col = [], None, None
+                for wl_col in df.columns:
+                    for it_col in df.columns:
+                        if wl_col == it_col:
+                            continue
+                        pairs = _column_pairs(wl_col, it_col)
+                        if len(pairs) > len(best_pairs):
+                            best_pairs = pairs
+                            best_wl_col, best_it_col = wl_col, it_col
+                if best_pairs:
+                    numeric_pairs = best_pairs
+                    wavelength_column, intensity_column = best_wl_col, best_it_col
+                    wavelengths_raw = df[wavelength_column].tolist()
+                    intensities_raw = df[intensity_column].tolist()
 
             if not numeric_pairs:
+                sample_rows = []
+                for wl_raw, it_raw in list(zip(wavelengths_raw, intensities_raw))[:5]:
+                    sample_rows.append(f'{wl_raw!r} | {it_raw!r}')
                 return Response({
                     'success': False,
                     'error': 'No finite spectral values',
                     'message': (
-                        'The file parsed but contained no usable numeric '
-                        'wavelength/intensity rows'
-                    )
+                        f'The file parsed but contained no usable numeric '
+                        f'wavelength/intensity rows. Detected columns: '
+                        f'{wavelength_column!r}, {intensity_column!r}; '
+                        f'available columns: {list(df.columns)!r}; '
+                        f'first rows (wavelength | intensity): '
+                        f'{"; ".join(sample_rows)}'
+                    ),
                 }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
             wavelengths = [p[0] for p in numeric_pairs]

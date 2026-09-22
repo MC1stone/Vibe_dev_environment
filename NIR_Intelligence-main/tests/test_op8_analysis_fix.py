@@ -309,8 +309,8 @@ check('T10a view converts spectral values tolerantly (no float() crash)',
       'def _to_float(value):' in view_src_t10
       and '_normalise_decimal_string' in view_src_t10)
 check('T10b non-numeric rows are skipped, not fatal',
-      'wl is None or it is None' in view_src_t10
-      and 'numeric_pairs.append' in view_src_t10)
+      'if wl is None or it is None:' in view_src_t10
+      and 'pairs.append((wl, it))' in view_src_t10)
 
 # Behavioural check: a German-style CSV with a 'Daten' row analyses cleanly.
 import pandas as pd
@@ -463,6 +463,69 @@ check('T12d plain comma-delimited English CSV still parses',
       _pairs_en_commas is not None and len(_pairs_en_commas) == 3
       and _pairs_en_commas[-1] == (1300.0, 46000.0),
       f'pairs={_pairs_en_commas}')
+
+# T12e/T12f: the crew view recovers when the loader's column guess fails.
+# Exotic exports (unexpected column names, e.g. a comment column matching a
+# spectral pattern) can make the loader pick the wrong pair; the view then
+# scans ALL column pairs and keeps the one with the most finite rows.
+
+def _view_pairs_from_columns(df, wl_col, it_col):
+    pairs_v = []
+    for w, i in zip(df[wl_col].tolist(), df[it_col].tolist()):
+        wf = _DPA._normalise_decimal_string(w)
+        itf = _DPA._normalise_decimal_string(i)
+        try:
+            wf, itf = float(wf), float(itf)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(wf) and math.isfinite(itf):
+            pairs_v.append((wf, itf))
+    return pairs_v
+
+def _best_view_pairs(csv_text):
+    import pandas as _pd
+    tmp_e = tempfile.NamedTemporaryFile(mode='w', suffix='.csv',
+                                        delete=False, encoding='utf-8')
+    tmp_e.write(csv_text)
+    tmp_e.close()
+    try:
+        loader_e = _DPA(input_directory=os.path.dirname(tmp_e.name),
+                        output_directory=tempfile.mkdtemp(prefix='op8fix_t12e_'))
+        sp_e = loader_e._load_spectral_data(tmp_e.name)
+        df_e = sp_e['data']
+        chosen = _view_pairs_from_columns(df_e, sp_e['wavelength_column'],
+                                           sp_e['intensity_column'])
+        if chosen:
+            return chosen
+        best = []
+        for wcol in df_e.columns:
+            for icol in df_e.columns:
+                if wcol == icol:
+                    continue
+                p = _view_pairs_from_columns(df_e, wcol, icol)
+                if len(p) > len(best):
+                    best = p
+        return best
+    finally:
+        os.unlink(tmp_e.name)
+
+_pairs_exotic = _best_view_pairs(
+    'Kommentar;Band;Wert\n'
+    'Messung A;900;15200\n'
+    'Messung B;925;18450\n'
+    'Messung C;1300;46000\n')
+check('T12e exotic export: view finds the right column pair',
+      len(_pairs_exotic) == 3 and _pairs_exotic[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_exotic}')
+
+_pairs_exotic2 = _best_view_pairs(
+    'Note;lambda_nm;Value (counts)\n'
+    'background dark;900;15200\n'
+    'background dark;925;18450\n'
+    'background dark;1300;46000\n')
+check('T12f English exotic export: view finds the right column pair',
+      len(_pairs_exotic2) == 3 and _pairs_exotic2[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_exotic2}')
 
 # ---------------------------------------------------------------- summary
 print()
