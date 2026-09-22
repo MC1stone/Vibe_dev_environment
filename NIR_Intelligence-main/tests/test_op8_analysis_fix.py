@@ -301,6 +301,95 @@ check('T9f self-contained inline workflow script in the template',
 check('T9g native no-JS choose-file label present',
       'for="fileInput"' in analysis_tpl)
 
+# ------------------- T10: tolerant CSV conversion (German DIY exports)
+# The user's DIY export carries header/metadata rows ('Daten', units, blanks)
+# inside the numeric columns; float('Daten') crashed the crew analysis.
+view_src_t10 = (DJANGO_DIR / 'api' / 'file_views.py').read_text()
+check('T10a view converts spectral values tolerantly (no float() crash)',
+      'def _to_float(value):' in view_src_t10
+      and "replace(',', '.')" in view_src_t10)
+check('T10b non-numeric rows are skipped, not fatal',
+      'wl is None or it is None' in view_src_t10
+      and 'numeric_pairs.append' in view_src_t10)
+
+# Behavioural check: a German-style CSV with a 'Daten' row analyses cleanly.
+import pandas as pd
+german_csv = tempfile.NamedTemporaryFile(
+    mode='w', suffix='.csv', delete=False, encoding='utf-8')
+german_csv.write('Messung;Intensitaet\n')
+german_csv.write('Daten;Rohwerte\n')
+german_csv.write('900;0,123\n')
+german_csv.write('950;0,187\n')
+german_csv.write('1000;0,254\n')
+german_csv.close()
+
+from agents.data_preparation_agent import EnhancedDataPreparationAgent as _DPA
+_loader = _DPA(
+    input_directory=os.path.dirname(german_csv.name),
+    output_directory=tempfile.mkdtemp(prefix='op8fix_t10_'))
+_df = pd.read_csv(german_csv.name, sep=';', decimal=',')
+_wl_raw = _df['Messung'].tolist()
+_it_raw = _df['Intensitaet'].tolist()
+
+def _view_to_float(value):
+    try:
+        return float(str(value).replace(',', '.'))
+    except (TypeError, ValueError):
+        return None
+
+_pairs = []
+for wl_raw, it_raw in zip(_wl_raw, _it_raw):
+    wl = _view_to_float(wl_raw)
+    it = _view_to_float(it_raw)
+    if wl is None or it is None:
+        continue
+    if math.isfinite(wl) and math.isfinite(it):
+        _pairs.append((wl, it))
+check('T10c German CSV: header row skipped, numeric rows kept',
+      len(_pairs) == 3 and _pairs[0] == (900.0, 0.123),
+      f'pairs={_pairs}')
+
+# -------- T11: the data loader agent handles German/European CSV exports
+# Semicolon delimiter, comma decimals, German column names and metadata rows
+# ('Daten') are all handled by EnhancedDataPreparationAgent itself.
+loader_src = Path(PROJECT / 'agents' / 'data_preparation_agent.py').read_text()
+check('T11a loader retries with ; delimiter and , decimals',
+      "sep=';', decimal=','" in loader_src)
+check('T11b loader knows German column names',
+      "'wellenlaenge'" in loader_src and "'intensitaet'" in loader_src
+      and "'messung'" in loader_src)
+check('T11c loader normalises comma decimals before numeric coercion',
+      "str.replace(',', '.', regex=False)" in loader_src)
+
+german_csv_path = Path(tempfile.mkdtemp(prefix='op8fix_t11_')) / 'german_spectrum.csv'
+german_csv_path.write_text(
+    'Messung;Intensitaet\n'
+    'Daten;Rohwerte\n'
+    '900;0,123\n'
+    '950;0,187\n'
+    '1000;0,254\n'
+    '1050;0,312\n'
+    '1100;0,298\n', encoding='utf-8')
+_german_loader = _DPA(
+    input_directory=str(german_csv_path.parent),
+    output_directory=tempfile.mkdtemp(prefix='op8fix_t11_out_'))
+_german = _german_loader._load_spectral_data(str(german_csv_path))
+_german_df = _german['data'] if _german else None
+_german_pairs = []
+if _german_df is not None:
+    _wcol = _german['wavelength_column']
+    _icol = _german['intensity_column']
+    for _wl, _it in zip(_german_df[_wcol].tolist(), _german_df[_icol].tolist()):
+        try:
+            _wl_f, _it_f = float(_wl), float(_it)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(_wl_f) and math.isfinite(_it_f):
+            _german_pairs.append((_wl_f, _it_f))
+check('T11d German CSV parses end-to-end in the loader',
+      len(_german_pairs) == 5 and _german_pairs[0] == (900.0, 0.123),
+      f'pairs={_german_pairs}')
+
 # ---------------------------------------------------------------- summary
 print()
 failed = [name for name, ok in results if not ok]

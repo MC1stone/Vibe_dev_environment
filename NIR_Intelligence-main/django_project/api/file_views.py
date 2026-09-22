@@ -604,23 +604,43 @@ class FileCrewAnalysisView(APIView):
                     'message': 'Wavelength/intensity columns missing in parsed data'
                 }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-            wavelengths = [float(v) for v in df[wavelength_column].tolist()]
-            intensities = [float(v) for v in df[intensity_column].tolist()]
+            wavelengths_raw = df[wavelength_column].tolist()
+            intensities_raw = df[intensity_column].tolist()
 
-            # Drop rows where either series is non-finite (NaN/inf) so no
-            # downstream agent or JSON serializer ever sees NaN.
-            finite_pairs = [
-                (wl, it) for wl, it in zip(wavelengths, intensities)
-                if math.isfinite(wl) and math.isfinite(it)
-            ]
-            if not finite_pairs:
+            # Spectrometer exports often carry header/metadata rows (e.g.
+            # 'Daten', units, blank lines) inside the numeric columns.
+            # Convert tolerantly: keep only rows where BOTH values parse as
+            # finite numbers, so a text row cannot crash the analysis.
+            def _to_float(value):
+                try:
+                    return float(str(value).replace(',', '.'))
+                except (TypeError, ValueError):
+                    return None
+
+            numeric_pairs = []
+            for wl_raw, it_raw in zip(wavelengths_raw, intensities_raw):
+                wl = _to_float(wl_raw)
+                it = _to_float(it_raw)
+                if wl is None or it is None:
+                    continue
+                if math.isfinite(wl) and math.isfinite(it):
+                    numeric_pairs.append((wl, it))
+
+            if not numeric_pairs:
                 return Response({
                     'success': False,
                     'error': 'No finite spectral values',
-                    'message': 'The file parsed but contained no usable (finite) wavelength/intensity values'
+                    'message': (
+                        'The file parsed but contained no usable numeric '
+                        'wavelength/intensity rows'
+                    )
                 }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-            wavelengths = [p[0] for p in finite_pairs]
-            intensities = [p[1] for p in finite_pairs]
+
+            wavelengths = [p[0] for p in numeric_pairs]
+            intensities = [p[1] for p in numeric_pairs]
+
+            # Keep the row count consistent for the report page.
+            finite_pairs = numeric_pairs
 
             from agents.nir_analysis_crew import (
                 NIRAnalysisCrew, CrewConfiguration, AnalysisRequest, AnalysisMode,
