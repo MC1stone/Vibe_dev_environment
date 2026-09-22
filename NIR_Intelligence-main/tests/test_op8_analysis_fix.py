@@ -592,6 +592,97 @@ check('T12k prose metadata + index prefixes + DE decimals extract',
       and _pairs_prose[-1] == (1300.0, 0.312),
       f'pairs={_pairs_prose}')
 
+# T13: the same parsing ladder must hold for .txt/.jdx uploads. The text
+# loader used to trust the first delimiter that produced two columns, so
+# 'Daten;passt' header rows survived and every row coerced to NaN.
+def _load_pairs_text(text, suffix='.txt'):
+    tmp = tempfile.NamedTemporaryFile(mode='w', suffix=suffix,
+                                      delete=False, encoding='utf-8')
+    tmp.write(text)
+    tmp.close()
+    try:
+        loader_t13 = _DPA(
+            input_directory=os.path.dirname(tmp.name),
+            output_directory=tempfile.mkdtemp(prefix='op8fix_t13_'))
+        spectral_t13 = loader_t13._load_spectral_data(tmp.name)
+        if not spectral_t13 or spectral_t13.get('data') is None:
+            return None
+        df_t13 = spectral_t13['data']
+        wc13, ic13 = spectral_t13['wavelength_column'], spectral_t13['intensity_column']
+        if wc13 not in df_t13.columns or ic13 not in df_t13.columns:
+            return None
+        pairs_t13 = []
+        for w, i in zip(df_t13[wc13].tolist(), df_t13[ic13].tolist()):
+            try:
+                wf, itf = float(w), float(i)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(wf) and math.isfinite(itf):
+                pairs_t13.append((wf, itf))
+        return pairs_t13
+    finally:
+        os.unlink(tmp.name)
+
+_pairs_txt_de = _load_pairs_text(
+    'Daten;passt\n'
+    '900;15200\n'
+    '925;18450\n'
+    '950;22100\n'
+    '1300;46000\n'
+)
+check('T13a txt DE header rows skipped (Daten;passt)',
+      _pairs_txt_de is not None and len(_pairs_txt_de) == 4
+      and _pairs_txt_de[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_txt_de}')
+
+_pairs_txt_units = _load_pairs_text(
+    'band;counts\n'
+    '900 nm;15 200 counts\n'
+    '925 nm;18 450 counts\n'
+    '950 nm;22 100 counts\n'
+    '1300 nm;46 000 counts\n'
+)
+check('T13b txt embedded units extract',
+      _pairs_txt_units is not None and len(_pairs_txt_units) == 4
+      and _pairs_txt_units[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_txt_units}')
+
+_pairs_txt_dec = _load_pairs_text(
+    'Messung\n'
+    '900;0,123\n'
+    '925;0,187\n'
+    '950;0,254\n'
+    '1300;0,312\n'
+)
+check('T13c txt DE decimals parse via normaliser',
+      _pairs_txt_dec is not None and len(_pairs_txt_dec) == 4
+      and _pairs_txt_dec[-1] == (1300.0, 0.312),
+      f'pairs={_pairs_txt_dec}')
+
+_pairs_txt_ws = _load_pairs_text(
+    'Daten passt\n'
+    '900 15200\n'
+    '925 18450\n'
+    '1300 46000\n'
+)
+check('T13d txt whitespace-delimited parse',
+      _pairs_txt_ws is not None and len(_pairs_txt_ws) == 3
+      and _pairs_txt_ws[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_txt_ws}')
+
+_pairs_jdx_prose = _load_pairs_text(
+    'Messung vom Dienstag\n'
+    'device=SpectroMark1\n'
+    '900 15200\n'
+    '925 18450\n'
+    '1300 46000\n',
+    suffix='.jdx',
+)
+check('T13e jdx prose metadata + raw extraction',
+      _pairs_jdx_prose is not None and len(_pairs_jdx_prose) == 3
+      and _pairs_jdx_prose[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_jdx_prose}')
+
 # ---------------------------------------------------------------- summary
 print()
 failed = [name for name, ok in results if not ok]
