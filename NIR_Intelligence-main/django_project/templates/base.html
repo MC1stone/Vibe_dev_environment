@@ -70,6 +70,11 @@
                             </a>
                         </li>
                         <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="/files/" class="c-nav-main__action {% if request.path == '/files/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">Files</span>
+                            </a>
+                        </li>
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/analysis/" class="c-nav-main__action {% if request.path == '/analysis/' %}c-nav-main__action--active{% endif %}">
                                 <span class="c-nav-main__label">Analysis</span>
                             </a>
@@ -172,6 +177,7 @@
                         <ul class="c-footer__list">
                             <li><a href="/">Dashboard</a></li>
                             <li><a href="/spectra/">Spectra</a></li>
+                            <li><a href="/files/">Files</a></li>
                             <li><a href="/analysis/">Analysis</a></li>
                             <li><a href="/jobs/">Jobs</a></li>
                         </ul>
@@ -210,9 +216,8 @@
                         </div>
                         <div class="col-md-6 text-md-end text-center">
                             <p class="c-footer__legal">
-                                <a href="/privacy/">Privacy Policy</a> | 
-                                <a href="/terms/">Terms of Service</a> | 
-                                <a href="/imprint/">Imprint</a>
+                                <a href="/documentation/">Documentation</a> | 
+                                <a href="/api/">API Reference</a>
                             </p>
                         </div>
                     </div>

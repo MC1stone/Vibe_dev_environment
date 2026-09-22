@@ -219,6 +219,42 @@ try:
 except Exception as exc:
     check('T6e analysis.html compiles (Django engine)', False, str(exc))
 
+# ---------------------------------------------------------------- T7: navigation visibility
+base_src = (DJANGO_DIR / 'templates' / 'base.html').read_text()
+index_src = (DJANGO_DIR / 'templates' / 'index.html').read_text()
+dash_src = (DJANGO_DIR / 'templates' / 'dashboard_colorful.html').read_text()
+
+check('T7a Files page linked in the main navigation',
+      'href="/files/"' in base_src)
+check('T7b Files page linked in the footer',
+      base_src.count('href="/files/"') >= 2)
+check('T7c Files nav-card on the landing page',
+      'href="/files/"' in index_src)
+check('T7d dashboard quick action opens the Files upload page',
+      'href="/files/"' in dash_src)
+check('T7e no dead legal links in the footer (privacy/terms/imprint removed)',
+      '/privacy/' not in base_src and '/terms/' not in base_src
+      and '/imprint/' not in base_src)
+
+# every internal link in the touched templates must resolve
+try:
+    import os as _os
+    _os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'nir_web.settings')
+    import django as _django
+    _django.setup()
+    from django.urls import resolve as _resolve
+    dead = []
+    for tpl_src in (base_src, index_src, dash_src):
+        for link in set(re.findall(r'href="(/[a-z0-9\-/]*)"', tpl_src)):
+            try:
+                _resolve(link)
+            except Exception:
+                dead.append(link)
+    check('T7f all internal links in nav templates resolve', dead == [],
+          f'dead={dead}')
+except Exception as exc:
+    check('T7f all internal links in nav templates resolve', False, str(exc))
+
 # ---------------------------------------------------------------- summary
 print()
 failed = [name for name, ok in results if not ok]
