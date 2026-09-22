@@ -370,6 +370,36 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - Verifikation: `tests/test_op6_crewai_agents.py` 51/51 grün;
   Regressionen S3–S9, OP1–OP3 grün, `manage.py check` ohne Befunde.
 
+### OP8 — CrewAI-Agenten-Resultate im Web sichtbar machen (MO 5/6/7/14) — ✅ ERLEDIGT
+- **Kontext (Befund):** Die OP6-Agenten (Sensor Quality, Statistical Analysis,
+  Neural Network) waren real implementiert, wurden aber von
+  `NIRAnalysisCrew.analyze_sample` nie ausgeführt; ihre Ergebnisse landeten in
+  keiner API-Antwort, und die Analysis-UI zeigte Demo-Daten (Zufalls-Spektrum,
+  '~2.5s'-Platzhalter) — die Plattform-Fortschritte waren im Web nicht sichtbar.
+- `agents/nir_analysis_crew.py`: `analyze_sample` führt jetzt Sensor-Qualität,
+  Statistik und Neuronale Netze aus (Mission-Regel: NN immer parallel zur
+  Statistik; Eingang ausschließlich über das S3-einheitliche Spektral-Schema —
+  format-/geräteagnostisch, Grundregeln erfüllt); Referenzwerte (z. B. Brix)
+  werden aus den Metadaten extrahiert, sodass PLS/PCR/MLP echtes
+  Kalibrationstraining fahren können; `AnalysisResult` + `get_analysis_summary` +
+  `get_analysis_history` führen die drei Resultatblöcke; `_json_safe` ersetzt
+  NaN/Infinity durch null (strikte JSON-Serialisierbarkeit für den Browser).
+- `django_project/api/crewai_views.py`: `start_analysis` und der Status-Endpunkt
+  liefern `sensor_quality` / `statistical_analysis` / `neural_network` +
+  `spectral_data`; `get_crew_status` meldet das volle Agenten-Roster (16
+  Missions-Agenten statt 5) inkl. CrewAI-Agentenzahl.
+- `django_project/templates/analysis.html` + `static/js/analysis.js`: drei
+  Agent-Resultat-Panels im Ergebnis-Modal; Chart zeigt das echte Spektrum;
+  Demo-Datenquellen entfernt (`generateSampleSpectralData`, Math.random-Chart,
+  Platzhalter-Durchschnittszeit); History-Filter zeigt Crew-Analysen korrekt;
+  View-Report öffnet den echten Report (report_id statt request_id).
+- Verifikation: `tests/test_op8_crew_results_ui.py` 31/31 grün (Crew-Ausführung,
+  striktes JSON, API-Payload-Formen, UI-Panels, keine Demo-Daten, OP6/OP7-
+  Regressionen); Vollregression S3–S9, OP1–OP4, OP6, OP7 grün;
+  `manage.py check` ohne Befunde; CI um OP8 erweitert.
+- Offen (Zielumgebung): End-to-End-Klick im Browser gegen laufende Container
+  (Upload → Crew-Analyse → Ergebnis-Panels + Quarto-Report).
+
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.
