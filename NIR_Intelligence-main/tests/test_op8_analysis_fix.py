@@ -294,6 +294,13 @@ check('T9e cache-busted analysis.js script tag',
       "js/analysis.js' %}?v=" in analysis_tpl
       or "js/analysis.js?v=" in analysis_tpl)
 
+check('T9f self-contained inline workflow script in the template',
+      "window.handleFileUpload = function" in analysis_tpl
+      and "window.runCompleteWorkflow = function" in analysis_tpl
+      and 'id="wfStatus"' in analysis_tpl)
+check('T9g native no-JS choose-file label present',
+      'for="fileInput"' in analysis_tpl)
+
 # ---------------------------------------------------------------- summary
 print()
 failed = [name for name, ok in results if not ok]

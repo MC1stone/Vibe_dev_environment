@@ -137,9 +137,14 @@
                     <div class="c-card__body">
                         <div class="drop-zone" id="dropZone">
                             <i class="bi bi-cloud-arrow-up" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 1rem;"></i>
-                            <p class="mb-0">Drag &amp; drop a spectrum file here or click to browse (.csv, .txt, .json, .h5)</p>
+                            <p class="mb-0">Drag &amp; drop a spectrum file here (.csv, .txt, .json, .h5)</p>
+                            <label for="fileInput" class="c-button c-button--secondary mt-2" style="cursor: pointer;">
+                                <i class="bi bi-folder2-open"></i>
+                                <span class="c-button__text">Choose file...</span>
+                            </label>
                             <input type="file" id="fileInput" accept=".csv,.txt,.json,.h5,.hdf5" style="display: none;" onchange="handleFileUpload(event)">
                         </div>
+                        <div id="wfStatus" class="mt-2 text-muted"></div>
                         <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
                             <div id="uploadedFileInfo" class="text-muted">
                                 No file selected yet.
@@ -274,6 +279,148 @@
 </section>
 
 {% block extra_js %}
-<script src="{% static 'js/analysis.js' %}?v=2"></script>
+<script src="{% static 'js/analysis.js' %}?v=3"></script>
+<script>
+// Self-contained workflow wiring. No dependency on external files or CDNs so
+// the upload always works and always gives visible feedback.
+(function () {
+    var workflowFile = null;
+
+    function setStatus(text, isError) {
+        var el = document.getElementById('wfStatus');
+        if (!el) return;
+        el.textContent = text || '';
+        el.className = 'mt-2 ' + (isError ? 'text-danger fw-bold' : 'text-muted');
+    }
+
+    function getCsrf() {
+        var el = document.querySelector('meta[name="csrf-token"]');
+        return el ? el.getAttribute('content') : '';
+    }
+
+    window.handleFileUpload = function (event) {
+        var files = event.target.files;
+        if (!files || files.length === 0) return;
+        var file = files[0];
+        workflowFile = file;
+        setStatus('Uploading "' + file.name + '" (' + Math.round(file.size / 1024) + ' KB) to the server...');
+
+        var fd = new FormData();
+        fd.append('files', file);
+        fetch('/api/files/upload/', {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+            headers: { 'X-CSRFToken': getCsrf() }
+        })
+        .then(function (response) {
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('you must be logged in (status ' + response.status + ')');
+            }
+            return response.json().catch(function () { return {}; });
+        })
+        .then(function (data) {
+            if (!data.success || !data.uploaded_files || !data.uploaded_files.length) {
+                throw new Error(
+                    (data.errors && data.errors.join('; '))
+                    || data.message || data.error || 'upload rejected by the server');
+            }
+            workflowFile.fileId = data.uploaded_files[0];
+            setStatus('Uploaded "' + file.name + '" - ready to run the complete analysis.');
+            var info = document.getElementById('uploadedFileInfo');
+            if (info) info.textContent = file.name + ' stored on the server.';
+            var runBtn = document.getElementById('runWorkflowBtn');
+            if (runBtn) runBtn.disabled = false;
+            if (typeof setWorkflowStep === 'function') setWorkflowStep(1);
+        })
+        .catch(function (error) {
+            workflowFile = null;
+            setStatus('Upload failed: ' + error.message, true);
+            var runBtn = document.getElementById('runWorkflowBtn');
+            if (runBtn) runBtn.disabled = true;
+        });
+    };
+
+    window.runCompleteWorkflow = function () {
+        if (!workflowFile || !workflowFile.fileId) {
+            setStatus('Please choose a file first (button "Choose file...").', true);
+            return;
+        }
+        setStatus('Running the complete analysis: data quality, spectral, statistics, neural network, report...');
+        var runBtn = document.getElementById('runWorkflowBtn');
+        if (runBtn) runBtn.disabled = true;
+
+        fetch('/api/files/' + encodeURIComponent(workflowFile.fileId) + '/crew-analysis/', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrf()
+            },
+            body: JSON.stringify({ include_calibration: true })
+        })
+        .then(function (response) {
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('you must be logged in (status ' + response.status + ')');
+            }
+            return response.json().catch(function () { return {}; });
+        })
+        .then(function (result) {
+            if (runBtn) runBtn.disabled = false;
+            if (!result.success) {
+                setStatus('Analysis failed: ' + (result.error || result.message || 'unknown server error'), true);
+                return;
+            }
+            setStatus('Analysis complete - the report is ready below.');
+            if (result.report_url) {
+                var openBtn = document.getElementById('openReportBtn');
+                if (openBtn) openBtn.disabled = false;
+                var linkArea = document.getElementById('reportLinkArea');
+                if (linkArea) linkArea.innerHTML = 'Complete report: <a href="' + result.report_url + '" target="_blank" class="fw-bold">open the full report</a>';
+            }
+            if (typeof displayAnalysisResults === 'function') {
+                try {
+                    displayAnalysisResults(Object.assign({
+                        sample_id: workflowFile.name,
+                        report_url: result.report_url,
+                        spectral_data: result.spectral_data,
+                        overall_quality_score: result.overall_quality_score
+                    }, result.summary || {}));
+                } catch (renderError) {
+                    setStatus('Results rendered with an issue: ' + renderError.message, true);
+                }
+            } else {
+                var row = document.getElementById('workflowResultsRow');
+                if (row) row.classList.remove('d-none');
+            }
+        })
+        .catch(function (error) {
+            if (runBtn) runBtn.disabled = false;
+            setStatus('Analysis request failed: ' + error.message, true);
+        });
+    };
+
+    window.addEventListener('error', function (event) {
+        setStatus('Script error on this page: ' + (event.message || 'unknown'), true);
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var dz = document.getElementById('dropZone');
+        if (dz) {
+            dz.addEventListener('dragover', function (ev) { ev.preventDefault(); });
+            dz.addEventListener('drop', function (ev) {
+                ev.preventDefault();
+                if (ev.dataTransfer && ev.dataTransfer.files.length) {
+                    var input = document.getElementById('fileInput');
+                    var dt = new DataTransfer();
+                    dt.items.add(ev.dataTransfer.files[0]);
+                    if (input) input.files = dt.files;
+                    window.handleFileUpload({ target: { files: dt.files } });
+                }
+            });
+        }
+    });
+})();
+</script>
 {% endblock %}
 {% endblock %}
