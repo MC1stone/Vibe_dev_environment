@@ -1,6 +1,7 @@
 # NIR Intelligence Platform - Enhanced Data Preparation Agent
 # Handles NIR spectroscopy data loading, cleaning, preprocessing, and quality assessment
 
+import io
 import json
 import os
 import zipfile
@@ -321,6 +322,27 @@ class EnhancedDataPreparationAgent(BaseAgent):
     def _load_csv_spectral(self, file_path: str) -> Dict[str, Any]:
         """Load spectral data from CSV file"""
         df = pd.read_csv(file_path)
+
+        # Some spectrometer exports write backslash-escaped quotes inside
+        # quoted fields ("\"") which is not valid RFC 4180 quoting. pandas
+        # then mis-splits rows and the numeric columns collapse to NaN.
+        # Detect that failure and retry with the escaped quotes normalised
+        # to doubled quotes, which pandas parses correctly.
+        numeric_cols_fallback = df.select_dtypes(include=[np.number]).columns.tolist()
+        if not numeric_cols_fallback:
+            try:
+                with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                    raw = f.read()
+                if '\\\"' in raw:
+                    normalised = raw.replace('\\\"', '""')
+                    df = pd.read_csv(io.StringIO(normalised))
+                    self.logger.info(
+                        "CSV used backslash-escaped quotes; re-parsed after normalisation: %s",
+                        file_path,
+                    )
+            except Exception as e:
+                self.logger.warning(f"CSV re-parse for escaped quotes failed: {e}")
+
         
         wavelength_col = None
         intensity_col = None

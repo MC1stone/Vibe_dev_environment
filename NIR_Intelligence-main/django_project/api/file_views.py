@@ -7,12 +7,16 @@ import os
 import sys
 import json
 import logging
+import math
 import tempfile
 import hashlib
 import mimetypes
 from pathlib import Path
 from datetime import datetime
-from django.http import JsonResponse, HttpResponse, FileResponse
+from django.http import Http404, JsonResponse, HttpResponse, FileResponse
+from django.shortcuts import redirect, render
+from django.views.generic import TemplateView
+from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
@@ -602,6 +606,21 @@ class FileCrewAnalysisView(APIView):
             wavelengths = [float(v) for v in df[wavelength_column].tolist()]
             intensities = [float(v) for v in df[intensity_column].tolist()]
 
+            # Drop rows where either series is non-finite (NaN/inf) so no
+            # downstream agent or JSON serializer ever sees NaN.
+            finite_pairs = [
+                (wl, it) for wl, it in zip(wavelengths, intensities)
+                if math.isfinite(wl) and math.isfinite(it)
+            ]
+            if not finite_pairs:
+                return Response({
+                    'success': False,
+                    'error': 'No finite spectral values',
+                    'message': 'The file parsed but contained no usable (finite) wavelength/intensity values'
+                }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            wavelengths = [p[0] for p in finite_pairs]
+            intensities = [p[1] for p in finite_pairs]
+
             from agents.nir_analysis_crew import (
                 NIRAnalysisCrew, CrewConfiguration, AnalysisRequest, AnalysisMode,
             )
@@ -630,7 +649,7 @@ class FileCrewAnalysisView(APIView):
             )
             result = crew.analyze_sample(request_obj)
 
-            summary = crew.get_analysis_summary(result)
+            summary = NIRAnalysisCrew._json_safe(crew.get_analysis_summary(result))
             reports = []
             for report in result.generated_reports:
                 reports.append({
@@ -651,6 +670,11 @@ class FileCrewAnalysisView(APIView):
                     'errors': result.errors,
                     'processing_time': result.processing_time,
                 },
+                'crew_summary': summary,
+                'spectral_series': {
+                    'wavelengths': wavelengths,
+                    'intensities': intensities,
+                },
             }
             file.is_analyzed = True
             file.analyzed_at = datetime.now()
@@ -665,6 +689,8 @@ class FileCrewAnalysisView(APIView):
                 'warnings': result.warnings,
                 'errors': result.errors,
                 'reports': reports,
+                'summary': summary,
+                'report_url': f"/analysis/report/{file.id}/",
                 'message': 'CrewAI analysis completed'
             })
 
@@ -865,3 +891,54 @@ class FileStatisticsView(APIView):
                 'error': str(e),
                 'message': 'Error getting file statistics'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class FileCrewReportView(TemplateView):
+    """Render the in-app CrewAI analysis report page for an uploaded file.
+
+    The page is driven by the analysis results the crew stored on the file
+    (crew_summary, spectral_series, crew_analysis) after a crew-analysis run.
+    It mirrors the report experience of the legacy nir_platform: quality
+    scorecards, spectral chart, agent result cards and recommendations.
+    """
+
+    template_name = 'crew_report.html'
+
+    def get(self, request, file_id):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=' + request.get_full_path())
+        try:
+            file = GenericFile.objects.get(id=file_id, user=request.user)
+        except (GenericFile.DoesNotExist, ValueError, ValidationError):
+            raise Http404('File not found')
+
+        analysis_results = file.analysis_results or {}
+        crew_summary = analysis_results.get('crew_summary') or {}
+        crew_analysis = analysis_results.get('crew_analysis') or {}
+        series = analysis_results.get('spectral_series') or {}
+        wavelengths = series.get('wavelengths') or []
+        intensities = series.get('intensities') or []
+
+        context = {
+            'file': file,
+            'page_title': 'CrewAI Analysis Report',
+            'crew_summary': crew_summary,
+            'crew_analysis': crew_analysis,
+            'spectral_analysis': crew_summary.get('spectral_analysis') or {},
+            'metadata_quality': crew_summary.get('metadata_quality') or {},
+            'sensor_quality': crew_summary.get('sensor_quality') or {},
+            'statistical_analysis': crew_summary.get('statistical_analysis') or {},
+            'neural_network': crew_summary.get('neural_network') or {},
+            'recommendations': crew_summary.get('recommendations')
+            or crew_analysis.get('recommendations') or [],
+            'warnings': crew_summary.get('warnings') or crew_analysis.get('warnings') or [],
+            'errors': crew_summary.get('errors') or crew_analysis.get('errors') or [],
+            'reports': crew_summary.get('reports') or [],
+            'overall_quality_score': crew_summary.get('overall_quality_score')
+            or crew_analysis.get('overall_quality_score') or 0,
+            'spectral_series_json': json.dumps({
+                'wavelengths': wavelengths,
+                'intensities': intensities,
+            }),
+            'summary_json': json.dumps(crew_summary),
+        }
+        return render(request, self.template_name, context)

@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}CrewAI Analysis Report - NIR_Mistral Framework{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-header {
+        background: linear-gradient(135deg, var(--color-primary, #7ab929) 0%, #5a8f1e 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    .score-badge {
+        font-size: 2.5rem;
+        font-weight: 700;
+        padding: 1rem 2rem;
+        border-radius: 12px;
+    }
+    .section-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        margin-bottom: 1.5rem;
+    }
+    .section-card .card-header {
+        background: white;
+        border-bottom: 2px solid var(--color-primary, #7ab929);
+        font-weight: 600;
+    }
+    .metric-value {
+        font-weight: 600;
+        font-family: monospace;
+    }
+    .nav-anchor {
+        scroll-margin-top: 90px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    {% if not crew_summary %}
+    <div class="alert alert-warning d-flex align-items-center">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <div>
+            No CrewAI analysis has been run for this file yet.
+            <a href="/files/" class="alert-link">Open the Files page</a> and press
+            <strong>Full Analysis</strong> to generate the report.
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Report Header -->
+    <div class="report-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2><i class="bi bi-file-earmark-text"></i> CrewAI Analysis Report</h2>
+                <p class="mb-0 opacity-75">{{ file.name }}</p>
+                <p class="mb-0 opacity-75">
+                    Request: {{ crew_summary.request_id|default:"—" }} ·
+                    Sample: {{ crew_summary.sample_id|default:file.id }}
+                </p>
+            </div>
+            <div class="text-center">
+                <div class="score-badge bg-white text-dark">
+                    {{ overall_quality_score|floatformat:1 }}
+                </div>
+                <p class="mt-2 mb-0 opacity-75">Overall Quality Score</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Contents -->
+    <div class="card section-card">
+        <div class="card-header"><i class="bi bi-list-ul"></i> Report Contents</div>
+        <div class="card-body d-flex flex-wrap gap-3">
+            <a href="#spectral" class="btn btn-outline-secondary btn-sm"><i class="bi bi-bar-chart-line me-1"></i> Spectral Analysis</a>
+            <a href="#metadata" class="btn btn-outline-secondary btn-sm"><i class="bi bi-tags me-1"></i> Metadata Quality</a>
+            <a href="#sensor" class="btn btn-outline-secondary btn-sm"><i class="bi bi-motherboard me-1"></i> Sensor Quality</a>
+            <a href="#statistical" class="btn btn-outline-secondary btn-sm"><i class="bi bi-graph-up me-1"></i> Statistical Analysis</a>
+            <a href="#neural" class="btn btn-outline-secondary btn-sm"><i class="bi bi-cpu me-1"></i> Neural Network</a>
+            <a href="#recommendations" class="btn btn-outline-secondary btn-sm"><i class="bi bi-lightbulb me-1"></i> Recommendations</a>
+        </div>
+    </div>
+
+    <!-- Spectral Analysis -->
+    <div id="spectral" class="nav-anchor">
+        <div class="card section-card">
+            <div class="card-header"><i class="bi bi-bar-chart-line"></i> Spectral Analysis</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-6">Quality Score:</dt>
+                            <dd class="col-sm-6 metric-value">{{ spectral_analysis.quality_score|default:0|floatformat:1 }} ({{ spectral_analysis.quality_grade|default:"N/A" }})</dd>
+                            <dt class="col-sm-6">Data Points:</dt>
+                            <dd class="col-sm-6 metric-value">{{ spectral_analysis.data_points|default:0 }}</dd>
+                            <dt class="col-sm-6">Processing Time:</dt>
+                            <dd class="col-sm-6 metric-value">{{ crew_summary.processing_time|floatformat:2 }} s</dd>
+                            <dt class="col-sm-6">Issues Detected:</dt>
+                            <dd class="col-sm-6">
+                                {% if spectral_analysis.issues_detected %}
+                                    {% for issue in spectral_analysis.issues_detected %}
+                                        <span class="badge bg-warning text-dark">{{ issue }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="badge bg-success">None</span>
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-6">Wavelength Range:</dt>
+                            <dd class="col-sm-6 metric-value">
+                                {% if spectral_analysis.wavelength_range %}
+                                    {{ spectral_analysis.wavelength_range.0|floatformat:1 }} – {{ spectral_analysis.wavelength_range.1|floatformat:1 }} nm
+                                {% else %}—{% endif %}
+                            </dd>
+                            <dt class="col-sm-6">Report Format:</dt>
+                            <dd class="col-sm-6 metric-value">{{ file.file_extension|upper }}</dd>
+                        </dl>
+                    </div>
+                </div>
+                {% if spectral_series_json != '{"wavelengths": [], "intensities": []}' %}
+                <hr>
+                <h6><i class="bi bi-graph-up"></i> Spectrum</h6>
+                <canvas id="spectrumChart" height="120"></canvas>
+                {% else %}
+                <div class="alert alert-secondary mt-3 mb-0">No spectral series stored for this file.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Metadata Quality -->
+    <div id="metadata" class="nav-anchor">
+        <div class="card section-card">
+            <div class="card-header"><i class="bi bi-tags"></i> Metadata Quality</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        <div class="display-4 fw-bold">{{ metadata_quality.overall_score|default:0|floatformat:1 }}</div>
+                        <span class="badge bg-primary">{{ metadata_quality.grade|default:"N/A" }}</span>
+                        <p class="text-muted mt-2 mb-0">Grade</p>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="row">
+                            <div class="col-6">
+                                <p class="mb-1">Completeness</p>
+                                <div class="progress" style="height: 18px;">
+                                    <div class="progress-bar bg-success" style="width: {{ metadata_quality.completeness|default:0 }}%"></div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <p class="mb-1">Accuracy</p>
+                                <div class="progress" style="height: 18px;">
+                                    <div class="progress-bar bg-info" style="width: {{ metadata_quality.accuracy|default:0 }}%"></div>
+                                </div>
+                            </div>
+                            <div class="col-6 mt-3">
+                                <p class="mb-1">Consistency</p>
+                                <div class="progress" style="height: 18px;">
+                                    <div class="progress-bar bg-warning" style="width: {{ metadata_quality.consistency|default:0 }}%"></div>
+                                </div>
+                            </div>
+                            <div class="col-6 mt-3">
+                                <p class="mb-1 d-flex justify-content-between"><span>Missing required fields</span> <span class="badge bg-danger">{{ metadata_quality.missing_required_fields|length }}</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% if metadata_quality.missing_required_fields %}
+                <hr>
+                <h6>Missing Required Fields</h6>
+                <ul class="mb-0">
+                    {% for field in metadata_quality.missing_required_fields %}
+                    <li>{{ field|title }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sensor Quality -->
+    <div id="sensor" class="nav-anchor">
+        <div class="card section-card">
+            <div class="card-header"><i class="bi bi-motherboard"></i> Sensor Quality</div>
+            <div class="card-body">
+                {% if sensor_quality %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-7">Status:</dt>
+                            <dd class="col-sm-5">
+                                <span class="badge {% if sensor_quality.status == 'ok' %}bg-success{% elif sensor_quality.status == 'degraded' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                    {{ sensor_quality.status|default:"N/A" }}
+                                </span>
+                            </dd>
+                            <dt class="col-sm-7">Spectra Assessed:</dt>
+                            <dd class="col-sm-5 metric-value">{{ sensor_quality.num_spectra|default:0 }}</dd>
+                            <dt class="col-sm-7">Overall Score:</dt>
+                            <dd class="col-sm-5 metric-value">{{ sensor_quality.overall_quality_score|default:0|floatformat:3 }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-7">Drift:</dt>
+                            <dd class="col-sm-5">{% if sensor_quality.drift_detected %}<span class="badge bg-danger">Detected</span>{% else %}<span class="badge bg-success">OK</span>{% endif %}</dd>
+                            <dt class="col-sm-7">Offset:</dt>
+                            <dd class="col-sm-5">{% if sensor_quality.offset_detected %}<span class="badge bg-danger">Detected</span>{% else %}<span class="badge bg-success">OK</span>{% endif %}</dd>
+                            <dt class="col-sm-7">Noise Level:</dt>
+                            <dd class="col-sm-5 metric-value">{{ sensor_quality.noise_level|default:0|floatformat:4 }}</dd>
+                        </dl>
+                    </div>
+                </div>
+                {% if sensor_quality.warnings %}
+                <hr>
+                <h6>Warnings</h6>
+                <ul class="mb-0">
+                    {% for w in sensor_quality.warnings %}<li>{{ w }}</li>{% endfor %}
+                </ul>
+                {% endif %}
+                {% else %}
+                <p class="mb-0 text-muted">Sensor quality assessment did not run for this analysis.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistical Analysis -->
+    <div id="statistical" class="nav-anchor">
+        <div class="card section-card">
+            <div class="card-header"><i class="bi bi-graph-up"></i> Statistical Analysis (PCA / PLS / PCR / ANOVA)</div>
+            <div class="card-body">
+                {% if statistical_analysis.status == 'ok' %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-7">Samples:</dt>
+                            <dd class="col-sm-5 metric-value">{{ statistical_analysis.num_samples }}</dd>
+                            <dt class="col-sm-7">Data Points:</dt>
+                            <dd class="col-sm-5 metric-value">{{ statistical_analysis.data_points }}</dd>
+                            <dt class="col-sm-7">Methods Applied:</dt>
+                            <dd class="col-sm-5">
+                                {% for m in statistical_analysis.methods_applied %}
+                                    <span class="badge bg-primary">{{ m }}</span>
+                                {% endfor %}
+                            </dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        {% with pca=statistical_analysis.method_results.PCA %}
+                        {% if pca %}
+                        <dl class="row mb-0">
+                            <dt class="col-sm-7">PCA Components:</dt>
+                            <dd class="col-sm-5 metric-value">{{ pca.n_components }}</dd>
+                            <dt class="col-sm-7">Cumulative Variance:</dt>
+                            <dd class="col-sm-5 metric-value">{{ pca.cumulative_variance_explained|floatformat:3 }}</dd>
+                        </dl>
+                        {% endif %}
+                        {% endwith %}
+                        {% with pls=statistical_analysis.method_results.PLS %}
+                        {% if pls %}
+                        <dl class="row mb-0 mt-2">
+                            <dt class="col-sm-7">PLS mean R²:</dt>
+                            <dd class="col-sm-5 metric-value">{{ pls.mean_r2|floatformat:3 }}</dd>
+                        </dl>
+                        {% endif %}
+                        {% endwith %}
+                        {% with pcr=statistical_analysis.method_results.PCR %}
+                        {% if pcr %}
+                        <dl class="row mb-0 mt-2">
+                            <dt class="col-sm-7">PCR mean R²:</dt>
+                            <dd class="col-sm-5 metric-value">{{ pcr.mean_r2|floatformat:3 }}</dd>
+                        </dl>
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+                {% if statistical_analysis.methods_skipped %}
+                <hr>
+                <h6>Skipped Methods</h6>
+                <ul class="mb-0">
+                    {% for s in statistical_analysis.methods_skipped %}
+                    <li><strong>{{ s.method }}</strong>: {{ s.reason }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% else %}
+                <p class="mb-0 text-muted">{{ statistical_analysis.message|default:"Statistical analysis did not produce results." }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Neural Network -->
+    <div id="neural" class="nav-anchor">
+        <div class="card section-card">
+            <div class="card-header"><i class="bi bi-cpu"></i> Neural Network Analysis (MLP / Autoencoder / CNN)</div>
+            <div class="card-body">
+                {% if neural_network %}
+                <dl class="row mb-0">
+                    <dt class="col-sm-6">Model:</dt>
+                    <dd class="col-sm-6"><span class="badge bg-primary">{{ neural_network.model|default:neural_network.status }}</span></dd>
+                    {% if neural_network.r2_score is not None %}
+                    <dt class="col-sm-6">R² Score:</dt>
+                    <dd class="col-sm-6 metric-value">{{ neural_network.r2_score|floatformat:3 }}</dd>
+                    {% endif %}
+                    {% if neural_network.reconstruction_mse is not None %}
+                    <dt class="col-sm-6">Reconstruction MSE:</dt>
+                    <dd class="col-sm-6 metric-value">{{ neural_network.reconstruction_mse|floatformat:4 }}</dd>
+                    {% endif %}
+                    {% if neural_network.anomalies_detected is not None %}
+                    <dt class="col-sm-6">Anomalies Detected:</dt>
+                    <dd class="col-sm-6 metric-value">{{ neural_network.anomalies_detected }}</dd>
+                    {% endif %}
+                    {% if neural_network.n_train is not None %}
+                    <dt class="col-sm-6">Train / Test:</dt>
+                    <dd class="col-sm-6 metric-value">{{ neural_network.n_train }} / {{ neural_network.n_test }}</dd>
+                    {% endif %}
+                    {% if neural_network.reason %}
+                    <dt class="col-sm-6">Note:</dt>
+                    <dd class="col-sm-6">{{ neural_network.reason }}</dd>
+                    {% endif %}
+                </dl>
+                {% else %}
+                <p class="mb-0 text-muted">Neural network analysis did not produce results.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div id="recommendations" class="nav-anchor">
+        <div class="card section-card">
+            <div class="card-header"><i class="bi bi-lightbulb"></i> Recommendations &amp; Warnings</div>
+            <div class="card-body">
+                {% if recommendations %}
+                <h6>Recommendations</h6>
+                <ul>
+                    {% for rec in recommendations %}<li>{{ rec }}</li>{% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-success mb-2"><i class="bi bi-check-circle"></i> No recommendations — the analysis found no issues.</p>
+                {% endif %}
+                {% if warnings %}
+                <h6>Warnings</h6>
+                <ul>
+                    {% for w in warnings %}<li>{{ w }}</li>{% endfor %}
+                </ul>
+                {% endif %}
+                {% if errors %}
+                <h6>Errors</h6>
+                <ul class="text-danger">
+                    {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if reports %}
+    <!-- Generated Files -->
+    <div class="card section-card">
+        <div class="card-header"><i class="bi bi-file-earmark-arrow-down"></i> Generated Report Files</div>
+        <ul class="list-group list-group-flush">
+            {% for r in reports %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>{{ r.report_type|title }}</strong>
+                    <span class="text-muted ms-2">{{ r.file_path }}</span>
+                </div>
+                <span class="badge {% if r.status == 'completed' %}bg-success{% else %}bg-danger{% endif %}">{{ r.status }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if spectral_series_json != '{"wavelengths": [], "intensities": []}' %}
+<script>
+    (function () {
+        var series = JSON.parse('{{ spectral_series_json|escapejs }}');
+        var ctx = document.getElementById('spectrumChart');
+        if (!ctx || typeof Chart === 'undefined') return;
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: series.wavelengths,
+                datasets: [{
+                    label: 'Intensity',
+                    data: series.intensities,
+                    borderColor: 'rgb(122, 185, 41)',
+                    backgroundColor: 'rgba(122, 185, 41, 0.15)',
+                    fill: true,
+                    tension: 0.2,
+                    pointRadius: series.wavelengths.length > 200 ? 0 : 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { title: { display: true, text: 'Wavelength (nm)' } },
+                    y: { title: { display: true, text: 'Intensity' } }
+                }
+            }
+        });
+    })();
+</script>
+{% endif %}
+{% endblock %}
