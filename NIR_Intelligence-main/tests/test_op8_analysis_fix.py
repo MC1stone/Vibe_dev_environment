@@ -527,6 +527,19 @@ check('T12f English exotic export: view finds the right column pair',
       len(_pairs_exotic2) == 3 and _pairs_exotic2[-1] == (1300.0, 46000.0),
       f'pairs={_pairs_exotic2}')
 
+# T12g: mixed-delimiter export (comma header, semicolon data rows) -
+# reported live: 'Daten' | 'passt'; nan | nan; ...
+_pairs_mixed = _load_pairs(
+    'wavelength,intensity\n'
+    'Daten;passt\n'
+    '900;15200\n'
+    '925;18450\n'
+    '1300;46000\n')
+check('T12g mixed delimiters (comma header, ; rows) parse',
+      _pairs_mixed is not None and len(_pairs_mixed) == 3
+      and _pairs_mixed[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_mixed}')
+
 # ---------------------------------------------------------------- summary
 print()
 failed = [name for name, ok in results if not ok]
