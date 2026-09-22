@@ -3,6 +3,7 @@
 
 import io
 import json
+import math
 import os
 import re
 import zipfile
@@ -379,6 +380,100 @@ class EnhancedDataPreparationAgent(BaseAgent):
 
     _SPLIT_ORDER = (';', '\t', ',', r'\s+')
 
+    _NUMBER_RUN = re.compile(r'-?\d[\d.,\u202f\u00a0 ]*')
+
+    def _number_tokens(self, line: str) -> List[str]:
+        """Extract numeric tokens from a line, thousands-aware.
+
+        Greedy digit runs are split again when their space-separated parts
+        are not thousands groups ('900 15200' -> two tokens, '15 200' ->
+        one token with thousands separator)."""
+        tokens: List[str] = []
+        for match in self._NUMBER_RUN.finditer(line):
+            run = match.group(0).rstrip('.,\u202f\u00a0 ')
+            if not run:
+                continue
+            parts = re.split(r'[\u202f\u00a0 ]+', run)
+            if len(parts) > 1:
+                digits_ok = all(
+                    re.fullmatch(r'\d+([.,]\d+)?', p) for p in parts)
+                thousands_ok = digits_ok and all(
+                    len(re.split(r'[.,]', p)[-1]) == 3 for p in parts[1:])
+                if thousands_ok:
+                    tokens.append(run)
+                else:
+                    tokens.extend(parts)
+            else:
+                tokens.append(run)
+        return tokens
+
+    def _coerce_number(self, text: str) -> Optional[float]:
+        """Parse a single numeric token, normalising thousands separators.
+        Handles '15200', '15,200.5', '15.200,00', '15 200'."""
+        try:
+            normalised = self._normalise_decimal_string(str(text).strip())
+            if normalised is None:
+                return None
+            return float(normalised)
+        except (TypeError, ValueError):
+            return None
+
+    def _raw_number_extraction(self, file_path: str) -> Optional[pd.DataFrame]:
+        """Last-resort spectral extraction from arbitrary text exports.
+
+        Scans each line for numeric tokens, tolerant of embedded units
+        ('900 nm'), thousands separators ('15 200'), European decimals
+        ('0,123'), user-added metadata rows, index prefixes ('band_1:')
+        and unknown column layouts. A line with exactly two tokens is a
+        data row; a line with more tries consecutive pairs and prefers a
+        wavelength-plausible first element. Fewer than three usable rows
+        -> None so the caller keeps its error path.
+        """
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                lines = [ln.rstrip("\r\n") for ln in f]
+            pairs = []
+            for ln in lines:
+                if not ln.strip():
+                    continue
+                tokens = self._number_tokens(ln)
+                if not tokens:
+                    continue
+                values = [self._coerce_number(t) for t in tokens]
+                values = [v for v in values
+                          if v is not None and math.isfinite(v)]
+                if len(values) < 2:
+                    continue
+                chosen = None
+                if len(values) == 2:
+                    chosen = (values[0], values[1])
+                else:
+                    for i in range(len(values) - 1):
+                        a, b = values[i], values[i + 1]
+                        # Prefer nm-like wavelengths; fall back to the last
+                        # consecutive pair (pixel indices, sample ids).
+                        if 100 <= a <= 5000:
+                            chosen = (a, b)
+                            break
+                    if chosen is None:
+                        chosen = (values[-2], values[-1])
+                wl, it = chosen
+                if wl <= 0 or it < 0:
+                    continue
+                pairs.append((wl, it))
+            if len(pairs) < 3:
+                return None
+            wavelengths = [p[0] for p in pairs]
+            if max(wavelengths) - min(wavelengths) <= 0:
+                return None
+            return pd.DataFrame({
+                "wavelength": [p[0] for p in pairs],
+                "intensity": [p[1] for p in pairs],
+            })
+        except Exception as e:
+            self.logger.warning(f"CSV raw number extraction failed: {e}")
+            return None
+
     def _mixed_delimiter_fallback(self, file_path: str) -> Optional[pd.DataFrame]:
         """Rebuild a table from lines with inconsistent delimiters.
 
@@ -464,6 +559,19 @@ class EnhancedDataPreparationAgent(BaseAgent):
                         "CSV had mixed delimiters; re-parsed per line: %s",
                         file_path,
                     )
+
+        # Last resort: no structure-based parse produced usable rows
+        # (user-added metadata, embedded units like '900 nm' | '15 200
+        # counts', unknown layouts). Extract every number pair from the raw
+        # text and keep the longest plausible wavelength/intensity series.
+        if self._score_delimiter_parse(df) <= 0:
+            extracted = self._raw_number_extraction(file_path)
+            if extracted is not None:
+                df = extracted
+                self.logger.info(
+                    "CSV parsed via last-resort raw number extraction: %s",
+                    file_path,
+                )
 
         if df is None:
             raise pd.errors.ParserError(f"Could not parse CSV: {file_path}")

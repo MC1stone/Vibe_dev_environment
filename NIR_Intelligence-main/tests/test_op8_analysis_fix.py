@@ -564,6 +564,34 @@ check('T12i mixed delimiters: space-separated rows parse',
       and _pairs_space_rows[-1] == (1300.0, 46000.0),
       f'pairs={_pairs_space_rows}')
 
+# T12j/T12k: last-resort raw number extraction when NO structure-based
+# parse works (embedded units, prose metadata, index prefixes). Every
+# spectroscope vendor and user-edited file has its own layout; the
+# extraction ladder must find the numbers anyway.
+_pairs_units = _load_pairs(
+    'wavelength,intensity\n'
+    'Daten;passt\n'
+    '900 nm;15 200 counts\n'
+    '925 nm;18 450 counts\n'
+    '950 nm;22 100 counts\n'
+    '1300 nm;46 000 counts\n')
+check('T12j embedded units extract (900 nm | 15 200 counts)',
+      _pairs_units is not None and len(_pairs_units) == 4
+      and _pairs_units[-1] == (1300.0, 46000.0),
+      f'pairs={_pairs_units}')
+
+_pairs_prose = _load_pairs(
+    'Messung vom Dienstag\n'
+    'device=SpectroMark1\n'
+    'band_1: 900 nm -> 0,123\n'
+    'band_2: 925 nm -> 0,187\n'
+    'band_3: 950 nm -> 0,254\n'
+    'band_4: 1300 nm -> 0,312\n')
+check('T12k prose metadata + index prefixes + DE decimals extract',
+      _pairs_prose is not None and len(_pairs_prose) == 4
+      and _pairs_prose[-1] == (1300.0, 0.312),
+      f'pairs={_pairs_prose}')
+
 # ---------------------------------------------------------------- summary
 print()
 failed = [name for name, ok in results if not ok]
