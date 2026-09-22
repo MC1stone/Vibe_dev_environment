@@ -326,6 +326,40 @@ def get_analysis_history(request):
         )
 
 
+def _load_report_file_preview(report_id: str):
+    """Load a generated report file from disk by report id.
+
+    Reports are written as <report_id>.html into the analysis output
+    directory. The crew's analysis history is in-memory, so after a server
+    restart this is the only way to serve an already generated report.
+    """
+    import glob
+
+    if not report_id or '/' in report_id or '\\' in report_id or '..' in report_id:
+        return None
+    output_dirs = [
+        getattr(settings, 'QUARTO_OUTPUT_DIR', None),
+        os.path.join(settings.BASE_DIR, 'output', 'analysis', 'reports'),
+    ]
+    safe_prefix = os.path.basename(report_id)
+    for base in output_dirs:
+        if not base:
+            continue
+        matches = sorted(glob.glob(os.path.join(base, safe_prefix + '.*')))
+        if not matches:
+            matches = sorted(
+                glob.glob(os.path.join(base, safe_prefix + '_*.html')))
+        for match in matches:
+            try:
+                with open(match, 'r', encoding='utf-8', errors='replace') as f:
+                    content = f.read()
+                if content:
+                    return content
+            except OSError:
+                continue
+    return None
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @csrf_exempt
@@ -352,10 +386,12 @@ def get_report_preview(request):
         
         crew = get_crew_instance()
         
-        # Find the report in generated reports
+        # Find the report in generated reports. Accept either a report id
+        # (comprehensive_<sample>_<ts>) or a request id (nir_analysis_...)
+        # so the Jobs page can pass the job id it has.
         for result in crew.analysis_history:
             for report in result.generated_reports:
-                if report.report_id == report_id:
+                if report.report_id == report_id or result.request_id == report_id:
                     if report.preview_available:
                         preview_html = crew.reporting_agent.generate_html_preview(report)
                         if preview_html:
@@ -364,11 +400,20 @@ def get_report_preview(request):
                                 "report_id": report.report_id,
                                 "preview": preview_html
                             }, status=status.HTTP_200_OK)
-                        else:
-                            return Response(
-                                {"error": "Preview not available"},
-                                status=status.HTTP_404_NOT_FOUND
-                            )
+                    return Response(
+                        {"error": "Preview not available"},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+        
+        # The crew history is in-memory: after a server restart the ids are
+        # gone. Fall back to serving the report file generated for this id.
+        preview_html = _load_report_file_preview(report_id)
+        if preview_html:
+            return Response({
+                "success": True,
+                "report_id": report_id,
+                "preview": preview_html
+            }, status=status.HTTP_200_OK)
         
         return Response({
             "found": False,
