@@ -5,6 +5,12 @@ __version__ = "1.0.0"
 __author__ = "NIR Intelligence Platform Team"
 __license__ = "MIT"
 
+# crewai's import-time warnings.warn patch breaks Django settings loading;
+# repair it before any submodule (and therefore crewai) gets imported.
+from .crewai_compat import ensure_crewai_compat
+
+ensure_crewai_compat()
+
 from .ansible_agent import AnsibleAgent
 from .calibration_agent import CalibrationAgent
 from .data_preparation_agent import EnhancedDataPreparationAgent as DataPreparationAgent
