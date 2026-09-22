@@ -680,8 +680,22 @@ class FileCrewAnalysisView(APIView):
             )
             from agents.reporting_agent import ReportType, ReportFormat
 
+            # Mission statement: the crew uses the local LLM (Ollama +
+            # mistral in Docker) when the CrewAI package is installed and
+            # the endpoint answers. Otherwise the deterministic standalone
+            # agent path runs unchanged - same results, no LLM narration.
+            try:
+                import crewai  # noqa: F401
+                import requests as _requests
+                _llm_up = _requests.get(
+                    f"{os.environ.get('OLLAMA_URL', 'http://localhost:11434').rstrip('/')}/api/tags",
+                    timeout=2,
+                ).ok
+            except Exception:
+                _llm_up = False
+
             config = CrewConfiguration(
-                enable_crewai=False,
+                enable_crewai=_llm_up,
                 temp_dir=tempfile.mkdtemp(prefix='crew_'),
                 output_dir=str(Path(settings.BASE_DIR) / 'output' / 'analysis'),
             )

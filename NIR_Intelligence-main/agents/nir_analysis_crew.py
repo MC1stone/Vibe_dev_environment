@@ -116,6 +116,11 @@ class CrewConfiguration:
     max_batch_size: int = 10
     temp_dir: str = "temp/crewai"
     output_dir: str = "output/analysis"
+    # Local LLM (mission statement: Ollama + mistral in Docker). When set,
+    # CrewAI agents are bound to this Ollama endpoint instead of defaulting
+    # to an unreachable OpenAI backend.
+    llm_base_url: str = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+    llm_model: str = os.environ.get("NIR_LLM_MODEL", "mistral")
 
 
 class NIRAnalysisCrew:
@@ -168,6 +173,7 @@ class NIRAnalysisCrew:
         self.crewai_agents = []
         self.crewai_tasks = []
         self.crew = None
+        self.crewai_llm = None
 
         # Initialize CrewAI if available
         if CREWAI_AVAILABLE and self.config.enable_crewai:
@@ -205,9 +211,28 @@ class NIRAnalysisCrew:
         tool.__name__ = f"{base_agent.name.lower()}_tool"
         return tool
 
+    def _build_llm(self):
+        """Bind the local Ollama LLM for CrewAI agents.
+
+        CrewAI defaults to an OpenAI backend that is unreachable in the
+        local stack; the mission statement runs Ollama + mistral in Docker.
+        Returns None when no binding is possible so callers keep the
+        deterministic standalone path.
+        """
+        try:
+            from crewai import LLM
+            return LLM(
+                model=self.config.llm_model,
+                base_url=f"{self.config.llm_base_url.rstrip('/')}",
+            )
+        except Exception as e:
+            self.logger.warning(f"CrewAI LLM binding to Ollama failed: {e}")
+            return None
+
     def _initialize_crewai(self):
         """Initialize the full CrewAI agent crew with real platform tools."""
         try:
+            self.crewai_llm = self._build_llm()
             spectral_agent = Agent(
                 role="NIR Spectral Analysis Expert",
                 goal="Analyze NIR spectral data for quality, issues, and provide parameter recommendations",
@@ -223,6 +248,7 @@ class NIRAnalysisCrew:
                     "Analyze NIR spectral data quality. Input: JSON with spectral_data.")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             sensor_quality_agent = Agent(
                 role="Sensor Quality Monitor",
@@ -237,6 +263,7 @@ class NIRAnalysisCrew:
                     "Run drift/noise/offset checks. Input: JSON with spectra and thresholds.")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             statistical_agent = Agent(
                 role="Chemometrics Statistician",
@@ -251,6 +278,7 @@ class NIRAnalysisCrew:
                     "Run statistical analyses. Input: JSON with spectra and reference_values.")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             neural_network_agent = Agent(
                 role="Neural Network Specialist",
@@ -265,6 +293,7 @@ class NIRAnalysisCrew:
                     "Train neural network models. Input: JSON with spectra, reference_values, models.")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             metadata_agent = Agent(
                 role="Metadata Quality Assessment Specialist",
@@ -280,6 +309,7 @@ class NIRAnalysisCrew:
                     "Assess metadata quality. Input: JSON with metadata, sample_id, file_paths.")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             data_preparation_agent = Agent(
                 role="Data Preparation Engineer",
@@ -294,6 +324,7 @@ class NIRAnalysisCrew:
                     "Prepare spectral data. Input: JSON with input_directory or file_paths.")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             calibration_agent = Agent(
                 role="Spectrometer Calibration Specialist",
@@ -308,6 +339,7 @@ class NIRAnalysisCrew:
                     "Calibrate models. Input: JSON with spectra and reference_values.")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             qdrant_agent = Agent(
                 role="Vector Database Operator",
@@ -322,6 +354,7 @@ class NIRAnalysisCrew:
                     "Check/operate Qdrant. Input: JSON with host, port, collection_name.")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             faiss_agent = Agent(
                 role="Similarity Search Operator",
@@ -335,6 +368,7 @@ class NIRAnalysisCrew:
                     "Find similar spectra. Input: JSON with reference_spectra, query_spectrum, top_k.")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             postgresql_agent = Agent(
                 role="Relational Database Operator",
@@ -348,6 +382,7 @@ class NIRAnalysisCrew:
                     "Operate PostgreSQL. Input: JSON with operation (health|query|insert), sql, params.")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             django_agent = Agent(
                 role="Platform Application Operator",
@@ -361,6 +396,7 @@ class NIRAnalysisCrew:
                     "Operate the Django app. Input: JSON with operation (health|endpoints), base_url.")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             mcp_agent = Agent(
                 role="Tool Integration and Interface Operator",
@@ -376,6 +412,7 @@ class NIRAnalysisCrew:
                     "operation (status|interfaces|ingest), tools, file_path (for ingest).")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             ilias_agent = Agent(
                 role="E-Learning Platform Operator",
@@ -389,6 +426,7 @@ class NIRAnalysisCrew:
                     "Operate ILIAS. Input: JSON with operation (status|list_courses|sync_learning_path).")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             reporting_agent = Agent(
                 role="Scientific Report Generator",
@@ -404,6 +442,7 @@ class NIRAnalysisCrew:
                     "Generate reports. Input: JSON with report_type, format, sample_id, data.")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
             quarto_agent = Agent(
                 role="Documentation Specialist",
@@ -417,6 +456,7 @@ class NIRAnalysisCrew:
                     "Render Quarto documents. Input: JSON with operation (generate|preview), report_type, data.")],
                 verbose=True,
                 allow_delegation=False,
+                llm=getattr(self, 'crewai_llm', None),
             )
 
             self.crewai_agents = [
