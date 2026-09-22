@@ -145,8 +145,19 @@ class SensorQualityAgent(BaseAgent):
                     residuals = np.apply_along_axis(detrend, 1, matrix)
                 except ImportError:
                     residuals = matrix - matrix.mean(axis=1, keepdims=True)
-                successive = np.abs(np.diff(residuals, axis=1)).mean()
-                noise_level = float(successive / np.sqrt(2.0) / scale)
+                if matrix.shape[0] == 1:
+                    # Single spectrum: first differences of the detrended
+                    # signal are dominated by the genuine spectral SHAPE
+                    # (peaks, slopes), not sensor noise. Estimate noise from
+                    # the robust scale of second differences (median absolute
+                    # deviation * 1.4826), which suppresses smooth trends AND
+                    # ignores single-band spikes (saturation outliers).
+                    second_diff = np.diff(residuals, n=2, axis=1)
+                    robust_sigma = float(np.median(np.abs(second_diff)) * 1.4826)
+                    noise_level = float(robust_sigma / np.sqrt(6.0) / scale)
+                else:
+                    successive = np.abs(np.diff(residuals, axis=1)).mean()
+                    noise_level = float(successive / np.sqrt(2.0) / scale)
                 noise_detected = bool(noise_level > noise_threshold)
                 results["noise_level"] = noise_level
                 results["noise_detected"] = noise_detected
