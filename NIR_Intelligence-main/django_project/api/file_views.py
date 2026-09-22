@@ -612,8 +612,9 @@ class FileCrewAnalysisView(APIView):
             # Convert tolerantly: keep only rows where BOTH values parse as
             # finite numbers, so a text row cannot crash the analysis.
             def _to_float(value):
+                from agents.data_preparation_agent import EnhancedDataPreparationAgent
                 try:
-                    return float(str(value).replace(',', '.'))
+                    return float(EnhancedDataPreparationAgent._normalise_decimal_string(value))
                 except (TypeError, ValueError):
                     return None
 
