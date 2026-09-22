@@ -17,15 +17,28 @@ function getCsrfToken() {
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
-    loadCrewAIStatus();
-    loadAnalysisData();
-    loadSpectraForAnalysis();
-    loadAgentsForAnalysis();
-    setupEventListeners();
+    // Wire the upload drop zone FIRST so a failing status/ajax loader
+    // can never leave the workflow unusable (silent dead UI).
+    try {
+        setupEventListeners();
+    } catch (err) {
+        console.error('Failed to set up upload listeners:', err);
+    }
+    
+    // Secondary loaders must never break the upload workflow either.
+    const safe = function(fn) {
+        return function() {
+            try { fn(); } catch (err) { console.error(err); }
+        };
+    };
+    safe(loadCrewAIStatus)();
+    safe(loadAnalysisData)();
+    safe(loadSpectraForAnalysis)();
+    safe(loadAgentsForAnalysis)();
     
     // Set up real-time updates
-    setInterval(refreshActiveJobs, 10000);
-    setInterval(loadCrewAIStatus, 30000);
+    setInterval(safe(refreshActiveJobs), 10000);
+    setInterval(safe(loadCrewAIStatus), 30000);
 });
 
 function setupEventListeners() {
@@ -692,6 +705,12 @@ function formatResultsData(result) {
 function createAnalysisChart(result) {
     const ctx = document.getElementById('analysisChart');
     if (!ctx) return;
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js is not available (CDN unreachable) - skipping the chart.');
+        ctx.parentElement.insertAdjacentHTML('beforeend',
+            '<p class="text-muted mb-0">Chart.js could not be loaded - the spectrum chart is unavailable offline.</p>');
+        return;
+    }
     
     // Destroy existing chart if it exists
     if (analysisChart) {

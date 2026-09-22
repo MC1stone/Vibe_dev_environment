@@ -274,11 +274,12 @@ class FileUploadView(APIView):
             
             if result.success and result.file_metadata:
                 # Update file record with extracted metadata
+                quality_grade = getattr(result.file_metadata, 'quality_grade', None)
                 metadata_dict = {
                     'file_category': result.file_metadata.file_category.value,
                     'mime_type': result.file_metadata.mime_type,
                     'quality_score': result.file_metadata.quality_score or 0.0,
-                    'quality_grade': result.file_metadata.quality_grade.value if result.file_metadata.quality_grade else 'unknown',
+                    'quality_grade': getattr(quality_grade, 'value', quality_grade) or 'unknown',
                     'quality_issues': result.file_metadata.quality_issues or [],
                     'content_metadata': result.file_metadata.custom_metadata or {}
                 }
