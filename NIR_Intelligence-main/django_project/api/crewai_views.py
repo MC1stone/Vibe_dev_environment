@@ -201,6 +201,15 @@ def start_analysis(request):
                 "enhancements": result.metadata_quality.enhancements
             }
         
+        # Add agent analysis results (OP6 agents, now executed by the crew)
+        response_data["sensor_quality"] = result.sensor_quality_results or {}
+        response_data["statistical_analysis"] = result.statistical_analysis_results or {}
+        response_data["neural_network"] = result.neural_network_results or {}
+        response_data["spectral_data"] = {
+            "wavelengths": (analysis_request.spectral_data or {}).get("wavelengths", []),
+            "intensities": (analysis_request.spectral_data or {}).get("intensities", []),
+        }
+        
         return Response(response_data, status=status.HTTP_200_OK)
         
     except json.JSONDecodeError:
@@ -251,6 +260,17 @@ def get_analysis_status(request):
                     "sample_id": result.sample_id,
                     "status": "completed",
                     "timestamp": result.timestamp,
+                    "processing_time": result.processing_time,
+                    "overall_quality_score": result.overall_quality_score,
+                    "spectral_analysis": summary.get("spectral_analysis", {}),
+                    "metadata_quality": summary.get("metadata_quality", {}),
+                    "sensor_quality": summary.get("sensor_quality", {}),
+                    "statistical_analysis": summary.get("statistical_analysis", {}),
+                    "neural_network": summary.get("neural_network", {}),
+                    "recommendations": summary.get("recommendations", []),
+                    "warnings": summary.get("warnings", []),
+                    "errors": summary.get("errors", []),
+                    "reports": summary.get("reports", []),
                     "summary": summary
                 }, status=status.HTTP_200_OK)
         
@@ -504,8 +524,21 @@ def get_crew_status(request):
                 "metadata_quality": "available", 
                 "reporting": "available",
                 "calibration": "available",
+                "sensor_quality": "available",
+                "statistical_analysis": "available",
+                "neural_network": "available",
+                "data_preparation": "available",
+                "qdrant": "available",
+                "faiss": "available",
+                "postgresql": "available",
+                "django": "available",
+                "mcp": "available",
+                "ilias": "available",
+                "quarto": "available",
                 "flower": "available" if crew.flower_agent else "disabled"
-            }
+            },
+            "crewai_agents": len(crew.crewai_agents),
+            "crewai_package_available": crew.crew is not None,
         }
         
         return Response(response_data, status=status.HTTP_200_OK)

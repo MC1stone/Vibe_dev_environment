@@ -2,6 +2,7 @@
 # Main CrewAI orchestration for complete NIR spectral analysis workflow
 
 import logging
+import math
 import os
 import sys
 from dataclasses import dataclass, field
@@ -88,6 +89,9 @@ class AnalysisResult:
     metadata_quality: Optional[MetadataQualityResult] = None
     generated_reports: List[GeneratedReport] = field(default_factory=list)
     calibration_results: Optional[Dict[str, Any]] = None
+    sensor_quality_results: Optional[Dict[str, Any]] = None
+    statistical_analysis_results: Optional[Dict[str, Any]] = None
+    neural_network_results: Optional[Dict[str, Any]] = None
     federated_learning_results: Optional[Dict[str, Any]] = None
     overall_quality_score: float = 0.0
     recommendations: List[str] = field(default_factory=list)
@@ -454,6 +458,32 @@ class NIRAnalysisCrew:
             self.logger.error(f"Error initializing CrewAI: {e}")
             self.crewai_agents = []
             self.crew = None
+    def _extract_reference_values(self, metadata: Dict[str, Any]):
+        """Extract numeric reference values (e.g. Brix) from metadata for
+        supervised methods (PLS/PCR/MLP/CNN). Returns None when absent."""
+        if not isinstance(metadata, dict):
+            return None
+        for key in ("reference_values", "brix", "reference", "y", "target"):
+            if key in metadata:
+                value = metadata[key]
+                if isinstance(value, (list, tuple)):
+                    return list(value)
+                if isinstance(value, (int, float)):
+                    return [value]
+        return None
+
+    @staticmethod
+    def _json_safe(data: Any) -> Any:
+        """Replace NaN/Infinity floats with None so results serialize to
+        strict JSON for the web API and templates."""
+        if isinstance(data, float):
+            return data if math.isfinite(data) else None
+        if isinstance(data, dict):
+            return {key: NIRAnalysisCrew._json_safe(value) for key, value in data.items()}
+        if isinstance(data, (list, tuple)):
+            return [NIRAnalysisCrew._json_safe(item) for item in data]
+        return data
+
     def _generate_request_id(self) -> str:
         """Generate unique request ID"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -616,6 +646,47 @@ class NIRAnalysisCrew:
                 result.warnings.append("Metadata quality assessment failed")
                 self.logger.warning("Metadata quality assessment failed")
 
+            # Step 2b: Sensor Quality, Statistical Analysis and Neural Network
+            # analysis. The statistical and neural network agents run in
+            # parallel per the mission statement rule (MO 7). Reference
+            # values from the metadata allow PLS/PCR/MLP calibration targets.
+            parallel_context = {
+                "spectra": request.spectral_data,
+                "reference_values": self._extract_reference_values(request.metadata),
+            }
+
+            sensor_output = self.sensor_quality_agent.execute(
+                {**parallel_context, "sample_id": request.sample_id}
+            )
+            if sensor_output.status == AgentStatus.COMPLETED:
+                result.sensor_quality_results = self._json_safe(sensor_output.data)
+                for warning in sensor_output.data.get("warnings", []):
+                    result.warnings.append(f"Sensor quality: {warning}")
+                self.logger.info("Sensor quality assessment completed")
+            else:
+                result.warnings.append("Sensor quality assessment failed")
+                self.logger.warning("Sensor quality assessment failed")
+
+            statistical_output = self.statistical_analysis_agent.execute(
+                {**parallel_context, "sample_id": request.sample_id}
+            )
+            if statistical_output.status == AgentStatus.COMPLETED:
+                result.statistical_analysis_results = self._json_safe(statistical_output.data)
+                self.logger.info("Statistical analysis completed")
+            else:
+                result.warnings.append("Statistical analysis failed")
+                self.logger.warning("Statistical analysis failed")
+
+            neural_output = self.neural_network_agent.execute(
+                {**parallel_context, "sample_id": request.sample_id}
+            )
+            if neural_output.status == AgentStatus.COMPLETED:
+                result.neural_network_results = self._json_safe(neural_output.data)
+                self.logger.info("Neural network analysis completed")
+            else:
+                result.warnings.append("Neural network analysis failed")
+                self.logger.warning("Neural network analysis failed")
+
             # Step 3: Calibration (if requested)
             if request.include_calibration:
                 self.logger.info("Performing calibration analysis...")
@@ -704,6 +775,9 @@ class NIRAnalysisCrew:
                     else {}
                 ),
                 "calibration_results": result.calibration_results or {},
+                "sensor_quality_results": result.sensor_quality_results or {},
+                "statistical_analysis_results": result.statistical_analysis_results or {},
+                "neural_network_results": result.neural_network_results or {},
             }
 
             # Generate main report
@@ -944,6 +1018,9 @@ class NIRAnalysisCrew:
                 if analysis_result.metadata_quality
                 else {}
             ),
+            "sensor_quality": analysis_result.sensor_quality_results or {},
+            "statistical_analysis": analysis_result.statistical_analysis_results or {},
+            "neural_network": analysis_result.neural_network_results or {},
             "recommendations": analysis_result.recommendations,
             "warnings": analysis_result.warnings,
             "errors": analysis_result.errors,
@@ -1004,6 +1081,18 @@ class NIRAnalysisCrew:
                     "reports_generated": len(result.generated_reports),
                     "errors": len(result.errors),
                     "warnings": len(result.warnings),
+                    "sensor_quality_status": (
+                        (result.sensor_quality_results or {}).get("status")
+                        if result.sensor_quality_results else None
+                    ),
+                    "statistical_methods_applied": (
+                        (result.statistical_analysis_results or {}).get("methods_applied")
+                        if result.statistical_analysis_results else None
+                    ),
+                    "neural_models_trained": (
+                        (result.neural_network_results or {}).get("models_trained")
+                        if result.neural_network_results else None
+                    ),
                 }
             )
 

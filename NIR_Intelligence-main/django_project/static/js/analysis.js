@@ -83,10 +83,8 @@ function loadCrewAIStatus() {
                 totalAnalysesEl.textContent = (status.analysis_history_count || 0) + ' total';
             }
             
-            // Update average processing time (placeholder)
-            if (avgProcessingTimeEl) {
-                avgProcessingTimeEl.textContent = '~2.5s';
-            }
+            // Average processing time is computed from the real history
+            // (updateAvgProcessingTime, called by loadAnalysisData)
         })
         .catch(function(error) {
             // If service is unavailable, show as not available
@@ -106,10 +104,11 @@ function loadAnalysisData() {
         .then(function(response) {
             const history = response.data.history || [];
             analysisJobs = history.filter(h => h.status === 'running' || h.status === 'pending' || h.status === 'processing');
-            analysisHistory = history.filter(h => h.status === 'completed' || h.status === 'failed' || h.status === 'cancelled');
             
+            analysisHistory = history.filter(h => (h.status === 'completed' || h.status === 'failed' || h.status === 'cancelled') || (h.status === undefined && h.request_id));
             updateActiveJobs();
             updateActiveJobsCount();
+            updateAvgProcessingTime();
             renderRecentResults();
             hideLoading();
         })
@@ -237,12 +236,13 @@ function startAnalysis() {
         }
     };
     
-    // If we have spectral data from file upload, include it
+    // Spectral data comes from the uploaded file (no demo data)
     if (fileUploadData) {
         analysisRequest.spectral_data = fileUploadData;
     } else {
-        // For demo purposes, create some sample spectral data
-        analysisRequest.spectral_data = generateSampleSpectralData();
+        hideLoading();
+        showError('Please upload a spectrum file first (.json, .csv or .txt).');
+        return;
     }
     
     currentAnalysisRequest = analysisRequest;
@@ -282,6 +282,12 @@ function startAnalysis() {
 function startQuickAnalysis() {
     const analysisType = document.getElementById('quickAnalysisType').value;
     
+    // Quick analysis runs on the uploaded file (no demo data)
+    if (!fileUploadData) {
+        showError('Please upload a spectrum file first (.json, .csv or .txt).');
+        return;
+    }
+    
     showLoading();
     
     // Prepare quick analysis request
@@ -297,7 +303,7 @@ function startQuickAnalysis() {
             analysis_name: 'Quick Analysis - ' + new Date().toLocaleTimeString(),
             description: 'Quick analysis performed via dashboard'
         },
-        spectral_data: generateSampleSpectralData() // Generate sample data for demo
+        spectral_data: fileUploadData
     };
     
     axios.post('/api/crewai/analysis/start/', quickRequest)
@@ -322,28 +328,6 @@ function startQuickAnalysis() {
             hideLoading();
             showError('Failed to start quick analysis. Please try again.');
         });
-}
-
-function generateSampleSpectralData() {
-    // Generate sample spectral data for demonstration
-    const wavelengths = [];
-    const intensities = [];
-    
-    // Generate wavelengths from 700 to 2500 nm
-    for (let i = 700; i <= 2500; i += 10) {
-        wavelengths.push(i);
-        // Generate some sample intensity values with peaks
-        let intensity = Math.random() * 0.5 + 0.3;
-        if (i >= 1200 && i <= 1400) intensity += 0.8; // Peak around 1300 nm
-        if (i >= 1700 && i <= 1900) intensity += 0.6; // Peak around 1800 nm
-        intensities.push(intensity);
-    }
-    
-    return {
-        wavelengths: wavelengths,
-        intensities: intensities,
-        sample_id: 'sample_' + Date.now()
-    };
 }
 
 function handleFileUpload(event) {
@@ -455,66 +439,213 @@ function displayAnalysisResults(result) {
     document.getElementById('resultCompleted').textContent = formatDate(result.timestamp);
     document.getElementById('resultProcessingTime').textContent = (result.processing_time || 0).toFixed(2) + 's';
     
-    // Update summary
-    const summary = result.summary || 'No summary available';
-    document.getElementById('resultSummary').innerHTML = '<p>' + summary + '</p>';
+    // Update summary (object from the crew, rendered as key facts)
+    const summary = result.summary || {};
+    document.getElementById('resultSummary').innerHTML = formatSummaryText(summary, result);
     
     // Update quality scores
     const qualityScores = document.getElementById('qualityScores');
     qualityScores.innerHTML = '';
     
-    if (result.overall_quality_score) {
-        qualityScores.innerHTML = `
+    if (result.overall_quality_score !== undefined && result.overall_quality_score !== null) {
+        qualityScores.innerHTML += `
             <div class="col-12 col-md-6">
                 <div class="c-stat-card h-100">
                     <div class="c-stat-card__icon c-stat-card__icon--primary">
                         <i class="bi bi-star"></i>
                     </div>
-                    <div class="c-stat-card__number">${result.overall_quality_score.toFixed(2)}</div>
+                    <div class="c-stat-card__number">${Number(result.overall_quality_score).toFixed(2)}</div>
                     <div class="c-stat-card__label">Overall Quality</div>
                 </div>
             </div>
         `;
     }
     
-    if (result.spectral_analysis) {
+    if (result.spectral_analysis && result.spectral_analysis.quality_score !== undefined) {
         qualityScores.innerHTML += `
             <div class="col-12 col-md-6">
                 <div class="c-stat-card h-100">
                     <div class="c-stat-card__icon c-stat-card__icon--success">
                         <i class="bi bi-graph-up"></i>
                     </div>
-                    <div class="c-stat-card__number">${result.spectral_analysis.quality_score.toFixed(2)}</div>
+                    <div class="c-stat-card__number">${Number(result.spectral_analysis.quality_score).toFixed(2)}</div>
                     <div class="c-stat-card__label">Spectral Quality</div>
                 </div>
             </div>
         `;
     }
     
-    if (result.metadata_quality) {
+    if (result.metadata_quality && result.metadata_quality.overall_score !== undefined) {
         qualityScores.innerHTML += `
             <div class="col-12 col-md-6">
                 <div class="c-stat-card h-100">
                     <div class="c-stat-card__icon c-stat-card__icon--info">
                         <i class="bi bi-check-circle"></i>
                     </div>
-                    <div class="c-stat-card__number">${result.metadata_quality.overall_quality_score.toFixed(2)}</div>
+                    <div class="c-stat-card__number">${Number(result.metadata_quality.overall_score).toFixed(2)}</div>
                     <div class="c-stat-card__label">Metadata Quality</div>
                 </div>
             </div>
         `;
     }
     
+    if (result.sensor_quality && result.sensor_quality.overall_quality_score !== undefined) {
+        qualityScores.innerHTML += `
+            <div class="col-12 col-md-6">
+                <div class="c-stat-card h-100">
+                    <div class="c-stat-card__icon c-stat-card__icon--warning">
+                        <i class="bi bi-activity"></i>
+                    </div>
+                    <div class="c-stat-card__number">${(Number(result.sensor_quality.overall_quality_score) * 100).toFixed(1)}%</div>
+                    <div class="c-stat-card__label">Sensor Quality</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Render the agent result panels (crew agent results, OP6/OP8)
+    renderSensorQualityResults(result.sensor_quality || (result.summary && result.summary.sensor_quality));
+    renderStatisticalResults(result.statistical_analysis || (result.summary && result.summary.statistical_analysis));
+    renderNeuralNetworkResults(result.neural_network || (result.summary && result.summary.neural_network));
+    
     // Update detailed results
     const resultData = document.getElementById('resultData');
     resultData.innerHTML = formatResultsData(result);
     
-    // Create chart with sample data
+    // Create chart from the real spectral data submitted to the crew
     createAnalysisChart(result);
     
     // Show the results modal
     const modal = new bootstrap.Modal(document.getElementById('analysisResultsModal'));
     modal.show();
+}
+
+function formatSummaryText(summary, result) {
+    const lines = [];
+    const spectral = result.spectral_analysis || summary.spectral_analysis || {};
+    if (spectral.quality_grade) {
+        lines.push(`<p class="mb-1"><strong>Spectral grade:</strong> ${spectral.quality_grade}</p>`);
+    }
+    if (spectral.issues_detected && spectral.issues_detected.length > 0) {
+        lines.push(`<p class="mb-1"><strong>Issues:</strong> ${spectral.issues_detected.join(', ')}</p>`);
+    }
+    const metadata = result.metadata_quality || summary.metadata_quality || {};
+    if (metadata.grade) {
+        lines.push(`<p class="mb-1"><strong>Metadata grade:</strong> ${metadata.grade}</p>`);
+    }
+    if (summary.recommendations && summary.recommendations.length > 0) {
+        lines.push('<p class="mb-1"><strong>Recommendations:</strong></p><ul class="mb-0">' +
+            summary.recommendations.map(r => `<li>${r}</li>`).join('') + '</ul>');
+    }
+    if (lines.length === 0) {
+        lines.push('<p class="mb-0">No summary available.</p>');
+    }
+    return lines.join('');
+}
+
+function fmt(value) {
+    if (value === undefined || value === null) return 'N/A';
+    const num = Number(value);
+    if (Number.isNaN(num)) return 'N/A';
+    return String(num.toFixed(4));
+}
+
+function renderSensorQualityResults(sq) {
+    const el = document.getElementById('sensorQualityResults');
+    if (!el) return;
+    if (!sq || Object.keys(sq).length === 0) {
+        el.innerHTML = '<p class="text-muted mb-0">Sensor quality agent did not produce results for this analysis.</p>';
+        return;
+    }
+    let html = '<div class="table-responsive"><table class="c-table c-table--sm c-table--bordered">';
+    if (sq.status) html += `<tr><td>Status</td><td>${sq.status}</td></tr>`;
+    if (sq.num_spectra !== undefined) html += `<tr><td>Spectra assessed</td><td>${sq.num_spectra}</td></tr>`;
+    if (sq.data_points !== undefined) html += `<tr><td>Data points</td><td>${sq.data_points}</td></tr>`;
+    if (sq.drift_level !== undefined) html += `<tr><td>Drift level</td><td>${fmt(sq.drift_level)} ${sq.drift_detected ? '<span class="c-badge c-badge--danger">detected</span>' : '<span class="c-badge c-badge--success">ok</span>'}</td></tr>`;
+    if (sq.offset_level !== undefined) html += `<tr><td>Offset level</td><td>${fmt(sq.offset_level)} ${sq.offset_detected ? '<span class="c-badge c-badge--danger">detected</span>' : '<span class="c-badge c-badge--success">ok</span>'}</td></tr>`;
+    if (sq.noise_level !== undefined) html += `<tr><td>Noise level</td><td>${fmt(sq.noise_level)} ${sq.noise_detected ? '<span class="c-badge c-badge--danger">detected</span>' : '<span class="c-badge c-badge--success">ok</span>'}</td></tr>`;
+    if (sq.overall_quality_score !== undefined) html += `<tr><td>Overall quality</td><td><strong>${(Number(sq.overall_quality_score) * 100).toFixed(1)}%</strong></td></tr>`;
+    if (sq.warnings && sq.warnings.length > 0) {
+        html += `<tr><td>Warnings</td><td><ul class="mb-0">${sq.warnings.map(w => `<li class="text-warning">${w}</li>`).join('')}</ul></td></tr>`;
+    }
+    if (sq.checks_performed && sq.checks_performed.length > 0) {
+        html += `<tr><td>Checks</td><td>${sq.checks_performed.join(', ')}</td></tr>`;
+    }
+    html += '</table></div>';
+    el.innerHTML = html;
+}
+
+function renderStatisticalResults(stats) {
+    const el = document.getElementById('statisticalResults');
+    if (!el) return;
+    if (!stats || Object.keys(stats).length === 0) {
+        el.innerHTML = '<p class="text-muted mb-0">Statistical analysis agent did not produce results for this analysis.</p>';
+        return;
+    }
+    let html = '<div class="table-responsive"><table class="c-table c-table--sm c-table--bordered">';
+    if (stats.status) html += `<tr><td>Status</td><td>${stats.status}</td></tr>`;
+    if (stats.num_samples !== undefined) html += `<tr><td>Samples</td><td>${stats.num_samples}</td></tr>`;
+    if (stats.data_points !== undefined) html += `<tr><td>Data points</td><td>${stats.data_points}</td></tr>`;
+    const applied = stats.methods_applied || [];
+    if (applied.length > 0) {
+        html += `<tr><td>Methods applied</td><td>${applied.map(m => `<span class="c-badge c-badge--success me-1">${m}</span>`).join('')}</td></tr>`;
+    }
+    const methodResults = stats.method_results || {};
+    if (methodResults.PCA && methodResults.PCA.cumulative_variance_explained !== undefined && methodResults.PCA.cumulative_variance_explained !== null) {
+        html += `<tr><td>PCA variance explained</td><td>${(Number(methodResults.PCA.cumulative_variance_explained) * 100).toFixed(1)}% (${methodResults.PCA.n_components} components)</td></tr>`;
+    }
+    if (methodResults.PLS && methodResults.PLS.mean_r2 !== undefined && methodResults.PLS.mean_r2 !== null) {
+        html += `<tr><td>PLS CV R&sup2;</td><td>${Number(methodResults.PLS.mean_r2).toFixed(3)}</td></tr>`;
+    }
+    if (methodResults.PCR && methodResults.PCR.mean_r2 !== undefined && methodResults.PCR.mean_r2 !== null) {
+        html += `<tr><td>PCR CV R&sup2;</td><td>${Number(methodResults.PCR.mean_r2).toFixed(3)}</td></tr>`;
+    }
+    if (methodResults.ClusterAnalysis && methodResults.ClusterAnalysis.silhouette_score !== undefined && methodResults.ClusterAnalysis.silhouette_score !== null) {
+        html += `<tr><td>Cluster silhouette</td><td>${Number(methodResults.ClusterAnalysis.silhouette_score).toFixed(3)} (k=${methodResults.ClusterAnalysis.k})</td></tr>`;
+    }
+    const skipped = stats.methods_skipped || [];
+    if (skipped.length > 0) {
+        html += `<tr><td>Skipped</td><td><ul class="mb-0">${skipped.map(s => `<li>${s.method}: ${s.reason}</li>`).join('')}</ul></td></tr>`;
+    }
+    html += '</table></div>';
+    el.innerHTML = html;
+}
+
+function renderNeuralNetworkResults(nn) {
+    const el = document.getElementById('neuralNetworkResults');
+    if (!el) return;
+    if (!nn || Object.keys(nn).length === 0) {
+        el.innerHTML = '<p class="text-muted mb-0">Neural network agent did not produce results for this analysis.</p>';
+        return;
+    }
+    let html = '<div class="table-responsive"><table class="c-table c-table--sm c-table--bordered">';
+    if (nn.status) html += `<tr><td>Status</td><td>${nn.status}</td></tr>`;
+    if (nn.num_samples !== undefined) html += `<tr><td>Samples</td><td>${nn.num_samples}</td></tr>`;
+    const trained = nn.models_trained || [];
+    if (trained.length > 0) {
+        html += `<tr><td>Models trained</td><td>${trained.map(m => `<span class="c-badge c-badge--success me-1">${m}</span>`).join('')}</td></tr>`;
+    }
+    const modelResults = nn.model_results || {};
+    if (modelResults.MLP && modelResults.MLP.r2_score !== undefined && modelResults.MLP.r2_score !== null) {
+        html += `<tr><td>MLP test R&sup2;</td><td>${Number(modelResults.MLP.r2_score).toFixed(3)}</td></tr>`;
+    }
+    if (modelResults.Autoencoder && modelResults.Autoencoder.reconstruction_mse !== undefined && modelResults.Autoencoder.reconstruction_mse !== null) {
+        html += `<tr><td>Autoencoder MSE</td><td>${Number(modelResults.Autoencoder.reconstruction_mse).toFixed(4)}</td></tr>`;
+        html += `<tr><td>Anomalies detected</td><td>${modelResults.Autoencoder.anomalies_detected}</td></tr>`;
+    }
+    if (nn.best_model && nn.best_model_r2_score !== undefined && nn.best_model_r2_score !== null) {
+        html += `<tr><td>Best model</td><td><strong>${nn.best_model}</strong> (R&sup2; ${Number(nn.best_model_r2_score).toFixed(3)})</td></tr>`;
+    }
+    const deferred = nn.models_deferred || [];
+    if (deferred.length > 0) {
+        html += `<tr><td>Deferred</td><td><ul class="mb-0">${deferred.map(d => `<li>${d.model}: ${d.reason}</li>`).join('')}</ul></td></tr>`;
+    }
+    const skipped = nn.models_skipped || [];
+    if (skipped.length > 0) {
+        html += `<tr><td>Skipped</td><td><ul class="mb-0">${skipped.map(s => `<li>${s.model}: ${s.reason}</li>`).join('')}</ul></td></tr>`;
+    }
+    html += '</table></div>';
+    el.innerHTML = html;
 }
 
 function formatResultsData(result) {
@@ -524,12 +655,12 @@ function formatResultsData(result) {
     if (result.spectral_analysis) {
         const sa = result.spectral_analysis;
         html += '<tr><th colspan="2" class="bg-light">Spectral Analysis</th></tr>';
-        html += `<tr><td>Quality Score</td><td>${sa.quality_score.toFixed(2)}</td></tr>`;
+        html += `<tr><td>Quality Score</td><td>${Number(sa.quality_score).toFixed(2)}</td></tr>`;
         html += `<tr><td>Quality Grade</td><td>${sa.quality_grade}</td></tr>`;
         html += `<tr><td>Wavelength Range</td><td>${sa.wavelength_range[0]} - ${sa.wavelength_range[1]} nm</td></tr>`;
         html += `<tr><td>Data Points</td><td>${sa.data_points}</td></tr>`;
-        html += `<tr><td>Noise Level</td><td>${sa.noise_level.toFixed(4)}</td></tr>`;
-        html += `<tr><td>Signal to Noise Ratio</td><td>${sa.signal_to_noise_ratio.toFixed(2)}</td></tr>`;
+        html += `<tr><td>Noise Level</td><td>${Number(sa.noise_level).toFixed(4)}</td></tr>`;
+        html += `<tr><td>Signal to Noise Ratio</td><td>${Number(sa.signal_to_noise_ratio).toFixed(2)}</td></tr>`;
         html += `<tr><td>Shift Detected</td><td>${sa.shift_detected ? 'Yes' : 'No'}</td></tr>`;
         
         if (sa.issues_detected && sa.issues_detected.length > 0) {
@@ -545,9 +676,9 @@ function formatResultsData(result) {
     if (result.metadata_quality) {
         const mq = result.metadata_quality;
         html += '<tr><th colspan="2" class="bg-light">Metadata Quality</th></tr>';
-        html += `<tr><td>Overall Score</td><td>${mq.overall_quality_score.toFixed(2)}</td></tr>`;
+        html += `<tr><td>Overall Score</td><td>${Number(mq.overall_quality_score !== undefined ? mq.overall_quality_score : mq.overall_score).toFixed(2)}</td></tr>`;
         html += `<tr><td>Quality Grade</td><td>${mq.overall_quality_grade}</td></tr>`;
-        html += `<tr><td>Completeness Score</td><td>${mq.completeness_score.toFixed(2)}</td></tr>`;
+        html += `<tr><td>Completeness Score</td><td>${Number(mq.completeness_score).toFixed(2)}</td></tr>`;
         html += `<tr><td>Accuracy Score</td><td>${mq.accuracy_score.toFixed(2)}</td></tr>`;
         html += `<tr><td>Consistency Score</td><td>${mq.consistency_score.toFixed(2)}</td></tr>`;
         
@@ -588,17 +719,30 @@ function createAnalysisChart(result) {
         analysisChart.destroy();
     }
     
-    // Generate sample spectral data for visualization
-    const wavelengths = [];
-    const intensities = [];
+    // Use the real spectral data submitted to / returned by the crew
+    const spectral = (result && result.spectral_data) || fileUploadData || null;
+    const wavelengths = spectral ? (spectral.wavelengths || []) : [];
+    const intensities = spectral ? (spectral.intensities || []) : [];
     
-    for (let i = 700; i <= 2500; i += 10) {
-        wavelengths.push(i);
-        let intensity = Math.random() * 0.5 + 0.3;
-        if (i >= 1200 && i <= 1400) intensity += 0.8;
-        if (i >= 1700 && i <= 1900) intensity += 0.6;
-        intensities.push(intensity);
+    if (wavelengths.length === 0 || intensities.length === 0) {
+        if (analysisChart) {
+            analysisChart.destroy();
+            analysisChart = null;
+        }
+        const parent = ctx.parentElement;
+        let note = document.getElementById('analysisChartEmpty');
+        if (!note && parent) {
+            note = document.createElement('p');
+            note.id = 'analysisChartEmpty';
+            note.className = 'text-muted mb-0';
+            note.textContent = 'No spectral data available for this analysis.';
+            parent.appendChild(note);
+        }
+        return;
     }
+    
+    const existingNote = document.getElementById('analysisChartEmpty');
+    if (existingNote) existingNote.remove();
     
     analysisChart = new Chart(ctx, {
         type: 'line',
@@ -669,8 +813,25 @@ function viewReport() {
         return;
     }
     
-    // Open the report in a new tab
-    window.open('/api/crewai/reports/preview/?report_id=' + currentAnalysisRequest.request_id, '_blank');
+    showLoading();
+    
+    // Look up the report generated for this analysis request, then preview it
+    axios.get('/api/crewai/analysis/status/?request_id=' + currentAnalysisRequest.request_id)
+        .then(function(response) {
+            const result = response.data;
+            const reports = (result.reports || (result.summary && result.summary.reports) || []);
+            if (reports.length > 0) {
+                hideLoading();
+                window.open('/api/crewai/reports/preview/?report_id=' + reports[0].report_id, '_blank');
+            } else {
+                hideLoading();
+                showError('No report was generated for this analysis.');
+            }
+        })
+        .catch(function(error) {
+            hideLoading();
+            showError('Failed to load the report for this analysis.');
+        });
 }
 
 function exportAnalysisResults() {
@@ -742,6 +903,20 @@ function updateActiveJobsCount() {
     document.getElementById('activeJobsCount').textContent = analysisJobs.length;
 }
 
+function updateAvgProcessingTime() {
+    const el = getElementSafely('avgProcessingTime');
+    if (!el) return;
+    const times = analysisHistory
+        .map(h => Number(h.processing_time))
+        .filter(t => !Number.isNaN(t));
+    if (times.length === 0) {
+        el.textContent = '0s';
+        return;
+    }
+    const avg = times.reduce((sum, t) => sum + t, 0) / times.length;
+    el.textContent = avg.toFixed(2) + 's';
+}
+
 function renderRecentResults() {
     const grid = document.getElementById('recentResultsGrid');
     
@@ -781,11 +956,19 @@ function renderRecentResults() {
                         </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Quality Score:</span>
-                            <strong>${result.overall_quality_score ? result.overall_quality_score.toFixed(2) : 'N/A'}</strong>
+                            <strong>${result.overall_quality_score !== undefined && result.overall_quality_score !== null ? Number(result.overall_quality_score).toFixed(2) : 'N/A'}</strong>
                         </div>
                         <div class="d-flex justify-content-between">
                             <span>Processing Time:</span>
-                            <strong>${(result.processing_time || 0).toFixed(2)}s</strong>
+                            <strong>${Number(result.processing_time || 0).toFixed(2)}s</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Statistics:</span>
+                            <strong>${(result.statistical_methods_applied || []).length || 'N/A'} methods</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Neural Networks:</span>
+                            <strong>${(result.neural_models_trained || []).length || 'N/A'} models</strong>
                         </div>
                     </div>
                     

@@ -26,7 +26,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest numpy pandas scipy scikit-learn pyyaml django pillow requests packaging djangorestframework djangorestframework-simplejwt django-cors-headers
 
-      - name: Run offline test matrices (S3-S9, OP1-OP4, OP6-OP7)
+      - name: Run offline test matrices (S3-S9, OP1-OP4, OP6-OP8)
         run: |
           python tests/test_s3_format_loaders.py
           python tests/test_s4_spectrometer_adapters.py
@@ -41,6 +41,7 @@ jobs:
           python tests/test_op6_crewai_agents.py
           python tests/test_op4_update_lookups.py
           python tests/test_op7_crew_pipeline_bridge.py
+          python tests/test_op8_crew_results_ui.py
 
       - name: Django system check
         run: python django_project/manage.py check
