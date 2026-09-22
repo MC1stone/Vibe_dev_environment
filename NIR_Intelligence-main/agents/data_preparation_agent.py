@@ -926,35 +926,45 @@ class EnhancedDataPreparationAgent(BaseAgent):
             return None
 
     def _load_text_spectral(self, file_path: str) -> Dict[str, Any]:
-        """Load spectral data from text-based formats (JDX, SPC, TXT)"""
+        """Load spectral data from text-based formats (JDX, SPC, TXT).
+
+        Same adaptive ladder as the CSV loader: delimiter scoring over all
+        candidates, European decimal/thousands normalisation, and the
+        last-resort raw number extraction for metadata-heavy DIY exports
+        ('Daten' header rows, embedded units like '900 nm', '15 200 counts').
+        """
         try:
+            df = None
+            best_score = -1.0
             for delimiter in [r'\s+', '\t', ',', ';']:
                 try:
-                    df = pd.read_csv(file_path, sep=delimiter, header=None, 
+                    candidate = pd.read_csv(file_path, sep=delimiter, header=None, 
                                    names=['wavelength', 'intensity'])
-                    if len(df.columns) >= 2:
-                        break
                 except pd.errors.ParserError:
                     continue
-            else:
-                with open(file_path, 'r') as f:
-                    lines = f.readlines()
-                    data = []
-                    for line in lines:
-                        parts = line.strip().split()
-                        if len(parts) >= 2:
-                            try:
-                                wavelength = float(parts[0])
-                                intensity = float(parts[1])
-                                data.append({'wavelength': wavelength, 'intensity': intensity})
-                            except ValueError:
-                                continue
-                    df = pd.DataFrame(data)
+                score = self._score_delimiter_parse(candidate)
+                if score > best_score:
+                    best_score = score
+                    df = candidate
+                    if score >= 1.0:
+                        break
+
+            if best_score <= 0:
+                df = self._raw_number_extraction(file_path)
             
-            if df.empty:
+            if df is None or df.empty:
                 self.log_error(f"Could not parse spectral data from {file_path}", 
                              ErrorSeverity.MEDIUM)
                 return None
+
+            for spectral_col in ('wavelength', 'intensity'):
+                if spectral_col in df.columns and not pd.api.types.is_numeric_dtype(df[spectral_col]):
+                    df[spectral_col] = (
+                        df[spectral_col]
+                        .astype('string')
+                        .map(self._normalise_decimal_string)
+                    )
+                    df[spectral_col] = pd.to_numeric(df[spectral_col], errors='coerce')
             
             return {
                 "data": df,
