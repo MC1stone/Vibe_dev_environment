@@ -210,6 +210,7 @@ check('T8e test-pinned agent panels kept',
       and 'id="statisticalResults"' in analysis_tpl
       and 'id="neuralNetworkResults"' in analysis_tpl)
 analysis_js = (DJANGO_DIR / 'static' / 'js' / 'analysis.js').read_text()
+urls_src = (DJANGO_DIR / 'nir_web' / 'urls.py').read_text()
 check('T8f single workflow entry point in JS',
       'function runCompleteWorkflow' in analysis_js
       and 'function startQuickAnalysis' not in analysis_js)
@@ -285,6 +286,13 @@ check('T9b status loaders are wrapped so failures cannot kill the workflow',
       and 'safe(loadCrewAIStatus)()' in analysis_js)
 check('T9c chart creation survives a missing Chart.js CDN',
       "typeof Chart === 'undefined'" in analysis_js)
+
+check('T9d dev static serving uses the live source dir (not stale staticfiles)',
+      "STATICFILES_DIRS or [settings.STATIC_ROOT]" in urls_src,
+      'DEBUG static serving must come from static/, git pull must update the served JS')
+check('T9e cache-busted analysis.js script tag',
+      "js/analysis.js' %}?v=" in analysis_tpl
+      or "js/analysis.js?v=" in analysis_tpl)
 
 # ---------------------------------------------------------------- summary
 print()

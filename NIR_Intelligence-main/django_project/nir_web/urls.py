@@ -118,9 +118,12 @@ urlpatterns = [
     path('api/', TemplateView.as_view(template_name='api_docs.html'), name='api-docs'),
 ]
 
-# Serve static and media files in development
+# Serve static and media files in development. Static files are served from
+# the live source directory (STATICFILES_DIRS) so a git pull + browser refresh
+# is enough; staticfiles/ is only the collectstatic target for production.
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    _static_doc_root = (settings.STATICFILES_DIRS or [settings.STATIC_ROOT])[0]
+    urlpatterns += static(settings.STATIC_URL, document_root=_static_doc_root)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # Catch-all for React/Vue frontend (if used) - exclude API paths
