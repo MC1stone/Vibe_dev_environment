@@ -213,8 +213,19 @@ analysis_js = (DJANGO_DIR / 'static' / 'js' / 'analysis.js').read_text()
 check('T8f single workflow entry point in JS',
       'function runCompleteWorkflow' in analysis_js
       and 'function startQuickAnalysis' not in analysis_js)
-check('T8g workflow posts one comprehensive analysis',
-      "report_type: 'comprehensive'" in analysis_js)
+check('T8g workflow runs the crew on the uploaded file (comprehensive report)',
+      "crew-analysis/" in analysis_js
+      and "report_type: 'comprehensive'" not in analysis_js)
+check('T8r workflow uploads the file to the server (real upload, no local-only parse)',
+      "fetch('/api/files/upload/'" in analysis_js
+      and 'formData.append' in analysis_js
+      and 'parseSpectrumFile(content' not in analysis_js)
+check('T8s workflow upload errors are surfaced to the user',
+      "Upload failed: ' + error.message" in analysis_js
+      and 'Please log in to upload files.' in analysis_js)
+check('T8t workflow report button opens the crew report page',
+      'currentAnalysisRequest.report_url' in analysis_js
+      and 'result.report_url' in analysis_js)
 
 # complete report content: data, evaluation, source code sections
 from agents.reporting_agent import ReportingAgent

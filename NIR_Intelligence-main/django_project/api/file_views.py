@@ -690,6 +690,10 @@ class FileCrewAnalysisView(APIView):
                 'errors': result.errors,
                 'reports': reports,
                 'summary': summary,
+                'spectral_data': {
+                    'wavelengths': wavelengths,
+                    'intensities': intensities,
+                },
                 'report_url': f"/analysis/report/{file.id}/",
                 'message': 'CrewAI analysis completed'
             })

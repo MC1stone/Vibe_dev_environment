@@ -177,7 +177,7 @@ check('T5c chart uses real spectral data',
 check('T5d placeholder average processing time removed',
       "'~2.5s'" not in js_src)
 check('T5e quick analysis requires a real upload (no demo data)',
-      re.search(r"if \(!fileUploadData\) \{\s*\n\s*showError", js_src) is not None)
+      re.search(r"if \(!fileUploadData \|\| !fileUploadData\.fileId\) \{\s*\n\s*showError", js_src) is not None)
 
 # ---------------------------------------------------------------- T6: regressions
 check('T6a comprehensive report still generated',
