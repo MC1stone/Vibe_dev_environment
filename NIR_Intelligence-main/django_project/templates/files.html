@@ -823,6 +823,8 @@ function renderFilesTable(files) {
             '<i class="bi bi-play-circle"></i></button> ' +
             '<button class="btn btn-outline-warning btn-sm" onclick="crewAnalyzeFile(\'' + file.id + '\')" title="CrewAI analysis with report">' +
             '<i class="bi bi-people"></i></button> ' +
+            '<button class="btn btn-outline-info btn-sm" onclick="openCrewReport(\'' + file.id + '\')" title="Open CrewAI report">' +
+            '<i class="bi bi-file-earmark-text"></i></button> ' +
             '<button class="btn btn-outline-success btn-sm" onclick="downloadFile(\'' + file.id + '\')">' +
             '<i class="bi bi-download"></i></button> ' +
             '<button class="btn btn-outline-danger btn-sm" onclick="deleteFile(\'' + file.id + '\')">' +
@@ -1138,16 +1140,27 @@ function crewAnalyzeFile(fileId) {
         if (data.success) {
             let msg = 'CrewAI analysis completed (quality: ' +
                 Math.round(data.overall_quality_score) + ').';
-            if (data.reports && data.reports.length > 0) {
+            if (data.report_url) {
+                msg += '\nOpening the report...';
+            } else if (data.reports && data.reports.length > 0) {
                 msg += '\nReport: ' + data.reports[0].file_path;
             }
             alert(msg);
-            loadFiles();
+            if (data.report_url) {
+                window.location.href = data.report_url;
+            } else {
+                loadFiles();
+            }
         } else {
             alert('Crew analysis failed: ' + (data.error || data.message || 'unknown error'));
         }
     })
     .catch(error => alert('Crew analysis failed: ' + error.message));
+}
+
+// Open the CrewAI analysis report page for a file
+function openCrewReport(fileId) {
+    window.location.href = '/analysis/report/' + fileId + '/';
 }
 
 // Download a file

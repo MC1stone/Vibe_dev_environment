@@ -953,7 +953,7 @@ class NIRAnalysisCrew:
         """
         Get a summary of analysis results suitable for API responses.
         """
-        summary = {
+        summary = NIRAnalysisCrew._sanitize_summary_floats({
             "request_id": analysis_result.request_id,
             "sample_id": analysis_result.sample_id,
             "timestamp": analysis_result.timestamp,
@@ -1036,9 +1036,17 @@ class NIRAnalysisCrew:
                 }
                 for report in analysis_result.generated_reports
             ],
-        }
-
+        })
         return summary
+
+    @staticmethod
+    def _sanitize_summary_floats(summary: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure the summary payload is strict-JSON safe.
+
+        Non-finite floats (NaN/Infinity) are replaced with None so DRF can
+        always serialize the response and the browser can always parse it.
+        """
+        return NIRAnalysisCrew._json_safe(summary)
 
     def cleanup_resources(self, max_age_days: int = 30) -> Dict[str, int]:
         """
