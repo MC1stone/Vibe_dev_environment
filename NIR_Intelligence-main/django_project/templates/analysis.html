@@ -369,7 +369,9 @@
         .then(function (result) {
             if (runBtn) runBtn.disabled = false;
             if (!result.success) {
-                setStatus('Analysis failed: ' + (result.error || result.message || 'unknown server error'), true);
+                var detail = result.message || result.error || 'unknown server error';
+                setStatus('Analysis failed: ' + detail
+                    + (result.error && result.message ? ' [' + result.error + ']' : ''), true);
                 return;
             }
             setStatus('Analysis complete - the report is ready below.');
