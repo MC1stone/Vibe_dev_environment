@@ -187,6 +187,81 @@ class StatisticalAnalysisAgent(BaseAgent):
                 "method_results": {},
             }
 
+            if matrix.shape[0] == 1:
+                # Single spectrum: PCA/PLS/clustering need multiple samples.
+                # Report descriptive statistics plus robust outlier detection
+                # (modified z-score on the median/MAD) so a single DIY
+                # spectrum still gets a real, meaningful statistics section.
+                spectrum = matrix[0]
+                median = float(np.median(spectrum))
+                mad = float(np.median(np.abs(spectrum - median)))
+                modified_z = (
+                    0.6745 * (spectrum - median) / mad if mad > 0
+                    else np.zeros_like(spectrum)
+                )
+                # A spectrum has a wide genuine dynamic range (peaks), so a
+                # global z-score misses single-band spikes. Compare each band
+                # against the median of its LOCAL NEIGHBOURS ONLY (the tested
+                # band is excluded from its own reference window): a spike
+                # deviates strongly from its neighbours even when the global
+                # MAD is large.
+                if spectrum.size >= 5:
+                    spectrum_f = spectrum.astype(float)
+                    neighbours = []
+                    for i in range(spectrum_f.size):
+                        lo = max(0, i - 3)
+                        hi = min(spectrum_f.size, i + 4)
+                        window_values = np.concatenate([
+                            spectrum_f[lo:i], spectrum_f[i + 1:hi]
+                        ])
+                        neighbours.append(float(np.median(window_values)))
+                    rolling = np.array(neighbours)
+                    residual = spectrum_f - rolling
+                    residual_mad = float(np.median(np.abs(residual)))
+                    if residual_mad > 0:
+                        local_z = 0.6745 * residual / residual_mad
+                        outlier_mask = np.abs(local_z) > 3.5
+                    else:
+                        # Degenerate MAD (e.g. mostly-flat spectrum): fall back
+                        # to any residual larger than 5% of the signal scale.
+                        threshold = 0.05 * float(np.abs(spectrum_f).max() or 1.0)
+                        outlier_mask = np.abs(residual) > threshold
+                    outlier_indices = [int(i) for i in np.flatnonzero(outlier_mask)]
+                    outlier_basis = "local modified z-score (leave-one-out median)"
+                    outlier_scores = [float(residual[i]) for i in outlier_indices]
+                else:
+                    outlier_indices = []
+                    outlier_basis = "too few points for outlier detection"
+                    outlier_scores = []
+                global_z_outliers = (
+                    [int(i) for i in np.flatnonzero(np.abs(modified_z) > 3.5)]
+                    if mad > 0 else []
+                )
+                results["methods_applied"].append("DescriptiveStatistics")
+                results["method_results"]["DescriptiveStatistics"] = {
+                    "num_points": int(spectrum.size),
+                    "mean": float(np.mean(spectrum)),
+                    "std": float(np.std(spectrum)),
+                    "median": median,
+                    "mad": mad,
+                    "min": float(np.min(spectrum)),
+                    "max": float(np.max(spectrum)),
+                    "q1": float(np.percentile(spectrum, 25)),
+                    "q3": float(np.percentile(spectrum, 75)),
+                    "dynamic_range": float(np.max(spectrum) - np.min(spectrum)),
+                    "outliers": {
+                        "method": outlier_basis,
+                        "indices": outlier_indices,
+                        "values": [float(spectrum[i]) for i in outlier_indices],
+                        "modified_z_scores": outlier_scores,
+                        "global_z_outlier_indices": global_z_outliers,
+                    },
+                    "status": "ok",
+                }
+                results["status"] = "ok"
+                self.status = AgentStatus.COMPLETED
+                return self._create_success_output(results)
+
             for method in methods:
                 method_name = str(method).strip()
                 try:

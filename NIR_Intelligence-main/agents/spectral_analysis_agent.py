@@ -79,7 +79,10 @@ class SpectralAnalysisAgent(BaseAgent):
 
         # Configuration
         self.wavelength_range = kwargs.get("wavelength_range", (700, 2500))  # nm
-        self.min_data_points = kwargs.get("min_data_points", 100)
+        # DIY multispectral sensors report few bands (8-256); 100 would grade
+        # every legitimate handheld capture as invalid. Ten bands still allow
+        # peak detection, outlier analysis and statistics.
+        self.min_data_points = kwargs.get("min_data_points", 10)
         self.quality_thresholds = kwargs.get(
             "quality_thresholds", {"excellent": 90, "good": 75, "fair": 50, "poor": 25}
         )
@@ -191,9 +194,20 @@ class SpectralAnalysisAgent(BaseAgent):
         """Calculate noise level in spectral data"""
         try:
             intensities_array = np.array(intensities)
-            # Use standard deviation as noise estimate
-            noise_level = np.std(intensities_array)
-            return float(noise_level)
+            # The standard deviation of a spectrum measures its SHAPE
+            # (peaks, slopes), not measurement noise: a strong genuine
+            # absorbance peak would be reported as noise. Estimate noise
+            # from second differences instead, which suppress any smooth
+            # trend and isolate high-frequency measurement noise
+            # (sigma ~ std(d2) / sqrt(6)).
+            intensities_array = np.asarray(intensities, dtype=float)
+            if intensities_array.size >= 3:
+                second_diff = np.diff(intensities_array, n=2)
+                # Robust scale (median absolute deviation * 1.4826): a single
+                # saturated band spike must not inflate the noise estimate.
+                robust_sigma = float(np.median(np.abs(second_diff)) * 1.4826)
+                return robust_sigma / np.sqrt(6.0)
+            return float(np.std(intensities_array))
         except Exception as e:
             self.logger.warning(f"Error calculating noise level: {e}")
             return 0.0
@@ -201,9 +215,9 @@ class SpectralAnalysisAgent(BaseAgent):
     def calculate_signal_to_noise(self, intensities: List[float]) -> float:
         """Calculate signal-to-noise ratio"""
         try:
-            intensities_array = np.array(intensities)
-            signal = np.mean(intensities_array)
-            noise = np.std(intensities_array)
+            intensities_array = np.asarray(intensities, dtype=float)
+            signal = float(np.mean(intensities_array))
+            noise = self.calculate_noise_level(intensities)
 
             if noise == 0:
                 return float("inf")
@@ -317,7 +331,10 @@ class SpectralAnalysisAgent(BaseAgent):
             # Check for low signal
             min_intensity = min(intensities)
             mean_intensity = np.mean(intensities)
-            if mean_intensity < 100:  # Arbitrary low threshold
+            # Threshold scales with the sensor bit depth: normalised by the
+            # spectrum maximum, a signal is "low" only when it uses a tiny
+            # fraction of the available dynamic range.
+            if mean_intensity < 0.01 * max(max_intensity, 1):
                 result.issues_detected.append(SpectrometerIssue.LOW_SIGNAL)
                 result.quality_score -= 20
                 result.recommendations.append("Low signal detected. Increase integration time or improve light source.")

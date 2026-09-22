@@ -88,8 +88,12 @@ check('T1e sensor quality results are real (drift/noise computed)',
       and 'noise_level' in result.sensor_quality_results
       and result.sensor_quality_results['num_spectra'] >= 1)
 check('T1f statistical methods applied on the data',
-      'PCA' in result.statistical_analysis_results.get('methods_applied', []),
+      'DescriptiveStatistics' in result.statistical_analysis_results.get('methods_applied', []),
       f"applied={result.statistical_analysis_results.get('methods_applied')}")
+check('T1f-2 single-spectrum descriptive stats include outliers and summary',
+      'outliers' in result.statistical_analysis_results['method_results']['DescriptiveStatistics']
+      and 'mean' in result.statistical_analysis_results['method_results']['DescriptiveStatistics'],
+      f"keys={sorted(result.statistical_analysis_results['method_results']['DescriptiveStatistics'].keys())[:8]}")
 
 # single-spectrum input to the multi-sample agents: they receive the same
 # unified schema dict, verify the no-data path does not crash the crew
