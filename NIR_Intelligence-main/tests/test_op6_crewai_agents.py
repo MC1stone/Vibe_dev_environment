@@ -163,8 +163,10 @@ expected = [
 check("T11a all mission agents instantiated on the crew",
       all(hasattr(crew, name) for name in expected),
       detail=str([n for n in expected if not hasattr(crew, n)]))
+_tool = crew._agent_tool(crew.mcp_agent, "d")
+_tool_run = getattr(_tool, "run", None) or getattr(_tool, "_run")
 check("T11b tool factory wraps agents with JSON contract",
-      callable(crew._agent_tool(crew.mcp_agent, "d")))
+      callable(_tool_run) and str(_tool_run(context_json="{}")).startswith("{"))
 
 # T12: CrewAI integration - 16 agents with tools when the package is present
 import types

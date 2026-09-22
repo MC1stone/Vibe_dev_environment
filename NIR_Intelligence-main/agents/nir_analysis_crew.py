@@ -17,6 +17,12 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 try:
+    from .crewai_compat import ensure_crewai_compat
+    ensure_crewai_compat()
+except ImportError:
+    pass
+
+try:
     from crewai import Agent, Crew, Process, Task
     from crewai.tools import tool
 
@@ -188,14 +194,17 @@ class NIRAnalysisCrew:
         self.logger.info(f"Federated learning enabled: {self.config.enable_federated_learning}")
 
     def _agent_tool(self, base_agent, description):
-        """Wrap a real platform agent as a CrewAI-compatible tool function.
+        """Wrap a real platform agent as a CrewAI-compatible tool.
 
-        The tool accepts a JSON context dict and executes the underlying
-        agent implementation (no simulated values).
+        crewai >= 0.80 requires tools to be BaseTool instances (pydantic
+        validation rejects plain functions). The tool accepts a JSON
+        context dict and executes the underlying agent implementation
+        (no simulated values). Falls back to a plain function when the
+        crewai package is unavailable (standalone mode, offline tests).
         """
-        def tool(context_json: str = "{}") -> str:
-            import json as _json
+        import json as _json
 
+        def _run(context_json: str = "{}") -> str:
             try:
                 context = _json.loads(context_json) if context_json else {}
             except (ValueError, TypeError):
@@ -207,9 +216,35 @@ class NIRAnalysisCrew:
                 "data": output.data,
                 "errors": [e.message for e in output.errors],
             }, default=str)
-        tool.__doc__ = description
-        tool.__name__ = f"{base_agent.name.lower()}_tool"
-        return tool
+
+        try:
+            from crewai.tools import BaseTool
+            from pydantic import BaseModel, Field
+
+            tool_name = f"{base_agent.name.lower()}_tool"
+            tool_description = description
+
+            class _Context(BaseModel):
+                context_json: str = Field(default="{}", description="JSON context for the agent")
+
+            class _WrappedTool(BaseTool):
+                name: str = tool_name
+                description: str = tool_description
+                args_schema: type = _Context
+
+                def _run(self, context_json: str = "{}") -> str:
+                    return _run(context_json)
+
+            instance = _WrappedTool()
+            instance.name = tool_name
+            instance.description = tool_description
+            return instance
+        except ImportError:
+            def tool(context_json: str = "{}") -> str:
+                return _run(context_json)
+            tool.__doc__ = description
+            tool.__name__ = f"{base_agent.name.lower()}_tool"
+            return tool
 
     def _build_llm(self):
         """Bind the local Ollama LLM for CrewAI agents.
