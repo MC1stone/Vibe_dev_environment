@@ -3,7 +3,47 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP21 - Sensor Quality SPC Dashboard and Optimization Recommendations
+## Current Task: OP22 - Spectrum Chart and Top-3 Similarity Comparison
+
+### Objective
+
+The uploaded spectral data was only ever shown as numbers: the spectral
+analysis section had no plot of the measured spectrum, and the FAISS
+similarity search reported scores without visualising the matches.
+OP22 renders both:
+
+| Chart | Content |
+|-------|---------|
+| Spectrum | The uploaded spectrum as a single line (same style as the database detail page) in the spectral analysis section |
+| Similarity Top-3 | The measurement overlaid with the three most similar spectra (spectral database + sibling project files), matches ordered by FAISS similarity |
+
+### Scope
+
+- `services/similarity_charts.py`: spectrum line chart and top-3
+  comparison overlay (base64 PNG data URLs, never raises, '' without
+  data; the comparison returns '' when no reference curve can be drawn
+  - never a fake overlay)
+- `services/project_crew.py`: the spectral analysis section carries
+  `charts`/`charts_note` with the uploaded spectrum; the similarity
+  section builds the reference curve map (sibling datasets + database
+  references) and overlays the top-3 matches on the measurement
+- Templates and the final OP11 report render both charts through the
+  generic section-charts loop (no template change needed)
+
+### Out of Scope
+
+- FAISS metric changes (the chart visualises the existing cosine search)
+- Cross-grid interpolation (references on a different wavelength grid
+  stay excluded, per the OP15 design rule)
+
+### Success Criteria
+
+- Both charts render from the real Triad preview (18 channels)
+- The similarity section shows the three most similar spectra from
+  database + sibling files with their similarity scores
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP21 - Sensor Quality SPC Dashboard and Optimization Recommendations
 
 ### Objective
 
