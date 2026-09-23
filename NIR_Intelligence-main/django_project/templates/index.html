@@ -54,6 +54,22 @@
         align-items: stretch;
         justify-content: center;
         gap: 0.25rem;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .workflow-row {
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+        width: 100%;
+        margin: 0 auto 0.5rem;
+    }
+
+    .workflow-row--wrap {
+        margin: 0 auto;
     }
 
     .workflow-step {
@@ -212,6 +228,7 @@
         Fahren Sie mit der Maus &uuml;ber die einzelnen Schritte, um eine Erkl&auml;rung zu erhalten.
     </p>
     <div class="workflow-diagram">
+     <div class="workflow-row">
         <div class="workflow-step" tabindex="0">
             <span class="workflow-step__num">1</span>
             <i class="bi bi-box-arrow-in-right workflow-step__icon"></i>
@@ -261,7 +278,11 @@
                 anschlie&szlig;end neu eingelesen (Reingest).
             </div>
         </div>
-        <span class="workflow-arrow"><i class="bi bi-arrow-right"></i></span>
+     </div>
+     <div class="workflow-row workflow-row--wrap">
+        <span class="workflow-arrow"><i class="bi bi-arrow-return-down"></i></span>
+     </div>
+     <div class="workflow-row">
         <div class="workflow-step" tabindex="0">
             <span class="workflow-step__num">5</span>
             <i class="bi bi-play-fill workflow-step__icon"></i>
@@ -297,6 +318,7 @@
                 &Auml;hnlichkeitstreffer; neue Analysen vergleichen gegen diese Referenzen.
             </div>
         </div>
+     </div>
     </div>
 </section>
 

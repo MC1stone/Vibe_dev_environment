@@ -184,7 +184,55 @@ def _kpi_row(items: List[Any]) -> str:
     return f'<div class="kpi">{cells}</div>'
 
 
-def _agent_section_html(section: Dict[str, Any]) -> str:
+_CHART_TITLES = {
+    'spectrum': 'Hochgeladenes Spektrum (Messdaten)',
+    'quality_bar': 'Qualitätsbewertung der Analysebereiche',
+    'similarity_top3': 'Top-3 ähnlichste Spektren aus der Datenbank',
+    'sensor_dashboard': 'Sensorqualitäts-Dashboard (SPC)',
+    'score_plot': 'PCA Score-Plot',
+    'loading_plot': 'PCA Loading-Plot',
+    'biplot': 'PCA Biplot',
+    'scree_plot': 'PCA Scree-Plot',
+    'r2_per_wavelength': 'PCA R² pro Wellenlänge',
+    'spe_plot': 'PCA SPE-Plot',
+    'prediction_vs_actual': 'Vorhersage vs. Referenzwert (neuronales Netz)',
+    'loss_curves': 'Trainings- und Validierungs-Loss',
+    'shap_summary': 'SHAP Summary (globale Wichtigkeit)',
+    'shap_waterfall': 'SHAP Waterfall (lokale Erklärung)',
+    'saliency_map': 'Saliency Map',
+    'grad_cam': 'Grad-CAM',
+    'attention_weights': 'Attention-Weights',
+    'ref_vs_pred': 'Referenz vs. Vorhersage (PLS-Kreuzvalidierung)',
+    'reg_coefficients': 'Regressionskoeffizienten pro Wellenlänge',
+    'rmsecv_vs_n': 'RMSECV vs. Anzahl PLS-Komponenten',
+}
+
+
+def _figure_caption(number: int, key: str) -> str:
+    title = _CHART_TITLES.get(key) or key.replace('_', ' ').capitalize()
+    return (f'<div class="fig-caption"><b>Abbildung {number}:</b> '
+            f'{_escape(title)}</div>')
+
+
+def _figure_registry(per_agent: List[Dict[str, Any]],
+                     overview_keys: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    """Ordered figure list identical to student_report.figure_explanations
+    and the chatbot figure numbering (overview charts first, then the agent
+    section charts in report order)."""
+    figures: List[Dict[str, Any]] = []
+    for key in (overview_keys or []):
+        figures.append({'key': key, 'section_index': -1})
+    for index, section in enumerate(per_agent):
+        for key, url in (section.get('charts') or {}).items():
+            if url:
+                figures.append({'key': key, 'section_index': index})
+    for number, figure in enumerate(figures, start=1):
+        figure['number'] = number
+    return figures
+
+
+def _agent_section_html(section: Dict[str, Any],
+                        section_figures: Optional[List[Dict[str, Any]]] = None) -> str:
     status = section.get('status', 'failed')
     badge = ('badge-ok' if status == 'completed' else 'badge-fail')
     rows = _metric_rows(section.get('data', {}))
@@ -203,9 +251,12 @@ def _agent_section_html(section: Dict[str, Any]) -> str:
     charts_html = ''
     charts = section.get('charts') or {}
     if charts:
+        fig_map = {f['key']: f['number'] for f in (section_figures or [])}
         imgs = ''.join(
-            f'<img src="{_escape(url)}" alt="PCA {_escape(k)}" '
+            f'<div class="fig-block"><img src="{_escape(url)}" alt="{_escape(_CHART_TITLES.get(k) or k)}" '
             f'style="max-width:100%;height:auto;margin:6px;">'
+            + (_figure_caption(fig_map[k], k) if k in fig_map else '')
+            + '</div>'
             for k, url in charts.items() if url)
         note = _escape(section.get('charts_note') or 'PCA-Diagramme')
         charts_html = f'<h3>{note}</h3>{imgs}'
@@ -263,20 +314,29 @@ def generate_final_html_report(project, crew_results: Dict[str, Any],
 
     spectrum_chart = spectrum_chart_data_url(datasets)
     quality_chart = quality_bar_chart_data_url(per_agent)
+    overview_keys = (['spectrum'] if spectrum_chart else []) + \
+                    (['quality_bar'] if quality_chart else [])
+    figures = _figure_registry(per_agent, overview_keys=overview_keys)
     charts = ''
     if spectrum_chart:
+        number = next((f['number'] for f in figures if f['key'] == 'spectrum'), 0)
         charts += f'<h3>Messdaten (grafisch)</h3>' \
-                 f'<img class="chart" src="{spectrum_chart}" alt="Messdaten-Plot">'
+                 f'<div class="fig-block"><img class="chart" src="{spectrum_chart}" ' \
+                 f'alt="Messdaten-Plot">{_figure_caption(number, "spectrum")}</div>'
     if quality_chart:
+        number = next((f['number'] for f in figures if f['key'] == 'quality_bar'), 0)
         charts += f'<h3>Auswertungsbewertung</h3>' \
-                 f'<img class="chart" src="{quality_chart}" alt="Qualitäts-Scores">'
+                 f'<div class="fig-block"><img class="chart" src="{quality_chart}" ' \
+                 f'alt="Qualitäts-Scores">{_figure_caption(number, "quality_bar")}</div>'
 
-    agent_html = ''.join(_agent_section_html(s) for s in per_agent) or \
+    agent_html = ''
+    for index, section in enumerate(per_agent):
+        section_figures = [f for f in figures if f['section_index'] == index]
+        agent_html += _agent_section_html(section, section_figures=section_figures)
+    agent_html = agent_html or \
         '<p class="muted">Keine Agenten-Berichte vorhanden.</p>'
 
     student_sections = {'discussion': '', 'conclusion': '', 'literature': ''}
-    overview_keys = (['spectrum'] if spectrum_chart else []) + \
-                    (['quality_bar'] if quality_chart else [])
     try:
         from services.student_report import build_student_sections
         student_sections = build_student_sections(

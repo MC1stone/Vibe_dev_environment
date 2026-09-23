@@ -186,6 +186,26 @@ for path, name in WORKFLOW_ROUTES:
         check(f'T5b workflow route {path} resolves', False, 'Resolver404')
 
 # ---------------------------------------------------------------------------
+# T6: workflow diagram centered in two rows; visible figure captions
+# ---------------------------------------------------------------------------
+check('T6a workflow diagram centered (max-width + auto margins)',
+      'margin: 0 auto' in index_src and 'max-width: 900px' in index_src)
+check('T6b steps grouped into centered rows (4 + 3)',
+      index_src.count('workflow-row') >= 4 and 'workflow-row--wrap' in index_src)
+check('T6c wrap arrow between the rows', 'bi-arrow-return-down' in index_src)
+
+report_src = (PROJECT / 'services' / 'project_report.py').read_text()
+check('T6d figure registry mirrors the student report numbering',
+      '_figure_registry' in report_src and 'section_index' in report_src)
+check('T6e visible "Abbildung N" captions rendered under the charts',
+      '_figure_caption' in report_src and 'Abbildung {number}' in report_src)
+check('T6f agent sections receive their own figure numbers',
+      'section_figures=section_figures' in report_src)
+check('T6g overview charts carry captions too',
+      'fig-caption' in report_src
+      and report_src.count('_figure_caption(number') >= 2)
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 print()
