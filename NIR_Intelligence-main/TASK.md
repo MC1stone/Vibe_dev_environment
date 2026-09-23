@@ -28,7 +28,14 @@ mouse-over.
   test_op8 still depend on files.html / analysis.html)
 - `tests/test_op8_crew_results_ui.py`: T7 navigation checks adapted to the
   OP25 navigation (files.html stays functional, workflow links verified)
-- `tests/test_op25_website_cleanup.py` (58 checks) + CI matrix extended
+- `django_project/templates/index.html`: workflow diagram centered - two
+  centered rows (4 + 3 steps) with a wrap arrow, max-width 900px
+- `services/project_report.py`: visible figure captions - every chart in the
+  final report (overview + agent sections) carries "Abbildung N: <Titel>"
+  with the SAME numbering as the OP23 Diskussion explanations and the OP24
+  chatbot references (overview charts first, then agent sections in report
+  order); `_figure_registry` + `_figure_caption` + `_CHART_TITLES`
+- `tests/test_op25_website_cleanup.py` (65 checks) + CI matrix extended
 
 ### Out of Scope
 - Deleting legacy templates/routes (kept unlinked for compatibility)
