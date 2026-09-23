@@ -162,10 +162,30 @@ def _metadata_quality_dict(result) -> Dict[str, Any]:
     return data
 
 
-def _generate_final_report(project, crew, result, per_agent: List[Dict[str, Any]]) -> str:
-    """Generate the final comprehensive Quarto report for the project and
+def _generate_final_report(project, crew, result, per_agent: List[Dict[str, Any]],
+                            full_series: List[Dict[str, Any]] = None) -> str:
+    """Generate the final comprehensive project report (OP11: rendered HTML
+    with embedded charts, original data, source code and evaluation) and
     return its file path. Falls back to the reporting agent's template
-    rendering when the quarto binary is unavailable (same behaviour as OP7)."""
+    rendering when the report builder is unavailable (same behaviour as
+    OP7 for single files)."""
+    from services.project_report import generate_final_html_report
+
+    return generate_final_html_report(project, {
+        'request_id': result.request_id,
+        'overall_quality_score': result.overall_quality_score,
+        'recommendations': list(result.recommendations or []),
+        'warnings': list(result.warnings or []),
+        'errors': list(result.errors or []),
+        'processing_time': result.processing_time,
+        'datasets_analyzed': len(full_series) if full_series is not None else None,
+        'per_agent_reports': per_agent,
+    }, full_series=full_series)
+
+
+def _generate_final_report_legacy(project, crew, result, per_agent: List[Dict[str, Any]]) -> str:
+    """Legacy single-file path (OP7 behaviour): reporting agent template
+    rendering. Kept as the fallback when the OP11 report builder fails."""
     from agents.reporting_agent import ReportType, ReportFormat
 
     output_dir = Path(tempfile.mkdtemp(prefix='project_report_'))
@@ -269,6 +289,10 @@ def run_project_crew(project) -> Dict[str, Any]:
         raise ValueError('Crew analysis produced no results')
 
     primary = results[0]
+    full_series = [{'file_name': d.get('file_name', str(d.get('file_id'))),
+                    'wavelengths': d.get('preview', {}).get('wavelengths', []),
+                    'intensities': d.get('preview', {}).get('intensities', [])}
+                   for d in datasets]
     crew_results: Dict[str, Any] = {
         'request_id': primary.request_id,
         'overall_quality_score': primary.overall_quality_score,
@@ -285,7 +309,13 @@ def run_project_crew(project) -> Dict[str, Any]:
     }
     project.crew_results = crew_results
 
-    final_path = _generate_final_report(project, crew, primary, all_reports)
+    try:
+        final_path = _generate_final_report(project, crew, primary, all_reports,
+                                            full_series=full_series)
+    except Exception:
+        logger.exception('OP11 report builder failed, falling back to the '
+                         'reporting agent template rendering')
+        final_path = _generate_final_report_legacy(project, crew, primary, all_reports)
     project.final_report_path = final_path
     project.phase = 'completed'
     project.completed_at = datetime.now()

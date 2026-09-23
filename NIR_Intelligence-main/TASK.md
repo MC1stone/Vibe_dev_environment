@@ -3,7 +3,50 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP10 - Project Workflow (Upload -> Preparation -> Release -> Crew -> Quarto Report)
+## Current Task: OP11 - Rendered Final Project Report (Charts, Original Data, Source Code)
+
+### Objective
+
+Replace the raw quarto-markdown project final report (found in the OP10 local
+test: unrendered R fragments in a .html file, no charts) with a rendered,
+self-contained HTML report: overview KPIs, embedded spectrum chart of the
+full measurement series (matplotlib PNG as data URLs), per-agent quality bar
+chart (evaluation), one section per agent (content + metrics + status),
+original data tables, recommendations, warnings and the analysis source
+code. The legacy reporting-agent template rendering stays as fallback;
+matplotlib stays optional (charts degrade gracefully, anti-code-creep).
+
+### Predecessors
+
+- OP10: COMPLETED (project workflow upload -> preparation -> release -> crew)
+- The local end-to-end test of OP10 exposed the raw-markdown final report
+
+### Scope
+
+- `services/project_report.py`: new OP11 report builder (rendered HTML with
+  embedded charts, per-agent sections, original data, source code)
+- `services/project_crew.py`: `_generate_final_report` uses the OP11 builder
+  and passes the full measurement series; legacy template rendering kept
+  as `_generate_final_report_legacy` fallback
+- `tests/test_op11_rendered_final_report.py` (30 checks) + CI matrix extended
+
+### Out of Scope
+
+- Quarto binary integration (separate step; the OP7 single-file path is
+  unchanged)
+- PDF/Word export formats
+- Per-agent charts beyond the spectrum and quality bar chart
+
+### Success Criteria
+
+- The project final report is a rendered HTML document without raw quarto/
+  R fragments
+- The report contains embedded spectrum + quality charts, original data,
+  recommendations and source code
+- Charts degrade gracefully without matplotlib; the legacy fallback stays
+- Existing test matrices stay green (no regressions)
+
+## Completed Task: OP10 - Project Workflow (Upload -> Preparation -> Release -> Crew -> Quarto Report)
 
 ### Objective
 Structure the end-to-end workflow as an analysis project: uploaded files open a
