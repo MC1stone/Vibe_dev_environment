@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% block title %}{{ project.name }} - Projektbericht{% endblock %}
+{% block content %}
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1><i class="bi bi-folder2-open me-2"></i>Projekt: {{ project.name }}</h1>
+        <div>
+            {% if project.phase == 'drafted' %}
+            <span class="badge bg-warning text-dark fs-6">Phase 1: Vorbereitung</span>
+            {% elif project.phase == 'released' %}
+            <span class="badge bg-info fs-6">Phase 2: Analyse</span>
+            {% else %}
+            <span class="badge bg-success fs-6">Abgeschlossen</span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if project.description %}
+    <p class="text-muted">{{ project.description }}</p>
+    {% endif %}
+
+    <!-- ===================== PHASE 1: PREPARATION ===================== -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Phase 1: Datenaufbereitung
+                <span class="text-muted fs-6">(Dateien &rarr; verwertbare Datensätze)</span></h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="border rounded p-3 text-center">
+                        <div class="fs-3">{{ usable_dataset_count|default:preparation.usable_dataset_count }}</div>
+                        <div class="text-muted">verwertbare Datensätze von {{ preparation.total_dataset_count|default:0 }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3 text-center">
+                        <div class="fs-3">{{ metadata_quality.overall_quality_score|default:'-' }} / 100</div>
+                        <div class="text-muted">Metadaten-Qualität</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3 text-center">
+                        <div class="fs-3">{{ metadata_quality.missing_recommended_fields|default:''|length }}</div>
+                        <div class="text-muted">fehlende Metadatenfelder</div>
+                    </div>
+                </div>
+            </div>
+
+            <h6><i class="bi bi-clipboard-data me-1"></i>Datensätze</h6>
+            <div class="table-responsive mb-3">
+                <table class="table table-sm table-hover align-middle">
+                    <thead>
+                        <tr><th>Datei</th><th>Typ</th><th>Status</th><th>Punkte</th><th>Wellenlängenbereich</th><th>Nutzbar</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for d in datasets %}
+                        <tr>
+                            <td>{{ d.file_name }}</td>
+                            <td>{{ d.file_category }}</td>
+                            <td>{% if d.usable %}<span class="badge bg-success">Messdaten</span>{% else %}<span class="badge bg-secondary">{{ d.reason|truncatechars:40 }}</span>{% endif %}</td>
+                            <td>{{ d.num_points|default:'-' }}</td>
+                            <td>{% if d.usable %}{{ d.wavelength_min|floatformat:0 }} – {{ d.wavelength_max|floatformat:0 }} nm{% else %}-{% endif %}</td>
+                            <td>{% if d.usable %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <h6><i class="bi bi-lightbulb me-1"></i>Verbesserungsvorschläge</h6>
+            <ul class="mb-2">
+                {% for rec in recommendations %}
+                <li>{{ rec }}</li>
+                {% empty %}
+                <li class="text-muted">Keine Empfehlungen.</li>
+                {% endfor %}
+            </ul>
+
+            {% if metadata_quality.missing_recommended_fields %}
+            <p class="small text-muted">Fehlende Metadatenfelder:
+                {% for f in metadata_quality.missing_recommended_fields %}<code>{{ f }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}
+            </p>
+            {% endif %}
+
+            {% if project.phase == 'drafted' %}
+            <div class="d-flex gap-2 mt-3">
+                <button id="btn-reingest" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-repeat me-1"></i>Daten angepasst? Aufbereitung erneut ausführen
+                </button>
+                <button id="btn-release" class="btn btn-success">
+                    <i class="bi bi-play-fill me-1"></i>Zur Analyse freigeben
+                </button>
+            </div>
+            <div id="workflow-status" class="mt-3" style="display:none;"></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ===================== PHASE 2: CREW ANALYSIS ===================== -->
+    {% if project.phase != 'drafted' %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-people me-2"></i>Phase 2: Agenten-Analysen
+                <span class="text-muted fs-6">(jeder Agent berichtet über seinen Bereich)</span></h5>
+        </div>
+        <div class="card-body">
+            {% if crew_analysis.overall_quality_score %}
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="border rounded p-3 text-center">
+                        <div class="fs-3">{{ crew_analysis.overall_quality_score|floatformat:1 }}</div>
+                        <div class="text-muted">Gesamtqualität (Crew)</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3 text-center">
+                        <div class="fs-3">{{ crew_analysis.processing_time|floatformat:1 }}s</div>
+                        <div class="text-muted">Bearbeitungszeit</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3 text-center">
+                        <div class="fs-3">{{ crew_results.datasets_analyzed|default:'-' }}</div>
+                        <div class="text-muted">analysierte Datensätze</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% for section in per_agent_reports %}
+            <div class="card border-1 mb-3">
+                <div class="card-header d-flex justify-content-between">
+                    <span><i class="bi bi-robot me-1"></i>{{ section.title }}</span>
+                    {% if section.status == 'completed' %}
+                    <span class="badge bg-success">abgeschlossen</span>
+                    {% else %}
+                    <span class="badge bg-danger">fehlgeschlagen</span>
+                    {% endif %}
+                </div>
+                <div class="card-body py-2">
+                    <pre class="mb-0 small" style="max-height: 220px; overflow: auto;"><code>{{ section.data|pprint }}</code></pre>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted mb-0">Noch keine Agenten-Berichte vorhanden.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ===================== FINAL QUARTO REPORT ===================== -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-file-earmark-pdf me-2"></i>Abschluss-Quarto-Bericht</h5>
+        </div>
+        <div class="card-body">
+            <p>Der Abschlussbericht enthält Originaldaten, Code, Auswertungsbewertung und Grafiken aller Analysen.</p>
+            {% if final_report_url %}
+            <a href="{{ final_report_url }}" class="btn btn-primary" target="_blank">
+                <i class="bi bi-box-arrow-up-right me-1"></i>Quarto-Abschlussbericht öffnen
+            </a>
+            {% else %}
+            <span class="text-muted">Noch kein Abschlussbericht generiert.</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+{% if project.phase == 'drafted' %}
+<script>
+(function () {
+    var statusBox = document.getElementById('workflow-status');
+    function getCsrfToken() {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            if (cookie.indexOf('csrftoken=') === 0) {
+                return decodeURIComponent(cookie.substring('csrftoken='.length));
+            }
+        }
+        return '';
+    }
+    function show(msg, ok) {
+        statusBox.style.display = 'block';
+        statusBox.innerHTML = '<div class="alert alert-' + (ok ? 'success' : 'danger') + ' mb-0">' + msg + '</div>';
+    }
+    document.getElementById('btn-reingest').addEventListener('click', function () {
+        fetch('/projects/{{ project.id }}/reingest/', {method: 'POST', headers: {'X-CSRFToken': getCsrfToken()}})
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.success) { show('Aufbereitung aktualisiert: ' + d.usable_dataset_count + ' verwertbare Datensätze.', true); setTimeout(function(){ location.reload(); }, 900); }
+                else { show('Fehler: ' + (d.error || 'unbekannt'), false); }
+            })
+            .catch(function (e) { show('Netzwerkfehler: ' + e, false); });
+    });
+    document.getElementById('btn-release').addEventListener('click', function () {
+        statusBox.style.display = 'block';
+        statusBox.innerHTML = '<div class="alert alert-info mb-0">Analyse läuft — alle Agenten werden ausgeführt, dies kann einige Momente dauern…</div>';
+        fetch('/projects/{{ project.id }}/release/', {method: 'POST', headers: {'X-CSRFToken': getCsrfToken()}})
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.success) { show('Analyse abgeschlossen (Qualität: ' + d.overall_quality_score + ').', true); setTimeout(function(){ location.reload(); }, 900); }
+                else { show('Fehler: ' + (d.error || d.message || 'unbekannt'), false); }
+            })
+            .catch(function (e) { show('Netzwerkfehler: ' + e, false); });
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

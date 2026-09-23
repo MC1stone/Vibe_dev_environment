@@ -49,6 +49,10 @@ urlpatterns = [
     
     # Generic File Management
     path('api/files/', include('api.file_urls')),
+
+    # Analysis Projects (OP10 project workflow)
+    path('projects/', include('api.project_urls')),
+    path('api/projects/', include('api.project_urls')),
     
     # User Management
     path('api/users/register/', UserRegistrationView.as_view(), name='user-register'),

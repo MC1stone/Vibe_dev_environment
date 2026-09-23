@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Projekte - NIR Intelligence Platform{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-folder2-open me-2"></i>Analose-Projekte</h1>
+        <a href="/files/" class="btn btn-primary"><i class="bi bi-upload me-1"></i>Dateien hochladen</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <p class="text-muted">
+                Jede hochgeladene Datei bildet ein neues Projekt (Datei-format-agnostisch).
+                Phase 1 bereitet die Daten auf (Messdaten, Metadaten), Sie geben das Projekt
+                zur Analyse frei, danach laufen alle Agenten-Analysen und der Abschluss-Quarto-Bericht wird erzeugt.
+            </p>
+            {% if projects %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Projekt</th>
+                            <th>Phase</th>
+                            <th>Dateien</th>
+                            <th>Datensätze</th>
+                            <th>Metadaten-Score</th>
+                            <th>Gesamtqualität</th>
+                            <th>Erstellt</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in projects %}
+                        <tr>
+                            <td><strong>{{ p.name }}</strong></td>
+                            <td>
+                                {% if p.phase == 'drafted' %}
+                                <span class="badge bg-warning text-dark">In Vorbereitung</span>
+                                {% elif p.phase == 'released' %}
+                                <span class="badge bg-info">Zur Analyse freigegeben</span>
+                                {% else %}
+                                <span class="badge bg-success">Abgeschlossen</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ p.file_count }}</td>
+                            <td>{{ p.dataset_count }}</td>
+                            <td>{{ p.metadata_score|default:'-' }}</td>
+                            <td>{{ p.overall_quality_score|default:'-' }}</td>
+                            <td>{{ p.created_at|date:'d.m.Y H:i' }}</td>
+                            <td>
+                                <a href="/projects/{{ p.id }}/" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-file-earmark-text me-1"></i>Bericht
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-folder2-open display-4 text-muted"></i>
+                <p class="mt-3 mb-1"><strong>Noch keine Projekte</strong></p>
+                <p class="text-muted">Laden Sie eine Datei hoch und erstellen Sie daraus ein Projekt.</p>
+                <a href="/files/" class="btn btn-primary"><i class="bi bi-upload me-1"></i>Jetzt Datei hochladen</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
