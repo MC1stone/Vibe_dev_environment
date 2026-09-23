@@ -20,10 +20,6 @@ from api.views import (
     FlowerAIAuthView, ILIASAuthView, FederatedLearningView
 )
 from api.file_views import FileCrewReportView
-from api.nir_test_views import (
-    nir_test_info, nir_test_demo, nir_test_run,
-    nir_test_files, nir_test_report, nir_test_setup, nir_test_clean
-)
 from api.quarto_views import (
     generate_spectral_report, generate_metadata_report,
     get_report_templates, check_quarto_status,
@@ -72,14 +68,6 @@ urlpatterns = [
     path('api/health/', HealthCheckView.as_view(), name='health-check'),
     path('health/', HealthCheckView.as_view(), name='health-check-root'),
     
-    # NIR_TEST Environment Integration
-    path('api/nir-test/info/', nir_test_info, name='nir-test-info'),
-    path('api/nir-test/demo/', nir_test_demo, name='nir-test-demo'),
-    path('api/nir-test/run/<str:test_name>/', nir_test_run, name='nir-test-run'),
-    path('api/nir-test/files/', nir_test_files, name='nir-test-files'),
-    path('api/nir-test/report/', nir_test_report, name='nir-test-report'),
-    path('api/nir-test/setup/', nir_test_setup, name='nir-test-setup'),
-    path('api/nir-test/clean/', nir_test_clean, name='nir-test-clean'),
     
     # Main Entry Point
     path('', TemplateView.as_view(template_name='index.html'), name='home'),
