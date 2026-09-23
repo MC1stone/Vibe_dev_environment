@@ -4,7 +4,9 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1><i class="bi bi-folder2-open me-2"></i>Analose-Projekte</h1>
-        <a href="/files/" class="btn btn-primary"><i class="bi bi-upload me-1"></i>Dateien hochladen</a>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#projectUploadModal">
+            <i class="bi bi-upload me-1"></i>Neues Projekt (Upload)
+        </button>
     </div>
 
     <div class="card shadow-sm">
@@ -61,11 +63,131 @@
             <div class="text-center py-5">
                 <i class="bi bi-folder2-open display-4 text-muted"></i>
                 <p class="mt-3 mb-1"><strong>Noch keine Projekte</strong></p>
-                <p class="text-muted">Laden Sie eine Datei hoch und erstellen Sie daraus ein Projekt.</p>
-                <a href="/files/" class="btn btn-primary"><i class="bi bi-upload me-1"></i>Jetzt Datei hochladen</a>
+                <p class="text-muted">Laden Sie Dateien hoch - daraus wird automatisch ein neues Projekt.</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#projectUploadModal">
+                    <i class="bi bi-upload me-1"></i>Jetzt Projekt anlegen
+                </button>
             </div>
             {% endif %}
         </div>
     </div>
 </div>
+
+<!-- ===================== PROJECT UPLOAD MODAL (OP12) ===================== -->
+<div class="modal fade" id="projectUploadModal" tabindex="-1"
+     aria-labelledby="projectUploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="projectUploadModalLabel">
+                    <i class="bi bi-folder-plus me-1"></i>Neues Projekt aus Dateien
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="projectName" class="form-label">Projektname (optional)</label>
+                    <input type="text" class="form-control" id="projectName"
+                           placeholder="wird aus der ersten Datei abgeleitet, falls leer">
+                </div>
+                <div class="mb-3">
+                    <label for="projectFiles" class="form-label">Dateien (beliebiges Format)</label>
+                    <input type="file" class="form-control" id="projectFiles" multiple>
+                    <div class="form-text">Alle Dateien bilden zusammen ein Projekt.</div>
+                </div>
+                <div id="projectUploadStatus" class="mt-3" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" id="btnCreateProject">
+                    <i class="bi bi-play-fill me-1"></i>Hochladen &amp; Projekt anlegen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var statusBox = document.getElementById('projectUploadStatus');
+    var createBtn = document.getElementById('btnCreateProject');
+
+    function getCsrfToken() {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            if (cookie.indexOf('csrftoken=') === 0) {
+                return decodeURIComponent(cookie.substring('csrftoken='.length));
+            }
+        }
+        return '';
+    }
+
+    function show(msg, ok) {
+        statusBox.style.display = 'block';
+        statusBox.innerHTML = '<div class="alert alert-' + (ok ? 'success' : 'danger')
+            + ' mb-0">' + msg + '</div>';
+    }
+
+    createBtn.addEventListener('click', function () {
+        var fileInput = document.getElementById('projectFiles');
+        var files = fileInput ? fileInput.files : null;
+        if (!files || files.length === 0) {
+            show('Bitte mindestens eine Datei auswählen.', false);
+            return;
+        }
+        createBtn.disabled = true;
+        show('Dateien werden hochgeladen…', true);
+
+        var formData = new FormData();
+        for (var i = 0; i < files.length; i++) formData.append('files', files[i]);
+
+        fetch('/api/files/upload/', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (uploadData) {
+            if (!uploadData.success) {
+                createBtn.disabled = false;
+                show('Upload fehlgeschlagen: ' + (uploadData.error || uploadData.message || 'unbekannt'), false);
+                return;
+            }
+            var fileIds = uploadData.uploaded_files || [];
+            if (!fileIds.length) {
+                createBtn.disabled = false;
+                show('Upload erfolgreich, aber keine Datei-IDs erhalten.', false);
+                return;
+            }
+            show('Projekt wird angelegt (Aufbereitung läuft)…', true);
+            var name = (document.getElementById('projectName').value || '').trim();
+            return fetch('/api/projects/create/', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ file_ids: fileIds, name: name })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (projectData) {
+                if (projectData.success) {
+                    window.location.href = '/projects/' + projectData.project_id + '/';
+                } else {
+                    createBtn.disabled = false;
+                    show('Projekt konnte nicht angelegt werden: '
+                         + (projectData.error || 'unbekannt'), false);
+                }
+            });
+        })
+        .catch(function (e) {
+            createBtn.disabled = false;
+            show('Netzwerkfehler: ' + e, false);
+        });
+    });
+})();
+</script>
 {% endblock %}

@@ -3,7 +3,42 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP11 - Rendered Final Project Report (Charts, Original Data, Source Code)
+## Current Task: OP12 - Project Creation UI on the Projects Page
+
+### Objective
+
+The projects page linked 'Dateien hochladen' to the legacy files page - files
+were uploaded there but no project was created; the OP10 project workflow was
+reachable only via the API. OP12 closes the UI gap per MO 1: the projects page
+gets its own upload modal (multi-file, optional project name) that uploads
+the files via /api/files/upload/, creates the project via
+/api/projects/create/ with the returned file ids and navigates to the
+preparation report (phase 1).
+
+### Predecessors
+
+- OP10: COMPLETED (project workflow, API)
+- OP11: COMPLETED (rendered final report)
+
+### Scope
+
+- `django_project/templates/projects.html`: upload modal replaces the legacy
+  /files/ link; upload -> create -> navigate flow with error paths
+- `tests/test_op12_project_upload_ui.py` (19 checks) + CI matrix extended
+
+### Out of Scope
+
+- The legacy files page itself (stays as-is for single-file analysis)
+- Inline metadata editing
+
+### Success Criteria
+
+- Upload on the projects page creates a project and lands on the preparation
+  report without leaving the page flow
+- Upload and project-creation error paths are visible to the user
+- Existing test matrices stay green (no regressions)
+
+## Completed Task: OP11 - Rendered Final Project Report (Charts, Original Data, Source Code)
 
 ### Objective
 
