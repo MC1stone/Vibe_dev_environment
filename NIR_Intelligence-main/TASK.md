@@ -3,7 +3,54 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP20 - Standard Calibration Plots
+## Current Task: OP21 - Sensor Quality SPC Dashboard and Optimization Recommendations
+
+### Objective
+
+The old NIR platform showed the sensor quality as a nicely presented
+panel with optimization recommendations. The new agent computes drift,
+offset, noise and a quality score from the real replicas (OP14 fixed
+the false alarms), but nothing was plotted and no recommendations were
+shown. OP21 renders a 4-panel SPC-style dashboard from the real
+measurement replicas and derives concrete German optimization
+recommendations from the agent results:
+
+| Panel | Type | Content |
+|-------|------|---------|
+| A | Control chart (Shewhart) | Drift trend over the replicas with a +/-3 sigma band |
+| B | Spectral overlay (all curves) | Visual drift as a systematic shift |
+| C | Noise per channel (box plot) | Which of the channels drive the noise? |
+| D | Quality gauge (0-1) | Traffic-light overall score with sub-scores |
+
+### Scope
+
+- `services/sensor_charts.py`: 4-panel dashboard builder (base64 PNG data
+  URL, never raises, empty dict without matplotlib, fewer than two
+  replicas or no sensor results) plus `sensor_recommendations()` deriving
+  concrete German optimization recommendations from the agent findings
+  (drift -> warm-up/re-calibration, offset -> dark/white reference, noise
+  -> averaging/longer integration, good -> keep control measurements)
+- `services/project_crew.py`: the sensor section carries `charts` and
+  `charts_note` (outside `data`) and injects the recommendations into the
+  section data as `optimization_recommendations`
+- Templates and the final OP11 report render the chart through the
+  generic section-charts loop (no template change needed)
+
+### Out of Scope
+
+- Sensor agent metric changes (the dashboard visualises the OP14-fixed
+  metrics as they are)
+- Time-based SPC (the replicas carry no timestamps; the measurement
+  order is the control axis)
+
+### Success Criteria
+
+- Dashboard renders from the real Triad replicas (18 channels) with the
+  real sensor agent results
+- Every agent finding maps to a concrete recommendation
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP20 - Standard Calibration Plots
 
 ### Objective
 
