@@ -3,7 +3,43 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP26 - Ansible Install Playbook for Debian 13
+## Current Task: OP27 - .deb Package and systemd Service
+
+### Objective
+The OP26 ansible playbook expects `nir_intelligence_main.deb` (or a tar.gz
+with install.sh) on the ventoy stick - this OP provides the packaging so
+that artifact actually exists and installs a running, service-managed
+platform on Debian 13.
+
+### Scope
+- `packaging/DEBIAN/control` + `postinst`: dpkg metadata; postinst creates
+  the system user `nir`, builds the venv, installs requirements (tolerant -
+  optional heavy deps like TensorFlow degrade gracefully per the OP14/18
+  truthfulness design), migrates the SQLite database and enables/restarts
+  the systemd service
+- `packaging/nir_intelligence.service`: systemd unit - web UI via
+  `manage.py runserver 127.0.0.1:8000` as user nir, restart on failure
+- `packaging/install.sh`: archive-method installer (same steps as postinst,
+  root check, .install_completed marker as the OP26 idempotency guard)
+- `packaging/build_deb.sh`: stages the repo payload (django_project, agents,
+  services, config, templates, docs) into /opt/nir_intelligence, strips
+  caches/dev DB, sets the version and builds dist/nir_intelligence_main.deb
+  with dpkg-deb
+- `tests/test_op27_deb_package.py`: builds the real .deb + tar.gz and
+  verifies structure, metadata, service contract and OP26 expectations
+
+### Out of Scope
+- Installing/unpacking the package on a real target (needs a Debian machine)
+- Production web server (gunicorn/nginx) - the platform runs on the Django
+  development server on loopback, matching the local-first design
+
+### Success Criteria
+- `packaging/build_deb.sh` produces a valid nir_intelligence_main.deb
+- Package payload, postinst, unit and install.sh match the OP26 playbook
+  expectations (paths /opt/nir_intelligence, install.sh, service name)
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP26 - Ansible Install Playbook for Debian 13
 
 ### Objective
 The platform should be installable on a blank Debian 13 (x86_64) machine

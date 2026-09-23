@@ -60,6 +60,7 @@ jobs:
           python tests/test_op24_report_chatbot.py
           python tests/test_op25_website_cleanup.py
           python tests/test_op26_ansible_install.py
+          python tests/test_op27_deb_package.py
 
       - name: Django system check
         run: python django_project/manage.py check

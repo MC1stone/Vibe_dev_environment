@@ -1,0 +1,16 @@
+Package: nir-intelligence-main
+Version: 1.0.0
+Section: science
+Priority: optional
+Architecture: all
+Maintainer: Martin <MC1stone@users.noreply.github.com>
+Installed-Size: 400000
+Depends: python3 (>= 3.11), python3-venv, python3-pip, sqlite3
+Recommends: quarto
+Description: NIR Intelligence Platform - fully local NIR spectroscopy analysis
+ Django + CrewAI multi-agent platform for NIR spectroscopy analysis:
+ project upload, metadata editing, agent-based analysis (spectral, sensor,
+ PCA, neural network XAI, calibration, FAISS similarity), student-friendly
+ final report with embedded chatbot, persistent spectral database.
+ Installs to /opt/nir_intelligence, provides the systemd service
+ nir_intelligence (web UI on http://127.0.0.1:8000).
