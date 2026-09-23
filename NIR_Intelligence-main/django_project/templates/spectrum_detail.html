@@ -15,6 +15,15 @@
             </a>
         </div>
     </div>
+    {% if chart %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header"><strong>Spektrum-Graph</strong></div>
+        <div class="card-body text-center">
+            <img src="{{ chart }}" alt="Spektrum {{ spectrum.file_name }}"
+                 class="img-fluid" style="max-height: 420px;">
+        </div>
+    </div>
+    {% endif %}
     <div class="row g-4">
         <div class="col-lg-6">
             <div class="card shadow-sm">

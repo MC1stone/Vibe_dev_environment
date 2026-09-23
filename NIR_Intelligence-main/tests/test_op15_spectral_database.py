@@ -199,6 +199,9 @@ check("T5b visibility request option validated",
 check("T5c SpectrumDatabaseView exists", 'class SpectrumDatabaseView' in views_src)
 check("T5d SpectrumDatabaseDetailView with FAISS matches",
       'class SpectrumDatabaseDetailView' in views_src and 'FaissAgent' in views_src)
+check("T5d2 detail view renders a spectrum chart",
+      'single_spectrum_chart_data_url' in views_src
+      and "'chart': chart" in views_src)
 urls_src = (PROJECT / 'django_project' / 'api' / 'project_urls.py').read_text(encoding='utf-8')
 check("T5e database route wired", "path('database/'" in urls_src)
 check("T5f detail route wired", "path('database/<uuid:spectrum_id>/'" in urls_src)
@@ -218,6 +221,10 @@ check("T5k projects page links the database", '/projects/database/' in projects_
 report_src = (PROJECT / 'django_project' / 'templates' / 'project_report.html').read_text(encoding='utf-8')
 check("T5l release offers lab-sharing opt-in",
       'spectrum-visibility' in report_src and 'lab_shared' in report_src)
+
+detail_template_src = detail_template.read_text(encoding='utf-8') if detail_template.exists() else ''
+check("T5d3 detail template embeds the chart",
+      '{% if chart %}' in detail_template_src and '<img src="{{ chart }}"' in detail_template_src)
 
 # templates compile
 from django.template.loader import get_template  # noqa: E402
@@ -245,6 +252,9 @@ check("T6d detail page renders (200)",
       detail_response.status_code == 200, str(detail_response.status_code))
 check("T6e detail page shows the series",
       b'16146.2' in detail_response.content)
+check("T6e2 detail page embeds the chart image",
+      b'data:image/png;base64,' in detail_response.content
+      and b'Spektrum-Graph' in detail_response.content)
 foreign = Client()
 foreign.force_login(bob)
 check("T6f detail of a private spectrum hidden for others (404)",
