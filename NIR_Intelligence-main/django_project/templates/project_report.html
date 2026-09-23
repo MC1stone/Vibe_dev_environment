@@ -194,6 +194,18 @@
                     {% endif %}
                 </div>
                 <div class="card-body py-2">
+                    {% if section.charts %}
+                    <div class="mb-3">
+                        <div class="text-muted small mb-2">{{ section.charts_note|default:'PCA-Diagramme' }}</div>
+                        <div class="row g-3">
+                            {% for key, url in section.charts.items %}
+                            <div class="col-md-6">
+                                <img src="{{ url }}" alt="PCA {{ key }}" class="img-fluid border rounded">
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                     <pre class="mb-0 small" style="max-height: 220px; overflow: auto;"><code>{{ section.data|pprint }}</code></pre>
                 </div>
             </div>
