@@ -37,3 +37,4 @@ _quarto.yml
 data/processed/reports/
 templates/reports/comprehensive.qmd
 django_project/templates/reports/comprehensive.qmd
+dist/

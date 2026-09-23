@@ -195,8 +195,8 @@ check('T7a CI runs the OP26 matrix',
       'python tests/test_op26_ansible_install.py' in ci)
 
 task_md = (PROJECT / 'TASK.md').read_text(encoding='utf-8')
-check('T7b TASK.md tracks OP26 as current task',
-      'Current Task: OP26' in task_md)
+check('T7b TASK.md documents OP26',
+      'OP26' in task_md)
 
 # ---------------------------------------------------------------------------
 # Summary

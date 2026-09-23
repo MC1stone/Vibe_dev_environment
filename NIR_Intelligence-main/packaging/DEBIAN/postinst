@@ -1,0 +1,62 @@
+#!/bin/bash
+# postinst - runs after the .deb payload is unpacked to /opt/nir_intelligence
+# Creates the service user, the Python venv, migrates the database and
+# enables the systemd service. Idempotent: safe to run on package upgrades.
+
+set -e
+
+APP_DIR="/opt/nir_intelligence"
+APP_USER="nir"
+APP_GROUP="nir"
+VENV_DIR="${APP_DIR}/venv"
+SERVICE_NAME="nir_intelligence"
+
+case "$1" in
+    configure)
+        # --- service user (system account, no login) -----------------------
+        if ! getent group "${APP_GROUP}" >/dev/null; then
+            groupadd --system "${APP_GROUP}"
+        fi
+        if ! id -u "${APP_USER}" >/dev/null 2>&1; then
+            useradd --system --gid "${APP_GROUP}" --home-dir "${APP_DIR}" \
+                --shell /usr/sbin/nologin "${APP_USER}"
+        fi
+
+        # --- Python venv + dependencies ------------------------------------
+        if [ ! -f "${VENV_DIR}/bin/activate" ]; then
+            python3 -m venv "${VENV_DIR}"
+        fi
+        # Upgrade pip first (old pip cannot resolve newer wheel metadata)
+        "${VENV_DIR}/bin/pip" install --quiet --upgrade pip || true
+        # TensorFlow is NOT a hard dependency (agents degrade gracefully);
+        # install the requirements that are installable and continue.
+        "${VENV_DIR}/bin/pip" install --quiet -r "${APP_DIR}/requirements.txt" || {
+            echo "WARNING: some requirements failed to install;" \
+                 "the platform continues with the agents that work." >&2
+        }
+
+        # --- permissions ----------------------------------------------------
+        chown -R "${APP_USER}:${APP_GROUP}" "${APP_DIR}"
+        chmod 600 "${APP_DIR}/django_project/db.sqlite3" 2>/dev/null || true
+
+        # --- database migration ---------------------------------------------
+        cd "${APP_DIR}/django_project"
+        if [ ! -f db.sqlite3 ]; then
+            sudo -u "${APP_USER}" "${VENV_DIR}/bin/python" manage.py migrate \
+                --noinput || \
+                echo "WARNING: initial migration failed (run manually)" >&2
+        fi
+
+        # --- systemd service ------------------------------------------------
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl daemon-reload || true
+            systemctl enable "${SERVICE_NAME}.service" >/dev/null 2>&1 || true
+            systemctl restart "${SERVICE_NAME}.service" || true
+        else
+            echo "NOTE: systemd not available - start the app via" \
+                 "${VENV_DIR}/bin/python ${APP_DIR}/django_project/manage.py runserver 127.0.0.1:8000" >&2
+        fi
+        ;;
+esac
+
+exit 0

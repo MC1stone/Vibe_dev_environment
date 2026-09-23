@@ -1,0 +1,18 @@
+[Unit]
+Description=NIR Intelligence Platform (Django web UI)
+After=network.target
+Documentation=file:/opt/nir_intelligence/README.md
+
+[Service]
+Type=simple
+User=nir
+Group=nir
+WorkingDirectory=/opt/nir_intelligence/django_project
+ExecStart=/opt/nir_intelligence/venv/bin/python manage.py runserver 127.0.0.1:8000 --noreload
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
