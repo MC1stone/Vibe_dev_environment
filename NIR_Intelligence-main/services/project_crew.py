@@ -107,6 +107,26 @@ def _similarity_section(project, dataset: Dict[str, Any]) -> Dict[str, Any]:
     })
     section = _agent_report("faiss_similarity", "Spektren-Datenbankvergleich (FAISS)", output)
     section['data']['database_references'] = db_sources
+
+    # OP22: overlay the three most similar spectra on the query curve
+    try:
+        matches = (section.get('data') or {}).get('matches') or []
+        if matches and references:
+            reference_curves = {
+                rid: (ref.get('data', {}).get('wavelength'),
+                      ref.get('data', {}).get('intensity'))
+                for rid, ref in zip(reference_ids, references)
+            }
+            from services.similarity_charts import similarity_top3_chart_data_url
+            url = similarity_top3_chart_data_url(
+                wavelengths, intensities, matches, reference_curves)
+            if url:
+                section['charts'] = {'similarity_top3': url}
+                section['charts_note'] = (
+                    'Messung mit den 3 ähnlichsten Spektren aus Datenbank '
+                    'und Projekt')
+    except Exception:
+        logger.exception('Similarity top-3 chart rendering failed (non-fatal)')
     return section
 
 
@@ -115,7 +135,7 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
     sections: List[Dict[str, Any]] = []
 
     if result.spectral_analysis is not None:
-        sections.append({
+        spectral_section = {
             "agent": "spectral_analysis",
             "title": "Spektralanalyse (Qualität)",
             "status": "completed",
@@ -130,7 +150,22 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
                 ],
                 "recommendations": list(result.spectral_analysis.recommendations or []),
             },
-        })
+        }
+        preview_wl = dataset.get('preview', {}).get('wavelengths', [])
+        preview_it = dataset.get('preview', {}).get('intensities', [])
+        if preview_wl and preview_it:
+            try:
+                from services.similarity_charts import spectrum_chart_data_url
+                url = spectrum_chart_data_url(
+                    preview_wl, preview_it,
+                    title='Hochgeladenes Spektrum (Messdaten)')
+                if url:
+                    spectral_section['charts'] = {'spectrum': url}
+                    spectral_section['charts_note'] = (
+                        'Spektrum der hochgeladenen Messdaten')
+            except Exception:
+                logger.exception('Spectrum chart rendering failed (non-fatal)')
+        sections.append(spectral_section)
     if result.metadata_quality is not None:
         sections.append({
             "agent": "metadata_quality",
