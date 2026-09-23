@@ -3,7 +3,43 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP24 - Embedded Report Chatbot
+## Current Task: OP25 - Website Cleanup and Workflow Overview
+
+### Objective
+The website accumulated many legacy demo pages (dashboard, agents, spectra,
+files, analysis, jobs, settings, documentation, chatbot, ilias) that are not
+part of the implemented project workflow. OP25 cleans the navigation down to
+the real workflow (start page -> projects -> spectral database), rebuilds the
+start page as a workflow overview diagram, and explains each workflow step on
+mouse-over.
+
+### Scope
+- `django_project/templates/base.html`: navbar reduced to Workflow
+  (start page), Projekte, Spektrendatenbank + Login/Logout/Register; settings
+  entry removed from the user dropdown; footer reduced to the workflow links
+- `django_project/templates/index.html`: new start page with a numbered
+  workflow diagram (Login/Registrierung -> Projekt anlegen (Upload) ->
+  Metadaten bearbeiten -> Dateien erganzen (Bearbeiten) -> Release
+  (Agenten-Analyse) -> Abschlussbericht -> Spektrendatenbank); each step
+  card carries a German hover/focus tooltip that references the real pages
+  and buttons; workflow CTAs instead of the legacy quick-nav
+- `django_project/templates/login.html`: dead /password-reset/ link removed
+- Legacy routes and templates stay functional but unlinked (test_op7 and
+  test_op8 still depend on files.html / analysis.html)
+- `tests/test_op8_crew_results_ui.py`: T7 navigation checks adapted to the
+  OP25 navigation (files.html stays functional, workflow links verified)
+- `tests/test_op25_website_cleanup.py` (58 checks) + CI matrix extended
+
+### Out of Scope
+- Deleting legacy templates/routes (kept unlinked for compatibility)
+- New backend functionality
+
+### Success Criteria
+- Navbar and start page link only the implemented workflow targets
+- Every workflow step has a German mouse-over explanation
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP24 - Embedded Report Chatbot
 
 ### Objective
 

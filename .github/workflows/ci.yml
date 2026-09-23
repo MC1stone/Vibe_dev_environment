@@ -58,6 +58,7 @@ jobs:
           python tests/test_op22_spectrum_similarity_charts.py
           python tests/test_op23_student_report.py
           python tests/test_op24_report_chatbot.py
+          python tests/test_op25_website_cleanup.py
 
       - name: Django system check
         run: python django_project/manage.py check

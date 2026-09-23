@@ -1,149 +1,176 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}NIR_Mistral Framework - Advanced NIR Spectroscopy Analysis{% endblock %}
+{% block title %}NIR Intelligence Platform - Workflow{% endblock %}
 
 {% block extra_css %}
 <style>
     .hero-section {
         background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
         color: white;
-        padding: 4rem 0;
-        margin-bottom: 3rem;
+        padding: 3rem 0 2.5rem;
+        margin-bottom: 2.5rem;
     }
-    
+
     .hero-content {
-        max-width: 800px;
+        max-width: 860px;
         margin: 0 auto;
         text-align: center;
     }
-    
+
     .hero-title {
-        font-size: 3rem;
+        font-size: 2.5rem;
         font-weight: 700;
-        margin-bottom: 1rem;
-        color: white;
-    }
-    
-    .hero-subtitle {
-        font-size: 1.25rem;
-        opacity: 0.9;
-        margin-bottom: 2rem;
-        color: white;
-    }
-    
-    .feature-cards {
-        margin: 3rem 0;
-    }
-    
-    .feature-card {
-        background: white;
-        border-radius: 12px;
-        padding: 2rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-        text-align: center;
-        height: 100%;
-    }
-    
-    .feature-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-    }
-    
-    .feature-icon {
-        width: 60px;
-        height: 60px;
-        background: var(--color-primary);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 1rem;
-        color: white;
-        font-size: 1.5rem;
-    }
-    
-    .feature-title {
-        font-size: 1.25rem;
-        font-weight: 600;
         margin-bottom: 0.75rem;
-        color: var(--color-text);
+        color: white;
     }
-    
-    .feature-description {
-        color: var(--color-text-muted);
-        line-height: 1.6;
+
+    .hero-subtitle {
+        font-size: 1.15rem;
+        opacity: 0.92;
+        margin-bottom: 1.75rem;
+        color: white;
     }
-    
-    .cta-section {
-        background: var(--color-background);
-        padding: 3rem 0;
-        text-align: center;
+
+    .workflow-section {
+        margin: 0 0 2.5rem;
     }
-    
-    .quick-nav {
-        margin: 2rem 0;
-    }
-    
-    .quick-nav-title {
+
+    .workflow-title {
         font-size: 1.5rem;
         font-weight: 600;
-        margin-bottom: 1.5rem;
         color: var(--color-text);
+        margin-bottom: 0.4rem;
     }
-    
-    .nav-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1.5rem;
-        margin: 2rem 0;
+
+    .workflow-hint {
+        color: var(--color-text-muted);
+        margin-bottom: 1.5rem;
     }
-    
-    .nav-card {
+
+    .workflow-diagram {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        justify-content: center;
+        gap: 0.25rem;
+    }
+
+    .workflow-step {
+        position: relative;
+        flex: 1 1 150px;
+        max-width: 190px;
+        min-width: 140px;
         background: white;
-        border-radius: 8px;
-        padding: 1.5rem;
+        border: 2px solid var(--color-primary);
+        border-radius: 12px;
+        padding: 1rem 0.85rem;
         text-align: center;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
-        color: var(--color-text);
+        transition: all 0.2s ease;
+        cursor: default;
         text-decoration: none;
+        color: var(--color-text);
         display: block;
     }
-    
-    .nav-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
-        color: var(--color-primary);
+
+    .workflow-step:hover,
+    .workflow-step:focus-visible {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 22px rgba(122, 185, 41, 0.35);
+        border-color: var(--color-primary-dark);
     }
-    
-    .nav-card i {
-        font-size: 2rem;
-        margin-bottom: 0.75rem;
-        color: var(--color-primary);
+
+    .workflow-step__num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        color: white;
+        font-weight: 700;
+        margin-bottom: 0.6rem;
     }
-    
-    .nav-card h4 {
-        font-size: 1.1rem;
+
+    .workflow-step__icon {
+        font-size: 1.4rem;
+        color: var(--color-primary);
+        display: block;
+        margin-bottom: 0.4rem;
+    }
+
+    .workflow-step__title {
+        font-size: 0.98rem;
         font-weight: 600;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.25rem;
     }
-    
-    .nav-card p {
-        font-size: 0.9rem;
+
+    .workflow-step__page {
+        font-size: 0.8rem;
         color: var(--color-text-muted);
-        margin: 0;
     }
-    
-    @media (max-width: 768px) {
-        .hero-title {
-            font-size: 2rem;
+
+    .workflow-tooltip {
+        position: absolute;
+        bottom: calc(100% + 10px);
+        left: 50%;
+        transform: translateX(-50%);
+        width: 250px;
+        max-width: 80vw;
+        background: #1f2937;
+        color: white;
+        padding: 0.7rem 0.85rem;
+        border-radius: 8px;
+        font-size: 0.83rem;
+        line-height: 1.45;
+        text-align: left;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.15s ease;
+        z-index: 30;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+    }
+
+    .workflow-tooltip::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 7px solid transparent;
+        border-top-color: #1f2937;
+    }
+
+    .workflow-step:hover .workflow-tooltip,
+    .workflow-step:focus-visible .workflow-tooltip {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .workflow-arrow {
+        align-self: center;
+        font-size: 1.3rem;
+        color: var(--color-primary);
+        flex: 0 0 auto;
+        padding: 0 0.15rem;
+    }
+
+    @media (max-width: 992px) {
+        .workflow-arrow {
+            transform: rotate(90deg);
+            padding: 0.3rem 0;
         }
-        
-        .hero-subtitle {
-            font-size: 1rem;
-        }
+    }
+
+    .cta-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
     }
 </style>
 {% endblock %}
@@ -153,201 +180,131 @@
 <section class="hero-section">
     <div class="hero-content">
         <h1 class="hero-title">
-            <i class="bi bi-graph-up-arrow"></i> NIR_Mistral Framework
+            <i class="bi bi-graph-up-arrow"></i> NIR Intelligence Platform
         </h1>
         <p class="hero-subtitle">
-            Advanced Near-Infrared Spectroscopy Analysis Platform for Research and Industrial Applications
+            Vollständig lokale NIR-Spektroskopie-Analyse: Projekt hochladen, Metadaten pflegen,
+            Agenten-Analyse freigeben, studentenfertiger Abschlussbericht mit Chatbot.
         </p>
-        <div class="d-flex justify-content-center gap-3 flex-wrap">
-            <a href="/dashboard/" class="c-button c-button--primary c-button--lg">
-                <i class="bi bi-speedometer2"></i>
-                <span>Go to Dashboard</span>
+        <div class="cta-buttons">
+            <a href="/projects/" class="c-button c-button--primary c-button--lg">
+                <i class="bi bi-folder2-open"></i>
+                <span>Zu den Projekten</span>
             </a>
-            <a href="/analysis/" class="c-button c-button--outline-light c-button--lg">
-                <i class="bi bi-play-circle"></i>
-                <span>Start Analysis</span>
+            <a href="/projects/database/" class="c-button c-button--outline-light c-button--lg">
+                <i class="bi bi-database"></i>
+                <span>Spektrendatenbank</span>
             </a>
         </div>
     </div>
 </section>
 
-<!-- Features Section -->
-<section class="feature-cards o-container">
-    <div class="row g-4">
-        <div class="col-md-4">
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="bi bi-cpu"></i>
-                </div>
-                <h3 class="feature-title">AI-Powered Analysis</h3>
-                <p class="feature-description">
-                    Leverage advanced machine learning models for comprehensive NIR spectral analysis with Crew AI integration.
-                </p>
+<!-- Workflow Overview -->
+<section class="workflow-section o-container">
+    <h2 class="workflow-title">
+        <i class="bi bi-diagram-3 me-2"></i>Der Analyse-Workflow
+    </h2>
+    <p class="workflow-hint">
+        Fahren Sie mit der Maus &uuml;ber die einzelnen Schritte, um eine Erkl&auml;rung zu erhalten.
+    </p>
+    <div class="workflow-diagram">
+        <div class="workflow-step" tabindex="0">
+            <span class="workflow-step__num">1</span>
+            <i class="bi bi-box-arrow-in-right workflow-step__icon"></i>
+            <div class="workflow-step__title">Login / Registrierung</div>
+            <div class="workflow-step__page">Startseite</div>
+            <div class="workflow-tooltip">
+                Melden Sie sich &uuml;ber <strong>Login</strong> an oder legen Sie einmalig ein
+                Benutzerkonto &uuml;ber <strong>Register</strong> an. Alle Projekte und die
+                Spektrendatenbank sind benutzerprivat.
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="bi bi-bar-chart-line"></i>
-                </div>
-                <h3 class="feature-title">Real-time Processing</h3>
-                <p class="feature-description">
-                    Process and analyze spectral data in real-time with instant quality assessments and recommendations.
-                </p>
+        <span class="workflow-arrow"><i class="bi bi-arrow-right"></i></span>
+        <div class="workflow-step" tabindex="0">
+            <span class="workflow-step__num">2</span>
+            <i class="bi bi-upload workflow-step__icon"></i>
+            <div class="workflow-step__title">Projekt anlegen (Upload)</div>
+            <div class="workflow-step__page">Projekte &rarr; "Neues Projekt (Upload)"</div>
+            <div class="workflow-tooltip">
+                Auf der <strong>Projekte</strong>-Seite &uuml;ber den Button
+                <strong>Neues Projekt (Upload)</strong> Dateien hochladen. Das Projekt startet in
+                der Phase <em>In Vorbereitung</em> (drafted), die Daten werden eingelesen und
+                aufbereitet (Messdaten, Metadaten, Referenzwerte).
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="bi bi-people"></i>
-                </div>
-                <h3 class="feature-title">Collaborative Platform</h3>
-                <p class="feature-description">
-                    Federated learning capabilities allow secure collaboration while maintaining data privacy.
-                </p>
+        <span class="workflow-arrow"><i class="bi bi-arrow-right"></i></span>
+        <div class="workflow-step" tabindex="0">
+            <span class="workflow-step__num">3</span>
+            <i class="bi bi-pencil-square workflow-step__icon"></i>
+            <div class="workflow-step__title">Metadaten bearbeiten</div>
+            <div class="workflow-step__page">Projektseite &rarr; Metadaten-Editor</div>
+            <div class="workflow-tooltip">
+                Direkt auf der Projektseite fehlende Metadaten (z.&nbsp;B. Ger&auml;t, Messdatum,
+                Operator) online erg&auml;nzen &ndash; ohne externe Dateien. Der
+                Metadaten-Score verbessert sich sofort. Nur in der Phase
+                <em>In Vorbereitung</em> m&ouml;glich.
             </div>
         </div>
-    </div>
-</section>
-
-<!-- Quick Navigation -->
-<section class="cta-section o-container">
-    <h2 class="quick-nav-title">Quick Access</h2>
-    <div class="nav-grid">
-        <a href="/dashboard/" class="nav-card">
-            <i class="bi bi-speedometer2"></i>
-            <h4>Dashboard</h4>
-            <p>Overview and system status</p>
-        </a>
-        <a href="/spectra/" class="nav-card">
-            <i class="bi bi-file-earmark-text"></i>
-            <h4>Spectra</h4>
-            <p>Manage spectral data</p>
-        </a>
-        <a href="/files/" class="nav-card">
-            <i class="bi bi-folder2-open"></i>
-            <h4>Files</h4>
-            <p>Upload and analyze spectral files</p>
-        </a>
-        <a href="/analysis/" class="nav-card">
-            <i class="bi bi-play-circle"></i>
-            <h4>Analysis</h4>
-            <p>Run analysis jobs</p>
-        </a>
-        <a href="/jobs/" class="nav-card">
-            <i class="bi bi-hourglass-split"></i>
-            <h4>Jobs</h4>
-            <p>Monitor analysis jobs</p>
-        </a>
-        <a href="/agents/" class="nav-card">
-            <i class="bi bi-robot"></i>
-            <h4>Agents</h4>
-            <p>AI agent management</p>
-        </a>
-        <a href="/documentation/" class="nav-card">
-            <i class="bi bi-book"></i>
-            <h4>Documentation</h4>
-            <p>API and usage guides</p>
-        </a>
-    </div>
-</section>
-
-<!-- System Status -->
-{% if user.is_authenticated %}
-<section class="o-container" style="margin: 3rem 0;">
-    <h2 class="mb-4">System Status</h2>
-    <div class="row g-4">
-        <div class="col-md-3">
-            <div class="c-stat-card">
-                <div class="c-stat-card__icon c-stat-card__icon--primary">
-                    <i class="bi bi-file-earmark-text"></i>
-                </div>
-                <div class="c-stat-card__content">
-                    <div class="c-stat-card__number" id="totalSpectra">0</div>
-                    <div class="c-stat-card__label">Total Spectra</div>
-                </div>
+        <span class="workflow-arrow"><i class="bi bi-arrow-right"></i></span>
+        <div class="workflow-step" tabindex="0">
+            <span class="workflow-step__num">4</span>
+            <i class="bi bi-folder-plus workflow-step__icon"></i>
+            <div class="workflow-step__title">Dateien erg&auml;nzen</div>
+            <div class="workflow-step__page">Projektliste &rarr; "Bearbeiten"</div>
+            <div class="workflow-tooltip">
+                &Uuml;ber den <strong>Bearbeiten</strong>-Button in der Projektliste lassen sich
+                weitere Messdateien zu einem bestehenden Projekt hinzuf&uuml;gen; die Daten werden
+                anschlie&szlig;end neu eingelesen (Reingest).
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="c-stat-card">
-                <div class="c-stat-card__icon c-stat-card__icon--success">
-                    <i class="bi bi-hourglass-split"></i>
-                </div>
-                <div class="c-stat-card__content">
-                    <div class="c-stat-card__number" id="totalJobs">0</div>
-                    <div class="c-stat-card__label">Analysis Jobs</div>
-                </div>
+        <span class="workflow-arrow"><i class="bi bi-arrow-right"></i></span>
+        <div class="workflow-step" tabindex="0">
+            <span class="workflow-step__num">5</span>
+            <i class="bi bi-play-fill workflow-step__icon"></i>
+            <div class="workflow-step__title">Release (Agenten-Analyse)</div>
+            <div class="workflow-step__page">Projektseite &rarr; "Zur Analyse freigeben"</div>
+            <div class="workflow-tooltip">
+                Mit <strong>Zur Analyse freigeben</strong> startet die CrewAI-Multiagenten-Analyse:
+                Spektralanalyse, Sensorqualit&auml;t, PCA/Statistik, neuronales Netz (XAI),
+                Kalibration (PLS) und Spektrenvergleich gegen die Datenbank.
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="c-stat-card">
-                <div class="c-stat-card__icon c-stat-card__icon--info">
-                    <i class="bi bi-robot"></i>
-                </div>
-                <div class="c-stat-card__content">
-                    <div class="c-stat-card__number">5+</div>
-                    <div class="c-stat-card__label">AI Agents</div>
-                </div>
+        <span class="workflow-arrow"><i class="bi bi-arrow-right"></i></span>
+        <div class="workflow-step" tabindex="0">
+            <span class="workflow-step__num">6</span>
+            <i class="bi bi-file-earmark-text workflow-step__icon"></i>
+            <div class="workflow-step__title">Abschlussbericht</div>
+            <div class="workflow-step__page">"Quarto-Abschlussbericht &ouml;ffnen"</div>
+            <div class="workflow-tooltip">
+                Der Bericht enth&auml;lt alle Grafiken (Spektrum, PCA, XAI, Kalibration,
+                Sensor-Dashboard), die studentenfreundlichen Abschnitte Diskussion, Fazit und
+                Literaturhinweise sowie den <strong>Chatbot</strong> f&uuml;r Fragen zur Analyse.
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="c-stat-card">
-                <div class="c-stat-card__icon c-stat-card__icon--warning">
-                    <i class="bi bi-cpu"></i>
-                </div>
-                <div class="c-stat-card__content">
-                    <div class="c-stat-card__number">100%</div>
-                    <div class="c-stat-card__label">System Ready</div>
-                </div>
+        <span class="workflow-arrow"><i class="bi bi-arrow-right"></i></span>
+        <div class="workflow-step" tabindex="0">
+            <span class="workflow-step__num">7</span>
+            <i class="bi bi-database workflow-step__icon"></i>
+            <div class="workflow-step__title">Spektrendatenbank</div>
+            <div class="workflow-step__page">Navigation &rarr; "Spektrendatenbank"</div>
+            <div class="workflow-tooltip">
+                Freigegebene Spektren landen in der persistenten Datenbank ( gleiche
+                Wellenl&auml;ngenraster, benutzerprivat). Detailseiten zeigen Spektrum-Graph und
+                &Auml;hnlichkeitstreffer; neue Analysen vergleichen gegen diese Referenzen.
             </div>
         </div>
     </div>
 </section>
-{% endif %}
 
 <!-- Welcome Message for New Users -->
 {% if not user.is_authenticated %}
-<section class="o-container" style="margin: 3rem 0; text-align: center;">
+<section class="o-container" style="margin: 1.5rem 0 3rem; text-align: center;">
     <div class="c-alert c-alert--info">
         <i class="bi bi-info-circle"></i>
-        <strong>Welcome!</strong> Please 
-        <a href="/login/" class="c-alert__link">login</a> or 
-        <a href="/register/" class="c-alert__link">register</a> to access all features.
+        <strong>Willkommen!</strong> Bitte
+        <a href="/login/" class="c-alert__link">anmelden</a> oder
+        <a href="/register/" class="c-alert__link">registrieren</a>, um den Workflow zu starten.
     </div>
 </section>
 {% endif %}
-{% endblock %}
-
-{% block extra_js %}
-<script>
-// Initialize system status on page load
-window.addEventListener('DOMContentLoaded', function() {
-    // Check if user is authenticated and load stats
-    {% if user.is_authenticated %}
-    loadSystemStats();
-    {% endif %}
-});
-
-function loadSystemStats() {
-    // Load spectra count
-    axios.get('/api/spectra/')
-        .then(function(response) {
-            const count = response.data.results ? response.data.results.length : 0;
-            document.getElementById('totalSpectra').textContent = count;
-        })
-        .catch(function(error) {
-            console.error('Error loading spectra count:', error);
-        });
-
-    // Load jobs count  
-    axios.get('/api/jobs/')
-        .then(function(response) {
-            const count = response.data.results ? response.data.results.length : 0;
-            document.getElementById('totalJobs').textContent = count;
-        })
-        .catch(function(error) {
-            console.error('Error loading jobs count:', error);
-        });
-}
-</script>
 {% endblock %}
