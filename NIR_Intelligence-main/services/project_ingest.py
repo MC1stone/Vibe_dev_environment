@@ -175,6 +175,44 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
                     for row in numeric.to_numpy().tolist()[:25]
                 ]
 
+    # Calibration samples for supervised models (MLP/CNN calibration, PLS/PCR
+    # targets): rows sampled across the WHOLE file, not only the replica
+    # block - one measured object carries one reference value (a constant
+    # target cannot train a calibrator). Saturated rows are excluded; the
+    # target column is chosen by name priority (brix/sugar/reference first),
+    # index/counter-like and row-unique columns are skipped.
+    calibration_samples = []
+    reference_values = None
+    if channel_names:
+        numeric_all = df[channel_names].apply(pd.to_numeric, errors='coerce') \
+            .dropna(how='any')
+        numeric_all = numeric_all[~(numeric_all >= 2 ** 31).any(axis=1)]
+        target_keys = ('brix', 'zucker', 'sugar', 'refe', 'target',
+                       'kalibration', 'calibration', 'y')
+        ordered_refs = sorted(
+            reference_columns,
+            key=lambda r: 0 if any(k in str(r['name']).lower()
+                                    for k in target_keys) else 1)
+        for ref in ordered_refs:
+            target = pd.to_numeric(df[ref['name']], errors='coerce')
+            if target.is_monotonic_increasing or target.is_monotonic_decreasing:
+                continue
+            if target.nunique() >= len(target):
+                continue
+            paired = numeric_all.join(target.rename('__target'), how='inner') \
+                .dropna(subset=['__target'])
+            if len(paired) < 12:
+                continue
+            max_samples = min(200, len(paired))
+            step = max(1, len(paired) // max_samples)
+            rows = paired.iloc[::step].head(max_samples)
+            calibration_samples = [
+                [float(v) for v in row]
+                for row in rows[channel_names].to_numpy().tolist()
+            ]
+            reference_values = [float(v) for v in rows['__target'].tolist()]
+            break
+
     return {
         'usable': True,
         'dataset_type': 'measurement',
@@ -194,9 +232,14 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
             'measurement_count': wide['measurement_count'],
             'channel_names': [c for c, _ in channels],
             'saturated_measurements': saturated_measurements,
+            **({'reference_values': reference_values}
+               if reference_values is not None else {}),
         },
         'numeric_references': reference_columns,
         'measurement_samples': measurement_samples,
+        'calibration_samples': calibration_samples,
+        **({'reference_values': reference_values}
+           if reference_values is not None else {}),
     }
 
 
