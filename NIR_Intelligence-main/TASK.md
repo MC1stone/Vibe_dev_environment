@@ -3,7 +3,52 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP18 - CNN Agent Fix and Supervised Calibration Pipeline
+## Current Task: OP19 - XAI Visualisations for the Neural Network Analysis
+
+### Objective
+
+A neural calibrator on NIR spectra is interpreted through standard XAI
+plots. OP18 fixed the CNN training; OP19 renders the seven standard XAI
+visualisations from REAL computations on the trained attention-CNN:
+
+| Plot | Content |
+|------|---------|
+| SHAP Summary (global) | Permutation importance (mean |dR2| per wavelength over the test set) |
+| SHAP Force/Waterfall (lokal) | Occlusion deltas of one measurement, sorted by magnitude |
+| Saliency Map | |d(output)/d(input)| gradient heatmap over the spectrum |
+| Grad-CAM | Class activation over the last Conv1D layer (spatial-axis weights) |
+| Attention-Weights | Learned softmax attention-pooling weights per wavelength |
+| Prediction vs. Actual | Model fit on the test split (R2, RMSE) |
+| Training/Validation Loss | Overfitting diagnosis per epoch |
+
+The `shap` package stays a non-dependency (permutation importance and
+occlusion are the SHAP-equivalents); nothing is simulated.
+
+### Scope
+
+- `services/xai_charts.py`: attention-CNN trainer (Conv1D stack + softmax
+  attention pooling + dense regression head, scaled features/target) and
+  seven plot renderers; base64 PNG data URLs, never raises, empty dict
+  without TensorFlow/matplotlib or with insufficient calibration rows
+- `services/project_crew.py`: the neural network section carries `charts`
+  and `charts_note` (outside `data`) whenever the dataset provides
+  calibration samples and reference values
+- Templates and the final OP11 report render the charts through the
+  generic section-charts loop (no template change needed)
+
+### Out of Scope
+
+- SHAP package integration (permutation/occlusion equivalents suffice)
+- XAI plots for non-CNN models (MLP, PLS)
+
+### Success Criteria
+
+- All seven plots render from the real Triad calibration data (200 rows,
+  real Brix 4.3-8.1) with TensorFlow installed
+- Without TensorFlow: empty charts, report intact (CI-safe)
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP18 - CNN Agent Fix and Supervised Calibration Pipeline
 
 ### Objective
 
