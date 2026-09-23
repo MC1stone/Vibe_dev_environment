@@ -43,8 +43,11 @@ from services.project_report import (  # noqa: E402
     spectrum_chart_data_url,
 )
 
+import importlib.util  # noqa: E402
+
 check('T1a matplotlib availability detected correctly',
-      project_report.MATPLOTLIB_AVAILABLE == bool(_try_mpl()) if (_try_mpl := lambda: __import__('importlib').util.find_spec('matplotlib')) else True)
+      project_report.MATPLOTLIB_AVAILABLE
+      == (importlib.util.find_spec('matplotlib') is not None))
 
 check('T1b spectrum chart empty without data',
       spectrum_chart_data_url([]) == '')
