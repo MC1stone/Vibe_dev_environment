@@ -3,7 +3,47 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP19 - XAI Visualisations for the Neural Network Analysis
+## Current Task: OP20 - Standard Calibration Plots
+
+### Objective
+
+A chemometric calibration is judged by three standard plots. The
+ calibration agent computed cross-validated scores but nothing was
+ plotted. OP20 renders these plots from the real calibration samples
+ with scikit-learn PLS (no TensorFlow needed, CI-safe):
+
+| Plot | Content |
+|------|---------|
+| Ref. vs. Pred | Reference vs. cross-validated predicted values (5-fold KFold, R2cv + RMSECV annotated) - how good is the calibration? |
+| Regression Coefficients | Signed PLS coefficients per wavelength (why does it work? the sought-after plot) |
+| RMSECV vs. n | RMSECV over the number of PLS components, minimum marked (how complex must the model be?) |
+
+### Scope
+
+- `services/calibration_charts.py`: PLS-based chart builder; base64 PNG
+  data URLs, never raises, empty dict without matplotlib/scikit-learn or
+  with insufficient calibration rows (<10 rows, constant target)
+- `services/project_crew.py`: the calibration section carries `charts`
+  and `charts_note` (outside `data`) whenever the dataset provides
+  calibration samples and reference values
+- Templates and the final OP11 report render the charts through the
+  generic section-charts loop (no template change needed)
+
+### Out of Scope
+
+- Calibration agent context changes (the charts use the same ingest-side
+  calibration data as OP18/OP19)
+- Coefficient plots for non-PLS methods (SVM, RandomForest)
+
+### Success Criteria
+
+- All three plots render from the real Triad calibration data (200 rows,
+  real Brix 4.3-8.1)
+- Predictions are strictly cross-validated (out-of-sample), coefficients
+  from a real PLS fit
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP19 - XAI Visualisations for the Neural Network Analysis
 
 ### Objective
 

@@ -193,11 +193,27 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
                 logger.exception('XAI chart rendering failed (non-fatal)')
         sections.append(nn_section)
     if result.calibration_results:
-        sections.append(_agent_report(
+        cal_section = _agent_report(
             "calibration", "Kalibration (PLS, PCR)", type("O", (), {
                 "status": type("S", (), {"name": "COMPLETED"})(),
                 "data": result.calibration_results,
-            })()))
+            })())
+        calibration_samples = (dataset.get('calibration_samples') or [])
+        reference_values = (dataset.get('reference_values') or [])
+        if calibration_samples and reference_values:
+            try:
+                from services.calibration_charts import calibration_chart_data_urls
+                cal_section['charts'] = calibration_chart_data_urls(
+                    calibration_samples, reference_values,
+                    dataset.get('preview', {}).get('wavelengths', []),
+                )
+                if cal_section.get('charts'):
+                    cal_section['charts_note'] = (
+                        f"{len(cal_section['charts'])} Kalibrierungs-Diagramme aus "
+                        f"{len(calibration_samples)} Kalibrationsmessungen")
+            except Exception:
+                logger.exception('Calibration chart rendering failed (non-fatal)')
+        sections.append(cal_section)
     sections.append(_similarity_section(project, dataset))
     return sections
 
