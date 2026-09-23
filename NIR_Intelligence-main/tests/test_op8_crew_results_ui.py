@@ -228,12 +228,12 @@ base_src = (DJANGO_DIR / 'templates' / 'base.html').read_text()
 index_src = (DJANGO_DIR / 'templates' / 'index.html').read_text()
 dash_src = (DJANGO_DIR / 'templates' / 'dashboard_colorful.html').read_text()
 
-check('T7a Files page linked in the main navigation',
-      'href="/files/"' in base_src)
-check('T7b Files page linked in the footer',
-      base_src.count('href="/files/"') >= 2)
-check('T7c Files nav-card on the landing page',
-      'href="/files/"' in index_src)
+check('T7a Files page kept functional via its legacy route (OP25 cleanup unlinks it)',
+      (DJANGO_DIR / 'templates' / 'files.html').exists())
+check('T7b projects workflow linked in the main navigation (OP25)',
+      'href="/projects/"' in base_src)
+check('T7c workflow overview on the landing page (OP25)',
+      'workflow-step' in index_src and 'href="/projects/"' in index_src)
 check('T7d dashboard quick action opens the Files upload page',
       'href="/files/"' in dash_src)
 check('T7e no dead legal links in the footer (privacy/terms/imprint removed)',

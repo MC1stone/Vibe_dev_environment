@@ -61,47 +61,17 @@
                     <ul class="c-nav-main__list js-disclosure-nav">
                         <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/" class="c-nav-main__action {% if request.path == '/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">Dashboard</span>
+                                <span class="c-nav-main__label">Workflow</span>
                             </a>
                         </li>
                         <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/spectra/" class="c-nav-main__action {% if request.path == '/spectra/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">Spectra</span>
+                            <a href="/projects/" class="c-nav-main__action {% if request.path == '/projects/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">Projekte</span>
                             </a>
                         </li>
                         <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/files/" class="c-nav-main__action {% if request.path == '/files/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">Files</span>
-                            </a>
-                        </li>
-                        <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/analysis/" class="c-nav-main__action {% if request.path == '/analysis/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">Analysis</span>
-                            </a>
-                        </li>
-                        <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/jobs/" class="c-nav-main__action {% if request.path == '/jobs/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">Jobs</span>
-                            </a>
-                        </li>
-                        <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/agents/" class="c-nav-main__action {% if request.path == '/agents/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">Agents</span>
-                            </a>
-                        </li>
-                        <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/documentation/" class="c-nav-main__action {% if request.path == '/documentation/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">Documentation</span>
-                            </a>
-                        </li>
-                        <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/chatbot/" class="c-nav-main__action {% if request.path == '/chatbot/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">Chatbot</span>
-                            </a>
-                        </li>
-                        <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/ilias/" class="c-nav-main__action {% if request.path == '/ilias/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">ILIAS</span>
+                            <a href="/projects/database/" class="c-nav-main__action {% if request.path == '/projects/database/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">Spektrendatenbank</span>
                             </a>
                         </li>
                     </ul>
@@ -117,11 +87,6 @@
                             <span class="c-button__text">{{ user.username }}</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li>
-                                <a class="dropdown-item" href="/settings/">
-                                    <i class="bi bi-gear"></i> Settings
-                                </a>
-                            </li>
                             <li>
                                 <a class="dropdown-item" href="/admin/">
                                     <i class="bi bi-person-workspace"></i> Admin Panel
@@ -158,55 +123,6 @@
     <footer class="o-page__footer c-footer">
         <div class="o-container">
             <div class="c-footer__inner">
-                <div class="row">
-                    <div class="col-md-4 mb-lg-0 mb-md-4">
-                        <h3 class="c-footer__title">NIR_Mistral Framework</h3>
-                        <p class="c-footer__text">
-                            Advanced NIR Spectroscopy Analysis Platform for research and industrial applications.
-                        </p>
-                        <div class="c-footer__social">
-                            <a href="https://github.com/martin/Development/vsCode_Environment/NIR_Mistral" 
-                               class="c-button c-button--outline-primary c-button--sm" target="_blank">
-                                <i class="bi bi-github"></i>
-                                <span class="c-button__text">GitHub</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-md-2 mb-lg-0 mb-md-4">
-                        <h4 class="c-footer__heading">Quick Links</h4>
-                        <ul class="c-footer__list">
-                            <li><a href="/">Dashboard</a></li>
-                            <li><a href="/spectra/">Spectra</a></li>
-                            <li><a href="/files/">Files</a></li>
-                            <li><a href="/analysis/">Analysis</a></li>
-                            <li><a href="/jobs/">Jobs</a></li>
-                        </ul>
-                    </div>
-                    <div class="col-md-2 mb-lg-0 mb-md-4">
-                        <h4 class="c-footer__heading">Resources</h4>
-                        <ul class="c-footer__list">
-                            <li><a href="/agents/">Agents</a></li>
-                            <li><a href="/documentation/">Documentation</a></li>
-                            <li><a href="/api/">API Reference</a></li>
-                            <li><a href="/admin/">Admin</a></li>
-                        </ul>
-                    </div>
-                    <div class="col-md-4 mb-lg-0 mb-md-4">
-                        <h4 class="c-footer__heading">Contact</h4>
-                        <address class="c-footer__text">
-                            <p>
-                                <i class="bi bi-geo-alt"></i> 
-                                NIR Research Institute<br>
-                                Weihenstephan-Triesdorf University<br>
-                                Germany
-                            </p>
-                            <p>
-                                <i class="bi bi-envelope"></i> 
-                                <a href="mailto:info@nir-mistral.local">info@nir-mistral.local</a>
-                            </p>
-                        </address>
-                    </div>
-                </div>
                 <div class="c-footer__bottom">
                     <div class="row">
                         <div class="col-md-6 text-md-start text-center">
@@ -216,8 +132,8 @@
                         </div>
                         <div class="col-md-6 text-md-end text-center">
                             <p class="c-footer__legal">
-                                <a href="/documentation/">Documentation</a> | 
-                                <a href="/api/">API Reference</a>
+                                <a href="/projects/">Projekte</a> |
+                                <a href="/projects/database/">Spektrendatenbank</a>
                             </p>
                         </div>
                     </div>
