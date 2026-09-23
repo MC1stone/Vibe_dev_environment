@@ -12,8 +12,10 @@ pybaselines>=1.0.0
 # Machine learning and deep learning
 # Note: PyTorch and TensorFlow have complex system dependencies
 # For Docker builds, install these separately or use CPU-only versions
-# tensorflow>=2.12.0
-# keras>=2.12.0
+# CNN calibration (NeuralNetworkAgent) trains when TensorFlow is present
+# and degrades to a reported 'deferred' status without it:
+# pip install tensorflow-cpu   # or tensorflow>=2.16 (Keras 3 compatible)
+# tensorflow>=2.16.0
 # pytorch>=2.0.0
 # torchvision>=0.15.0
 optuna>=3.2.0

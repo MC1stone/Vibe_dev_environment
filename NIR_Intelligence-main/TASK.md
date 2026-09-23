@@ -3,7 +3,49 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP17 - Project Delete and File-Add Buttons on the Projects List
+## Current Task: OP18 - CNN Agent Fix and Supervised Calibration Pipeline
+
+### Objective
+
+The CNN agent never trained for two root causes:
+1. The training code was broken for current Keras (deprecated input_shape
+   argument), lacked feature scaling (raw ADC values against Brix ~5 stall
+   the gradient descent) and recorded no loss history.
+2. No reference values ever reached the supervised agents: the wide ingest
+   kept Brix only as a column statistic, never per measurement - and the
+   replica block is one object with a constant Brix, which cannot train a
+   calibrator.
+
+### Scope
+
+- `agents/neural_network_agent.py`: `_train_cnn` rebuilt - Keras 3 Input
+   layer, StandardScaler for features and target, validation split, loss +
+   validation loss curves, RMSE, convergence flag from the real history;
+  graceful deferred without TensorFlow, skipped without reference values
+- `services/project_ingest.py`: calibration samples sampled across the
+  whole wide file (one reference value per measured object, target column
+  by name priority brix/sugar/reference first, index/counter-like columns
+  skipped, saturated rows excluded, up to 200 rows); replicas stay for the
+  sensor agent
+- `agents/nir_analysis_crew.py`: supervised context (statistical + neural
+  network agents) uses the calibration samples; the sensor agent keeps the
+  replica context
+- `requirements.txt`: CNN activation documented (tensorflow-cpu optional)
+
+### Out of Scope
+
+- XAI visualisations (SHAP, saliency, Grad-CAM etc.) - follow-up on top of
+  the now-working CNN
+- CNN architecture search (fixed sensible 1D-CNN)
+
+### Success Criteria
+
+- Triad file: 200 calibration samples with real Brix values (4.3-8.1)
+- CNN trains end-to-end on the triad data with usable R2 and loss curve
+  (with TensorFlow); deferred/skipped states reported honestly without it
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP17 - Project Delete and File-Add Buttons on the Projects List
 
 ### Objective
 

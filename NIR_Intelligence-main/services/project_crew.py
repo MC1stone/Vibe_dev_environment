@@ -315,6 +315,9 @@ def run_project_crew(project) -> Dict[str, Any]:
             metadata={'file_name': dataset.get('file_name', ''),
                       'file_extension': dataset.get('file_extension', ''),
                       'measurement_samples': dataset.get('measurement_samples') or [],
+                      'calibration_samples': dataset.get('calibration_samples') or [],
+                      **({'reference_values': dataset['reference_values']}
+                         if dataset.get('reference_values') else {}),
                       **(dataset.get('metadata') or {})},
             file_paths=[],
             analysis_mode=AnalysisMode.STANDARD,

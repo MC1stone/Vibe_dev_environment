@@ -736,11 +736,25 @@ class NIRAnalysisCrew:
             # analysis. The statistical and neural network agents run in
             # parallel per the mission statement rule (MO 7). Reference
             # values from the metadata allow PLS/PCR/MLP calibration targets.
+            # Supervised models (MLP/CNN, PLS/PCR) need varying targets:
+            # prefer the file-wide calibration samples (one reference value
+            # per measured object, e.g. Brix) over the replica block (one
+            # object, constant target). The sensor agent keeps the replicas.
+            calibration_samples = request.metadata.get("calibration_samples") or []
             parallel_context = {
                 "spectra": (request.metadata.get("measurement_samples")
                             or request.spectral_data),
                 "reference_values": self._extract_reference_values(request.metadata),
             }
+            supervised_context = {
+                "spectra": (calibration_samples
+                            or request.metadata.get("measurement_samples")
+                            or request.spectral_data),
+                "reference_values": self._extract_reference_values(request.metadata),
+            }
+            sensor_output = self.sensor_quality_agent.execute(
+                {**parallel_context, "sample_id": request.sample_id}
+            )
 
             sensor_output = self.sensor_quality_agent.execute(
                 {**parallel_context, "sample_id": request.sample_id}
@@ -755,7 +769,7 @@ class NIRAnalysisCrew:
                 self.logger.warning("Sensor quality assessment failed")
 
             statistical_output = self.statistical_analysis_agent.execute(
-                {**parallel_context, "sample_id": request.sample_id}
+                {**supervised_context, "sample_id": request.sample_id}
             )
             if statistical_output.status == AgentStatus.COMPLETED:
                 result.statistical_analysis_results = self._json_safe(statistical_output.data)
@@ -765,7 +779,7 @@ class NIRAnalysisCrew:
                 self.logger.warning("Statistical analysis failed")
 
             neural_output = self.neural_network_agent.execute(
-                {**parallel_context, "sample_id": request.sample_id}
+                {**supervised_context, "sample_id": request.sample_id}
             )
             if neural_output.status == AgentStatus.COMPLETED:
                 result.neural_network_results = self._json_safe(neural_output.data)

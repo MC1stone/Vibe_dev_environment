@@ -146,32 +146,57 @@ class NeuralNetworkAgent(BaseAgent):
 
             tf.get_logger().setLevel("ERROR")
             from sklearn.model_selection import train_test_split
+            from sklearn.preprocessing import StandardScaler
 
             test_size = float(training.get("test_size", 0.25))
             if matrix.shape[0] < 4:
                 return {"status": "skipped", "reason": "not enough samples"}
-            X = matrix.reshape(matrix.shape[0], matrix.shape[1], 1)
+            # Feature scaling is essential for the 1D-CNN: raw ADC values
+            # (thousands) against Brix targets (~5) otherwise stall the
+            # gradient descent and the model never converges.
+            x_scaler = StandardScaler().fit(matrix)
+            y_scaler = StandardScaler().fit(y.reshape(-1, 1))
+            X = x_scaler.transform(matrix).reshape(matrix.shape[0], matrix.shape[1], 1)
+            y_scaled = y_scaler.transform(y.reshape(-1, 1)).ravel()
             X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=test_size, random_state=42)
+                X, y_scaled, test_size=test_size, random_state=42)
+            validation_split = float(training.get("validation_split", 0.2))
             model = tf.keras.Sequential([
-                tf.keras.layers.Conv1D(16, 5, activation="relu", input_shape=(X.shape[1], 1)),
+                tf.keras.Input(shape=(X.shape[1], 1)),
+                tf.keras.layers.Conv1D(16, 5, activation="relu", padding="same"),
                 tf.keras.layers.MaxPooling1D(2),
-                tf.keras.layers.Flatten(),
+                tf.keras.layers.Conv1D(32, 3, activation="relu", padding="same"),
+                tf.keras.layers.GlobalMaxPooling1D(),
                 tf.keras.layers.Dense(32, activation="relu"),
                 tf.keras.layers.Dense(1),
             ])
             model.compile(optimizer="adam", loss="mse")
             epochs = int(training.get("epochs", 50))
-            model.fit(X_train, y_train, epochs=epochs, verbose=0)
+            history = model.fit(
+                X_train, y_train,
+                epochs=epochs,
+                verbose=0,
+                validation_split=validation_split if X_train.shape[0] >= 8 else 0.0,
+            )
             predictions = model.predict(X_test, verbose=0).ravel()
             ss_res = float(np.sum((y_test - predictions) ** 2))
             ss_tot = float(np.sum((y_test - np.mean(y_test)) ** 2))
             r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+            loss_curve = [float(v) for v in (history.history.get("loss") or [])]
+            val_loss_curve = [
+                float(v) for v in (history.history.get("val_loss") or [])
+            ]
+            converged = bool(loss_curve and loss_curve[-1] <= loss_curve[0])
             return {
                 "status": "ok",
                 "epochs_completed": epochs,
                 "r2_score": float(r2),
-                "convergence_achieved": True,
+                "rmse": float(np.sqrt(ss_res / max(1, len(y_test)))),
+                "n_train": int(X_train.shape[0]),
+                "n_test": int(X_test.shape[0]),
+                "loss_curve": loss_curve,
+                "validation_loss_curve": val_loss_curve,
+                "convergence_achieved": converged,
             }
         except Exception as exc:
             return {"status": "deferred", "reason": f"CNN training failed: {exc}"}
