@@ -76,6 +76,11 @@ from django.core.files.uploadedfile import SimpleUploadedFile  # noqa: E402
 from core.models import AnalysisProject  # noqa: E402
 
 User = get_user_model()
+try:
+    User.objects.filter(username='op12tester').first()
+except Exception:
+    from django.core.management import call_command
+    call_command('migrate', interactive=False, verbosity=0)
 user = User.objects.filter(username='op12tester').first()
 if user is None:
     user = User(username='op12tester', email='op12tester@test.local')
