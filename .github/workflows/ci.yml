@@ -24,7 +24,7 @@ jobs:
       - name: Install minimal test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest numpy pandas scipy scikit-learn pyyaml django pillow requests packaging djangorestframework djangorestframework-simplejwt django-cors-headers
+          pip install pytest numpy pandas scipy scikit-learn pyyaml django pillow requests packaging djangorestframework djangorestframework-simplejwt django-cors-headers matplotlib
 
       - name: Run offline test matrices (S3-S9, OP1-OP4, OP6-OP8)
         run: |
