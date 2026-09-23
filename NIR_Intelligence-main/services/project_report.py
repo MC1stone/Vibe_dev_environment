@@ -184,9 +184,18 @@ def _agent_section_html(section: Dict[str, Any]) -> str:
     if recommendations:
         items = ''.join(f'<li>{_escape(r)}</li>' for r in recommendations)
         recs = f'<h3>Empfehlungen</h3><ul>{items}</ul>'
+    charts_html = ''
+    charts = section.get('charts') or {}
+    if charts:
+        imgs = ''.join(
+            f'<img src="{_escape(url)}" alt="PCA {_escape(k)}" '
+            f'style="max-width:100%;height:auto;margin:6px;">'
+            for k, url in charts.items() if url)
+        note = _escape(section.get('charts_note') or 'PCA-Diagramme')
+        charts_html = f'<h3>{note}</h3>{imgs}'
     return (f'<div class="card"><h3>{_escape(section.get("title", section.get("agent", "Agent")))} '
             f'<span class="badge {badge}">{_escape(status)}</span></h3>'
-            f'{table}{recs}</div>')
+            f'{table}{charts_html}{recs}</div>')
 
 
 def _original_data_html(datasets: List[Dict[str, Any]]) -> str:

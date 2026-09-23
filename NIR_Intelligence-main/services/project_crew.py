@@ -149,11 +149,25 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
                 "data": result.sensor_quality_results,
             })()))
     if result.statistical_analysis_results:
-        sections.append(_agent_report(
+        section = _agent_report(
             "statistical_analysis", "Statistische Analyse (PCA, PLS, Cluster)", type("O", (), {
                 "status": type("S", (), {"name": "COMPLETED"})(),
                 "data": result.statistical_analysis_results,
-            })()))
+            })())
+        measurement_samples = (dataset.get('measurement_samples') or [])
+        if measurement_samples:
+            try:
+                from services.pca_charts import pca_chart_data_urls
+                section['charts'] = pca_chart_data_urls(
+                    measurement_samples,
+                    dataset.get('preview', {}).get('wavelengths', []),
+                )
+                section['charts_note'] = (
+                    f"{len(section.get('charts', {}))} PCA-Diagramme aus "
+                    f"{len(measurement_samples)} Messreplikaten")
+            except Exception:
+                logger.exception('PCA chart rendering failed (non-fatal)')
+        sections.append(section)
     if result.neural_network_results:
         sections.append(_agent_report(
             "neural_network", "Neuronale Netzwerkanalyse (CNN, MLP)", type("O", (), {

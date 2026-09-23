@@ -3,7 +3,49 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP15 - Persistent Spectral Database
+## Current Task: OP16 - Standard PCA Visualisations
+
+### Objective
+
+The statistical agent computed PCA metrics (explained variance,
+components), but a PCA in spectroscopy is judged by its standard plots.
+OP16 renders the six standard PCA graphics from the measurement replicas
+of a dataset and shows them in the statistical section of the project
+report and the final OP11 report:
+
+- Score-Plot (PC1 vs PC2): sample clustering, outlier detection
+- Loading-Plot: which wavelengths drive each component
+- Biplot: scores and loadings in one graphic
+- Scree-Plot: eigenvalues -> choice of component count
+- R2 per wavelength: which spectral regions the PCs explain
+- SPE-Plot (squared prediction error): outliers / model fit
+
+### Scope
+
+- `services/pca_charts.py`: `pca_chart_data_urls()` - six matplotlib (Agg)
+  plots as base64 PNG data URLs from measurement_samples + wavelengths,
+  never raises, empty dict without matplotlib or without replicas
+- `services/project_crew.py`: statistical section carries `charts` and
+  `charts_note` outside `data` so the pprint block stays small
+- `django_project/templates/project_report.html` +
+  `services/project_report.py`: charts rendered in the project page and
+  the final HTML report
+- `tests/test_op16_pca_charts.py` (27 checks) + CI matrix extended
+
+### Out of Scope
+
+- Interactive plots (static PNGs only)
+- PCA on the full 2049-measurement matrix (charts use the extracted
+  replicas, capped at 25, same basis as the sensor agent)
+
+### Success Criteria
+
+- Triad file: all six plots rendered as base64 PNG from the replicas
+- No replicas / single spectrum -> no charts, report stays intact
+- Charts strictly JSON serializable (crew_results contract)
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP15 - Persistent Spectral Database
 
 ### Objective
 

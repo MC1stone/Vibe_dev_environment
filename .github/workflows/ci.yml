@@ -49,6 +49,7 @@ jobs:
           python tests/test_op13_online_metadata_editing.py
           python tests/test_op14_agent_truthfulness.py
           python tests/test_op15_spectral_database.py
+          python tests/test_op16_pca_charts.py
 
       - name: Django system check
         run: python django_project/manage.py check
