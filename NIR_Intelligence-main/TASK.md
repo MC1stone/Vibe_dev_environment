@@ -3,7 +3,53 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP13 - Online Metadata Editing in the Project Report
+## Current Task: OP14 - Truthful Agent Statements in the Project Report
+
+### Objective
+
+The report for the Dpark fun NIR Triad file (18 channels, 410-940 nm, 2049
+measurements) contained wrong agent statements: the wide-format export went
+through the two-column fallback loader (garbled wavelength axis), the spectral
+agent called the valid VIS range 'outside expected range (700, 2500)', the
+sensor agent derived noise 0.71 from the genuine channel shape, FAISS failed
+with 'no usable intensity vector' despite 18 intensities (schema mismatch),
+and the metadata agent complained about fields the platform itself knows.
+OP14 fixes each statement at the root cause so the report describes the data
+truthfully.
+
+### Scope
+
+- `services/project_ingest.py`: wide-format detection now survives preamble
+  blank lines (skip_blank_lines=False + dropna), channel conversion without
+  the thousands-separator heuristic, median per channel (robust against ADC
+  overflow markers), replicate extraction from the longest same-object run,
+  saturated-measurement count
+- `agents/spectral_analysis_agent.py`: expected wavelength range is opt-in
+  (None default) - spectrometer agnostic, no false VIS/NIR complaint
+- `agents/sensor_quality_agent.py`: replica-based noise (std across
+  measurements, not channel-shape differences), trend-based drift,
+  no false offset against the replicates' own mean
+- `agents/nir_analysis_crew.py`: known sample_id/instrument/acquisition_time
+  aliases fed into the metadata assessment; measurement replicas passed to
+  the sensor agent
+- `services/project_crew.py`: FAISS query in the unified schema, skipped
+  when the project has no other datasets; saturation warning surfaced in
+  the crew result; timezone-aware timestamps
+- `tests/test_op14_agent_truthfulness.py` (31 checks) + CI matrix extended
+
+### Out of Scope
+
+- Persistent spectral database comparison (OP15+, user explicitly deferred)
+- Editing the agent thresholds per project (defaults stay)
+
+### Success Criteria
+
+- Triad file: 18 channels 410-940 nm, 2049 measurements, Brix 4.3-8.1 reported
+- All seven agent sections complete; no false range/noise/FAISS statements
+- Saturated measurements (ADC overflow) reported as their own warning
+- Existing test matrices stay green (no regressions)
+
+## Completed Task: OP13 - Online Metadata Editing in the Project Report
 
 ### Objective
 

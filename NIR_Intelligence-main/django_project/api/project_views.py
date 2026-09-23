@@ -8,7 +8,7 @@
 import logging
 import os
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from django.conf import settings
@@ -207,7 +207,7 @@ class ProjectReleaseView(APIView if DRF_AVAILABLE else object):
                                ' bevor die Analyse freigegeben werden kann.',
                 }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
             project.phase = 'released'
-            project.released_at = datetime.now()
+            project.released_at = datetime.now(tz=timezone.utc)
             project.save(update_fields=['phase', 'released_at', 'updated_at'])
         try:
             from services.project_crew import run_project_crew

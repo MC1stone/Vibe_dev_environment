@@ -9,7 +9,7 @@ import logging
 import os
 import tempfile
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -56,28 +56,36 @@ def _similarity_section(project, dataset: Dict[str, Any]) -> Dict[str, Any]:
     reference spectra when available. Uses the FAISS agent (S5 engine)."""
     from agents.faiss_agent import FaissAgent
 
-    query = {
-        "wavelengths": dataset.get("preview", {}).get("wavelengths", []),
-        "intensities": dataset.get("preview", {}).get("intensities", []),
-    }
-    if not query["wavelengths"]:
+    wavelengths = dataset.get("preview", {}).get("wavelengths", [])
+    intensities = dataset.get("preview", {}).get("intensities", [])
+    if not wavelengths or not intensities:
         return {"agent": "faiss_similarity", "title": "Spektren-Datenbankvergleich",
                 "status": "failed", "data": {"reason": "Keine Messdaten"}}
+    query = {
+        "data": {"wavelength": wavelengths, "intensity": intensities},
+        "wavelength_column": "wavelength",
+        "intensity_column": "intensity",
+    }
 
     references = []
     reference_ids = []
     for other in (project.preparation_report or {}).get("datasets", []):
         if other.get("usable") and other.get("file_id") != dataset.get("file_id"):
+            other_wl = other.get("preview", {}).get("wavelengths", [])
+            other_it = other.get("preview", {}).get("intensities", [])
+            if not other_wl or not other_it:
+                continue
             references.append({
-                "wavelengths": other.get("preview", {}).get("wavelengths", []),
-                "intensities": other.get("preview", {}).get("intensities", []),
+                "data": {"wavelength": other_wl, "intensity": other_it},
+                "wavelength_column": "wavelength",
+                "intensity_column": "intensity",
             })
             reference_ids.append(other.get("file_name", other.get("file_id")))
 
     output = FaissAgent().execute({
         "reference_spectra": references,
         "reference_ids": reference_ids,
-        "query_spectrum": query,
+        "query_spectrum": query if references else None,
         "top_k": 5,
     })
     return _agent_report("faiss_similarity", "Spektren-Datenbankvergleich (FAISS)", output)
@@ -273,6 +281,7 @@ def run_project_crew(project) -> Dict[str, Any]:
             spectral_data={'wavelengths': wavelengths, 'intensities': intensities},
             metadata={'file_name': dataset.get('file_name', ''),
                       'file_extension': dataset.get('file_extension', ''),
+                      'measurement_samples': dataset.get('measurement_samples') or [],
                       **(dataset.get('metadata') or {})},
             file_paths=[],
             analysis_mode=AnalysisMode.STANDARD,
@@ -282,6 +291,13 @@ def run_project_crew(project) -> Dict[str, Any]:
             user_id=str(getattr(project, 'user_id', None) or getattr(getattr(project, 'user', None), 'id', None)),
         )
         result = crew.analyze_sample(request_obj)
+        saturated = int((dataset.get('metadata') or {}).get('saturated_measurements') or 0)
+        if saturated:
+            result.warnings.append(
+                f"{dataset.get('file_name')}: {saturated} Messung(en) mit "
+                "übersteuertem (saturiertem) Kanalwert - ADC-Überlauf des Sensors, "
+                "diese Messungen wurden von der Replica-Analyse ausgeschlossen."
+            )
         results.append(result)
         all_reports.extend(_per_agent_reports(crew, result, project, dataset))
 
@@ -318,7 +334,7 @@ def run_project_crew(project) -> Dict[str, Any]:
         final_path = _generate_final_report_legacy(project, crew, primary, all_reports)
     project.final_report_path = final_path
     project.phase = 'completed'
-    project.completed_at = datetime.now()
+    project.completed_at = datetime.now(tz=timezone.utc)
     project.save(update_fields=['crew_results', 'final_report_path', 'phase',
                                 'completed_at', 'updated_at'])
     logger.info('Project crew completed for %s: %s datasets, %s agent reports',

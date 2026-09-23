@@ -706,8 +706,17 @@ class NIRAnalysisCrew:
 
             # Step 2: Metadata Quality Assessment
             self.logger.info("Performing metadata quality assessment...")
+            metadata = dict(request.metadata or {})
+            metadata.setdefault("sample_id", request.sample_id)
+            if "instrument_type" not in metadata and metadata.get("instrument"):
+                metadata["instrument_type"] = metadata["instrument"]
+            if "measurement_date" not in metadata:
+                for date_field in ("acquisition_time", "date_created", "created_at"):
+                    if metadata.get(date_field):
+                        metadata["measurement_date"] = metadata[date_field]
+                        break
             metadata_context = {
-                "metadata": request.metadata,
+                "metadata": metadata,
                 "sample_id": request.sample_id,
                 "file_paths": request.file_paths,
             }
@@ -728,7 +737,8 @@ class NIRAnalysisCrew:
             # parallel per the mission statement rule (MO 7). Reference
             # values from the metadata allow PLS/PCR/MLP calibration targets.
             parallel_context = {
-                "spectra": request.spectral_data,
+                "spectra": (request.metadata.get("measurement_samples")
+                            or request.spectral_data),
                 "reference_values": self._extract_reference_values(request.metadata),
             }
 
