@@ -71,9 +71,13 @@ sys.path.insert(0, str(PROJECT / 'django_project'))
 django.setup()
 
 from django.test import Client  # noqa: E402
+from django.conf import settings  # noqa: E402
 from django.contrib.auth import get_user_model  # noqa: E402
 from django.core.files.uploadedfile import SimpleUploadedFile  # noqa: E402
 from core.models import AnalysisProject  # noqa: E402
+
+if 'testserver' not in settings.ALLOWED_HOSTS:
+    settings.ALLOWED_HOSTS.append('testserver')
 
 User = get_user_model()
 try:
