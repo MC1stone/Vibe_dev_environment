@@ -3,7 +3,38 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP25 - Website Cleanup and Workflow Overview
+## Current Task: OP26 - Ansible Install Playbook for Debian 13
+
+### Objective
+The platform should be installable on a blank Debian 13 (x86_64) machine
+from a Ventoy stick with a single Ansible run. Two methods are supported:
+the packaged app as a .deb (preferred) or as a tar.gz archive with an
+install.sh script (fallback).
+
+### Scope
+- `ansible/install_nir_intelligence.yml`: the playbook - ventoy mount and
+  source presence checks (clean abort before any change), apt update,
+  dependency install (python3, wget, git, unzip), .deb method (copy to /tmp,
+  apt install) or archive method (copy to /opt, unarchive to
+  /opt/nir_intelligence, run install.sh as root), systemd service
+  nir_intelligence enabled/started (if present), verification via service
+  status; all paths and names as vars; block/rescue error handling;
+  idempotent (creates-guards, state: present)
+- `ansible/INSTALL_NIR_INTELLIGENCE.md`: short run guide (prerequisites,
+  ansible-playbook command, variables table, error handling, idempotency)
+- `tests/test_op26_ansible_install.py` (structural matrix) + CI line
+
+### Out of Scope
+- Building the .deb package itself (separate OP)
+- Running the playbook against a real Debian 13 target (target machine)
+
+### Success Criteria
+- Playbook is valid YAML with all required tasks, error handling and
+  idempotency guards
+- Guide documents execution after the Debian installation
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP25 - Website Cleanup and Workflow Overview
 
 ### Objective
 The website accumulated many legacy demo pages (dashboard, agents, spectra,

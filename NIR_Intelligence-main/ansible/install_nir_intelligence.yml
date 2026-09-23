@@ -1,0 +1,256 @@
+---
+# ============================================================================
+# NIR Intelligence Main - Installation auf frisch installiertem Debian 13
+# ============================================================================
+# Installiert die Eigenentwicklung "NIR Intelligence Main" von einem
+# Ventoy-Stick aus. Zwei Methoden werden unterstuetzt:
+#
+#   1. .deb-Paket : /mnt/ventoy/ansible/nir_intelligence_main.deb
+#   2. Archiv     : /mnt/ventoy/ansible/nir_intelligence_main.tar.gz
+#                   -> nach /opt/nir_intelligence entpacken und
+#                      /opt/nir_intelligence/install.sh ausfuehren
+#
+# Das Playbook ist idempotent: mehrfaches Ausfuehren fuehrt zum gleichen
+# Ergebnis. Die Installationsmethode wird automatisch gewaehlt - bevorzugt
+# wird das .deb-Paket, falls vorhanden.
+#
+# Ausfuehrung (nach der Debian-Installation, Ventoy-Stick eingehaengt):
+#   ansible-playbook -i localhost, -c local install_nir_intelligence.yml \
+#       --ask-become-pass
+# ============================================================================
+
+- name: NIR Intelligence Main - Installation auf Debian 13 (Ventoy-Stick)
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: true
+
+  vars:
+    # ---- Quellpfade auf dem Ventoy-Stick ---------------------------------
+    ventoy_mount: "/mnt/ventoy"
+    ventoy_ansible_dir: "{{ ventoy_mount }}/ansible"
+    deb_path: "{{ ventoy_ansible_dir }}/nir_intelligence_main.deb"
+    archive_path: "{{ ventoy_ansible_dir }}/nir_intelligence_main.tar.gz"
+
+    # ---- Installationsziele ----------------------------------------------
+    deb_staging_dir: "/tmp"
+    deb_staging_path: "{{ deb_staging_dir }}/nir_intelligence_main.deb"
+    opt_install_dir: "/opt/nir_intelligence"
+    archive_staging_path: "/opt/nir_intelligence_main.tar.gz"
+
+    # ---- Pakete ------------------------------------------------------------
+    required_packages:
+      - python3
+      - wget
+      - git
+      - unzip
+
+    # ---- Dienst ------------------------------------------------------------
+    service_name: "nir_intelligence"
+    service_check_enabled: true
+
+    # ---- Verifikation ------------------------------------------------------
+    verify_command: "systemctl is-active {{ service_name }}"
+    verify_timeout: 30
+
+  tasks:
+    # ==========================================================================
+    # 0. Pre-Flight-Checks: Ventoy-Stick und Installationsquelle vorhanden
+    # ==========================================================================
+    - name: Pruefe, ob der Ventoy-Stick eingehaengt ist
+      ansible.builtin.stat:
+        path: "{{ ventoy_mount }}"
+      register: ventoy_mount_state
+
+    - name: Breche ab, wenn der Ventoy-Stick nicht eingehaengt ist
+      ansible.builtin.fail:
+        msg: >-
+          Der Ventoy-Stick ist nicht unter {{ ventoy_mount }} eingehaengt.
+          Bitte den Stick mounten und das Playbook erneut ausfuehren.
+      when: not ventoy_mount_state.stat.exists
+
+    - name: Pruefe, ob das .deb-Paket auf dem Stick liegt
+      ansible.builtin.stat:
+        path: "{{ deb_path }}"
+      register: deb_file_state
+
+    - name: Pruefe, ob das Archiv auf dem Stick liegt
+      ansible.builtin.stat:
+        path: "{{ archive_path }}"
+      register: archive_file_state
+
+    - name: Breche ab, wenn weder .deb-Paket noch Archiv gefunden wurden
+      ansible.builtin.fail:
+        msg: >-
+          Weder {{ deb_path }} noch {{ archive_path }} wurden gefunden.
+          Bitte die Eigenentwicklung auf den Ventoy-Stick kopieren.
+      when: not deb_file_state.stat.exists and not archive_file_state.stat.exists
+
+    - name: Festlegung der Installationsmethode
+      ansible.builtin.set_fact:
+        install_method: "{{ 'deb' if deb_file_state.stat.exists else 'archive' }}"
+
+    - name: Installationsmethode bekanntgeben
+      ansible.builtin.debug:
+        msg: "Installationsmethode: {{ install_method }}"
+
+    # ==========================================================================
+    # 1. Paketindex aktualisieren und Abhaengigkeiten installieren
+    # ==========================================================================
+    - name: Aktualisiere den Paketindex (apt update)
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Installiere Abhaengigkeiten
+      ansible.builtin.apt:
+        name: "{{ required_packages }}"
+        state: present
+
+    # ==========================================================================
+    # 2a. Installationsmethode: .deb-Paket
+    # ==========================================================================
+    - name: .deb-Paket installieren
+      when: install_method == 'deb'
+      block:
+        - name: Kopiere das .deb-Paket nach /tmp
+          ansible.builtin.copy:
+            src: "{{ deb_path }}"
+            dest: "{{ deb_staging_path }}"
+            mode: "0644"
+            remote_src: true
+
+        - name: Installiere das .deb-Paket mit apt
+          ansible.builtin.apt:
+            deb: "{{ deb_staging_path }}"
+            state: present
+          register: deb_install_result
+
+        - name: Entferne das .deb-Paket aus /tmp
+          ansible.builtin.file:
+            path: "{{ deb_staging_path }}"
+            state: absent
+          when: deb_install_result is succeeded
+
+      rescue:
+        - name: Installation des .deb-Pakets fehlgeschlagen
+          ansible.builtin.fail:
+            msg: >-
+              Die Installation des .deb-Pakets ist fehlgeschlagen.
+              Bitte die Paketintegritaet pruefen
+              (dpkg-deb --info {{ deb_staging_path }}) und das
+              Playbook erneut ausfuehren.
+
+    # ==========================================================================
+    # 2b. Installationsmethode: Archiv mit install.sh
+    # ==========================================================================
+    - name: Archiv installieren
+      when: install_method == 'archive'
+      block:
+        - name: Kopiere das Archiv nach /opt
+          ansible.builtin.copy:
+            src: "{{ archive_path }}"
+            dest: "{{ archive_staging_path }}"
+            mode: "0644"
+            remote_src: true
+
+        - name: Entpacke das Archiv nach /opt/nir_intelligence
+          ansible.builtin.unarchive:
+            src: "{{ archive_staging_path }}"
+            dest: "{{ opt_install_dir | dirname }}"
+            remote_src: true
+            creates: "{{ opt_install_dir }}/install.sh"
+
+        - name: Pruefe, ob das Installationsskript existiert
+          ansible.builtin.stat:
+            path: "{{ opt_install_dir }}/install.sh"
+          register: install_script_state
+
+        - name: Breche ab, wenn install.sh fehlt
+          ansible.builtin.fail:
+            msg: >-
+              Das Skript {{ opt_install_dir }}/install.sh wurde im Archiv
+              nicht gefunden. Bitte das Archiv pruefen.
+          when: not install_script_state.stat.exists
+
+        - name: Fuehre install.sh mit Root-Rechten aus
+          ansible.builtin.command:
+            cmd: "bash {{ opt_install_dir }}/install.sh"
+            chdir: "{{ opt_install_dir }}"
+            creates: "{{ opt_install_dir }}/.install_completed"
+          register: install_script_result
+
+        - name: Entferne das Archiv aus /opt
+          ansible.builtin.file:
+            path: "{{ archive_staging_path }}"
+            state: absent
+
+      rescue:
+        - name: Archiv-Installation fehlgeschlagen
+          ansible.builtin.fail:
+            msg: >-
+              Die Installation aus dem Archiv ist fehlgeschlagen.
+              Bitte das Archiv pruefen
+              (tar -tzf {{ archive_staging_path }}) und das
+              Playbook erneut ausfuehren.
+
+    # ==========================================================================
+    # 3. Dienst aktivieren und starten
+    # ==========================================================================
+    - name: Pruefe, ob der systemd-Dienst existiert
+      ansible.builtin.stat:
+        path: "/etc/systemd/system/{{ service_name }}.service"
+      register: service_file_state
+
+    - name: Lade die systemd-Konfiguration neu
+      ansible.builtin.systemd:
+        daemon_reload: true
+      when: service_file_state.stat.exists
+
+    - name: Aktiviere und starte den Dienst nir_intelligence
+      ansible.builtin.systemd:
+        name: "{{ service_name }}"
+        enabled: true
+        state: started
+      when: >
+        service_file_state.stat.exists and service_check_enabled | bool
+      register: service_start_result
+
+    - name: Dienst-Name im Playbook anpassen (Hinweis, falls abweichend)
+      ansible.builtin.debug:
+        msg: >-
+          Hinweis: Falls der systemd-Dienst anders heisst als
+          '{{ service_name }}', bitte die Variable 'service_name' im
+          Playbook entsprechend anpassen.
+      when: not service_file_state.stat.exists
+
+    # ==========================================================================
+    # 4. Verifikation der Installation
+    # ==========================================================================
+    - name: Pruefe, ob der Dienst aktiv ist (Verifikation)
+      ansible.builtin.command:
+        cmd: "{{ verify_command }}"
+      register: verify_result
+      changed_when: false
+      failed_when: >
+        verify_result.rc != 0 and service_file_state.stat.exists
+      when: >
+        service_file_state.stat.exists and service_check_enabled | bool
+
+    - name: Installation erfolgreich verifiziert
+      ansible.builtin.debug:
+        msg: >-
+          NIR Intelligence Main wurde erfolgreich installiert
+          (Methode: {{ install_method }}) und der Dienst
+          '{{ service_name }}' ist aktiv.
+      when: >
+        service_file_state.stat.exists and service_check_enabled | bool
+
+    - name: Verifikation uebersprungen (kein Dienst, nur Installation)
+      ansible.builtin.debug:
+        msg: >-
+          NIR Intelligence Main wurde installiert (Methode:
+          {{ install_method }}). Kein systemd-Dienst '{{ service_name }}'
+          gefunden - Verifikation uebersprungen. Falls die Anwendung
+          keinen Service mitbringt, ist dieser Schritt optional.
+      when: not service_file_state.stat.exists
