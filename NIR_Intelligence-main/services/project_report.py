@@ -275,15 +275,24 @@ def generate_final_html_report(project, crew_results: Dict[str, Any],
         '<p class="muted">Keine Agenten-Berichte vorhanden.</p>'
 
     student_sections = {'discussion': '', 'conclusion': '', 'literature': ''}
+    overview_keys = (['spectrum'] if spectrum_chart else []) + \
+                    (['quality_bar'] if quality_chart else [])
     try:
         from services.student_report import build_student_sections
-        overview_keys = (['spectrum'] if spectrum_chart else []) + \
-                        (['quality_bar'] if quality_chart else [])
         student_sections = build_student_sections(
             per_agent, crew_results, datasets,
             overview_keys=overview_keys)
     except Exception:
         logger.exception('Student report sections failed (non-fatal)')
+
+    chatbot_widget = ''
+    try:
+        from services.report_chatbot import chatbot_html
+        chatbot_widget = chatbot_html(
+            per_agent, crew_results, datasets,
+            overview_keys=overview_keys).get('widget', '')
+    except Exception:
+        logger.exception('Chatbot widget rendering failed (non-fatal)')
 
     recommendations = crew_results.get('recommendations', [])
     rec_items = ''.join(f'<li>{_escape(r)}</li>' for r in recommendations) or \
@@ -330,6 +339,8 @@ Request-ID: {_escape(crew_results.get('request_id', '-'))}</p>
 
 <h2>Literaturhinweise</h2>
 <div class="card"><ul>{student_sections['literature']}</ul></div>
+
+{chatbot_widget}
 
 <h2>Originaldaten</h2>
 {_original_data_html(datasets)}

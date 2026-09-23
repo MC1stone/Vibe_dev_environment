@@ -3,7 +3,51 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP23 - Student-Friendly Report Sections (Diskussion, Fazit, Literatur)
+## Current Task: OP24 - Embedded Report Chatbot
+
+### Objective
+
+Students should be able to ask questions about the analysis directly in
+the final report. The report is a self-contained offline HTML file, so a
+live CrewAI chat would break the concept (server dependency, no offline
+use). Hybrid design:
+
+1. `ChatbotAgent` (CrewAI agent, `agents/chatbot_agent.py`) runs at
+   release time with the REAL crew results and builds a structured Q&A
+   knowledge base: categories (Projekt, Spektrum, Sensor, Statistik,
+   Neuronales Netz, Kalibration, Datenbank, Optimierung, Warnungen,
+   Methoden), anticipated student questions, answers carrying the real
+   numbers (R2, RMSE, drift level, wavelength range, similarity scores),
+   keyword matching sets and figure references (Abbildung numbers
+   consistent with the OP23 explanations). Consistent with the OP14
+   truthfulness rule: the agent only answers what the results contain.
+2. Embedded chat widget (`services/report_chatbot.py`): vanilla-JS,
+   fully offline client-side matching (umlaut-folded keyword scoring +
+   question-text similarity), answer chips as suggested questions, jump
+   links that scroll to and highlight the referenced figure, fallback
+   answer when nothing matches. No server, no network, no external
+   libraries.
+
+### Scope
+
+- `agents/chatbot_agent.py`: release-time knowledge base builder
+- `services/report_chatbot.py`: widget template + payload embedding
+- `services/project_report.py`: the final report gains the chatbot
+  section between Literaturhinweise and Originaldaten
+
+### Out of Scope
+
+- Live LLM backend (a local Ollama endpoint would be a separate OP with
+  infrastructure requirements)
+- Multi-turn conversations (single-question matching by design)
+
+### Success Criteria
+
+- Knowledge base entries carry only real numbers from the crew results
+- Widget works fully offline (no external URLs, no fetch)
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP23 - Student-Friendly Report Sections (Diskussion, Fazit, Literatur)
 
 ### Objective
 
