@@ -82,13 +82,32 @@ def _similarity_section(project, dataset: Dict[str, Any]) -> Dict[str, Any]:
             })
             reference_ids.append(other.get("file_name", other.get("file_id")))
 
+    # OP15: include the persisted spectral database - records visible to
+    # the project owner on the same wavelength grid (no cross-grid
+    # interpolation by design); records from this project are excluded
+    # (already covered as sibling datasets above).
+    db_sources = 0
+    try:
+        from services.spectrum_database import references_for_dataset
+        user_id = getattr(project, 'user_id', None)
+        if user_id:
+            db = references_for_dataset(user_id, dataset,
+                                        exclude_project_id=project.id)
+            references.extend(db['references'])
+            reference_ids.extend(f'Datenbank: {i}' for i in db['ids'])
+            db_sources = len(db['references'])
+    except Exception:
+        logger.exception('Spectral database lookup failed (non-fatal)')
+
     output = FaissAgent().execute({
         "reference_spectra": references,
         "reference_ids": reference_ids,
         "query_spectrum": query if references else None,
         "top_k": 5,
     })
-    return _agent_report("faiss_similarity", "Spektren-Datenbankvergleich (FAISS)", output)
+    section = _agent_report("faiss_similarity", "Spektren-Datenbankvergleich (FAISS)", output)
+    section['data']['database_references'] = db_sources
+    return section
 
 
 def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:

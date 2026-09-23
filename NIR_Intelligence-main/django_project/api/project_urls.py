@@ -8,6 +8,8 @@ from .project_views import (
     ProjectMetadataView,
     ProjectReleaseView,
     ProjectFinalReportView,
+    SpectrumDatabaseView,
+    SpectrumDatabaseDetailView,
 )
 
 urlpatterns = [
@@ -18,4 +20,6 @@ urlpatterns = [
     path('<uuid:project_id>/metadata/', ProjectMetadataView.as_view(), name='project-metadata'),
     path('<uuid:project_id>/release/', ProjectReleaseView.as_view(), name='project-release'),
     path('<uuid:project_id>/final-report/', ProjectFinalReportView.as_view(), name='project-final-report'),
+    path('database/', SpectrumDatabaseView.as_view(), name='spectrum-database'),
+    path('database/<uuid:spectrum_id>/', SpectrumDatabaseDetailView.as_view(), name='spectrum-detail'),
 ]

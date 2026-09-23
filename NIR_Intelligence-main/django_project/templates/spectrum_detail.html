@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Spektrum-Details - NIR Intelligence Platform{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-graph-up me-2"></i>{{ spectrum.file_name }}</h1>
+        <div>
+            {% if spectrum.project_id %}
+            <a href="/projects/{{ spectrum.project_id }}/" class="btn btn-outline-primary me-2">
+                <i class="bi bi-folder2-open me-1"></i>Quellprojekt
+            </a>
+            {% endif %}
+            <a href="/projects/database/" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Zur Datenbank
+            </a>
+        </div>
+    </div>
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header"><strong>Messreihe</strong></div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr><th>Wellenlänge (nm)</th><th>Intensität</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for wl, it in series %}
+                                <tr>
+                                    <td>{{ wl|floatformat:1 }}</td>
+                                    <td>{{ it|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header"><strong>Metadaten &amp; Herkunft</strong></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Punkte</dt><dd class="col-sm-7">{{ spectrum.num_points }}</dd>
+                        <dt class="col-sm-5">Bereich</dt><dd class="col-sm-7">{{ spectrum.wavelength_min|floatformat:0 }} &ndash; {{ spectrum.wavelength_max|floatformat:0 }} nm</dd>
+                        <dt class="col-sm-5">Gerät</dt><dd class="col-sm-7">{{ spectrum.instrument_type|default:'-' }}</dd>
+                        <dt class="col-sm-5">Probentyp</dt><dd class="col-sm-7">{{ spectrum.sample_type|default:'-' }}</dd>
+                        <dt class="col-sm-5">Erstellt</dt><dd class="col-sm-7">{{ spectrum.created_at|date:'d.m.Y H:i' }}</dd>
+                    </dl>
+                    {% if metadata %}
+                    <hr>
+                    <dl class="row mb-0">
+                        {% for key, value in metadata.items %}
+                        <dt class="col-sm-5">{{ key }}</dt><dd class="col-sm-7">{{ value }}</dd>
+                        {% endfor %}
+                    </dl>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card shadow-sm">
+                <div class="card-header"><strong>Ähnlichste Spektren (gleiche Wellenlängenraster)</strong></div>
+                <div class="card-body">
+                    {% if matches %}
+                    <table class="table table-sm">
+                        <thead><tr><th>Referenz</th><th>Distanz</th><th>Ähnlichkeit</th></tr></thead>
+                        <tbody>
+                            {% for m in matches %}
+                            <tr>
+                                <td>{{ m.reference_id }}</td>
+                                <td>{{ m.distance|floatformat:2 }}</td>
+                                <td>{{ m.similarity|floatformat:4 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="mb-0 text-muted">Keine Vergleichsspektren auf demselben Raster in der Datenbank.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

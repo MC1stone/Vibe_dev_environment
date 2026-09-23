@@ -3,7 +3,53 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP14 - Truthful Agent Statements in the Project Report
+## Current Task: OP15 - Persistent Spectral Database
+
+### Objective
+
+Released projects were compared only against their own sibling datasets -
+spectra from earlier projects were lost after the run, so the FAISS
+similarity section always started from an empty reference set. OP15
+persists every usable dataset of a released project as a `SpectrumRecord`
+so later projects can compare against the visible database records.
+
+### Design Decisions
+
+- Comparison metric: same wavelength grid only (grid key over rounded
+  wavelengths) - no cross-grid interpolation, by design
+- Visibility with federated learning in mind: user-private default,
+  explicit per-record `lab_shared` opt-in. FL ground rule: raw spectra stay
+  local, only parameter updates leave clients. Provenance fields
+  (instrument_type, sample_type) double as non-IID sharding dimensions
+  for the federated learning roadmap (S9 grouping)
+
+### Scope
+
+- `core/models.py`: `SpectrumRecord` (UUID, user, project, file_name,
+  visibility, wavelengths/intensities/metadata JSON, wavelength_grid,
+  instrument_type, sample_type, created_at) + migration 0006
+- `services/spectrum_database.py`: `persist_project_spectra()` (idempotent
+  per project+file_name, never raises), `visible_records()` (own +
+  lab_shared), `references_for_dataset()` (same grid, unified FAISS schema)
+- `services/project_crew.py`: similarity section appends visible database
+  records to the FAISS reference set, `database_references` count
+- `api/project_views.py` + templates: release persists spectra with the
+  `spectrum_visibility` option, database list/detail pages with FAISS
+  top-5 matches, projects page links the database, release offers the
+  lab-sharing opt-in
+- `tests/test_op15_spectral_database.py` (41 checks) + CI matrix extended
+
+### Success Criteria
+
+- Releasing a project persists its usable datasets; re-release updates
+  instead of duplicating
+- A new project finds visible same-grid records from earlier projects as
+  FAISS references; cross-grid records are excluded, not interpolated
+- Private records of other users stay invisible (enforced in query and
+  detail view)
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP14 - Truthful Agent Statements in the Project Report
 
 ### Objective
 

@@ -29,6 +29,85 @@ except ImportError:  # offline test mode without djangorestframework
 from core.models import AnalysisProject, GenericFile
 
 
+class SpectrumDatabaseView(TemplateView):
+    """Browse the local spectral database (OP15): all spectra visible to the
+    user (own records plus lab-shared ones) with provenance and a link to the
+    source project. The FAISS similarity section of released projects
+    compares against exactly this set (same wavelength grid only)."""
+
+    template_name = 'spectrum_database.html'
+
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=' + request.get_full_path())
+        from services.spectrum_database import visible_records
+        records = visible_records(request.user)
+        spectra = []
+        for record in records:
+            summary = record.get_summary()
+            summary['is_own'] = record.user_id == request.user.id
+            summary['is_shared'] = record.visibility == 'lab_shared'
+            spectra.append(summary)
+        context = {
+            'page_title': 'Spektrendatenbank',
+            'spectra': spectra,
+            'total_count': len(spectra),
+        }
+        return render(request, self.template_name, context)
+
+
+class SpectrumDatabaseDetailView(TemplateView):
+    """One database spectrum: preview table plus the most similar visible
+    spectra on the same wavelength grid (FAISS, top-k)."""
+
+    template_name = 'spectrum_detail.html'
+
+    def get(self, request, spectrum_id):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=' + request.get_full_path())
+        from services.spectrum_database import visible_records
+        records = visible_records(request.user)
+        try:
+            record = records.get(id=spectrum_id)
+        except (ValueError, Exception):
+            raise Http404('Spectrum not found')
+        matches = []
+        others = records.filter(wavelength_grid=record.wavelength_grid) \
+                        .exclude(id=record.id)
+        if others.exists():
+            try:
+                from agents.faiss_agent import FaissAgent
+                references = [{
+                    'data': {'wavelength': o.wavelengths,
+                             'intensity': o.intensities},
+                    'wavelength_column': 'wavelength',
+                    'intensity_column': 'intensity',
+                } for o in others]
+                ids = [o.file_name or str(o.id) for o in others]
+                output = FaissAgent().execute({
+                    'reference_spectra': references,
+                    'reference_ids': ids,
+                    'query_spectrum': {
+                        'data': {'wavelength': record.wavelengths,
+                                 'intensity': record.intensities},
+                        'wavelength_column': 'wavelength',
+                        'intensity_column': 'intensity',
+                    },
+                    'top_k': 5,
+                })
+                matches = output.data.get('matches', []) if output else []
+            except Exception:
+                logger.exception('Similarity search failed (non-fatal)')
+        context = {
+            'page_title': f'Spektrum {record.file_name}',
+            'spectrum': record.get_summary(),
+            'series': list(zip(record.wavelengths, record.intensities)),
+            'matches': matches,
+            'metadata': record.metadata or {},
+        }
+        return render(request, self.template_name, context)
+
+
 def _get_project(project_id, user):
     try:
         return AnalysisProject.objects.get(id=project_id, user=user)
@@ -209,6 +288,18 @@ class ProjectReleaseView(APIView if DRF_AVAILABLE else object):
             project.phase = 'released'
             project.released_at = datetime.now(tz=timezone.utc)
             project.save(update_fields=['phase', 'released_at', 'updated_at'])
+
+        # OP15: persist the released datasets into the spectral database
+        # (visibility opt-in via the request; default stays owner-private)
+        try:
+            from services.spectrum_database import persist_project_spectra
+            visibility = request.data.get('spectrum_visibility', 'private') \
+                if hasattr(request, 'data') else 'private'
+            if visibility not in ('private', 'lab_shared'):
+                visibility = 'private'
+            persist_project_spectra(project, visibility=visibility)
+        except Exception:
+            logger.exception('Spectral database persist failed (non-fatal)')
         try:
             from services.project_crew import run_project_crew
             crew_results = run_project_crew(project)
