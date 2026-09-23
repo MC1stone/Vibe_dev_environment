@@ -143,11 +143,30 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
             },
         })
     if result.sensor_quality_results:
-        sections.append(_agent_report(
+        sensor_section = _agent_report(
             "sensor_quality", "Sensorqualität (Drift, Rauschen)", type("O", (), {
                 "status": type("S", (), {"name": "COMPLETED"})(),
                 "data": result.sensor_quality_results,
-            })()))
+            })())
+        measurement_samples = (dataset.get('measurement_samples') or [])
+        if measurement_samples:
+            try:
+                from services.sensor_charts import (
+                    sensor_dashboard_data_urls, sensor_recommendations)
+                recommendations = sensor_recommendations(result.sensor_quality_results)
+                if recommendations:
+                    sensor_section['data'] = dict(sensor_section.get('data') or {})
+                    sensor_section['data']['optimization_recommendations'] = recommendations
+                sensor_section['charts'] = sensor_dashboard_data_urls(
+                    measurement_samples, result.sensor_quality_results,
+                    dataset.get('preview', {}).get('wavelengths', []),
+                )
+                if sensor_section.get('charts'):
+                    sensor_section['charts_note'] = (
+                        "SPC-Dashboard (Kontrollkarte, Overlay, Kanal-Rauschen, Gauge)")
+            except Exception:
+                logger.exception('Sensor dashboard rendering failed (non-fatal)')
+        sections.append(sensor_section)
     if result.statistical_analysis_results:
         section = _agent_report(
             "statistical_analysis", "Statistische Analyse (PCA, PLS, Cluster)", type("O", (), {
