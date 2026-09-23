@@ -274,6 +274,17 @@ def generate_final_html_report(project, crew_results: Dict[str, Any],
     agent_html = ''.join(_agent_section_html(s) for s in per_agent) or \
         '<p class="muted">Keine Agenten-Berichte vorhanden.</p>'
 
+    student_sections = {'discussion': '', 'conclusion': '', 'literature': ''}
+    try:
+        from services.student_report import build_student_sections
+        overview_keys = (['spectrum'] if spectrum_chart else []) + \
+                        (['quality_bar'] if quality_chart else [])
+        student_sections = build_student_sections(
+            per_agent, crew_results, datasets,
+            overview_keys=overview_keys)
+    except Exception:
+        logger.exception('Student report sections failed (non-fatal)')
+
     recommendations = crew_results.get('recommendations', [])
     rec_items = ''.join(f'<li>{_escape(r)}</li>' for r in recommendations) or \
         '<li class="muted">Keine Empfehlungen.</li>'
@@ -310,6 +321,15 @@ Request-ID: {_escape(crew_results.get('request_id', '-'))}</p>
 
 <h2>Agenten-Berichte (je Bereich)</h2>
 {agent_html}
+
+<h2>Diskussion</h2>
+<div class="card">{student_sections['discussion']}</div>
+
+<h2>Fazit</h2>
+<div class="card">{student_sections['conclusion']}</div>
+
+<h2>Literaturhinweise</h2>
+<div class="card"><ul>{student_sections['literature']}</ul></div>
 
 <h2>Originaldaten</h2>
 {_original_data_html(datasets)}

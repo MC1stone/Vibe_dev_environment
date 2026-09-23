@@ -3,7 +3,50 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP22 - Spectrum Chart and Top-3 Similarity Comparison
+## Current Task: OP23 - Student-Friendly Report Sections (Diskussion, Fazit, Literatur)
+
+### Objective
+
+The final report listed per-agent results but was not written for students.
+OP23 renders three sections from the REAL analysis results (no invented
+findings, Fachbegriffe explained in plain language at first use):
+
+- **Diskussion**: interpretation of the spectra (band assignment from the
+  measured wavelength range), assessment of the model quality (R2, RMSE from
+  the agent results with an honest RMSEP note), possible error sources
+  (concrete agent findings + general NIR effects like Streulicht,
+  inhomogeneous samples, temperature) and a detailed explanation of every
+  figure (Abbildung 1..N in report order, each describing what the chart
+  shows and how to read it)
+- **Fazit**: summary of the key findings (overall score, best R2, completed
+  sections) and every optimization option collected from all agents, each
+  with a short explanation of the underlying effect
+- **Literaturhinweise**: real, accessible standard works cited in APA style
+  (Pasquini 2003; Workman & Weyer 2012; Geladi & Kowalski 1986; Wold et al.
+  2001; Williams & Norris 2001; N\u00e6s et al. 2002; Burns & Ciurczak 2007)
+
+### Scope
+
+- `services/student_report.py`: spectrum interpretation, model quality
+  paragraphs, error sources, figure explanations, conclusion builder and
+  the APA literature list; everything degrades honestly to 'no data'
+  statements, never to invented findings
+- `services/project_report.py`: the final report gains Diskussion, Fazit
+  and Literaturhinweise between the agent sections and the original data
+
+### Out of Scope
+
+- Per-agent section text changes (the sections stay as they are)
+- English report variant
+
+### Success Criteria
+
+- Every figure in the final report is explained (Abbildung 1..N, no gaps)
+- Model quality text uses the real agent numbers, with an honest note that
+  no independent RMSEP validation set exists
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP22 - Spectrum Chart and Top-3 Similarity Comparison
 
 ### Objective
 
