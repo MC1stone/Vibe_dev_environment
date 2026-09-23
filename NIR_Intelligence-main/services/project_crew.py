@@ -169,11 +169,29 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
                 logger.exception('PCA chart rendering failed (non-fatal)')
         sections.append(section)
     if result.neural_network_results:
-        sections.append(_agent_report(
+        nn_section = _agent_report(
             "neural_network", "Neuronale Netzwerkanalyse (CNN, MLP)", type("O", (), {
                 "status": type("S", (), {"name": "COMPLETED"})(),
                 "data": result.neural_network_results,
-            })()))
+            })())
+        calibration_samples = (dataset.get('calibration_samples') or [])
+        reference_values = (dataset.get('reference_values') or [])
+        if calibration_samples and reference_values:
+            try:
+                from services.xai_charts import xai_chart_data_urls
+                nn_section['charts'] = xai_chart_data_urls(
+                    calibration_samples, reference_values,
+                    dataset.get('preview', {}).get('wavelengths', []),
+                    epochs=60,
+                )
+                if nn_section.get('charts'):
+                    nn_section['charts_note'] = (
+                        f"{len(nn_section['charts'])} XAI-Diagramme aus "
+                        f"{len(calibration_samples)} Kalibrationsmessungen"
+                    )
+            except Exception:
+                logger.exception('XAI chart rendering failed (non-fatal)')
+        sections.append(nn_section)
     if result.calibration_results:
         sections.append(_agent_report(
             "calibration", "Kalibration (PLS, PCR)", type("O", (), {
