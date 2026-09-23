@@ -69,7 +69,7 @@ class SpectrumDatabaseDetailView(TemplateView):
         records = visible_records(request.user)
         try:
             record = records.get(id=spectrum_id)
-        except (ValueError, Exception):
+        except Exception:
             raise Http404('Spectrum not found')
         matches = []
         others = records.filter(wavelength_grid=record.wavelength_grid) \
@@ -98,12 +98,21 @@ class SpectrumDatabaseDetailView(TemplateView):
                 matches = output.data.get('matches', []) if output else []
             except Exception:
                 logger.exception('Similarity search failed (non-fatal)')
+        chart = ''
+        try:
+            from services.project_report import single_spectrum_chart_data_url
+            chart = single_spectrum_chart_data_url(
+                record.wavelengths, record.intensities,
+                title=f'Spektrum: {record.file_name}')
+        except Exception:
+            logger.exception('Spectrum chart rendering failed (non-fatal)')
         context = {
             'page_title': f'Spektrum {record.file_name}',
             'spectrum': record.get_summary(),
             'series': list(zip(record.wavelengths, record.intensities)),
             'matches': matches,
             'metadata': record.metadata or {},
+            'chart': chart,
         }
         return render(request, self.template_name, context)
 

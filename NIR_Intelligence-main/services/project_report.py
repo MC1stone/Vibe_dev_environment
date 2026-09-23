@@ -70,6 +70,22 @@ def spectrum_chart_data_url(datasets: List[Dict[str, Any]]) -> str:
     return _figure_to_data_url(fig)
 
 
+def single_spectrum_chart_data_url(wavelengths: List[Any],
+                                   intensities: List[Any],
+                                   title: str = 'Spektrum') -> str:
+    """One line for one spectrum - used on the database detail page to
+    visualise a persisted SpectrumRecord. Returns '' without matplotlib."""
+    if not MATPLOTLIB_AVAILABLE or not wavelengths or not intensities:
+        return ''
+    fig, ax = plt.subplots(figsize=(8, 4.2))
+    ax.plot(wavelengths, intensities, color='#0d6efd')
+    ax.set_xlabel('Wellenlänge (nm)')
+    ax.set_ylabel('Intensität')
+    ax.set_title(title)
+    ax.grid(alpha=0.3)
+    return _figure_to_data_url(fig)
+
+
 def _quality_score(section: Dict[str, Any]) -> Optional[float]:
     """Extract a 0-100 quality score from a per-agent section."""
     data = section.get('data') or {}
