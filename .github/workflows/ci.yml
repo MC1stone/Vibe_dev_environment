@@ -46,6 +46,7 @@ jobs:
           python tests/test_op10_project_workflow.py
           python tests/test_op11_rendered_final_report.py
           python tests/test_op12_project_upload_ui.py
+          python tests/test_op13_online_metadata_editing.py
 
       - name: Django system check
         run: python django_project/manage.py check

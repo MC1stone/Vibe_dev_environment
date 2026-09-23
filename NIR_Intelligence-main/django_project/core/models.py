@@ -931,6 +931,10 @@ class AnalysisProject(models.Model):
     preparation_report = models.JSONField(
         default=dict, blank=True, verbose_name='Preparation Report (Phase 1)'
     )
+    # User-entered metadata overrides per file (OP13): {file_id: {field: value}}
+    metadata_overrides = models.JSONField(
+        default=dict, blank=True, verbose_name='Metadata Overrides (User)'
+    )
 
     # Phase 2: crew analysis results (per-agent reports, summary, final report path)
     crew_results = models.JSONField(

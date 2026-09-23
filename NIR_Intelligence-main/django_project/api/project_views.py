@@ -117,7 +117,8 @@ class ProjectDetailView(TemplateView):
 
 
 class ProjectReingestView(APIView if DRF_AVAILABLE else object):
-    """Re-run the phase 1 preparation after the user adapted the files."""
+    """Re-run the phase 1 preparation after the user adapted the files
+    or edited the metadata online (OP13)."""
 
     def post(self, request, project_id):
         if not request.user.is_authenticated:
@@ -131,6 +132,58 @@ class ProjectReingestView(APIView if DRF_AVAILABLE else object):
             'usable_dataset_count': report.get('usable_dataset_count'),
             'total_dataset_count': report.get('total_dataset_count'),
             'recommendations': report.get('recommendations', []),
+            'report_url': f'/projects/{project.id}/',
+        })
+
+
+class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
+    """Edit dataset metadata online (OP13): the user enters/updates metadata
+    fields per file directly on the project page; the overrides are stored
+    on the project and the preparation report is rebuilt so the metadata
+    quality assessment reflects the changes immediately - no external file
+    versions or re-upload needed."""
+
+    def post(self, request, project_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'error': 'Authentication required'},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        project = _get_project(project_id, request.user)
+        if project.phase != 'drafted':
+            return Response({
+                'success': False,
+                'error': 'Project already released',
+                'message': 'Metadaten können nur vor der Freigabe angepasst werden.',
+            }, status=status.HTTP_409_CONFLICT)
+        metadata = request.data.get('metadata')
+        if not isinstance(metadata, dict) or not metadata:
+            return Response({'success': False, 'error': 'metadata dict required'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        known_file_ids = {str(f.id) for f in project.files.all()}
+        overrides = dict(project.metadata_overrides or {})
+        for file_id, fields in metadata.items():
+            if str(file_id) not in known_file_ids:
+                continue
+            if not isinstance(fields, dict):
+                continue
+            merged = dict(overrides.get(str(file_id), {}))
+            for key, value in fields.items():
+                if len(str(key)) > 64:
+                    return Response({'success': False,
+                                     'error': f'Metadatenfeld zu lang: {key}'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+                merged[str(key)] = '' if value is None else str(value)[:512]
+            overrides[str(file_id)] = merged
+        project.metadata_overrides = overrides
+        project.save(update_fields=['metadata_overrides', 'updated_at'])
+
+        from services.project_ingest import build_preparation_report
+        report = build_preparation_report(project)
+        return Response({
+            'success': True,
+            'metadata_quality_score': report.get('metadata_quality', {}).get('overall_quality_score'),
+            'missing_recommended_fields': report.get('metadata_quality', {}).get('missing_recommended_fields', []),
+            'usable_dataset_count': report.get('usable_dataset_count'),
             'report_url': f'/projects/{project.id}/',
         })
 

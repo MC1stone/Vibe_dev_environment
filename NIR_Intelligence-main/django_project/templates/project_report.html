@@ -85,6 +85,53 @@
             {% endif %}
 
             {% if project.phase == 'drafted' %}
+            <!-- Metadata editor (OP13): edit dataset metadata online, no re-upload -->
+            <h6 class="mt-4"><i class="bi bi-pencil-square me-1"></i>Metadaten online anpassen
+                <span class="text-muted fs-6">(wirkt sofort auf die Metadatenbewertung, kein erneuter Upload nötig)</span></h6>
+            <div class="accordion mb-3" id="metadataEditor">
+                {% for d in datasets %}
+                {% if d.usable %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#meta-{{ forloop.counter }}">
+                            <i class="bi bi-file-earmark-text me-2"></i>{{ d.file_name }}
+                        </button>
+                    </h2>
+                    <div id="meta-{{ forloop.counter }}" class="accordion-collapse collapse"
+                         data-bs-parent="#metadataEditor">
+                        <div class="accordion-body">
+                            <form class="metadata-form" data-file-id="{{ d.file_id }}">
+                                <div class="row g-2">
+                                    {% for field in metadata_quality.missing_recommended_fields %}
+                                    <div class="col-md-4">
+                                        <label class="form-label small">{{ field }}</label>
+                                        <input type="text" class="form-control form-control-sm"
+                                               name="{{ field }}" value="{{ d.metadata.field|default:'' }}"
+                                               placeholder="{{ field }} ergänzen">
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="mt-2">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control meta-new-key"
+                                               placeholder="Weiteres Feld (z. B. sample_id)">
+                                        <button class="btn btn-outline-secondary meta-add-field" type="button">
+                                            <i class="bi bi-plus"></i> Feld hinzufügen
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary mt-3">
+                                    <i class="bi bi-save me-1"></i>Metadaten speichern
+                                </button>
+                                <span class="metadata-status text-muted small ms-2"></span>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
             <div class="d-flex gap-2 mt-3">
                 <button id="btn-reingest" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-repeat me-1"></i>Daten angepasst? Aufbereitung erneut ausführen
@@ -188,6 +235,47 @@
         statusBox.style.display = 'block';
         statusBox.innerHTML = '<div class="alert alert-' + (ok ? 'success' : 'danger') + ' mb-0">' + msg + '</div>';
     }
+    document.querySelectorAll('.metadata-form').forEach(function (form) {
+        var fileId = form.getAttribute('data-file-id');
+        var status = form.querySelector('.metadata-status');
+        form.querySelector('.meta-add-field').addEventListener('click', function () {
+            var keyInput = form.querySelector('.meta-new-key');
+            var key = (keyInput.value || '').trim();
+            if (!key) return;
+            var row = form.querySelector('.row.g-2');
+            var col = document.createElement('div');
+            col.className = 'col-md-4';
+            var label = document.createElement('label');
+            label.className = 'form-label small';
+            label.textContent = key;
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control form-control-sm';
+            input.name = key;
+            input.placeholder = key + ' ergänzen';
+            col.appendChild(label);
+            col.appendChild(input);
+            row.appendChild(col);
+            keyInput.value = '';
+        });
+        form.addEventListener('submit', function (ev) {
+            ev.preventDefault();
+            var fields = {};
+            new FormData(form).forEach(function (value, key) {
+                if (key) fields[key] = value;
+            });
+            status.textContent = 'Speichern…';
+            fetch('/projects/{{ project.id }}/metadata/', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ metadata: (function () { var m = {}; m[fileId] = fields; return m; })() })
+            }).then(function (r) { return r.json(); }).then(function (d) { if (d.success) { status.textContent = 'Gespeichert ✓ (Score: ' + d.metadata_quality_score + ')'; setTimeout(function(){ location.reload(); }, 800); } else { status.textContent = 'Fehler: ' + (d.error || 'unbekannt'); } }).catch(function (e) { status.textContent = 'Netzwerkfehler: ' + e; });
+        });
+    });
     document.getElementById('btn-reingest').addEventListener('click', function () {
         fetch('/projects/{{ project.id }}/reingest/', {method: 'POST', headers: {'X-CSRFToken': getCsrfToken()}})
             .then(function (r) { return r.json(); })

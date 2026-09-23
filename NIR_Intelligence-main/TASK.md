@@ -3,7 +3,48 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP12 - Project Creation UI on the Projects Page
+## Current Task: OP13 - Online Metadata Editing in the Project Report
+
+### Objective
+
+The phase-1 report showed missing metadata fields with recommendations,
+but the only adaptation path was editing files externally and re-uploading
+them. OP13 adds the online path per MO 2-4: a metadata editor per dataset on
+the project page (drafted phase only) - recommended fields prefilled from the
+assessment, custom fields addable - the overrides are stored on the project
+(metadata_overrides), the preparation report is rebuilt and the metadata
+quality score updates immediately. No external file versions, no re-upload.
+
+### Predecessors
+
+- OP10: COMPLETED (project workflow)
+- OP11: COMPLETED (rendered final report)
+- OP12: COMPLETED (project creation UI)
+
+### Scope
+
+- `core/models.py`: `metadata_overrides` JSON field + migration 0005
+- `services/project_ingest.py`: apply_metadata_overrides (empty values ignored,
+  user-entered fields tracked for the report)
+- `api/project_views.py` + `project_urls.py`: ProjectMetadataView (POST
+  /projects/<id>/metadata/, drafted phase only, 409 after release)
+- `templates/project_report.html`: per-dataset metadata editor (accordion,
+  prefilled recommended fields, custom field add, inline status)
+- `tests/test_op13_online_metadata_editing.py` (28 checks) + CI matrix extended
+
+### Out of Scope
+
+- Editing the measurement data itself (still re-upload, by design)
+- Metadata editing after release (phase guard 409)
+
+### Success Criteria
+
+- Metadata editable online in the drafted phase; score updates immediately
+- Overrides persisted on the project and visible in the rebuilt report
+- Metadata editing rejected after release (409)
+- Existing test matrices stay green (no regressions)
+
+## Completed Task: OP12 - Project Creation UI on the Projects Page
 
 ### Objective
 

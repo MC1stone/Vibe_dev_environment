@@ -115,7 +115,7 @@ def _assess_metadata(datasets: List[Dict[str, Any]]) -> Dict[str, Any]:
         for key in dataset.get("metadata", {}):
             fields_found[key] = fields_found.get(key, 0) + 1
     assessed["metadata_fields"] = sorted(fields_found)
-    recommended = ["operator", "humidity", "temperature", "instrument", "acquisition_time"]
+    recommended = RECOMMENDED_METADATA_FIELDS
     missing = [f for f in recommended if f not in fields_found]
     assessed["missing_recommended_fields"] = missing
     assessed["overall_quality_score"] = round(
@@ -145,14 +145,45 @@ def _recommendations(datasets: List[Dict[str, Any]], metadata_assessment: Dict[s
     return recommendations
 
 
+RECOMMENDED_METADATA_FIELDS = [
+    "operator", "humidity", "temperature", "instrument", "acquisition_time"
+]
+
+
+def apply_metadata_overrides(entry: Dict[str, Any], overrides: Dict[str, Any]) -> None:
+    """Merge user-entered metadata overrides (OP13) into a dataset entry.
+
+    Empty values are ignored so a user can clear a typo by keeping other
+    fields intact; the merged fields are tracked for the report UI.
+    """
+    if not overrides:
+        return
+    merged = dict(entry.get("metadata") or {})
+    applied = []
+    for key, value in (overrides or {}).items():
+        if value in (None, ""):
+            continue
+        merged[key] = value
+        applied.append(key)
+    entry["metadata"] = merged
+    entry["metadata_user_entered"] = applied
+
+
 def build_preparation_report(project) -> Dict[str, Any]:
     """Build the full phase-1 preparation report for an AnalysisProject.
 
     The report contains: usable datasets (measurement series + metadata),
     metadata quality assessment and improvement recommendations. It is
     stored on project.preparation_report and rendered to the user.
+    User-entered metadata overrides (project.metadata_overrides, OP13) are
+    applied per file before the assessment.
     """
-    datasets = [ingest_file(f) for f in project.files.all()]
+    overrides = getattr(project, "metadata_overrides", None) or {}
+    datasets = []
+    for f in project.files.all():
+        entry = ingest_file(f)
+        apply_metadata_overrides(entry, overrides.get(str(f.id), {}))
+        datasets.append(entry)
     metadata_assessment = _assess_metadata(datasets)
     recommendations = _recommendations(datasets, metadata_assessment)
     usable_count = sum(1 for d in datasets if d.get("usable"))
