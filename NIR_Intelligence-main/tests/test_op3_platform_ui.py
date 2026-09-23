@@ -142,6 +142,18 @@ def main():
     with open(iv_path, encoding="utf-8") as f:
         iv_src = f.read()
     check("T8e ilias sync view expects title", "title" in iv_src)
+    rs_path = os.path.join(os.path.dirname(__file__), "..", "django_project", "port_manager",
+                           "management", "commands", "runserver_free.py")
+    check("T8f runserver_free command exists (port manager start)", os.path.exists(rs_path))
+    if os.path.exists(rs_path):
+        with open(rs_path, encoding="utf-8") as f:
+            rs_src = f.read()
+        check("T8g runserver_free uses the port management agent",
+              "PortManagementAgentCrewAI" in rs_src and "find_free_port" in rs_src)
+        check("T8h runserver_free falls back when the preferred port is taken",
+              "already in use" in rs_src)
+        check("T8i runserver_free binds loopback only by default",
+              "127.0.0.1" in rs_src)
 
     # ---------- T9: regression spot checks ----------
     ok_op1 = os.path.exists(os.path.join(os.path.dirname(__file__), "test_op1_embedding_pipeline.py"))
