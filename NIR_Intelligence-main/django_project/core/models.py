@@ -979,3 +979,88 @@ class AnalysisProject(models.Model):
             'released_at': self.released_at.isoformat() if self.released_at else None,
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
         }
+
+
+class SpectrumRecord(models.Model):
+    """One persisted spectrum in the local spectral database (OP15).
+
+    Written when a project is released; the FAISS similarity section
+    compares new spectra against the records visible to the user.
+    Visibility defaults to the owner (FL ground rule: raw spectra stay
+    local, only parameter updates ever leave a client); per-record lab
+    sharing is an explicit opt-in within one trust boundary. Provenance
+    fields double as non-IID sharding dimensions for federated learning.
+    """
+
+    VISIBILITY = [
+        ('private', 'Private (owner only)'),
+        ('lab_shared', 'Shared within the lab'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='spectrum_records',
+        verbose_name='User'
+    )
+    project = models.ForeignKey(
+        AnalysisProject,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='spectrum_records',
+        verbose_name='Source Project'
+    )
+    file_name = models.CharField(max_length=512, verbose_name='Source File Name')
+    visibility = models.CharField(
+        max_length=20, choices=VISIBILITY, default='private',
+        verbose_name='Visibility'
+    )
+    # Measurement series (the spectral database payload)
+    wavelengths = models.JSONField(default=list, verbose_name='Wavelengths (nm)')
+    intensities = models.JSONField(default=list, verbose_name='Intensities')
+    metadata = models.JSONField(default=dict, verbose_name='Metadata')
+    # Provenance / FL sharding dimensions
+    wavelength_grid = models.CharField(
+        max_length=255, db_index=True, blank=True,
+        verbose_name='Wavelength Grid Key',
+        help_text='Rounded wavelength axis key, e.g. "410.0,435.0,...,940.0"'
+    )
+    instrument_type = models.CharField(
+        max_length=255, blank=True, verbose_name='Instrument Type'
+    )
+    sample_type = models.CharField(max_length=255, blank=True, verbose_name='Sample Type')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')
+
+    class Meta:
+        verbose_name = 'Spectrum Record'
+        verbose_name_plural = 'Spectrum Records'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'visibility']),
+            models.Index(fields=['wavelength_grid']),
+        ]
+
+    def __str__(self):
+        return f"{self.file_name} ({len(self.wavelengths)} Punkte)"
+
+    @staticmethod
+    def grid_key(wavelengths):
+        """Canonical grid key so equally-dimensioned spectra find each other
+        regardless of float formatting. Rounded to 0.1 nm."""
+        return ','.join(f'{round(float(w), 1):.1f}' for w in wavelengths)
+
+    def get_summary(self):
+        """Compact record summary for list views and API responses."""
+        return {
+            'id': str(self.id),
+            'file_name': self.file_name,
+            'visibility': self.visibility,
+            'num_points': len(self.wavelengths),
+            'wavelength_min': min(self.wavelengths) if self.wavelengths else None,
+            'wavelength_max': max(self.wavelengths) if self.wavelengths else None,
+            'instrument_type': self.instrument_type,
+            'sample_type': self.sample_type,
+            'project_id': str(self.project_id) if self.project_id else None,
+            'created_at': self.created_at.isoformat(),
+        }

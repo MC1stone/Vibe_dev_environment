@@ -136,6 +136,12 @@
                 <button id="btn-reingest" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-repeat me-1"></i>Daten angepasst? Aufbereitung erneut ausführen
                 </button>
+                <label class="d-flex align-items-center gap-2 mb-0" for="spectrum-visibility"
+                       title="Persistierte Spektren bleiben standardmäßig privat (FL-Grundregel).">
+                    <input type="checkbox" id="spectrum-visibility" name="spectrum_visibility"
+                           value="lab_shared" class="form-check-input mt-0">
+                    Spektren im Labor teilen
+                </label>
                 <button id="btn-release" class="btn btn-success">
                     <i class="bi bi-play-fill me-1"></i>Zur Analyse freigeben
                 </button>
@@ -288,7 +294,9 @@
     document.getElementById('btn-release').addEventListener('click', function () {
         statusBox.style.display = 'block';
         statusBox.innerHTML = '<div class="alert alert-info mb-0">Analyse läuft — alle Agenten werden ausgeführt, dies kann einige Momente dauern…</div>';
-        fetch('/projects/{{ project.id }}/release/', {method: 'POST', headers: {'X-CSRFToken': getCsrfToken()}})
+        var visibility = document.getElementById('spectrum-visibility');
+        var visibilityValue = (visibility && visibility.checked) ? 'lab_shared' : 'private';
+        fetch('/projects/{{ project.id }}/release/', {method: 'POST', headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'}, body: JSON.stringify({spectrum_visibility: visibilityValue})})
             .then(function (r) { return r.json(); })
             .then(function (d) {
                 if (d.success) { show('Analyse abgeschlossen (Qualität: ' + d.overall_quality_score + ').', true); setTimeout(function(){ location.reload(); }, 900); }

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Spektrendatenbank - NIR Intelligence Platform{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-database me-2"></i>Spektrendatenbank</h1>
+        <a href="/projects/" class="btn btn-outline-primary">
+            <i class="bi bi-folder2-open me-1"></i>Zurück zu den Projekten
+        </a>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <p class="text-muted">
+                Persistierte Spektren freigegebener Projekte. Der FAISS-Vergleich neuer
+                Projekte läuft gegen diese Datenbank (nur Spektren mit identischem
+                Wellenlängenraster, keine Interpolation). Eigene Spektren sind privat;
+                geteilte (laborweit) sind explizit freigegeben - Rohdaten verlassen
+                nie den lokalen Server (FL-Grundregel).
+            </p>
+            {% if spectra %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Datei</th>
+                            <th>Punkte</th>
+                            <th>Bereich (nm)</th>
+                            <th>Gerät</th>
+                            <th>Probe</th>
+                            <th>Sichtbarkeit</th>
+                            <th>Erstellt</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in spectra %}
+                        <tr>
+                            <td><strong>{{ s.file_name }}</strong></td>
+                            <td>{{ s.num_points }}</td>
+                            <td>{{ s.wavelength_min|floatformat:0 }} &ndash; {{ s.wavelength_max|floatformat:0 }}</td>
+                            <td>{{ s.instrument_type|default:'-' }}</td>
+                            <td>{{ s.sample_type|default:'-' }}</td>
+                            <td>
+                                {% if s.is_shared %}
+                                <span class="badge bg-success">Labor geteilt</span>
+                                {% elif s.is_own %}
+                                <span class="badge bg-secondary">Privat</span>
+                                {% else %}
+                                <span class="badge bg-info">Geteilt (anderer Nutzer)</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ s.created_at|date:'d.m.Y H:i' }}</td>
+                            <td>
+                                <a href="/projects/database/{{ s.id }}/" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-search me-1"></i>Details
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="mb-0">
+                Noch keine Spektren in der Datenbank. Geben Sie ein Projekt zur Analyse frei,
+                um dessen Datensätze automatisch zu persistieren.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
