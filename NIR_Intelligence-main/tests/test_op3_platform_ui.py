@@ -118,8 +118,12 @@ def main():
     # ---------- T6: navigation ----------
     with open(os.path.join(TEMPLATES_DIR, "base.html"), encoding="utf-8") as f:
         base_src = f.read()
-    check("T6a chatbot nav entry", "/chatbot/" in base_src and "Chatbot" in base_src)
-    check("T6b ilias nav entry", "/ilias/" in base_src and "ILIAS" in base_src)
+    check("T6a chatbot page kept functional via its legacy route (OP25 cleanup unlinks it)",
+          os.path.exists(os.path.join(TEMPLATES_DIR, "chatbot.html")))
+    check("T6b ilias page kept functional via its legacy route (OP25 cleanup unlinks it)",
+          os.path.exists(os.path.join(TEMPLATES_DIR, "ilias.html")))
+    check("T6c projects workflow linked in the navigation (OP25)",
+          "/projects/" in base_src and "Projekte" in base_src)
 
     # ---------- T7: upload view redirect ----------
     wf_path = os.path.join(os.path.dirname(__file__), "..", "django_project", "api", "workflow_display_views.py")
