@@ -890,3 +890,92 @@ class GenericFile(models.Model):
         self.processed_at = timezone.now()
         
         self.save()
+
+class AnalysisProject(models.Model):
+    """A file-type-agnostic analysis project (OP10).
+
+    An uploaded file opens a new project (MO 1). Phase 1 (drafted) turns the
+    raw files into usable datasets (measurement series, metadata) and shows
+    the user a preparation report with quality assessment and improvement
+    recommendations. The user adapts the data (re-ingest adapted files) and
+    releases the project for analysis. Phase 2 (released) runs the full crew
+    analysis with per-agent reports and the final Quarto project report.
+    """
+
+    PHASES = [
+        ('drafted', 'Drafted (Preparation)'),
+        ('released', 'Released (Analysis)'),
+        ('completed', 'Completed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='analysis_projects',
+        verbose_name='User'
+    )
+    name = models.CharField(max_length=255, verbose_name='Project Name')
+    description = models.TextField(blank=True, verbose_name='Description')
+    files = models.ManyToManyField(
+        GenericFile,
+        related_name='analysis_projects',
+        blank=True,
+        verbose_name='Project Files'
+    )
+
+    # Phase 1: preparation report (datasets, metadata assessment, recommendations)
+    phase = models.CharField(
+        max_length=20, choices=PHASES, default='drafted', verbose_name='Phase'
+    )
+    preparation_report = models.JSONField(
+        default=dict, blank=True, verbose_name='Preparation Report (Phase 1)'
+    )
+    # User-entered metadata overrides per file (OP13): {file_id: {field: value}}
+    metadata_overrides = models.JSONField(
+        default=dict, blank=True, verbose_name='Metadata Overrides (User)'
+    )
+
+    # Phase 2: crew analysis results (per-agent reports, summary, final report path)
+    crew_results = models.JSONField(
+        default=dict, blank=True, verbose_name='Crew Analysis Results (Phase 2)'
+    )
+    final_report_path = models.CharField(
+        max_length=512, blank=True, verbose_name='Final Quarto Report Path'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated At')
+    released_at = models.DateTimeField(null=True, blank=True, verbose_name='Released At')
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name='Completed At')
+
+    class Meta:
+        verbose_name = 'Analysis Project'
+        verbose_name_plural = 'Analysis Projects'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'phase']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_phase_display()})"
+
+    def get_summary(self):
+        """Compact project summary for list views and API responses."""
+        preparation = self.preparation_report or {}
+        datasets = preparation.get('datasets', [])
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'description': self.description,
+            'phase': self.phase,
+            'file_count': self.files.count(),
+            'dataset_count': len(datasets),
+            'metadata_score': preparation.get('metadata_quality', {}).get('overall_quality_score'),
+            'recommendation_count': len(preparation.get('recommendations', [])),
+            'overall_quality_score': (self.crew_results or {}).get('overall_quality_score'),
+            'created_at': self.created_at.isoformat(),
+            'released_at': self.released_at.isoformat() if self.released_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+        }

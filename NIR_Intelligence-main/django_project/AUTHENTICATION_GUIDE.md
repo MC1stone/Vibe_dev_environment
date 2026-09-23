@@ -83,14 +83,6 @@ All other endpoints require a valid JWT access token in the `Authorization: Bear
 ### User Endpoints
 - `GET /api/users/profile/` - Get user profile
 
-### NIR_TEST Environment Endpoints
-- `GET /api/nir-test/info/` - Get environment info
-- `GET /api/nir-test/demo/` - Run demonstration
-- `GET /api/nir-test/run/{test_name}/` - Run specific test
-- `GET /api/nir-test/files/` - List test data files
-- `GET /api/nir-test/report/` - Get test report
-- `POST /api/nir-test/setup/` - Setup environment
-- `POST /api/nir-test/clean/` - Clean environment
 
 ### Dashboard
 - `GET /` or `GET /dashboard/` - Dashboard view
@@ -129,13 +121,6 @@ headers = {
 agents_response = requests.get(f"{BASE_URL}/api/agents/", headers=headers)
 print("Agents:", agents_response.json())
 
-# Get NIR_TEST info
-nir_test_response = requests.get(f"{BASE_URL}/api/nir-test/info/", headers=headers)
-print("NIR_TEST Info:", nir_test_response.json())
-
-# Run NIR_TEST demo
-demo_response = requests.get(f"{BASE_URL}/api/nir-test/demo/", headers=headers)
-print("Demo Results:", demo_response.json())
 ```
 
 ### JavaScript (Browser) Example
@@ -225,11 +210,6 @@ curl -s -X GET "$BASE_URL/api/agents/" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" | jq '.[] | .name'
 
-# 3. Test NIR_TEST endpoints
-echo -e "\nTesting NIR_TEST info endpoint..."
-curl -s -X GET "$BASE_URL/api/nir-test/info/" \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
-  -H "Content-Type: application/json" | jq '.status'
 
 echo -e "\nAuthentication test completed!"
 ```
@@ -297,11 +277,6 @@ echo -e "\nAuthentication test completed!"
    curl -X GET http://localhost:8000/api/agents/ \
      -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
    ```
-
-4. **Run NIR_TEST demo:**
-   ```bash
-   curl -X GET http://localhost:8000/api/nir-test/demo/ \
-     -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
    ```
 
 ## 📚 Additional Resources

@@ -77,8 +77,12 @@ class SpectralAnalysisAgent(BaseAgent):
         super().__init__(name="SpectralAnalysisAgent", version="1.0.0", **kwargs)
         self.dependencies = ["numpy", "pandas", "scipy", "scikit-learn"]
 
-        # Configuration
-        self.wavelength_range = kwargs.get("wavelength_range", (700, 2500))  # nm
+        # Configuration: expected wavelength range in nm. None (default)
+        # means no range expectation - the platform is spectrometer agnostic
+        # (a 410-940 nm VIS multisensor is as valid as a 700-2500 nm NIR
+        # spectrometer). Set explicitly to grade a capture against a known
+        # device range.
+        self.wavelength_range = kwargs.get("wavelength_range")
         # DIY multispectral sensors report few bands (8-256); 100 would grade
         # every legitimate handheld capture as invalid. Ten bands still allow
         # peak detection, outlier analysis and statistics.
@@ -275,11 +279,12 @@ class SpectralAnalysisAgent(BaseAgent):
                 recommendations=[],
             )
 
-            # Check wavelength range
+            # Check wavelength range (only when a device range was configured)
             min_wl, max_wl = result.wavelength_range
-            expected_min, expected_max = self.wavelength_range
 
-            if min_wl < expected_min or max_wl > expected_max:
+            if (self.wavelength_range is not None
+                    and (min_wl < self.wavelength_range[0] or max_wl > self.wavelength_range[1])):
+                expected_min, expected_max = self.wavelength_range
                 result.issues_detected.append(SpectrometerIssue.WAVELENGTH_SHIFT)
                 result.quality_score -= 15
                 result.recommendations.append(

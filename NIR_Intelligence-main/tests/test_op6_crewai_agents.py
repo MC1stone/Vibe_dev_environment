@@ -242,7 +242,9 @@ for name in ["crewai", "crewai.tools"]:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import background_crew_runner
 
-runner = background_crew_runner.BackgroundCrewRunner(once=True, state_file="/tmp/op6_state.json")
+import tempfile as _tempfile
+_state_file = os.path.join(_tempfile.mkdtemp(prefix="op6_state_"), "state.json")
+runner = background_crew_runner.BackgroundCrewRunner(once=True, state_file=_state_file)
 round_result = runner.run_round()
 check("T13a background round reports all platform agents",
       set(round_result["platform"]["agents"]) == {"django", "postgresql", "qdrant", "ilias", "mcp"})

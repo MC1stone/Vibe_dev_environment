@@ -32,6 +32,7 @@ sqlalchemy>=2.0.0
 # Web development
 django>=4.2.0
 djangorestframework>=3.14.0
+djangorestframework-simplejwt>=5.2.0
 django-cors-headers>=4.2.0
 
 # Containerization and orchestration

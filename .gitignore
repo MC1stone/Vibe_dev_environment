@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Environment / secrets
+.env
+.env.*
+
+# Build artifacts & binaries
+*.deb
+*.zip
+dist/
+build/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+
+# Logs & local databases
+*.log
+*.sqlite3
+
+# Local archives/backups
+*.tar.gz
+backup/

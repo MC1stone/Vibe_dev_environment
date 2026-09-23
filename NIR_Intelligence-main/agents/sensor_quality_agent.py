@@ -119,19 +119,44 @@ class SensorQualityAgent(BaseAgent):
             noise_threshold = float(context.get("noise_threshold", self.noise_threshold))
 
             if "drift" in self.checks:
-                normalized_drift = float(np.abs(matrix - reference).mean() / scale)
+                reference_is_mean = (context.get("reference_spectrum") == "mean"
+                                    or (context.get("reference_spectrum") is None
+                                        and self.reference_spectrum == "mean"))
+                if matrix.shape[0] >= 3 and reference_is_mean:
+                    # Replicates against their own mean: random measurement
+                    # scatter around the mean is noise, not drift. Drift is a
+                    # systematic trend over the measurement order - estimated
+                    # as the root-mean-square per-channel least-squares slope
+                    # of the raw (not detrended) measurements.
+                    t = np.arange(matrix.shape[0], dtype=float)
+                    t_centered = t - t.mean()
+                    denom = float((t_centered ** 2).sum()) or 1.0
+                    centered = matrix - matrix.mean(axis=0, keepdims=True)
+                    slopes = (centered * t_centered[:, None]).sum(axis=0) / denom
+                    normalized_drift = float(np.sqrt((slopes ** 2).mean()) / scale)
+                else:
+                    normalized_drift = float(np.abs(matrix - reference).mean() / scale)
                 drift_detected = bool(normalized_drift > drift_threshold)
                 results["drift_detected"] = drift_detected
                 results["drift_level"] = normalized_drift
                 if drift_detected:
                     warnings.append(
-                        f"Drift detected: mean deviation {normalized_drift:.4f} "
+                        f"Drift detected: trend {normalized_drift:.4f} "
                         f"exceeds threshold {drift_threshold:.4f}")
 
             if "offset" in self.checks:
-                offsets = matrix.mean(axis=1) - reference.mean()
-                normalized_offset = float(np.abs(offsets).max() / scale)
-                offset_detected = bool(normalized_offset > drift_threshold)
+                if matrix.shape[0] >= 3 and reference_is_mean:
+                    # A baseline offset cannot be judged against the
+                    # replicates' own mean (it is zero by construction);
+                    # report the noise-baseline scatter instead so the check
+                    # stays informative without false positives.
+                    offsets = matrix.mean(axis=1) - reference.mean()
+                    normalized_offset = float(np.abs(offsets).std() / scale)
+                    offset_detected = False
+                else:
+                    offsets = matrix.mean(axis=1) - reference.mean()
+                    normalized_offset = float(np.abs(offsets).max() / scale)
+                    offset_detected = bool(normalized_offset > drift_threshold)
                 results["offset_detected"] = offset_detected
                 results["offset_level"] = normalized_offset
                 if offset_detected:
@@ -156,8 +181,12 @@ class SensorQualityAgent(BaseAgent):
                     robust_sigma = float(np.median(np.abs(second_diff)) * 1.4826)
                     noise_level = float(robust_sigma / np.sqrt(6.0) / scale)
                 else:
-                    successive = np.abs(np.diff(residuals, axis=1)).mean()
-                    noise_level = float(successive / np.sqrt(2.0) / scale)
+                    # Replicates: noise is the measurement-to-measurement
+                    # variation per channel (std across replicas, averaged
+                    # over channels). Differences along the channel axis
+                    # would measure the genuine spectral shape, not noise.
+                    per_channel_std = residuals.std(axis=0, ddof=1) if matrix.shape[0] > 1 else residuals.std(axis=0)
+                    noise_level = float(per_channel_std.mean() / scale)
                 noise_detected = bool(noise_level > noise_threshold)
                 results["noise_level"] = noise_level
                 results["noise_detected"] = noise_detected

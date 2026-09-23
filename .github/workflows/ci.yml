@@ -24,7 +24,7 @@ jobs:
       - name: Install minimal test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest numpy pandas scipy scikit-learn pyyaml django pillow requests packaging djangorestframework djangorestframework-simplejwt django-cors-headers
+          pip install pytest numpy pandas scipy scikit-learn pyyaml django pillow requests packaging djangorestframework djangorestframework-simplejwt django-cors-headers matplotlib
 
       - name: Run offline test matrices (S3-S9, OP1-OP4, OP6-OP8)
         run: |
@@ -43,6 +43,11 @@ jobs:
           python tests/test_op7_crew_pipeline_bridge.py
           python tests/test_op8_crew_results_ui.py
           python tests/test_op9_mcp_data_agent.py
+          python tests/test_op10_project_workflow.py
+          python tests/test_op11_rendered_final_report.py
+          python tests/test_op12_project_upload_ui.py
+          python tests/test_op13_online_metadata_editing.py
+          python tests/test_op14_agent_truthfulness.py
 
       - name: Django system check
         run: python django_project/manage.py check
