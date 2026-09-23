@@ -54,10 +54,20 @@
                             <td>{{ p.metadata_score|default:'-' }}</td>
                             <td>{{ p.overall_quality_score|default:'-' }}</td>
                             <td>{{ p.created_at|date:'d.m.Y H:i' }}</td>
-                            <td>
+                            <td class="text-end">
                                 <a href="/projects/{{ p.id }}/" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-file-earmark-text me-1"></i>Bericht
                                 </a>
+                                {% if p.phase == 'drafted' %}
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-project"
+                                        data-project-id="{{ p.id }}" data-project-name="{{ p.name }}">
+                                    <i class="bi bi-pencil-square me-1"></i>Bearbeiten
+                                </button>
+                                {% endif %}
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-project"
+                                        data-project-id="{{ p.id }}" data-project-name="{{ p.name }}">
+                                    <i class="bi bi-trash me-1"></i>Löschen
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -112,6 +122,50 @@
     </div>
 </div>
 
+<div class="modal fade" id="projectFilesAddModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Projekt bearbeiten: <span id="editProjectName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Weitere Dateien auswählen - sie werden zum Projekt hinzugefügt und
+                    der Vorbereitungsbericht wird neu aufgebaut. Bereits vorhandene Dateien werden übersprungen.</p>
+                <div id="editProjectStatus" style="display:none;"></div>
+                <label for="editProjectFiles" class="form-label">Dateien (beliebiges Format)</label>
+                <input type="file" class="form-control" id="editProjectFiles" multiple>
+                <div class="form-text">Alle Dateien bilden zusammen ein Projekt.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" id="btnAddProjectFiles">Hochladen &amp; Hinzufügen</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="projectDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-trash me-2"></i>Projekt löschen</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Projekt <strong id="deleteProjectName"></strong> wirklich löschen?</p>
+                    <p class="text-muted small mb-0">Hochgeladene Dateien bleiben erhalten. Bereits in der
+                        Spektrendatenbank persistierte Spektren bleiben ebenfalls erhalten (nur die
+                        Projekt-Verknüpfung wird entfernt).</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmDelete">Löschen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
 (function () {
     var statusBox = document.getElementById('projectUploadStatus');
@@ -193,6 +247,135 @@
             show('Netzwerkfehler: ' + e, false);
         });
     });
+
+    var editModalEl = document.getElementById('projectFilesAddModal');
+    if (editModalEl) {
+        var editModal = new bootstrap.Modal(editModalEl);
+        var editProjectId = null;
+        var addFilesBtn = document.getElementById('btnAddProjectFiles');
+        var editStatusBox = document.getElementById('editProjectStatus');
+
+        function showEdit(msg, ok) {
+            editStatusBox.style.display = 'block';
+            editStatusBox.innerHTML = '<div class="alert alert-' + (ok ? 'success' : 'danger')
+                + ' mb-0">' + msg + '</div>';
+        }
+
+        document.querySelectorAll('.btn-edit-project').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                editProjectId = btn.getAttribute('data-project-id');
+                document.getElementById('editProjectName').textContent =
+                    btn.getAttribute('data-project-name') || '';
+                editStatusBox.style.display = 'none';
+                editModal.show();
+            });
+        });
+
+        addFilesBtn.addEventListener('click', function () {
+            var fileInput = document.getElementById('editProjectFiles');
+            var files = fileInput ? fileInput.files : null;
+            if (!files || files.length === 0) {
+                showEdit('Bitte mindestens eine Datei auswählen.', false);
+                return;
+            }
+            addFilesBtn.disabled = true;
+            showEdit('Dateien werden hochgeladen…', true);
+            var formData = new FormData();
+            for (var i = 0; i < files.length; i++) formData.append('files', files[i]);
+            fetch('/api/files/upload/', {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin',
+                headers: { 'X-CSRFToken': getCsrfToken() }
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (uploadData) {
+                var raw = (uploadData.file_ids || uploadData.uploaded_files || uploadData.files || []);
+                var fileIds = raw.map(function (f) {
+                    return (typeof f === 'string') ? f : f.id;
+                });
+                if (!fileIds.length) {
+                    addFilesBtn.disabled = false;
+                    showEdit('Upload fehlgeschlagen: ' + (uploadData.error || 'unbekannt'), false);
+                    return null;
+                }
+                showEdit('Dateien werden zum Projekt hinzugefügt…', true);
+                return fetch('/projects/' + editProjectId + '/files/add/', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ file_ids: fileIds })
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (addData) {
+                    if (addData.success) {
+                        window.location.href = '/projects/' + editProjectId + '/';
+                    } else {
+                        addFilesBtn.disabled = false;
+                        showEdit('Hinzufügen fehlgeschlagen: ' + (addData.error || 'unbekannt'), false);
+                    }
+                });
+            })
+            .catch(function (e) {
+                addFilesBtn.disabled = false;
+                showEdit('Netzwerkfehler: ' + e, false);
+            });
+        });
+
+        editModalEl.addEventListener('hidden.bs.modal', function () {
+            addFilesBtn.disabled = false;
+            editProjectId = null;
+        });
+    }
+
+    var deleteModalEl = document.getElementById('projectDeleteModal');
+    if (deleteModalEl) {
+        var deleteModal = new bootstrap.Modal(deleteModalEl);
+        var pendingProjectId = null;
+        var confirmBtn = document.getElementById('btnConfirmDelete');
+
+        document.querySelectorAll('.btn-delete-project').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                pendingProjectId = btn.getAttribute('data-project-id');
+                document.getElementById('deleteProjectName').textContent =
+                    btn.getAttribute('data-project-name') || '';
+                deleteModal.show();
+            });
+        });
+
+        confirmBtn.addEventListener('click', function () {
+            if (!pendingProjectId) { return; }
+            confirmBtn.disabled = true;
+            fetch('/projects/' + pendingProjectId + '/delete/', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'X-CSRFToken': getCsrfToken() }
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    confirmBtn.disabled = false;
+                    deleteModal.hide();
+                    show('Löschen fehlgeschlagen: ' + (data.error || 'unbekannt'), false);
+                }
+            })
+            .catch(function (e) {
+                confirmBtn.disabled = false;
+                deleteModal.hide();
+                show('Netzwerkfehler: ' + e, false);
+            });
+        });
+
+        deleteModalEl.addEventListener('hidden.bs.modal', function () {
+            confirmBtn.disabled = false;
+            pendingProjectId = null;
+        });
+    }
 })();
 </script>
 {% endblock %}

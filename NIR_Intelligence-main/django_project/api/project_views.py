@@ -204,6 +204,76 @@ class ProjectDetailView(TemplateView):
         return render(request, self.template_name, context)
 
 
+class ProjectDeleteView(APIView if DRF_AVAILABLE else object):
+    """Delete one of the user's projects (OP17). The uploaded files stay in
+    the media store (they may be shared by other projects); persisted
+    SpectrumRecords keep their data - only the project link is nulled by the
+    SET_NULL rule - so the spectral database is not damaged by a deletion."""
+
+    def post(self, request, project_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'error': 'Authentication required'},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        project = _get_project(project_id, request.user)
+        name = project.name
+        project_id_str = str(project.id)
+        project.delete()
+        logger.info('Project %s (%s) deleted by user %s',
+                    project_id_str, name, getattr(request.user, 'id', None))
+        return Response({
+            'success': True,
+            'deleted_project_id': project_id_str,
+            'deleted_project_name': name,
+        })
+
+
+class ProjectFilesAddView(APIView if DRF_AVAILABLE else object):
+    """Add more files to an existing drafted project (OP17): upload flow
+    reuses /api/files/upload/, this view attaches the file_ids to the
+    project and rebuilds the preparation report so the report page and
+    metadata assessment reflect the new files immediately. Released or
+    completed projects are frozen - the crew results and the persisted
+    spectra belong to the released dataset state."""
+
+    def post(self, request, project_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'error': 'Authentication required'},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        project = _get_project(project_id, request.user)
+        if project.phase != 'drafted':
+            return Response({
+                'success': False,
+                'error': 'Files can only be added in the drafted phase '
+                         '(the project is already released).',
+            }, status=status.HTTP_400_BAD_REQUEST)
+        file_ids = request.data.get('file_ids', [])
+        if not file_ids:
+            return Response({'success': False, 'error': 'file_ids required'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        files = GenericFile.objects.filter(id__in=file_ids, user=request.user)
+        if not files.exists():
+            return Response({'success': False, 'error': 'No matching files'},
+                            status=status.HTTP_404_NOT_FOUND)
+        existing_ids = set(project.files.values_list('id', flat=True))
+        new_files = [f for f in files if f.id not in existing_ids]
+        already_count = len(files) - len(new_files)
+        if new_files:
+            project.files.add(*new_files)
+            from services.project_ingest import build_preparation_report
+            report = build_preparation_report(project)
+        else:
+            report = project.preparation_report or {}
+        return Response({
+            'success': True,
+            'added_file_count': len(new_files),
+            'already_present_count': already_count,
+            'file_count': project.files.count(),
+            'usable_dataset_count': report.get('usable_dataset_count'),
+            'total_dataset_count': report.get('total_dataset_count'),
+            'report_url': f'/projects/{project.id}/',
+        })
+
+
 class ProjectReingestView(APIView if DRF_AVAILABLE else object):
     """Re-run the phase 1 preparation after the user adapted the files
     or edited the metadata online (OP13)."""

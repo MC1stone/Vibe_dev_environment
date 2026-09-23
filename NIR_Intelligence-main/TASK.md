@@ -3,7 +3,43 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP16 - Standard PCA Visualisations
+## Current Task: OP17 - Project Delete and File-Add Buttons on the Projects List
+
+### Objective
+
+The projects list had no way to remove a leftover project or to extend a
+drafted project with further files. OP17 adds both actions to every
+project row.
+
+### Scope
+
+- Delete button (every phase) with a Bootstrap confirmation dialog;
+  `ProjectDeleteView` (POST `<uuid>/delete/`) enforces ownership via the
+  same `_get_project` contract as all views (404 for other users)
+- Edit button (drafted phase only): modal uploads further files via the
+  existing `/api/files/upload/` and attaches them with
+  `ProjectFilesAddView` (POST `<uuid>/files/add/`); the preparation
+  report is rebuilt so the report page reflects the new files
+  immediately; duplicate file ids are skipped and reported; released
+  projects are frozen (400)
+
+### Safety Contract
+
+- Only the owner can delete or edit (404 for other users)
+- Uploaded GenericFiles stay in the media store (may be shared by other
+  projects)
+- Persisted SpectrumRecords survive a deletion (SET_NULL on the project
+  link) - the spectral database is not damaged
+
+### Success Criteria
+
+- Delete: project gone from list and DB, records keep their data
+- Add files: file count and preparation report updated, duplicates
+  skipped, released projects rejected
+- `tests/test_op17_project_delete.py` (29 checks) + CI matrix extended
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP16 - Standard PCA Visualisations
 
 ### Objective
 
