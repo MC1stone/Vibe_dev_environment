@@ -30,7 +30,7 @@
             <div class="row mb-3">
                 <div class="col-md-4">
                     <div class="border rounded p-3 text-center">
-                        <div class="fs-3">{{ usable_dataset_count|default:preparation.usable_dataset_count }}</div>
+                        <div class="fs-3">{{ preparation.usable_dataset_count|default:0 }}</div>
                         <div class="text-muted">verwertbare Datensätze von {{ preparation.total_dataset_count|default:0 }}</div>
                     </div>
                 </div>
@@ -234,7 +234,8 @@
     {% endif %}
 
 </div>
-
+{% endblock %}
+{% block extra_js %}
 {% if project.phase == 'drafted' %}
 <script>
 (function () {
