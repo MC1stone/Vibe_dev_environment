@@ -320,6 +320,11 @@ def ingest_file(file_record) -> Dict[str, Any]:
     )
     spectral = loader._load_spectral_data(file_path)
     if not spectral or spectral.get("data") is None or len(spectral.get("data", [])) == 0:
+        text_metadata = _metadata_only_entry(file_record, file_path, loader)
+        if text_metadata is not None:
+            logger.info('Metadata-only ingest for %s (description file with '
+                        'no measurement values)', file_record.name)
+            return text_metadata
         entry.update({"usable": False, "reason": "Not parseable as spectral data (S3 loader)"})
         return entry
 
@@ -353,6 +358,30 @@ def ingest_file(file_record) -> Dict[str, Any]:
         "numeric_references": _extract_numeric_reference(spectral.get("metadata") or {}),
     })
     return entry
+
+
+def _metadata_only_entry(file_record, file_path, loader) -> Dict[str, Any] | None:
+    """A text file without measurement values can still be the experiment's
+    documentation (prose description, sample background): its metadata is
+    extracted and the file is listed as a metadata source instead of being
+    discarded as 'not parseable'. Returns None for binary/unreadable files
+    or when no metadata was found - those keep the honest usable=False
+    marker. Never raises."""
+    try:
+        metadata = loader._extract_text_metadata(file_path)
+    except Exception:
+        return None
+    if not metadata or all(key == "description" for key in metadata):
+        return None
+    return {
+        "file_id": str(file_record.id),
+        "file_name": file_record.name,
+        "file_extension": file_record.file_extension,
+        "file_category": file_record.file_category,
+        "usable": True,
+        "dataset_type": "metadata",
+        "metadata": metadata,
+    }
 
 
 def _assess_metadata(datasets: List[Dict[str, Any]]) -> Dict[str, Any]:
