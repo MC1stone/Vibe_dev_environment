@@ -146,7 +146,6 @@
 </div>
 <div class="modal fade" id="projectDeleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="bi bi-trash me-2"></i>Projekt löschen</h5>
@@ -165,7 +164,8 @@
             </div>
         </div>
     </div>
-</div>
+{% endblock %}
+{% block extra_js %}
 <script>
 (function () {
     var statusBox = document.getElementById('projectUploadStatus');
