@@ -6,6 +6,7 @@ import json
 import math
 import os
 import re
+import tempfile
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime
@@ -558,7 +559,7 @@ class EnhancedDataPreparationAgent(BaseAgent):
         raises; an unreadable or empty archive returns []."""
         candidates: List[str] = []
         extract_dir = os.path.join(
-            self.temp_directory, "content_scan",
+            tempfile.gettempdir(), "nir_archive_scan",
             os.path.splitext(os.path.basename(file_path))[0],
         )
         try:
@@ -973,7 +974,60 @@ class EnhancedDataPreparationAgent(BaseAgent):
             key_norm = re.sub(r"[\s/()\-]+", "_", key).strip("_").lower()
             canonical = self._canonical_metadata_key(key_norm)
             metadata[canonical if canonical else key_norm] = value
+        for key, value in self._extract_prose_metadata(lines).items():
+            metadata.setdefault(key, value)
         return metadata
+
+    _PROSE_OPERATOR_RE = re.compile(
+        r"(?:messungen\s+wurden\s+von|gemessen\s+von|gemessen\s+durch|"
+        r"bediener(?:in)?|operator|messperson|durchgef\u00fchrt\s+von)"
+        r"\s+([A-Z\u00c0-\u00ff][\w\u00c0-\u00ff\-]{1,30})", re.IGNORECASE)
+    _PROSE_INSTRUMENT_RE = re.compile(
+        r"(?:mit\s+dem|mit\s+der|mit\s+einem?)\s+"
+        r"([A-Z\u00c0-\u00ff][\w\u00c0-\u00ff\-]*\s*(?:nir\s*)?triad\w*)", re.IGNORECASE)
+    _PROSE_INSTRUMENT_RE_2 = re.compile(
+        r"(\btriadsensor\b|\btriad\s+sensor\b|\bspektrometer\b|\bsensor\b)", re.IGNORECASE)
+    _PROSE_TEMPERATURE_RE = re.compile(
+        r"(\d{1,3}(?:[.,]\d+)?)\s*[\u00b0\u00ba\u2218\u2032'`\u2019]?\s*"
+        r"(?:raumtemperatur|celsius|\u00b0c)", re.IGNORECASE)
+    _PROSE_HUMIDITY_RE = re.compile(
+        r"(\d{1,3}(?:[.,]\d+)?)\s*%\s*(?:luftfeuchte|luftfeuchtigkeit|"
+        r"feuchte|rel\.?\s*luft)", re.IGNORECASE)
+    _PROSE_LOCATION_RE = re.compile(
+        r"(?:in\s+der|in\s+dem|im)\s+([A-Z\u00c0-\u00ff][\w\u00c0-\u00ff\-]*(?:\s+[A-Z\u00c0-\u00ff][\w\u00c0-\u00ff\-]*)*)"
+        r"(?:\s+werkstatt|\s+labor|\s+raum)", re.IGNORECASE)
+
+    def _extract_prose_metadata(self, lines) -> Dict[str, Any]:
+        """Extract metadata from free-text (prose) descriptions: files that
+        document an experiment ('Die Messungen wurden von Yvonne mit dem
+        Triadsensor ... 25' Raumtemperatur ... 88% Luftfeuchte ausgefuehrt')
+        carry the same canonical fields as 'Key: Value' exports, just in
+        sentence form. The full text is kept as an honest 'description';
+        no values are invented, only explicitly stated ones are taken.
+        Never raises."""
+        prose: Dict[str, Any] = {}
+        try:
+            text = "\n".join(str(ln) for ln in lines[:500])
+            compact = re.sub(r"\s+", " ", text)
+            for regex, field in (
+                (self._PROSE_OPERATOR_RE, "operator_name"),
+                (self._PROSE_INSTRUMENT_RE, "instrument_type"),
+                (self._PROSE_TEMPERATURE_RE, "temperature"),
+                (self._PROSE_HUMIDITY_RE, "humidity"),
+                (self._PROSE_LOCATION_RE, "location"),
+            ):
+                match = regex.search(compact)
+                if match:
+                    prose[field] = match.group(1).strip().rstrip(".,;")
+            match = self._PROSE_INSTRUMENT_RE_2.search(compact)
+            if match and "instrument_type" not in prose:
+                prose["instrument_type"] = match.group(1).strip()
+            description = text.strip()
+            if description:
+                prose["description"] = description[:2000]
+        except Exception:
+            return prose
+        return prose
 
     _METADATA_ALIASES = {
         "sample": "sample_id", "sample_id": "sample_id", "probe": "sample_id",

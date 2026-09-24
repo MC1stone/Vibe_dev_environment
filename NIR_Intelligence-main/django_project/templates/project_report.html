@@ -59,9 +59,9 @@
                         <tr>
                             <td>{{ d.file_name }}</td>
                             <td>{{ d.file_category }}</td>
-                            <td>{% if d.usable %}<span class="badge bg-success">Messdaten</span>{% else %}<span class="badge bg-secondary">{{ d.reason|truncatechars:40 }}</span>{% endif %}</td>
-                            <td>{{ d.num_points|default:'-' }}</td>
-                            <td>{% if d.usable %}{{ d.wavelength_min|floatformat:0 }} – {{ d.wavelength_max|floatformat:0 }} nm{% else %}-{% endif %}</td>
+                            <td>{% if d.dataset_type == 'metadata' %}<span class="badge bg-info">Metadaten/Dokumentation</span>{% elif d.usable %}<span class="badge bg-success">Messdaten</span>{% else %}<span class="badge bg-secondary">{{ d.reason|truncatechars:40 }}</span>{% endif %}</td>
+                            <td>{% if d.dataset_type == 'metadata' %}-{% else %}{{ d.num_points|default:'-' }}{% endif %}</td>
+                            <td>{% if d.dataset_type == 'metadata' %}<span class="small text-muted">Beschreibung/Probenhintergrund</span>{% elif d.usable %}{{ d.wavelength_min|floatformat:0 }} – {{ d.wavelength_max|floatformat:0 }} nm{% else %}-{% endif %}</td>
                             <td>{% if d.usable %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}</td>
                         </tr>
                         {% endfor %}

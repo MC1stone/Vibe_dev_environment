@@ -222,6 +222,47 @@ check('T5i ZIP with a UTF-16 inner file loads with metadata',
       has_pair(r, n=3) and meta_zip16.get('instrument_type') == 'SpectroMark1',
       f'meta={meta_zip16}')
 
+# T5j-T5l: prose description files (experiment documentation). A text file
+# WITHOUT measurement values is not garbage: it documents the experiment
+# ('Die Messungen wurden von Yvonne ... 25' Raumtemperatur ... 88%
+# Luftfeuchte') and its metadata must be extracted instead of discarded.
+prose_path = os.path.join(tmp, 'oel_beschreibung.txt')
+with open(prose_path, 'w', encoding='utf-8') as f:
+    f.write('Metadaten zum Oel\n\nDie Messungen wurden von Yvonne mit dem '
+            'Triadsensor unter tageslicht bedingungnen in der NIRS Werkstatt '
+            'ausgef\u00fchrt 25\u2032 raumtemperatur, nicht verdunkelt, '
+            '88% Luftfeuchte.\n')
+prose_meta = agent._extract_text_metadata(prose_path)
+check('T5j prose description yields canonical metadata fields',
+      prose_meta.get('operator_name') == 'Yvonne'
+      and prose_meta.get('instrument_type') == 'Triadsensor'
+      and prose_meta.get('temperature') == '25'
+      and prose_meta.get('humidity') == '88'
+      and prose_meta.get('location') == 'NIRS',
+      f'meta={prose_meta}')
+check('T5k prose description kept honestly (no invented spectra)',
+      load(prose_path) is None or load(prose_path).get('data') is None,
+      'description file must not produce fake measurement rows')
+from services.project_ingest import _metadata_only_entry
+
+class _Record:
+    id = '00000000-0000-0000-0000-000000000001'
+    name = 'oel_beschreibung.txt'
+    file_extension = '.txt'
+    file_category = 'text'
+
+mo = _metadata_only_entry(_Record(), prose_path, agent)
+check('T5l metadata-only ingest: description file becomes a metadata source',
+      mo is not None and mo.get('usable') is True
+      and mo.get('dataset_type') == 'metadata'
+      and mo.get('metadata', {}).get('operator_name') == 'Yvonne',
+      f'mo={mo}')
+bin_path = os.path.join(tmp, 'noise2.bin')
+with open(bin_path, 'wb') as f:
+    f.write(os.urandom(2048))
+check('T5m binary noise is NOT a metadata source (honest None)',
+      _metadata_only_entry(_Record(), bin_path, agent) is None)
+
 # ---------------------------------------------------------------- T6
 check('T6a _get_file_type returns UNKNOWN instead of None',
       agent._get_file_type(unknown_path) is not None,
