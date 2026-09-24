@@ -342,6 +342,7 @@ def ingest_file(file_record) -> Dict[str, Any]:
 
     wavelengths = [p[0] for p in pairs]
     intensities = [p[1] for p in pairs]
+    _sync_recommended_aliases(entry.get("metadata") or {})
     entry.update({
         "usable": True,
         "dataset_type": "measurement",
@@ -373,6 +374,7 @@ def _metadata_only_entry(file_record, file_path, loader) -> Dict[str, Any] | Non
         return None
     if not metadata or all(key == "description" for key in metadata):
         return None
+    _sync_recommended_aliases(metadata)
     return {
         "file_id": str(file_record.id),
         "file_name": file_record.name,
@@ -426,6 +428,30 @@ def _recommendations(datasets: List[Dict[str, Any]], metadata_assessment: Dict[s
 RECOMMENDED_METADATA_FIELDS = [
     "operator", "humidity", "temperature", "instrument", "acquisition_time"
 ]
+
+# The loaders emit canonical names (operator_name, instrument_type,
+# timestamp); the recommended fields use their short aliases. Both
+# describe the SAME information - without a mapping the editor showed
+# 'operator' and 'operator_name' as two fields with the same value.
+RECOMMENDED_FIELD_ALIASES = {
+    "operator": "operator_name",
+    "instrument": "instrument_type",
+    "acquisition_time": "timestamp",
+}
+
+
+def _sync_recommended_aliases(metadata: Dict[str, Any]) -> None:
+    """Give every canonical loader field its recommended alias so the same
+    information is not shown twice in the editor: the recommended field
+    ('operator') mirrors the canonical loader field ('operator_name').
+    Never raises, never overwrites existing values."""
+    try:
+        for alias, canonical in RECOMMENDED_FIELD_ALIASES.items():
+            value = metadata.get(canonical)
+            if value not in (None, "") and metadata.get(alias) in (None, ""):
+                metadata[alias] = value
+    except Exception:
+        return
 
 
 def apply_metadata_overrides(entry: Dict[str, Any], overrides: Dict[str, Any]) -> None:

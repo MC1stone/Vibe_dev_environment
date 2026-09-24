@@ -263,6 +263,25 @@ with open(bin_path, 'wb') as f:
 check('T5m binary noise is NOT a metadata source (honest None)',
       _metadata_only_entry(_Record(), bin_path, agent) is None)
 
+# T5n: no redundant metadata fields. The loaders emit canonical names
+# (operator_name, instrument_type); the recommended platform fields use
+# the short aliases (operator, instrument). Both describe the same
+# information - the ingest syncs them and the editor shows each piece of
+# information exactly once.
+from services.project_ingest import (_assess_metadata,
+                                     RECOMMENDED_METADATA_FIELDS)
+mo_meta = mo.get('metadata', {})
+check('T5n recommended aliases synced from canonical loader fields',
+      mo_meta.get('operator') == mo_meta.get('operator_name') == 'Yvonne'
+      and mo_meta.get('instrument') == mo_meta.get('instrument_type')
+      == 'Triadsensor',
+      f'meta={mo_meta}')
+assessment = _assess_metadata([mo])
+check('T5o assessment counts the alias, not only the canonical field',
+      'operator' not in assessment.get('missing_recommended_fields', [])
+      and 'instrument' not in assessment.get('missing_recommended_fields', []),
+      f"missing={assessment.get('missing_recommended_fields')}")
+
 # ---------------------------------------------------------------- T6
 check('T6a _get_file_type returns UNKNOWN instead of None',
       agent._get_file_type(unknown_path) is not None,
