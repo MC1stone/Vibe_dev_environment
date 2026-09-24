@@ -211,8 +211,8 @@ ci = (PROJECT.parent / '.github' / 'workflows' / 'ci.yml').read_text(encoding='u
 check('T8a CI runs the OP27 matrix',
       'python tests/test_op27_deb_package.py' in ci)
 task_md = (PROJECT / 'TASK.md').read_text(encoding='utf-8')
-check('T8b TASK.md tracks OP27 as current task',
-      'Current Task: OP27' in task_md)
+check('T8b TASK.md documents OP27 (current or completed)',
+      'Current Task: OP27' in task_md or 'Completed Task: OP27' in task_md)
 
 # ---------------------------------------------------------------------------
 # Summary
