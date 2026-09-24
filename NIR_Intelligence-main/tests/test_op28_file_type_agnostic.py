@@ -44,6 +44,13 @@ def check(name, condition, detail=''):
         print(f'[FAIL] {name} {detail}')
 
 
+def skip(name, reason):
+    """Optional-dependency guard: the loaders degrade gracefully without
+    h5py/openpyxl/pyarrow (the content-driven chain just skips the stage),
+    so the matrix skips those checks instead of failing on import."""
+    print(f'[SKIP] {name} ({reason})')
+
+
 import numpy as np
 import pandas as pd
 
@@ -73,11 +80,17 @@ def has_pair(result, n=10):
 
 
 # ---------------------------------------------------------------- T1
-hdf5_path = os.path.join(tmp, 's.hdf5')
-import h5py
-with h5py.File(hdf5_path, 'w') as f:
-    f.create_dataset('spectra', data=np.column_stack([wl, it]))
-check('T1a .hdf5 alias loads (was rejected before OP28)', has_pair(load(hdf5_path)))
+try:
+    import h5py
+except ImportError:
+    h5py = None
+if h5py is not None:
+    hdf5_path = os.path.join(tmp, 's.hdf5')
+    with h5py.File(hdf5_path, 'w') as f:
+        f.create_dataset('spectra', data=np.column_stack([wl, it]))
+    check('T1a .hdf5 alias loads (was rejected before OP28)', has_pair(load(hdf5_path)))
+else:
+    skip('T1a .hdf5 alias loads (was rejected before OP28)', 'h5py not installed')
 
 yaml_path = os.path.join(tmp, 's.yaml')
 with open(yaml_path, 'w', encoding='utf-8') as f:
@@ -92,19 +105,34 @@ with open(xml_path, 'w', encoding='utf-8') as f:
 check('T1c XML (attribute rows) loads', has_pair(load(xml_path)))
 
 # ---------------------------------------------------------------- T2
-xlsx_path = os.path.join(tmp, 's.xlsx')
-pd.DataFrame({'wavelength': wl, 'intensity': it}).to_excel(xlsx_path, index=False)
-r = load(xlsx_path)
-check('T2a XLSX loads (all sheets scanned)', has_pair(r) and r['metadata'].get('excel_sheet'),
-      f"r={bool(r)}")
+try:
+    import openpyxl  # noqa: F401
+except ImportError:
+    openpyxl = None
+if openpyxl is not None:
+    xlsx_path = os.path.join(tmp, 's.xlsx')
+    pd.DataFrame({'wavelength': wl, 'intensity': it}).to_excel(xlsx_path, index=False)
+    r = load(xlsx_path)
+    check('T2a XLSX loads (all sheets scanned)', has_pair(r) and r['metadata'].get('excel_sheet'),
+          f"r={bool(r)}")
+else:
+    skip('T2a XLSX loads (all sheets scanned)', 'openpyxl not installed')
 
-parquet_path = os.path.join(tmp, 's.parquet')
-pd.DataFrame({'wavelength': wl, 'intensity': it}).to_parquet(parquet_path)
-check('T2b Parquet loads', has_pair(load(parquet_path)))
+try:
+    import pyarrow  # noqa: F401
+except ImportError:
+    pyarrow = None
+if pyarrow is not None:
+    parquet_path = os.path.join(tmp, 's.parquet')
+    pd.DataFrame({'wavelength': wl, 'intensity': it}).to_parquet(parquet_path)
+    check('T2b Parquet loads', has_pair(load(parquet_path)))
 
-feather_path = os.path.join(tmp, 's.feather')
-pd.DataFrame({'wavelength': wl, 'intensity': it}).to_feather(feather_path)
-check('T2c Feather loads', has_pair(load(feather_path)))
+    feather_path = os.path.join(tmp, 's.feather')
+    pd.DataFrame({'wavelength': wl, 'intensity': it}).to_feather(feather_path)
+    check('T2c Feather loads', has_pair(load(feather_path)))
+else:
+    skip('T2b Parquet loads', 'pyarrow not installed')
+    skip('T2c Feather loads', 'pyarrow not installed')
 
 # ---------------------------------------------------------------- T3
 zip_path = os.path.join(tmp, 's.zip')
