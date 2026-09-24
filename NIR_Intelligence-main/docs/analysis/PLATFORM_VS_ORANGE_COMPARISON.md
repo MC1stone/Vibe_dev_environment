@@ -50,6 +50,8 @@ Selber Datensatz, dieselbe Plattform — nach Integration der Fixes aus Issues #
 
 **Fazit Nach-Integration:** Die drei kritischen Differenzen aus § 3.1–3.3 sind geschlossen — PLS, MLP und der Kalibrations-Agent liefern jetzt Werte auf Orange-Niveau bzw. darüber. Verbleibende methodische Unterschiede (PCA ohne Standardisierung, k=3-Default beim Clustering, Replikat-Overlap in CV) sind dokumentiert; der Replikat-Overlap wird nun automatisch erkannt und die Group-wise-CV-Option als Empfehlung vorgeschlagen.
 
+> Der vollständige Nachher-Bericht mit derselben Struktur wie dieser Vergleich: [POST_INTEGRATION_COMPARISON.md](POST_INTEGRATION_COMPARISON.md).
+
 ---
 
 ## 2. Was beide Analysen konsistent finden (Robuste Kernergebnisse)
