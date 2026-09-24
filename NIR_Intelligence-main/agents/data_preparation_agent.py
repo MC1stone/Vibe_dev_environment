@@ -20,6 +20,47 @@ from scipy import signal as scipy_signal
 from .base_agent import AgentOutput, AgentStatus, BaseAgent, ErrorSeverity
 
 
+def sniff_text_encoding(file_path: str) -> str:
+    """Detect the text encoding of a file from its byte-order mark and
+    content. Windows spectrometer exports arrive as UTF-16, older ones as
+    cp1252/latin-1; hardcoding utf-8 turns those files into replacement
+    characters and loses their measurements and metadata. Never raises."""
+    try:
+        with open(file_path, "rb") as probe:
+            head = probe.read(4)
+    except OSError:
+        return "utf-8"
+    if head.startswith(b"\xff\xfe\x00\x00") or head.startswith(b"\x00\x00\xfe\xff"):
+        return "utf-32"
+    if head.startswith(b"\xff\xfe") or head.startswith(b"\xfe\xff"):
+        return "utf-16"
+    if head.startswith(b"\xef\xbb\xbf"):
+        return "utf-8-sig"
+    if len(head) >= 4:
+        nuls_even = sum(1 for i in (0, 2) if head[i] == 0)
+        nuls_odd = sum(1 for i in (1, 3) if head[i] == 0)
+        if nuls_even == 2 and nuls_odd == 0:
+            return "utf-16"
+        if nuls_odd == 2 and nuls_even == 0:
+            return "utf-16"
+    return "utf-8"
+
+
+def read_text_file(file_path: str) -> str:
+    """Read a whole text file with the sniffed encoding. Never raises on
+    decoding problems; undecodable bytes become replacement characters."""
+    with open(file_path, "r", encoding=sniff_text_encoding(file_path),
+              errors="replace") as handle:
+        return handle.read()
+
+
+def read_text_lines(file_path: str) -> list:
+    """Read the lines of a text file with the sniffed encoding."""
+    with open(file_path, "r", encoding=sniff_text_encoding(file_path),
+              errors="replace") as handle:
+        return handle.readlines()
+
+
 class DataQualityGrade(Enum):
     """Quality grading for spectral data and metadata"""
     EXCELLENT = "A"
@@ -685,7 +726,8 @@ class EnhancedDataPreparationAgent(BaseAgent):
         collects every scalar key as metadata. Never raises; returns None
         for non-YAML content."""
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            with open(file_path, "r", encoding=sniff_text_encoding(file_path),
+                      errors="replace") as f:
                 text = f.read()
         except OSError as e:
             self.logger.warning(f"YAML read failed for {file_path}: {e}")
@@ -705,7 +747,8 @@ class EnhancedDataPreparationAgent(BaseAgent):
         (<row><wavelength>400</wavelength>...</row>). Collects scalar
         elements as metadata. Never raises; returns None for non-XML."""
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            with open(file_path, "r", encoding=sniff_text_encoding(file_path),
+                      errors="replace") as f:
                 text = f.read()
         except OSError as e:
             self.logger.warning(f"XML read failed for {file_path}: {e}")
@@ -816,7 +859,8 @@ class EnhancedDataPreparationAgent(BaseAgent):
         try:
             for delimiter in [r'\s+', '\t', ',', ';', '|']:
                 try:
-                    candidate = pd.read_csv(file_path, sep=delimiter, engine="python")
+                    candidate = pd.read_csv(file_path, sep=delimiter, engine="python",
+                                         encoding=sniff_text_encoding(file_path))
                 except pd.errors.EmptyDataError:
                     return None
                 except Exception:
@@ -862,8 +906,7 @@ class EnhancedDataPreparationAgent(BaseAgent):
         unknown extensions. Returns None when fewer than 3 data rows
         exist. Never raises."""
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-                lines = [ln.rstrip("\r\n") for ln in f if ln.strip()]
+            lines = [ln.rstrip("\r\n") for ln in read_text_lines(file_path) if ln.strip()]
         except Exception:
             return None
         if not lines:
@@ -909,8 +952,7 @@ class EnhancedDataPreparationAgent(BaseAgent):
         fields via alias lists. Never raises."""
         metadata: Dict[str, Any] = {}
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-                lines = f.readlines()
+            lines = read_text_lines(file_path)
         except Exception:
             return metadata
 
@@ -1073,8 +1115,7 @@ class EnhancedDataPreparationAgent(BaseAgent):
         -> None so the caller keeps its error path.
         """
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-                lines = [ln.rstrip("\r\n") for ln in f]
+            lines = [ln.rstrip("\r\n") for ln in read_text_lines(file_path)]
             pairs = []
             for ln in lines:
                 if not ln.strip():
@@ -1129,8 +1170,7 @@ class EnhancedDataPreparationAgent(BaseAgent):
         the file cannot be read this way.
         """
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-                lines = [ln.rstrip("\r\n") for ln in f if ln.strip()]
+            lines = [ln.rstrip("\r\n") for ln in read_text_lines(file_path) if ln.strip()]
             if not lines:
                 return None
             rows = []
@@ -1159,7 +1199,7 @@ class EnhancedDataPreparationAgent(BaseAgent):
         """Load spectral data from CSV file"""
         df = None
         try:
-            df = pd.read_csv(file_path)
+            df = pd.read_csv(file_path, encoding=sniff_text_encoding(file_path))
         except pd.errors.EmptyDataError:
             raise
         except Exception as comma_error:
@@ -1176,7 +1216,8 @@ class EnhancedDataPreparationAgent(BaseAgent):
         comma_score = self._score_delimiter_parse(df)
         semicolon_df = None
         try:
-            semicolon_df = pd.read_csv(file_path, sep=';', decimal=',')
+            semicolon_df = pd.read_csv(file_path, sep=';', decimal=',',
+                                       encoding=sniff_text_encoding(file_path))
         except Exception as e:
             self.logger.warning(f"CSV re-parse with ';' delimiter failed: {e}")
         semicolon_score = self._score_delimiter_parse(semicolon_df)
@@ -1227,11 +1268,11 @@ class EnhancedDataPreparationAgent(BaseAgent):
         numeric_cols_fallback = df.select_dtypes(include=[np.number]).columns.tolist()
         if not numeric_cols_fallback:
             try:
-                with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-                    raw = f.read()
+                raw = read_text_file(file_path)
                 if '\\\"' in raw:
                     normalised = raw.replace('\\\"', '""')
-                    df = pd.read_csv(io.StringIO(normalised))
+                    df = pd.read_csv(io.StringIO(normalised),
+                                      encoding=sniff_text_encoding(file_path))
                     self.logger.info(
                         "CSV used backslash-escaped quotes; re-parsed after normalisation: %s",
                         file_path,

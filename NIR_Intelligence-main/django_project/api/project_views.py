@@ -334,24 +334,20 @@ class ProjectDeleteView(APIView if DRF_AVAILABLE else object):
 
 
 class ProjectFilesAddView(APIView if DRF_AVAILABLE else object):
-    """Add more files to an existing drafted project (OP17): upload flow
-    reuses /api/files/upload/, this view attaches the file_ids to the
-    project and rebuilds the preparation report so the report page and
-    metadata assessment reflect the new files immediately. Released or
-    completed projects are frozen - the crew results and the persisted
-    spectra belong to the released dataset state."""
+    """Add more files to an existing project (OP17): upload flow reuses
+    /api/files/upload/, this view attaches the file_ids to the project and
+    rebuilds the preparation report so the report page and metadata
+    assessment reflect the new files immediately. Released/completed
+    projects stay editable (further measurements): adding files moves the
+    project back to the drafted phase so the user reviews the new data and
+    re-releases for a fresh crew run. The crew results and persisted
+    spectra of the earlier release are kept until then."""
 
     def post(self, request, project_id):
         if not request.user.is_authenticated:
             return Response({'success': False, 'error': 'Authentication required'},
                             status=status.HTTP_401_UNAUTHORIZED)
         project = _get_project(project_id, request.user)
-        if project.phase != 'drafted':
-            return Response({
-                'success': False,
-                'error': 'Files can only be added in the drafted phase '
-                         '(the project is already released).',
-            }, status=status.HTTP_400_BAD_REQUEST)
         file_ids = request.data.get('file_ids', [])
         if not file_ids:
             return Response({'success': False, 'error': 'file_ids required'},
@@ -365,6 +361,9 @@ class ProjectFilesAddView(APIView if DRF_AVAILABLE else object):
         already_count = len(files) - len(new_files)
         if new_files:
             project.files.add(*new_files)
+            if project.phase != 'drafted':
+                project.phase = 'drafted'
+                project.save(update_fields=['phase', 'updated_at'])
             from services.project_ingest import build_preparation_report
             report = build_preparation_report(project)
         else:
