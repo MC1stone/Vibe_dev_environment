@@ -103,12 +103,12 @@
                         <div class="accordion-body">
                             <form class="metadata-form" data-file-id="{{ d.file_id }}">
                                 <div class="row g-2">
-                                    {% for field in metadata_quality.missing_recommended_fields %}
+                                    {% for f in d.editor_fields %}
                                     <div class="col-md-4">
-                                        <label class="form-label small">{{ field }}</label>
+                                        <label class="form-label small">{{ f.name }}{% if not f.recommended %} <span class="badge bg-light text-dark">eigene</span>{% endif %}</label>
                                         <input type="text" class="form-control form-control-sm"
-                                               name="{{ field }}" value="{{ d.metadata.field|default:'' }}"
-                                               placeholder="{{ field }} ergänzen">
+                                               name="{{ f.name }}" value="{{ f.value }}"
+                                               placeholder="{{ f.name }} ergänzen">
                                     </div>
                                     {% endfor %}
                                 </div>

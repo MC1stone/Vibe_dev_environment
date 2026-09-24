@@ -249,6 +249,29 @@ class ProjectCreateView(APIView if DRF_AVAILABLE else object):
         })
 
 
+def _metadata_editor_fields(dataset: dict, recommended_fields: list) -> list:
+    """Form fields for the OP13 online metadata editor of one dataset.
+
+    Shows every recommended field (so existing values stay editable after a
+    save - previously only *missing* fields were rendered, which made saved
+    values disappear from the form on reload) plus all fields the user has
+    already entered, each prefilled with its current value.
+    """
+    metadata = dataset.get('metadata') or {}
+    names = []
+    for name in list(recommended_fields or []):
+        if name and name not in names:
+            names.append(name)
+    for name in metadata:
+        if name and name not in names:
+            names.append(name)
+    return [{
+        'name': name,
+        'value': metadata.get(name, ''),
+        'recommended': name in (recommended_fields or []),
+    } for name in names]
+
+
 class ProjectDetailView(TemplateView):
     """Phase 1 report (drafted) or phase 2 overview (released/completed).
 
@@ -265,12 +288,17 @@ class ProjectDetailView(TemplateView):
         project = _get_project(project_id, request.user)
         preparation = project.preparation_report or {}
         crew_results = project.crew_results or {}
+        from services.project_ingest import RECOMMENDED_METADATA_FIELDS
+        datasets = preparation.get('datasets', [])
+        for dataset in datasets:
+            dataset['editor_fields'] = _metadata_editor_fields(
+                dataset, RECOMMENDED_METADATA_FIELDS)
         context = {
             'page_title': f'Projekt: {project.name}',
             'project': project,
             'project_summary': project.get_summary(),
             'preparation': preparation,
-            'datasets': preparation.get('datasets', []),
+            'datasets': datasets,
             'metadata_quality': preparation.get('metadata_quality', {}),
             'recommendations': preparation.get('recommendations', []),
             'crew_results': crew_results,
