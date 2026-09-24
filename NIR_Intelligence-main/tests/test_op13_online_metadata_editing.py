@@ -121,7 +121,7 @@ check('T2j recommended fields prefilled from the assessment',
       'missing_recommended_fields' in template_src)
 check('T2k custom fields addable', 'meta-add-field' in template_src)
 check('T2l existing override values prefilled',
-      'd.metadata.field|default' in template_src)
+      'f.value' in template_src and 'd.editor_fields' in template_src)
 
 # ---------------------------------------------------------------------------
 # T3: live API contract (Django test client, real ORM)
