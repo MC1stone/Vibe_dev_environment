@@ -30,6 +30,26 @@
 | **Metadaten** | 70.6 „fair", ISO-19115/Dublin-Core-Empfehlungen | nicht bewertet (nicht Teil des Skripts) | Platform hat eigenen Metadaten-Agent |
 | **Bericht** | HTML: 20+ Abbildungen, Diskussion, Fazit, Literatur (APA), Chatbot | Markdown + JSON + 11 Grafiken | Platform deutlich ausführlicher |
 
+### 1b. Nach-Integration-Vergleich (Stand nach Merge von PR #64, Fresh-Lauf 2026-09-24 09:21)
+
+Selber Datensatz, dieselbe Plattform — nach Integration der Fixes aus Issues #65–#67 (Bericht `final_op14test_20260924_092127.html`):
+
+| Kennzahl | Platform vor Fixes | Platform nach Fixes | Orange-Workflow | Bewertung |
+|---|---|---|---|---|
+| **Kalibrationsstichprobe** | max. 200 Zeilen | **2000 Zeilen** (von 2014 bereinigten) | 2014 Zeilen | ✅ annähernd gleichwertig (Issue #66) |
+| **PLS (CV, statistisch)** | mean R² = −1.83 | **mean R² = +0.626** (10 Komp., standardisiert, KFold shuffle) | R² = 0.622, RMSECV 0.623 | ✅ Deckungsgleich mit Orange (Issue #65) |
+| **PCR (CV, statistisch)** | kollabiert | **mean R² = +0.613** | R² ≈ 0.60 (PCR 10 Komp.) | ✅ konsistent |
+| **MLP** | R² = 0.001 (150 Trainingszeilen) | **R² = 0.870** (1500 Train / 500 Test) | R² = 0.846 (5-fold, 2014) | ✅ jetzt auf Orange-Niveau — gleiche Datenbasis heben das MLP |
+| **CNN (neural)** | R² = 0.547 (50 Testzeilen) | **R² = 0.782, RMSE 0.488** (500 Testzeilen) | R² = 0.587, RMSE 0.651 | ⚠️ Platform-CNN profitiert vom größeren Trainingsset; Orange zurückhaltender |
+| **Kalibrations-Agent** | `no_reference`, übersprungen | **alle 6 Methoden positiv:** PLS 0.626, PCR 0.613, SVM 0.862, RF 0.872 (best), XGBoost 0.867, CNN 0.860 | PLS/PCR als Kalibration | ✅ Agent arbeitsfähig (Issue #67); Achtung: RF/XGB/SVM-Werte sind optimistisch (Replikat-Overlap) |
+| **Group-wise-CV-Empfehlung** | — | **automatisch erkannt**: 36 eindeutige Brix-Werte auf 2000 Zeilen, Risiko `replica_overlap_in_cv`, Empfehlung Group-wise CV | — | ✅ Plattform „lernt“: schlägt die Verbesserungsoption vor, ohne sie auszuführen |
+| **PCA** | PC1 63.1 %, kum. 99.4 % (200 Proben) | PC1 67.5 %, kum. 99.5 % (2000 Proben) | PC1 38.0 %, kum. 97.0 % (2014, standardisiert) | ⚠️ Platform-PCA rechnet unskaliert → Varianzdominanz einzelner Kanäle; Orange standardisiert |
+| **Clustering** | k=3, Silhouette 0.347 | k=3, Silhouette 0.356 (2000 Proben) | k=2, Silhouette 0.448 | ⚠️ weiterhin k=3-Default vs. Orange-Optimierung |
+| **Rauschen/Drift/Sensor** | Rauschen 0.294, Drift 0.0224 detektiert | unverändert: Drift 0.0224 detektiert (Replikatenblock) | Drift ≈ 0 nicht detektiert | unchanged, beide Aussagen bleiben kontextabhängig wahr |
+| **Gesamtqualität** | 73.2 / 100 | 75.0 / 100 | Ampel ROT | Platform milder aggregiert (unchanged) |
+
+**Fazit Nach-Integration:** Die drei kritischen Differenzen aus § 3.1–3.3 sind geschlossen — PLS, MLP und der Kalibrations-Agent liefern jetzt Werte auf Orange-Niveau bzw. darüber. Verbleibende methodische Unterschiede (PCA ohne Standardisierung, k=3-Default beim Clustering, Replikat-Overlap in CV) sind dokumentiert; der Replikat-Overlap wird nun automatisch erkannt und die Group-wise-CV-Option als Empfehlung vorgeschlagen.
+
 ---
 
 ## 2. Was beide Analysen konsistent finden (Robuste Kernergebnisse)
