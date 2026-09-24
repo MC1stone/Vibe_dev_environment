@@ -244,6 +244,31 @@ class CalibrationAgent(BaseAgent):
                 threshold = float(self.performance_thresholds.get("r2", 0.8))
                 results["thresholds_met"] = bool(best_r2 >= threshold)
 
+            unique_refs = np.unique(y)
+            if 3 <= unique_refs.size < y.size * 0.9 and y.size >= 8:
+                _, ref_counts = np.unique(y, return_counts=True)
+                if ref_counts.mean() >= 2.0:
+                    results["replicate_structure"] = {
+                        "unique_reference_values": int(unique_refs.size),
+                        "mean_replicas_per_reference": round(
+                            float(ref_counts.mean()), 2),
+                        "max_replicas_per_reference": int(ref_counts.max()),
+                        "risk": (
+                            "replica_overlap_in_cv"
+                            if unique_refs.size < y.size * 0.25
+                            else "moderate_replica_overlap"
+                        ),
+                        "recommendation": (
+                            "Kalibrationszeilen sind Replikate je Messobjekt "
+                            "(eindeutige Referenzwerte: {n_unique} auf {n_rows} "
+                            "Zeilen). Kreuzvalidierung kann Replikate desselben "
+                            "Objekts auf Train- und Testfold verteilen und R\u00b2 "
+                            "optimistisch machen. Empfohlene Option: Group-wise CV "
+                            "(Replikate je Objekt strikt in denselben Fold), um "
+                            "generalisierbare G\u00fcte zu messen."
+                        ).format(n_unique=int(unique_refs.size), n_rows=int(y.size)),
+                    }
+
             results["status"] = "ok"
             self.status = AgentStatus.COMPLETED
             return self._create_success_output(results)

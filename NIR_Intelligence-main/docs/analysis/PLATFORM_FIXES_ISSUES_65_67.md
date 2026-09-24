@@ -73,4 +73,15 @@ Damit entspricht die Plattform dem Orange-Referenzwert (PLS 0.622 / RMSECV 0.623
 
 ## Ausblick
 
-- **Group-wise CV nach Tomate** (Replikate derselben Frucht strikt in denselben Fold) würde den verbleibenden Optimismus-Bias eliminieren – als Folge-Issue empfohlen.
+- **Group-wise CV nach Tomate** (Replikate derselben Frucht strikt in denselben Fold) würde den verbleibenden Optimismus-Bias eliminieren. Auftrag: **nicht automatisch ausführen**, sondern als Option vorschlagen.
+
+### Umgesetzt als „gelernte“ Empfehlung (keine Ausführung)
+
+Die Plattform-Agenten erkennen jetzt selbst, wenn Kalibrationsdaten Replikat-Struktur tragen, und schlagen die Verbesserungsoption vor – ohne sie anzuwenden:
+
+- **Erkennung** (`agents/statistical_analysis_agent.py` via `_replicate_structure_assessment`, `agents/calibration_agent.py` analog): wenige eindeutige Referenzwerte (hier 36 Brix-Werte) über viele Zeilen (2000) mit Ø ≥ 2 Replikaten je Referenz → `replicate_structure` mit `risk` (`replica_overlap_in_cv` bei < 25 % eindeutigen Werten, sonst `moderate_replica_overlap`) und einer Empfehlung in den Agenten-Ergebnissen.
+
+- **Empfehlungstext** (erscheint im Abschlussbericht als Tabellenzeilen, da `_metric_rows` die Agenten-Daten rekursiv flacht):
+  > „Kalibrationszeilen sind Replikate je Messobjekt (eindeutige Referenzwerte: 36 auf 2000 Zeilen). Kreuzvalidierung kann Replikate desselben Objekts auf Train- und Testfold verteilen und R² optimistisch machen. Empfohlene Option: Group-wise CV (Replikate je Objekt strikt in denselben Fold), um generalisierbare Güte zu messen.“
+
+- **Verifikation:** Beide Agenten liefern `replicate_structure` auf den Tomatendaten (36 eindeutige / 2000 Zeilen, Ø 55.56 Replikate, Risiko `replica_overlap_in_cv`); 5 Berichts-Zeilen sichtbar. Matrizen: OP14 31/31, OP18 25/25, OP6 51/51, OP11 30/30 grün.

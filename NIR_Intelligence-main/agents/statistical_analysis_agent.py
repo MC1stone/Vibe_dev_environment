@@ -51,6 +51,41 @@ def _extract_matrix(spectra: Any) -> Optional[np.ndarray]:
     return np.vstack(rows)
 
 
+def _replicate_structure_assessment(y: np.ndarray) -> Optional[Dict[str, Any]]:
+    """Detect replicate structure in calibration targets (learned from the
+    T4/T5 tomato comparison, issue #65 follow-up): few unique reference
+    values spread over many rows mean multiple spectra share one target
+    (replicas of the same object). Random KFold can then split replicas of
+    the same object across train and test folds, which inflates R^2. The
+    recommended fix is a group-wise CV keyed by the measured object - it
+    is only recommended here, never applied automatically."""
+    if y is None or y.size < 8:
+        return None
+    unique, counts = np.unique(y, return_counts=True)
+    if unique.size < 3:
+        return None
+    replicas_per_target = counts.mean()
+    if unique.size >= y.size * 0.9 or replicas_per_target < 2.0:
+        return None
+    return {
+        "unique_reference_values": int(unique.size),
+        "mean_replicas_per_reference": round(float(replicas_per_target), 2),
+        "max_replicas_per_reference": int(counts.max()),
+        "risk": (
+            "replica_overlap_in_cv"
+            if unique.size < y.size * 0.25 else "moderate_replica_overlap"
+        ),
+        "recommendation": (
+            "Kalibrationszeilen sind Replikate je Messobjekt (eindeutige "
+            "Referenzwerte: {n_unique} auf {n_rows} Zeilen). Kreuzvalidierung "
+            "kann Replikate desselben Objekts auf Train- und Testfold "
+            "verteilen und R\u00b2 optimistisch machen. Empfohlene Option: "
+            "Group-wise CV (Replikate je Objekt strikt in denselben Fold), "
+            "um generalisierbare G\u00fcte zu messen."
+        ).format(n_unique=int(unique.size), n_rows=int(y.size)),
+    }
+
+
 class StatisticalAnalysisAgent(BaseAgent):
     """Agent for performing statistical analysis on NIR data.
 
@@ -197,6 +232,10 @@ class StatisticalAnalysisAgent(BaseAgent):
                 "data_points": int(matrix.shape[1]),
                 "method_results": {},
             }
+
+            replicate_assessment = _replicate_structure_assessment(y)
+            if replicate_assessment is not None:
+                results["replicate_structure"] = replicate_assessment
 
             if matrix.shape[0] == 1:
                 # Single spectrum: PCA/PLS/clustering need multiple samples.
