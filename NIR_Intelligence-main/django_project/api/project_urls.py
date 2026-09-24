@@ -10,6 +10,8 @@ from .project_views import (
     ProjectMetadataView,
     ProjectReleaseView,
     ProjectFinalReportView,
+    SensorListView,
+    SensorDetailView,
     SpectrumDatabaseView,
     SpectrumDatabaseDetailView,
 )
@@ -26,4 +28,6 @@ urlpatterns = [
     path('<uuid:project_id>/final-report/', ProjectFinalReportView.as_view(), name='project-final-report'),
     path('database/', SpectrumDatabaseView.as_view(), name='spectrum-database'),
     path('database/<uuid:spectrum_id>/', SpectrumDatabaseDetailView.as_view(), name='spectrum-detail'),
+    path('sensors/', SensorListView.as_view(), name='sensor-list'),
+    path('sensors/<str:sensor_key>/', SensorDetailView.as_view(), name='sensor-detail'),
 ]

@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% block title %}Sensoren - NIR Intelligence Platform{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-cpu me-2"></i>Sensoren</h1>
+        <a href="/projects/" class="btn btn-outline-primary">
+            <i class="bi bi-folder2-open me-1"></i>Zu den Projekten
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <p class="text-muted mb-0">
+                Katalog aller Sensoren der Analysen: registrierte Adapter mit Fähigkeiten,
+                Nutzung aus der bestehenden Datenbank (Spektrendatenbank und
+                Projektberichte) sowie die Einstelloptionen, die die Plattform
+                versteht und in die Bewertung einbezieht. Optimierungsvorschläge
+                kommen dedupliziert aus den Analysen.
+            </p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header"><h5 class="mb-0"><i class="bi bi-joystick me-1"></i>Registrierte Sensoren (Adapter)</h5></div>
+        <div class="card-body">
+            {% if registered_sensors %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Modell</th>
+                            <th>Wellenlängen (nm)</th>
+                            <th>Detektor</th>
+                            <th>Interface</th>
+                            <th>In Nutzung</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in registered_sensors %}
+                        <tr>
+                            <td><strong>{{ s.model_id }}</strong></td>
+                            <td>
+                                {% with range=s.capabilities.wavelength_range_nm %}
+                                {% if range %}{{ range|first }} &ndash; {{ range|last }}{% else %}-{% endif %}
+                                {% endwith %}
+                            </td>
+                            <td>{{ s.capabilities.detector_type|default:'-' }}</td>
+                            <td>{{ s.capabilities.interface_type|default:'-' }}</td>
+                            <td>
+                                {% if s.in_use %}
+                                <span class="badge bg-success">Aktiv genutzt</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Noch nicht in Analysen</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="/projects/sensors/{{ s.model_id }}/" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-search me-1"></i>Details
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="mb-0">Keine Adapter registriert.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header"><h5 class="mb-0"><i class="bi bi-sliders me-1"></i>Einstelloptionen</h5></div>
+        <div class="card-body">
+            <p class="text-muted">
+                Parameter, die die Plattform aus Messdateien extrahiert (OP28) und deren
+                Bereiche aus dem Parameter-Recommender. Fehlende Angaben in Messungen
+                werden ehrlich als fehlend bewertet, nie erfunden.
+            </p>
+            {% if setting_options %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Beschreibung</th>
+                            <th>Einheit</th>
+                            <th>Bereich / Werte</th>
+                            <th>Typ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for o in setting_options %}
+                        <tr>
+                            <td><strong>{{ o.name }}</strong></td>
+                            <td>{{ o.description }}</td>
+                            <td>{{ o.unit|default:'' }}</td>
+                            <td>
+                                {% if o.possible_values %}
+                                    {{ o.possible_values|join:", " }}
+                                {% elif o.min_value is not None %}
+                                    {{ o.min_value }} &ndash; {{ o.max_value }} (Standard: {{ o.default_value }})
+                                {% else %}
+                                    frei
+                                {% endif %}
+                            </td>
+                            <td>{{ o.parameter_type }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="mb-0">Keine Einstelloptionen bekannt.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header"><h5 class="mb-0"><i class="bi bi-bar-chart me-1"></i>Nutzung (bestehende Datenbank)</h5></div>
+        <div class="card-body">
+            {% if usage %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Sensor</th>
+                            <th>Adapter</th>
+                            <th>Spektren</th>
+                            <th>Projekte</th>
+                            <th>Proben</th>
+                            <th>Erfasste Einstellungen</th>
+                            <th>Zuletzt</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in usage %}
+                        <tr>
+                            <td><strong>{{ u.instrument_type }}</strong></td>
+                            <td>{{ u.model_id|default:'nicht zugeordnet' }}</td>
+                            <td>{{ u.spectrum_count }}</td>
+                            <td>{{ u.project_count }}</td>
+                            <td>{{ u.samples|join:", " }}</td>
+                            <td>
+                                {% for key, values in u.recorded_settings.items %}
+                                <span class="badge bg-light text-dark">{{ key }}: {{ values|join:", " }}</span>
+                                {% endfor %}
+                            </td>
+                            <td>{{ u.last_used|slice:":10"|default:'-' }}</td>
+                            <td>
+                                <a href="/projects/sensors/{{ u.instrument_type|urlencode }}/" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-search me-1"></i>Details
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="mb-0">
+                Noch keine Nutzung erfasst. Geben Sie ein Projekt zur Analyse frei, damit
+                Spektren mit Gerätemetadaten in der bestehenden Datenbank landen.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header"><h5 class="mb-0"><i class="bi bi-lightbulb me-1"></i>Optimierungsvorschläge</h5></div>
+        <div class="card-body">
+            {% if suggestions %}
+            <ul class="mb-0">
+                {% for s in suggestions %}
+                <li>
+                    <strong>{{ s.parameter }}</strong>:
+                    {{ s.recommended_value }}
+                    <span class="badge bg-info">{{ s.source }}</span>
+                    {% if s.conflict %}<span class="badge bg-warning text-dark">Quellen uneinig - Alternativen in den Sensordetails</span>{% endif %}
+                    <br><small class="text-muted">{{ s.reason }}</small>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="mb-0">Noch keine Vorschläge aus Analysen. Führen Sie eine Analyse durch.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

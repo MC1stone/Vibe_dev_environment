@@ -184,6 +184,31 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
                 "data": result.sensor_quality_results,
             })())
         measurement_samples = (dataset.get('measurement_samples') or [])
+        # OP29: deduplicated optimization suggestions - the three existing
+        # recommendation sources (analytical parameter recommendations,
+        # data-preparation heuristics, generic sensor-quality texts) merged
+        # into one prioritized list per parameter - plus the assessment of
+        # the settings recorded in the dataset metadata.
+        try:
+            from services.sensor_catalog import (
+                assess_settings,
+                get_optimization_suggestions,
+            )
+            parameter_recommendations = list(
+                getattr(result, 'parameter_recommendations', []) or [])
+            merged_suggestions = get_optimization_suggestions(
+                sensor_results=result.sensor_quality_results,
+                parameter_recommendations=parameter_recommendations,
+                crew_recommendations=list(result.recommendations or []),
+            )
+            sensor_section['data'] = dict(sensor_section.get('data') or {})
+            if merged_suggestions:
+                sensor_section['data']['optimization_suggestions'] = merged_suggestions
+            metadata = dataset.get('metadata') or {}
+            setting_assessment = assess_settings(metadata)
+            sensor_section['data']['setting_assessment'] = setting_assessment
+        except Exception:
+            logger.exception('OP29 sensor catalog merge failed (non-fatal)')
         if measurement_samples:
             try:
                 from services.sensor_charts import (

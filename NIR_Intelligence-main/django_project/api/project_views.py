@@ -117,6 +117,84 @@ class SpectrumDatabaseDetailView(TemplateView):
         return render(request, self.template_name, context)
 
 
+class SensorListView(TemplateView):
+    """Sensor catalog overview (OP29): all sensors known to the platform -
+    registered adapters with capabilities, the setting options the platform
+    understands and the usage recorded in the existing database. The
+    optimization suggestions from the crew analyses are listed per sensor."""
+
+    template_name = 'sensor_list.html'
+
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=' + request.get_full_path())
+        from agents.sensor_agent import SensorAgent
+        output = SensorAgent().execute({
+            'operation': 'collect',
+            'user_id': request.user.id,
+        })
+        data = output.data or {}
+        context = {
+            'page_title': 'Sensoren',
+            'registered_sensors': data.get('registered_sensors', []),
+            'setting_options': data.get('setting_options', []),
+            'usage': data.get('usage', []),
+            'unmatched_usage': data.get('unmatched_usage', []),
+            'suggestions': data.get('optimization_suggestions', []),
+        }
+        return render(request, self.template_name, context)
+
+
+class SensorDetailView(TemplateView):
+    """One sensor (OP29): adapter profile, recorded usage from the existing
+    database, the sensor's setting values found in the user's measurements
+    with a completeness/plausibility assessment, and the deduplicated
+    optimization suggestions from the analyses."""
+
+    template_name = 'sensor_detail.html'
+
+    def get(self, request, sensor_key):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=' + request.get_full_path())
+        from urllib.parse import unquote
+
+        from agents.sensor_agent import SensorAgent
+        from services.sensor_catalog import assess_settings, match_model_id
+        output = SensorAgent().execute({
+            'operation': 'collect',
+            'user_id': request.user.id,
+        })
+        data = output.data or {}
+        name = unquote(sensor_key)
+        model_id = match_model_id(name)
+        sensor = next((s for s in data.get('registered_sensors', [])
+                       if s['model_id'] == (model_id or name)), None)
+        usage = next((u for u in data.get('usage', [])
+                      if u['instrument_type'] == name
+                      or (model_id and u['model_id'] == model_id)), None)
+        if sensor is None and usage is None:
+            raise Http404('Sensor not found')
+
+        recorded = (usage or {}).get('recorded_settings') or {}
+        assessment = assess_settings(
+            {key: (values[-1] if isinstance(values, list) and values else values)
+             for key, values in recorded.items()},
+            setting_options=data.get('setting_options', []))
+
+        suggestions = data.get('optimization_suggestions', [])
+        context = {
+            'page_title': f'Sensor {name}',
+            'sensor': sensor,
+            'sensor_name': name,
+            'model_id': model_id,
+            'usage': usage,
+            'assessment': assessment,
+            'setting_options': data.get('setting_options', []),
+            'suggestions': suggestions,
+        }
+        return render(request, self.template_name, context)
+
+
 def _get_project(project_id, user):
     try:
         return AnalysisProject.objects.get(id=project_id, user=user)
