@@ -203,7 +203,7 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
                 .dropna(subset=['__target'])
             if len(paired) < 12:
                 continue
-            max_samples = min(200, len(paired))
+            max_samples = min(2000, len(paired))
             step = max(1, len(paired) // max_samples)
             rows = paired.iloc[::step].head(max_samples)
             calibration_samples = [

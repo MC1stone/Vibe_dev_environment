@@ -56,6 +56,8 @@ Der drastischste Unterschied. Ursachenkette:
 
 **Bewertung:** Der Plattformwert ist ein **echtes Schwachstellen-Signal**, kein Datenproblem – dasselbe PLS liefert mit Skalierung positive R². Das deckt sich mit dem OP18-Befund („raw ADC values against Brix ~5 stall the gradient descent"), nur eben für den statistischen Agenten noch nicht umgesetzt. **Nachbesserungs-Kandidat Nr. 1.**
 
+> **✅ Behoben (Issue #65):** `agents/statistical_analysis_agent.py` und `agents/calibration_agent.py` standardisieren die Features jetzt per `StandardScaler` in einer Pipeline und validieren mit `KFold(shuffle=True, random_state=42)` statt ungeschshuffletem KFold (die Kalibrationszeilen sind nach Tomate sortiert – ohne Shuffle sieht jeder Fold nur einen schmalen Brix-Bereich, was die negative R² unabhängig von der Skalierung verursachte). Verifikation auf denselben Tomatendaten: **PLS mean R² = +0.626** (vorher −1.83), PCR +0.613, CNN-Kalibration +0.865 (vorher −2093 durch divergiertes Training auf unskalierten ADC-Werten). Damit entspricht die Plattform dem Orange-Referenzwert (0.622).
+
 ### 3.2 MLP: R² = 0.001 (Platform) vs. 0.846 (Orange)
 
 - Platform: MLP mit 64–32 auf nur **150 Trainingszeilen** (75/25-Split der 200 Kalibrationszeilen), 200 Iterationen – bei konstanten Zielwerten pro Tomate und Replikat-Überschneidung bleibt praktisch keine generalisierbare Struktur übrig; „convergence_achieved: True" ist technisch true, aber inhaltlich bedeutungslos.
@@ -63,11 +65,15 @@ Der drastischste Unterschied. Ursachenkette:
 
 **Bewertung:** Der MLP-Vergleich ist etwas **unfair**: das Orange-MLP kann Replikate derselben Fracht in Train und Test haben (leichte Optimismus-Bias), das Plattform-MLP ist dagegen schlicht unterversorgt. Dennoch: **MLP + volle Datenmenge ist mit Abstand der beste Vorhersager** – ein Ergebnis, das die Platform in dieser Form nicht produzieren kann, weil sie maximal 200 Zeilen weiterreicht. **Nachbesserungs-Kandidat Nr. 2** (Stichprobenlimit anheben).
 
+> **✅ Behoben (Issue #66):** `services/project_ingest.py` reicht jetzt bis zu **2000 Kalibrationszeilen** weiter (vorher max. 200). Auf den Tomatendaten werden damit 2000 von 2014 bereinigten Messungen genutzt; OP20-Prüfungen (≥ 50 Zeilen) bleiben erfüllt, OP14 weiterhin 31/31 grün.
+
 ### 3.3 Kalibrations-Agent: „no_reference" trotz vorhandener Referenzen
 
 Der Kalibrations-Agent der Platform meldet „Calibration requires reference values" und springt – obwohl der statistische Agent mit denselben 200 Kalibrationsmessungen arbeitet und sogar 3 PLS-Kalibrierungsdiagramme rendert. Offenbar werden `reference_values` nicht in den Kontext des Kalibrations-Agenten gereicht (der statistical agent bekommt `calibration_samples`).
 
 **Bewertung:** Konsistenzfehler in der Agenten-Verkabelung, von OP18 nur für statistik/CNN behoben. Der Agent, dessen Kernaufgabe Kalibration ist, läuft leer – **Nachbesserungs-Kandidat Nr. 3**.
+
+> **✅ Behoben (Issue #67):** `agents/nir_analysis_crew.py` reicht im `calibration_context` jetzt `spectra` und `reference_values` aus dem `supervised_context` (dateiweite Kalibrationsmessungen) durch. Verifikation auf den Tomatendaten: der Kalibrations-Agent liefert vollständige Ergebnisse statt `no_reference` – PLS +0.626, PCR +0.613, SVM +0.862, RandomForest +0.872, XGBoost +0.867, CNN +0.865.
 
 ### 3.4 Sensorurteile: Drift ja/nein
 
@@ -116,11 +122,13 @@ Der Plattform-Abschlussbericht ist in einer anderen Liga: 20+ Abbildungen mit du
 
 Beide Analysen sehen denselben Datensatz und kommen beim Kernbefund überein: **Die Daten sind für Präzisionskalibration zu rau** (SNR/Rauschen), **ein CNN erreicht moderates Screening-Niveau (R² ≈ 0.55–0.59)**, und die **visuellen Kanäle (G_560, U_760, W_860)** tragen die Brix-Information.
 
-Die markanten Differenzen (PLS-Vorzeichenwechsel, MLP 0.001 vs. 0.846, übersprungener Kalibrations-Agent) sind **überwiegend Implementierungs-, nicht Dateneffekte** – mit drei konkreten Ansatzpunkten für die Platform:
+Die markanten Differenzen (PLS-Vorzeichenwechsel, MLP 0.001 vs. 0.846, übersprungener Kalibrations-Agent) sind **überwiegend Implementierungs-, nicht Dateneffekte** – alle drei sind inzwischen behoben:
 
-1. Feature-Skalierung in den statistischen Agenten (PLS/PCR) nachziehen (wie OP18 für CNN)
-2. Stichprobenlimit von 200 Kalibrationszeilen anheben bzw. Replikat-Strukturierung verbessern (Group-wise CV nach Tomate)
-3. `reference_values` an den Kalibrations-Agenten durchreichen
+1. ✅ **Issue #65:** Feature-Skalierung + geschshufflede KFold in den statistischen Agenten (PLS/PCR) und der CNN-Kalibration nachgezogen – PLS mean R² jetzt +0.626 statt −1.83
+2. ✅ **Issue #66:** Stichprobenlimit von 200 auf 2000 Kalibrationszeilen angehoben
+3. ✅ **Issue #67:** `reference_values` und `spectra` werden an den Kalibrations-Agenten durchgereicht – dieser liefert jetzt alle sechs Methoden mit positiven R²
+
+Als nächster Verbesserungsschritt bliebe eine **Group-wise CV nach Tomate** (Replikate derselben Frucht strikt in denselben Fold), um den verbleibenden Optimismus-Bias zu eliminieren.
 
 Umgekehrt profitiert der Orange-Weg von den Plattform-Vorstößen: Drift-Fenster, degraded-Status und XAI-Breite wären sinnvolle Erweiterungen des Skripts/Workflows.
 

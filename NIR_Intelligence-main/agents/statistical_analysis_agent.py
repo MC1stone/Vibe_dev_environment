@@ -67,6 +67,7 @@ class StatisticalAnalysisAgent(BaseAgent):
         self.default_components = int(kwargs.get("default_components", 10))
         self.validation_method = kwargs.get("validation_method", "cross_validation")
         self.cv_folds = int(kwargs.get("cv_folds", 5))
+        self.random_state = int(kwargs.get("random_state", 42))
 
     def _run_pca(self, matrix: np.ndarray) -> Dict[str, Any]:
         from sklearn.decomposition import PCA
@@ -84,14 +85,21 @@ class StatisticalAnalysisAgent(BaseAgent):
 
     def _run_pls(self, matrix: np.ndarray, y: np.ndarray) -> Dict[str, Any]:
         from sklearn.cross_decomposition import PLSRegression
-        from sklearn.model_selection import cross_val_score
+        from sklearn.model_selection import KFold, cross_val_score
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
 
         n_components = int(min(self.default_components, matrix.shape[0] - 1, matrix.shape[1]))
-        pls = PLSRegression(n_components=max(1, n_components))
+        pipeline = Pipeline([
+            ("scaler", StandardScaler()),
+            ("pls", PLSRegression(n_components=max(1, n_components))),
+        ])
         folds = min(self.cv_folds, len(y))
-        scores = cross_val_score(pls, matrix, y, cv=folds, scoring="r2")
+        splitter = KFold(n_splits=folds, shuffle=True, random_state=self.random_state)
+        scores = cross_val_score(pipeline, matrix, y, cv=splitter, scoring="r2")
         return {
             "n_components": max(1, n_components),
+            "feature_scaling": "standardized",
             "r2_scores": [float(s) for s in scores],
             "mean_r2": float(np.mean(scores)),
             "validation": self.validation_method,
@@ -101,16 +109,19 @@ class StatisticalAnalysisAgent(BaseAgent):
     def _run_pcr(self, matrix: np.ndarray, y: np.ndarray) -> Dict[str, Any]:
         from sklearn.decomposition import PCA
         from sklearn.linear_model import LinearRegression
-        from sklearn.model_selection import cross_val_score
+        from sklearn.model_selection import KFold, cross_val_score
         from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
 
         n_components = int(min(self.default_components, matrix.shape[0] - 1, matrix.shape[1]))
         pipeline = Pipeline([
+            ("scaler", StandardScaler()),
             ("pca", PCA(n_components=max(1, n_components))),
             ("regression", LinearRegression()),
         ])
         folds = min(self.cv_folds, len(y))
-        scores = cross_val_score(pipeline, matrix, y, cv=folds, scoring="r2")
+        splitter = KFold(n_splits=folds, shuffle=True, random_state=self.random_state)
+        scores = cross_val_score(pipeline, matrix, y, cv=splitter, scoring="r2")
         return {
             "n_components": max(1, n_components),
             "r2_scores": [float(s) for s in scores],
