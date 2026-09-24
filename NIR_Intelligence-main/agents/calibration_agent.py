@@ -75,25 +75,32 @@ class CalibrationAgent(BaseAgent):
 
     def _fit_method(self, method: str, matrix: np.ndarray, y: np.ndarray,
                     folds: int) -> Dict[str, Any]:
-        from sklearn.model_selection import cross_val_score
+        from sklearn.model_selection import KFold, cross_val_score
 
         if method == "PLS":
             from sklearn.cross_decomposition import PLSRegression
-
-            n_components = max(1, min(10, matrix.shape[0] - 1, matrix.shape[1]))
-            estimator = PLSRegression(n_components=n_components)
-            param_note = {"n_components": n_components}
-        elif method == "PCR":
-            from sklearn.decomposition import PCA
-            from sklearn.linear_model import LinearRegression
+            from sklearn.preprocessing import StandardScaler
             from sklearn.pipeline import Pipeline
 
             n_components = max(1, min(10, matrix.shape[0] - 1, matrix.shape[1]))
             estimator = Pipeline([
+                ("scaler", StandardScaler()),
+                ("pls", PLSRegression(n_components=n_components)),
+            ])
+            param_note = {"n_components": n_components, "feature_scaling": "standardized"}
+        elif method == "PCR":
+            from sklearn.decomposition import PCA
+            from sklearn.linear_model import LinearRegression
+            from sklearn.pipeline import Pipeline
+            from sklearn.preprocessing import StandardScaler
+
+            n_components = max(1, min(10, matrix.shape[0] - 1, matrix.shape[1]))
+            estimator = Pipeline([
+                ("scaler", StandardScaler()),
                 ("pca", PCA(n_components=n_components)),
                 ("regression", LinearRegression()),
             ])
-            param_note = {"n_components": n_components}
+            param_note = {"n_components": n_components, "feature_scaling": "standardized"}
         elif method == "SVM":
             from sklearn.svm import SVR
             from sklearn.preprocessing import StandardScaler
@@ -122,7 +129,8 @@ class CalibrationAgent(BaseAgent):
             return {"status": "skipped", "reason": f"unknown method {method}"}
 
         folds = max(2, min(folds, matrix.shape[0]))
-        scores = cross_val_score(estimator, matrix, y, cv=folds, scoring="r2")
+        splitter = KFold(n_splits=folds, shuffle=True, random_state=42)
+        scores = cross_val_score(estimator, matrix, y, cv=splitter, scoring="r2")
         return {
             "status": "ok",
             "parameters": param_note,
@@ -143,9 +151,15 @@ class CalibrationAgent(BaseAgent):
 
             if matrix.shape[0] < 4:
                 return {"status": "skipped", "reason": "not enough samples"}
-            X = matrix.reshape(matrix.shape[0], matrix.shape[1], 1)
+            from sklearn.preprocessing import StandardScaler
+            feature_scaler = StandardScaler().fit(matrix)
+            scaled = feature_scaler.transform(matrix)
+            X = scaled.reshape(scaled.shape[0], scaled.shape[1], 1)
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, test_size=0.25, random_state=42)
+            y_mean = float(np.mean(y_train))
+            y_std = float(np.std(y_train)) or 1.0
+            y_train_scaled = (y_train - y_mean) / y_std
             model = tf.keras.Sequential([
                 tf.keras.layers.Conv1D(16, 5, activation="relu", input_shape=(X.shape[1], 1)),
                 tf.keras.layers.MaxPooling1D(2),
@@ -154,8 +168,8 @@ class CalibrationAgent(BaseAgent):
                 tf.keras.layers.Dense(1),
             ])
             model.compile(optimizer="adam", loss="mse")
-            model.fit(X_train, y_train, epochs=50, verbose=0)
-            predictions = model.predict(X_test, verbose=0).ravel()
+            model.fit(X_train, y_train_scaled, epochs=50, verbose=0)
+            predictions = model.predict(X_test, verbose=0).ravel() * y_std + y_mean
             ss_res = float(np.sum((y_test - predictions) ** 2))
             ss_tot = float(np.sum((y_test - np.mean(y_test)) ** 2))
             r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
@@ -229,6 +243,31 @@ class CalibrationAgent(BaseAgent):
                 results["best_r2_score"] = best_r2
                 threshold = float(self.performance_thresholds.get("r2", 0.8))
                 results["thresholds_met"] = bool(best_r2 >= threshold)
+
+            unique_refs = np.unique(y)
+            if 3 <= unique_refs.size < y.size * 0.9 and y.size >= 8:
+                _, ref_counts = np.unique(y, return_counts=True)
+                if ref_counts.mean() >= 2.0:
+                    results["replicate_structure"] = {
+                        "unique_reference_values": int(unique_refs.size),
+                        "mean_replicas_per_reference": round(
+                            float(ref_counts.mean()), 2),
+                        "max_replicas_per_reference": int(ref_counts.max()),
+                        "risk": (
+                            "replica_overlap_in_cv"
+                            if unique_refs.size < y.size * 0.25
+                            else "moderate_replica_overlap"
+                        ),
+                        "recommendation": (
+                            "Kalibrationszeilen sind Replikate je Messobjekt "
+                            "(eindeutige Referenzwerte: {n_unique} auf {n_rows} "
+                            "Zeilen). Kreuzvalidierung kann Replikate desselben "
+                            "Objekts auf Train- und Testfold verteilen und R\u00b2 "
+                            "optimistisch machen. Empfohlene Option: Group-wise CV "
+                            "(Replikate je Objekt strikt in denselben Fold), um "
+                            "generalisierbare G\u00fcte zu messen."
+                        ).format(n_unique=int(unique_refs.size), n_rows=int(y.size)),
+                    }
 
             results["status"] = "ok"
             self.status = AgentStatus.COMPLETED

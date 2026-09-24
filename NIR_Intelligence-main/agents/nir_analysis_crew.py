@@ -788,11 +788,17 @@ class NIRAnalysisCrew:
                 result.warnings.append("Neural network analysis failed")
                 self.logger.warning("Neural network analysis failed")
 
-            # Step 3: Calibration (if requested)
+            # Step 3: Calibration (if requested). The calibration agent
+            # consumes the same supervised context (file-wide calibration
+            # samples + reference values) as the statistical and neural
+            # network agents; without them it reports no_reference although
+            # the dataset carries references (issue #67).
             if request.include_calibration:
                 self.logger.info("Performing calibration analysis...")
                 calibration_context = {
                     "spectral_data": request.spectral_data,
+                    "spectra": supervised_context["spectra"],
+                    "reference_values": supervised_context["reference_values"],
                     "sample_id": request.sample_id,
                     "metadata": request.metadata,
                 }

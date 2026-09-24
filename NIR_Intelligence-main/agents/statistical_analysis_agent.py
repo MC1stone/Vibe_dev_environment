@@ -51,6 +51,41 @@ def _extract_matrix(spectra: Any) -> Optional[np.ndarray]:
     return np.vstack(rows)
 
 
+def _replicate_structure_assessment(y: np.ndarray) -> Optional[Dict[str, Any]]:
+    """Detect replicate structure in calibration targets (learned from the
+    T4/T5 tomato comparison, issue #65 follow-up): few unique reference
+    values spread over many rows mean multiple spectra share one target
+    (replicas of the same object). Random KFold can then split replicas of
+    the same object across train and test folds, which inflates R^2. The
+    recommended fix is a group-wise CV keyed by the measured object - it
+    is only recommended here, never applied automatically."""
+    if y is None or y.size < 8:
+        return None
+    unique, counts = np.unique(y, return_counts=True)
+    if unique.size < 3:
+        return None
+    replicas_per_target = counts.mean()
+    if unique.size >= y.size * 0.9 or replicas_per_target < 2.0:
+        return None
+    return {
+        "unique_reference_values": int(unique.size),
+        "mean_replicas_per_reference": round(float(replicas_per_target), 2),
+        "max_replicas_per_reference": int(counts.max()),
+        "risk": (
+            "replica_overlap_in_cv"
+            if unique.size < y.size * 0.25 else "moderate_replica_overlap"
+        ),
+        "recommendation": (
+            "Kalibrationszeilen sind Replikate je Messobjekt (eindeutige "
+            "Referenzwerte: {n_unique} auf {n_rows} Zeilen). Kreuzvalidierung "
+            "kann Replikate desselben Objekts auf Train- und Testfold "
+            "verteilen und R\u00b2 optimistisch machen. Empfohlene Option: "
+            "Group-wise CV (Replikate je Objekt strikt in denselben Fold), "
+            "um generalisierbare G\u00fcte zu messen."
+        ).format(n_unique=int(unique.size), n_rows=int(y.size)),
+    }
+
+
 class StatisticalAnalysisAgent(BaseAgent):
     """Agent for performing statistical analysis on NIR data.
 
@@ -67,6 +102,7 @@ class StatisticalAnalysisAgent(BaseAgent):
         self.default_components = int(kwargs.get("default_components", 10))
         self.validation_method = kwargs.get("validation_method", "cross_validation")
         self.cv_folds = int(kwargs.get("cv_folds", 5))
+        self.random_state = int(kwargs.get("random_state", 42))
 
     def _run_pca(self, matrix: np.ndarray) -> Dict[str, Any]:
         from sklearn.decomposition import PCA
@@ -84,14 +120,21 @@ class StatisticalAnalysisAgent(BaseAgent):
 
     def _run_pls(self, matrix: np.ndarray, y: np.ndarray) -> Dict[str, Any]:
         from sklearn.cross_decomposition import PLSRegression
-        from sklearn.model_selection import cross_val_score
+        from sklearn.model_selection import KFold, cross_val_score
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
 
         n_components = int(min(self.default_components, matrix.shape[0] - 1, matrix.shape[1]))
-        pls = PLSRegression(n_components=max(1, n_components))
+        pipeline = Pipeline([
+            ("scaler", StandardScaler()),
+            ("pls", PLSRegression(n_components=max(1, n_components))),
+        ])
         folds = min(self.cv_folds, len(y))
-        scores = cross_val_score(pls, matrix, y, cv=folds, scoring="r2")
+        splitter = KFold(n_splits=folds, shuffle=True, random_state=self.random_state)
+        scores = cross_val_score(pipeline, matrix, y, cv=splitter, scoring="r2")
         return {
             "n_components": max(1, n_components),
+            "feature_scaling": "standardized",
             "r2_scores": [float(s) for s in scores],
             "mean_r2": float(np.mean(scores)),
             "validation": self.validation_method,
@@ -101,16 +144,19 @@ class StatisticalAnalysisAgent(BaseAgent):
     def _run_pcr(self, matrix: np.ndarray, y: np.ndarray) -> Dict[str, Any]:
         from sklearn.decomposition import PCA
         from sklearn.linear_model import LinearRegression
-        from sklearn.model_selection import cross_val_score
+        from sklearn.model_selection import KFold, cross_val_score
         from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
 
         n_components = int(min(self.default_components, matrix.shape[0] - 1, matrix.shape[1]))
         pipeline = Pipeline([
+            ("scaler", StandardScaler()),
             ("pca", PCA(n_components=max(1, n_components))),
             ("regression", LinearRegression()),
         ])
         folds = min(self.cv_folds, len(y))
-        scores = cross_val_score(pipeline, matrix, y, cv=folds, scoring="r2")
+        splitter = KFold(n_splits=folds, shuffle=True, random_state=self.random_state)
+        scores = cross_val_score(pipeline, matrix, y, cv=splitter, scoring="r2")
         return {
             "n_components": max(1, n_components),
             "r2_scores": [float(s) for s in scores],
@@ -186,6 +232,10 @@ class StatisticalAnalysisAgent(BaseAgent):
                 "data_points": int(matrix.shape[1]),
                 "method_results": {},
             }
+
+            replicate_assessment = _replicate_structure_assessment(y)
+            if replicate_assessment is not None:
+                results["replicate_structure"] = replicate_assessment
 
             if matrix.shape[0] == 1:
                 # Single spectrum: PCA/PLS/clustering need multiple samples.
