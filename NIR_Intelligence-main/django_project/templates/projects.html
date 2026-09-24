@@ -58,12 +58,10 @@
                                 <a href="/projects/{{ p.id }}/" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-file-earmark-text me-1"></i>Bericht
                                 </a>
-                                {% if p.phase == 'drafted' %}
                                 <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-project"
                                         data-project-id="{{ p.id }}" data-project-name="{{ p.name }}">
                                     <i class="bi bi-pencil-square me-1"></i>Bearbeiten
                                 </button>
-                                {% endif %}
                                 <button type="button" class="btn btn-sm btn-outline-danger btn-delete-project"
                                         data-project-id="{{ p.id }}" data-project-name="{{ p.name }}">
                                     <i class="bi bi-trash me-1"></i>Löschen
@@ -132,6 +130,9 @@
             <div class="modal-body">
                 <p class="text-muted small">Weitere Dateien auswählen - sie werden zum Projekt hinzugefügt und
                     der Vorbereitungsbericht wird neu aufgebaut. Bereits vorhandene Dateien werden übersprungen.</p>
+                <p class="text-muted small">Bei einem freigegebenen Projekt kehrt es durch das Hinzufügen neuer
+                    Messungen in die Vorbereitungsphase zurück und muss für eine neue Analyse erneut
+                    freigegeben werden.</p>
                 <div id="editProjectStatus" style="display:none;"></div>
                 <label for="editProjectFiles" class="form-label">Dateien (beliebiges Format)</label>
                 <input type="file" class="form-control" id="editProjectFiles" multiple>

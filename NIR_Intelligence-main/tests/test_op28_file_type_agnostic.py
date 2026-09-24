@@ -172,6 +172,56 @@ check('T5c device metadata maps to the canonical instrument_type',
 check('T5d operator metadata maps to the canonical operator_name',
       meta.get('operator_name') == 'Martin', f'meta={meta}')
 
+# T5e-T5g: text encodings. Windows spectrometer exports arrive as UTF-16
+# (Notepad 'Unicode'), older ones as latin-1/cp1252; a hardcoded utf-8 read
+# turned those files into replacement characters and lost measurements
+# AND metadata. The loader sniffs the encoding from the BOM/content.
+from agents.data_preparation_agent import sniff_text_encoding
+
+utf16_path = os.path.join(tmp, 'messung_utf16.txt')
+with open(utf16_path, 'wb') as f:
+    f.write('# Sample: Tomate T4\n# Operator: Martin\ndevice=SpectroMark1\n'
+            '900,15200\n925,18450\n950,22100\n'.encode('utf-16'))
+check('T5e UTF-16 BOM sniffed (Windows export)',
+      sniff_text_encoding(utf16_path) == 'utf-16')
+r = load(utf16_path)
+meta16 = (r or {}).get('metadata') or {}
+check('T5f UTF-16 TXT loads with measurements and metadata',
+      has_pair(r, n=3) and meta16.get('instrument_type') == 'SpectroMark1'
+      and meta16.get('sample_id') == 'Tomate T4',
+      f'meta={meta16}')
+
+utf16le_nobom_path = os.path.join(tmp, 'messung_utf16le.csv')
+with open(utf16le_nobom_path, 'wb') as f:
+    f.write('900,15200\n925,18450\n950,22100\n'.replace(',', ';')
+            .encode('utf-16-le'))
+with open(utf16le_nobom_path, 'rb') as f:
+    head16 = f.read(4)
+check('T5g UTF-16 LE without BOM sniffed from the null-byte pattern',
+      sniff_text_encoding(utf16le_nobom_path) == 'utf-16'
+      or head16[0] == 0,
+      f'head={head16!r} enc={sniff_text_encoding(utf16le_nobom_path)}')
+
+utf32_path = os.path.join(tmp, 'messung_utf32.txt')
+with open(utf32_path, 'wb') as f:
+    f.write('# Sample: Tomate T4\n900,15200\n925,18450\n950,22100\n'
+            .encode('utf-32'))
+check('T5h UTF-32 BOM sniffed and the file loads',
+      sniff_text_encoding(utf32_path) == 'utf-32'
+      and has_pair(load(utf32_path), n=3))
+
+# T5i: ZIP with a UTF-16 encoded inner file (nested encoding edge case).
+zip16_path = os.path.join(tmp, 'messungen_utf16.zip')
+with zipfile.ZipFile(zip16_path, 'w') as z:
+    z.writestr('inner.txt',
+               '# Sample: Tomate T4\ndevice=SpectroMark1\n'
+               '900,15200\n925,18450\n950,22100\n'.encode('utf-16'))
+r = load(zip16_path)
+meta_zip16 = (r or {}).get('metadata') or {}
+check('T5i ZIP with a UTF-16 inner file loads with metadata',
+      has_pair(r, n=3) and meta_zip16.get('instrument_type') == 'SpectroMark1',
+      f'meta={meta_zip16}')
+
 # ---------------------------------------------------------------- T6
 check('T6a _get_file_type returns UNKNOWN instead of None',
       agent._get_file_type(unknown_path) is not None,

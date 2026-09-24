@@ -7,10 +7,11 @@
 #   stay (they may be shared by other projects); persisted
 #   SpectrumRecords stay (SET_NULL on the project link), the spectral
 #   database is not damaged by a deletion.
-# - an edit button (drafted phase only) that uploads further files and
-#   attaches them to the project; the preparation report is rebuilt so
-#   the report page reflects the new files immediately. Released
-#   projects are frozen (400).
+# - an edit button (every phase) that uploads further files and attaches
+#   them to the project; the preparation report is rebuilt so the report
+#   page reflects the new files immediately. Adding files to a
+#   released/completed project moves it back to the drafted phase so the
+#   user re-releases after reviewing the new measurements.
 import json
 import sys
 from pathlib import Path
@@ -146,9 +147,9 @@ check("T4a ProjectFilesAddView exists", "class ProjectFilesAddView" in views_src
 check("T4b files/add route wired",
       "path('<uuid:project_id>/files/add/'" in urls_src
       and "ProjectFilesAddView" in urls_src)
-check("T4c edit button in the list (drafted only)",
+check("T4c edit button in the list (all phases, no phase guard)",
       "btn-edit-project" in projects_tpl
-      and "{% if p.phase == 'drafted' %}" in projects_tpl)
+      and "{% if p.phase == 'drafted' %}\n                                <button type=\"button\" class=\"btn btn-sm btn-outline-secondary btn-edit-project\"" not in projects_tpl)
 check("T4d edit modal posts to files/add route",
       "projectFilesAddModal" in projects_tpl
       and "/files/add/'" in projects_tpl)
@@ -210,7 +211,10 @@ released_project = AnalysisProject.objects.create(
 resp = c.post(f"/projects/{released_project.id}/files/add/",
               data=json.dumps({'file_ids': file_ids}),
               content_type='application/json')
-check("T4l released project frozen (400)", resp.status_code == 400)
+check("T4l released project editable: files added, phase back to drafted",
+      resp.status_code == 200
+      and AnalysisProject.objects.get(id=released_project.id).phase == 'drafted',
+      str(resp.status_code))
 
 runner.teardown_databases(old_config)
 

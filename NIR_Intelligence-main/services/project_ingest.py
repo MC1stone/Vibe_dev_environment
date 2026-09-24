@@ -31,7 +31,9 @@ def _detect_wide_format(file_path: str) -> Dict[str, Any] | None:
     path = Path(file_path)
     if not path.exists():
         return None
-    text = path.read_text(encoding='utf-8', errors='replace')
+    from agents.data_preparation_agent import sniff_text_encoding
+    text = path.read_text(encoding=sniff_text_encoding(str(path)),
+                          errors='replace')
     lines = text.splitlines()
 
     header_row, header_fields, delimiter = None, None, None
@@ -54,9 +56,11 @@ def _detect_wide_format(file_path: str) -> Dict[str, Any] | None:
         return None
 
     try:
+        from agents.data_preparation_agent import sniff_text_encoding
         df = pd.read_csv(path, sep=delimiter, header=header_row, dtype=str,
                          engine='python', on_bad_lines='skip',
-                         skip_blank_lines=False)
+                         skip_blank_lines=False,
+                         encoding=sniff_text_encoding(str(path)))
         df = df.dropna(how='all')
     except Exception:
         return None
