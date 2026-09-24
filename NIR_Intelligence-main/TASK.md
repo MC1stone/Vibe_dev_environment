@@ -3,7 +3,65 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP27 - .deb Package and systemd Service
+## Current Task: OP28 - File-Type Agnostic Data Loading (MO 1)
+
+### Objective
+
+MO 1 requires raw data import independent of the file format, but the
+platform still rejected files by extension at three levels: the Django
+spectrum upload accepted only .txt/.csv/.json/.h5/.hdf5 (HTTP 400 for
+everything else), the data-preparation loader hard-dispatched seven
+extensions and logged 'Unsupported spectral file format' for anything
+else (even .hdf5 had no loader), and the MCP ingest required a single
+wavelength/intensity column pair, so wide measurement matrices were not
+ingestable. OP28 removes all extension gates and makes the search for
+measurement values and metadata content-driven.
+
+### Scope
+
+- `agents/data_preparation_agent.py`: `_load_spectral_data` never rejects
+  a file - the extension picks a dedicated fast-path parser (.hdf5 alias
+  and YAML/XML/Excel/Parquet/Feather added), and any file (unknown or no
+  extension, failed fast path) goes through the new content-driven chain
+  `_load_content_driven`: archive -> HDF5 -> SPC/MAT binary magic -> Excel
+  -> Parquet/Feather -> JSON -> YAML/XML -> generic table parse -> line-
+  filtered extraction -> raw number extraction. Metadata is searched in
+  every text file (`_extract_text_metadata`: comment lines, 'Key: Value',
+  'Key = Value'; aliases map to the canonical platform fields). Batch
+  discovery and `_get_file_type` no longer skip unknown files (UNKNOWN
+  instead of None).
+- `agents/mcp_agent.py`: `_ingest` detects wide measurement matrices
+  (channel columns '<prefix>_<wavelength>', same rule as the ingest
+  service) BEFORE pair extraction, validates candidate wavelength axes
+  (ascending, >10 nm span) so reference values (Brix) are never misread
+  as wavelengths, scans all column pairs when the named pair yields
+  nothing, and reports the matrix layout honestly.
+- `services/mcp_data_server.py`: ingest tool description updated (any
+  format, content inspection)
+- `django_project/api/views.py`: upload whitelist removed (every file
+  type accepted); `_parse_spectrum_file` uses the content-driven loader
+  instead of the '#'-header-only TXT reader
+- `django_project/templates/analysis.html`, `spectra.html`,
+  `static/js/analysis.js`: accept-restrictions and file-type hints removed
+- `tests/test_op28_file_type_agnostic.py` (23 checks) + CI matrix extended
+
+### Out of Scope
+
+- Binary image/audio parsing beyond the existing agents (no measurements
+  in PNG/JPG/WAV/MP3 for the spectral pipeline)
+- The legacy `generic_file_handler_agent.py` (orthogonal metadata
+  extraction; untouched)
+
+### Success Criteria
+
+- Every file type is accepted at upload; no extension whitelist remains
+- Measurements and metadata are found in known, unknown and extensionless
+  files (XLSX, Parquet, Feather, YAML, XML, ZIP, .dat, no extension)
+- A file with no extractable measurements returns an honest error/None,
+  never invented values
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP27 - .deb Package and systemd Service
 
 ### Objective
 The OP26 ansible playbook expects `nir_intelligence_main.deb` (or a tar.gz

@@ -7,8 +7,11 @@
 
 import math
 import os
+import re
 import tempfile
-from typing import Any, Dict, List, Optional
+
+import pandas as pd
+from typing import Any, Dict, List, Optional, Tuple
 
 from .base_agent import AgentOutput, AgentStatus, BaseAgent, ErrorSeverity
 
@@ -92,7 +95,11 @@ class MCPAgent(BaseAgent):
         Reuses the S3 format-agnostic loader (all file formats, all
         spectrometers): loads the file, extracts metadata and the unified
         spectral schema, and emits the clean wavelengths/intensities pairs
-        the statistical analysis agents consume.
+        the statistical analysis agents consume. When the file contains no
+        single wavelength/intensity pair but a wide measurement table
+        (one row per measurement, one column per channel), the measurement
+        matrix is extracted instead, so every file with measurable values
+        is ingestable (MO 1).
         """
         file_path = str(context.get("file_path", "")).strip()
         if not file_path:
@@ -121,53 +128,167 @@ class MCPAgent(BaseAgent):
             }
 
         df = spectral["data"]
+        metadata = dict(spectral.get("metadata") or {})
+
+        # Multi-channel (wide-format) exports first, same detection rule as
+        # the ingest service (services/project_ingest.py): channel columns
+        # named '<prefix>_<wavelength>' (A_410, B_435, ch_410nm, 680nm).
+        # Such a file has one row per measurement and no single spectral
+        # axis, so the pair extraction below must not run.
+        channel_re = re.compile(r"^(?:[A-Za-z]{1,3}_)?(\d{2,5})\s*n?m?$",
+                                re.IGNORECASE)
+        channel_cols = [c for c in df.columns
+                        if channel_re.match(str(c).strip())]
+        if len(channel_cols) >= 3:
+            numeric_cols = [c for c in df.columns
+                            if pd.api.types.is_numeric_dtype(df[c])]
+            matrix = df[numeric_cols].apply(pd.to_numeric, errors="coerce")
+            usable = matrix.dropna(how="all")
+            measurements = []
+            for row in usable.to_numpy(dtype=float, na_value=float("nan")):
+                values = [float(v) for v in row
+                          if not (isinstance(v, float) and math.isnan(v))
+                          and math.isfinite(v)]
+                if values:
+                    measurements.append(values)
+            if measurements:
+                metadata["dataset_layout"] = "wide_measurement_matrix"
+                return {
+                    "operation": "ingest",
+                    "file_path": file_path,
+                    "format": spectral.get("format"),
+                    "source_file": os.path.basename(file_path),
+                    "status": "ok",
+                    "metadata": metadata,
+                    "wavelength_column": None,
+                    "intensity_column": None,
+                    "prepared_dataset": {
+                        "channels": [str(c) for c in numeric_cols],
+                        "num_channels": len(numeric_cols),
+                        "num_measurements": len(measurements),
+                        "measurements": measurements,
+                        "wavelength_unit": "channel_index",
+                        "ready_for": "statistical_analysis",
+                    },
+                }
+
+        def _finite_pairs(wl_col: Any, it_col: Any) -> List[Tuple[float, float]]:
+            pairs: List[Tuple[float, float]] = []
+            for wl_raw, it_raw in zip(df[wl_col].tolist(), df[it_col].tolist()):
+                wl = EnhancedDataPreparationAgent._normalise_decimal_string(wl_raw)
+                it = EnhancedDataPreparationAgent._normalise_decimal_string(it_raw)
+                try:
+                    wl_f, it_f = float(wl), float(it)
+                except (TypeError, ValueError):
+                    continue
+                if math.isfinite(wl_f) and math.isfinite(it_f):
+                    pairs.append((wl_f, it_f))
+            return pairs
+
         wavelength_col = spectral.get("wavelength_column")
         intensity_col = spectral.get("intensity_column")
-        if wavelength_col not in df.columns or intensity_col not in df.columns:
+        pairs: List[Tuple[float, float]] = []
+
+        def _is_spectral_axis(values: List[float]) -> bool:
+            """A real spectral axis ascends and spans at least 10 nm (or
+            the equivalent in um / cm-1 scaled exports). Reference-value
+            columns (Brix, sugar) and channel runs fail this check and
+            route the file to the measurement-matrix extraction."""
+            if len(values) < 2:
+                return False
+            if not all(b > a for a, b in zip(values, values[1:])):
+                return False
+            return (values[-1] - values[0]) > 10.0
+
+        if wavelength_col in df.columns and intensity_col in df.columns:
+            candidates = _finite_pairs(wavelength_col, intensity_col)
+            if candidates and _is_spectral_axis([p[0] for p in candidates]):
+                pairs = candidates
+
+        # The loader picks columns by name patterns and heuristics; exotic
+        # exports can defeat that guess. Scan ALL column pairs and keep
+        # the most plausible spectral pair.
+        if not pairs and len(df.columns) >= 2:
+            for wl_col in df.columns:
+                for it_col in df.columns:
+                    if wl_col == it_col:
+                        continue
+                    candidate = _finite_pairs(wl_col, it_col)
+                    if not candidate:
+                        continue
+                    wls = [p[0] for p in candidate]
+                    if not _is_spectral_axis(wls):
+                        continue
+                    its = [p[1] for p in candidate]
+                    if its == sorted(its) and all(
+                            abs(b - a) <= 1e-9 for a, b in zip(its, its[1:])):
+                        continue
+                    if len(candidate) > len(pairs):
+                        pairs = candidate
+                        wavelength_col, intensity_col = wl_col, it_col
+
+        if pairs:
+            wavelengths = [p[0] for p in pairs]
+            intensities = [p[1] for p in pairs]
             return {
                 "operation": "ingest",
                 "file_path": file_path,
-                "status": "error",
-                "error": "wavelength/intensity columns not found",
+                "format": spectral.get("format"),
+                "source_file": os.path.basename(file_path),
+                "status": "ok",
+                "metadata": metadata,
+                "wavelength_column": wavelength_col,
+                "intensity_column": intensity_col,
+                "prepared_dataset": {
+                    "wavelengths": wavelengths,
+                    "intensities": intensities,
+                    "num_points": len(wavelengths),
+                    "wavelength_unit": "nm",
+                    "ready_for": "statistical_analysis",
+                },
             }
 
-        wavelengths, intensities = [], []
-        for wl_raw, it_raw in zip(df[wavelength_col].tolist(),
-                                  df[intensity_col].tolist()):
-            wl = EnhancedDataPreparationAgent._normalise_decimal_string(wl_raw)
-            it = EnhancedDataPreparationAgent._normalise_decimal_string(it_raw)
-            try:
-                wl_f, it_f = float(wl), float(it)
-            except (TypeError, ValueError):
-                continue
-            if math.isfinite(wl_f) and math.isfinite(it_f):
-                wavelengths.append(wl_f)
-                intensities.append(it_f)
-
-        if not wavelengths:
-            return {
-                "operation": "ingest",
-                "file_path": file_path,
-                "status": "error",
-                "error": "no finite spectral values",
-            }
+        # No wavelength/intensity pair anywhere: search the file for a
+        # wide measurement matrix (one row per measurement, one column
+        # per channel) so multi-channel exports are ingestable too.
+        numeric_cols = [c for c in df.columns
+                        if pd.api.types.is_numeric_dtype(df[c])]
+        if len(numeric_cols) >= 2:
+            matrix = df[numeric_cols].apply(pd.to_numeric, errors="coerce")
+            usable = matrix.dropna(how="all")
+            measurements = []
+            for row in usable.to_numpy(dtype=float, na_value=float("nan")):
+                values = [float(v) for v in row
+                          if not (isinstance(v, float) and math.isnan(v))
+                          and math.isfinite(v)]
+                if values:
+                    measurements.append(values)
+            if measurements:
+                metadata["dataset_layout"] = "wide_measurement_matrix"
+                return {
+                    "operation": "ingest",
+                    "file_path": file_path,
+                    "format": spectral.get("format"),
+                    "source_file": os.path.basename(file_path),
+                    "status": "ok",
+                    "metadata": metadata,
+                    "wavelength_column": None,
+                    "intensity_column": None,
+                    "prepared_dataset": {
+                        "channels": [str(c) for c in numeric_cols],
+                        "num_channels": len(numeric_cols),
+                        "num_measurements": len(measurements),
+                        "measurements": measurements,
+                        "wavelength_unit": "channel_index",
+                        "ready_for": "statistical_analysis",
+                    },
+                }
 
         return {
             "operation": "ingest",
             "file_path": file_path,
-            "format": spectral.get("format"),
-            "source_file": os.path.basename(file_path),
-            "status": "ok",
-            "metadata": spectral.get("metadata") or {},
-            "wavelength_column": wavelength_col,
-            "intensity_column": intensity_col,
-            "prepared_dataset": {
-                "wavelengths": wavelengths,
-                "intensities": intensities,
-                "num_points": len(wavelengths),
-                "wavelength_unit": "nm",
-                "ready_for": "statistical_analysis",
-            },
+            "status": "error",
+            "error": "no finite spectral values",
         }
 
     def _probe_tool(self, tool: Dict[str, Any], timeout: int = 5) -> Dict[str, Any]:

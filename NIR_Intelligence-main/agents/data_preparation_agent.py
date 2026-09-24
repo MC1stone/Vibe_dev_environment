@@ -30,22 +30,37 @@ class DataQualityGrade(Enum):
 
 
 class FileType(Enum):
-    """Supported file types for NIR data"""
+    """Known file types for NIR data.
+
+    The platform is file-type agnostic (MO 1): files are categorised by
+    content inspection, not by extension whitelists. This enum only lists
+    the extensions with a KNOWN, dedicated parser so the known formats keep
+    their fast path; every other file (any extension, no extension at all)
+    still goes through the content-driven fallback chain in
+    _load_spectral_data.
+    """
     CSV = ".csv"
     JSON = ".json"
     HDF5 = ".h5"
+    HDF5_ALT = ".hdf5"
     JDX = ".jdx"
     SPC = ".spc"
     TXT = ".txt"
+    MAT = ".mat"
+    XLSX = ".xlsx"
+    XLS = ".xls"
+    PARQUET = ".parquet"
+    FEATHER = ".feather"
+    XML = ".xml"
+    YAML = ".yaml"
+    YML = ".yml"
     ZIP = ".zip"
     PNG = ".png"
     JPG = ".jpg"
     JPEG = ".jpeg"
     WAV = ".wav"
     MP3 = ".mp3"
-    XML = ".xml"
-    YAML = ".yaml"
-    YML = ".yml"
+    UNKNOWN = ""
 
 
 @dataclass
@@ -86,9 +101,14 @@ class ParameterRecommendation:
 class EnhancedDataPreparationAgent(BaseAgent):
     """Enhanced agent for preparing NIR spectroscopy data with comprehensive quality assessment"""
 
-    # Supported file extensions
-    SPECTRAL_EXTENSIONS = [".csv", ".json", ".h5", ".jdx", ".spc", ".txt", ".mat"]
-    METADATA_EXTENSIONS = [".json", ".xml", ".yaml", ".yml"]
+    # Extensions with a KNOWN dedicated parser. NOT a whitelist: the
+    # spectral loading itself is content-driven and accepts any file (MO 1,
+    # file-type agnostic import). _get_file_type returns UNKNOWN for
+    # everything else so _process_single_file still routes those files
+    # into the content-driven loader instead of skipping them.
+    SPECTRAL_EXTENSIONS = [".csv", ".json", ".h5", ".hdf5", ".jdx", ".spc", ".txt",
+                           ".mat", ".xlsx", ".xls", ".parquet", ".feather"]
+    METADATA_EXTENSIONS = [".xml", ".yaml", ".yml"]
     IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"]
     AUDIO_EXTENSIONS = [".wav", ".mp3"]
     ARCHIVE_EXTENSIONS = [".zip"]
@@ -200,32 +220,41 @@ class EnhancedDataPreparationAgent(BaseAgent):
         return list(set(required_fields))
 
     def _get_file_type(self, file_path: str) -> Optional[FileType]:
-        """Determine the type of a file based on its extension"""
+        """Determine the type of a file based on its extension.
+
+        File-type agnostic (MO 1): unknown extensions and files without an
+        extension are NOT rejected. They are returned as UNKNOWN so the
+        processing pipeline hands them to the content-driven spectral
+        loader, which decides by content (binary magic, JSON/YAML/XML
+        structure, table shape, raw numbers) whether measurements and
+        metadata can be extracted.
+        """
         ext = os.path.splitext(file_path)[1].lower()
         
-        if ext in self.SPECTRAL_EXTENSIONS:
-            return FileType(ext)
-        elif ext in self.METADATA_EXTENSIONS:
-            if ext == ".json":
-                return FileType.JSON
-            elif ext == ".xml":
-                return FileType.XML
-            elif ext in [".yaml", ".yml"]:
-                return FileType.YAML
-        elif ext in self.IMAGE_EXTENSIONS:
-            if ext == ".png":
-                return FileType.PNG
-            elif ext in [".jpg", ".jpeg"]:
-                return FileType.JPG
-        elif ext in self.AUDIO_EXTENSIONS:
-            if ext == ".wav":
-                return FileType.WAV
-            elif ext == ".mp3":
-                return FileType.MP3
-        elif ext in self.ARCHIVE_EXTENSIONS:
-            return FileType.ZIP
+        try:
+            if ext in self.SPECTRAL_EXTENSIONS:
+                return FileType(ext)
+            elif ext in self.METADATA_EXTENSIONS:
+                if ext == ".xml":
+                    return FileType.XML
+                elif ext in [".yaml", ".yml"]:
+                    return FileType.YAML
+            elif ext in self.IMAGE_EXTENSIONS:
+                if ext == ".png":
+                    return FileType.PNG
+                elif ext in [".jpg", ".jpeg"]:
+                    return FileType.JPG
+            elif ext in self.AUDIO_EXTENSIONS:
+                if ext == ".wav":
+                    return FileType.WAV
+                elif ext == ".mp3":
+                    return FileType.MP3
+            elif ext in self.ARCHIVE_EXTENSIONS:
+                return FileType.ZIP
+        except ValueError:
+            return FileType.UNKNOWN
         
-        return None
+        return FileType.UNKNOWN
 
     def _validate_input_directory(self) -> bool:
         """Validate input directory exists and contains files"""
@@ -240,18 +269,25 @@ class EnhancedDataPreparationAgent(BaseAgent):
         all_extensions = (self.SPECTRAL_EXTENSIONS + self.METADATA_EXTENSIONS + 
                         self.IMAGE_EXTENSIONS + self.AUDIO_EXTENSIONS + self.ARCHIVE_EXTENSIONS)
         
+        # File-type agnostic discovery (MO 1): EVERY file in the input
+        # directory is a candidate; the content-driven loader decides by
+        # content whether measurements/metadata can be extracted. The
+        # known-extension list above is only used for the type label, not
+        # as a whitelist.
         files = [
-            f for f in os.listdir(self.input_directory) 
-            if any(f.lower().endswith(ext) for ext in all_extensions)
+            f for f in os.listdir(self.input_directory)
+            if os.path.isfile(os.path.join(self.input_directory, f))
+            and not f.startswith('.')
         ]
         
         if not files:
             self.log_error(
-                f"No supported data files found in {self.input_directory}",
+                f"No data files found in {self.input_directory}",
                 ErrorSeverity.CRITICAL,
                 {
-                    "suggested_fix": f"Place supported files in {self.input_directory}",
-                    "supported_extensions": all_extensions
+                    "suggested_fix": f"Place data files in {self.input_directory}",
+                    "note": "Any file type is accepted; content is inspected to decide",
+                    "known_extensions": all_extensions
                 }
             )
             return False
@@ -295,31 +331,638 @@ class EnhancedDataPreparationAgent(BaseAgent):
             return None
 
     def _load_spectral_data(self, file_path: str) -> Optional[Dict[str, Any]]:
-        """Load spectral data from various file formats"""
+        """Load measurement values and metadata from ANY file (MO 1).
+
+        File-type agnostic strategy: the extension picks the dedicated
+        fast-path parser when one exists, but never rejects a file. Any
+        file - a known extension whose parser fails, an unknown extension,
+        no extension at all - goes through the content-driven chain
+        (_load_content_driven), which searches the file for measurements
+        and metadata by content. Returns the unified spectral schema
+        (data/metadata/format/wavelength_column/intensity_column) or None
+        when the file contains no extractable measurements.
+        """
         try:
             file_ext = os.path.splitext(file_path)[1].lower()
             
             if file_ext == ".csv":
-                return self._load_csv_spectral(file_path)
+                result = self._load_csv_spectral(file_path)
             elif file_ext == ".json":
-                return self._load_json_spectral(file_path)
-            elif file_ext == ".h5":
-                return self._load_hdf5_spectral(file_path)
+                result = self._load_json_spectral(file_path)
+            elif file_ext in (".h5", ".hdf5"):
+                result = self._load_hdf5_spectral(file_path)
             elif file_ext in (".jdx", ".txt"):
-                return self._load_text_spectral(file_path)
+                result = self._load_text_spectral(file_path)
             elif file_ext == ".spc":
-                return self._load_spc_spectral(file_path)
+                result = self._load_spc_spectral(file_path)
             elif file_ext == ".mat":
-                return self._load_mat_spectral(file_path)
+                result = self._load_mat_spectral(file_path)
+            elif file_ext in (".xlsx", ".xls"):
+                result = self._load_excel_spectral(file_path)
+            elif file_ext in (".parquet", ".feather"):
+                result = self._load_parquet_spectral(file_path)
+            elif file_ext in (".yaml", ".yml"):
+                result = self._load_yaml_spectral(file_path)
+            elif file_ext == ".xml":
+                result = self._load_xml_spectral(file_path)
             else:
-                self.log_error(f"Unsupported spectral file format: {file_ext}", 
-                             ErrorSeverity.MEDIUM, {"file": file_path})
-                return None
+                result = None
+            
+            if result is not None and result.get("data") is not None \
+                    and len(result["data"]) > 0:
+                return result
+            
+            self.logger.info(
+                "Extension-based load yielded no data; trying content-driven "
+                "fallback chain: %s", file_path,
+            )
+            return self._load_content_driven(file_path)
                 
         except Exception as e:
             self.log_error(f"Failed to load spectral data from {file_path}: {str(e)}", 
                          ErrorSeverity.MEDIUM)
             return None
+
+    # Maximum number of files extracted from an archive that are scanned
+    # for spectral content (recursion guard for nested archives).
+    _MAX_ARCHIVE_CANDIDATES = 50
+
+    _WAVELENGTH_PATTERNS = ['wavelength', 'wave', 'lambda', 'nm', 'wavenumber',
+                            'wellenlaenge', 'wellenlänge', 'messung']
+    _INTENSITY_PATTERNS = ['intensity', 'absorbance', 'reflectance', 'transmittance', 'value',
+                           'intensitaet', 'intensität', 'absorption', 'reflexion',
+                           'transmission', 'rohwert', 'signal']
+
+    @staticmethod
+    def _is_tar_like(file_path: str, ext: str) -> bool:
+        if ext in (".tar", ".tar.gz", ".tgz", ".gz", ".bz2", ".xz"):
+            return True
+        try:
+            import tarfile
+            return tarfile.is_tarfile(file_path)
+        except Exception:
+            return False
+
+    def _load_content_driven(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Search ANY file for measurements and metadata, by content.
+
+        The chain runs regardless of the extension (MO 1 - every file is
+        a candidate): archive -> HDF5 -> SPC/MAT binary magic -> Excel
+        -> Parquet/Feather -> JSON -> YAML/XML -> generic table parse ->
+        raw number extraction. The first stage that yields usable
+        measurement rows wins; metadata is collected along the way.
+        Returns None only when no stage found measurements.
+        """
+        if not os.path.isfile(file_path):
+            return None
+
+        ext = os.path.splitext(file_path)[1].lower()
+        collected_metadata: Dict[str, Any] = {}
+
+        def _accepts(partial: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+            try:
+                if partial and partial.get("data") is not None and len(partial["data"]) > 0:
+                    for key, value in (partial.get("metadata") or {}).items():
+                        collected_metadata.setdefault(key, value)
+                    return partial
+            except Exception:
+                return None
+            return None
+
+        def _try(stage) -> Optional[Dict[str, Any]]:
+            """Run one content stage; a parse error means 'not this format',
+            never the end of the chain."""
+            try:
+                return _accepts(stage())
+            except Exception:
+                return None
+
+        if zipfile.is_zipfile(file_path) or self._is_tar_like(file_path, ext):
+            for candidate in self._extract_archive_candidates(file_path):
+                nested = self._load_spectral_data(candidate)
+                if nested is not None and nested.get("data") is not None \
+                        and len(nested["data"]) > 0:
+                    nested["source_file"] = file_path
+                    nested["extracted_from"] = candidate
+                    for key, value in (nested.get("metadata") or {}).items():
+                        collected_metadata.setdefault(key, value)
+                    nested["metadata"] = collected_metadata
+                    return nested
+
+        if ext not in (".h5", ".hdf5"):
+            partial = _try(lambda: self._load_hdf5_spectral(file_path))
+            if partial is not None:
+                partial["metadata"] = collected_metadata
+                return partial
+
+        if ext not in (".spc", ".mat"):
+            try:
+                with open(file_path, "rb") as probe:
+                    magic = probe.read(4)
+            except OSError:
+                magic = b""
+            if len(magic) >= 4 and magic[2:4] == b"SP":
+                partial = _try(lambda: self._load_spc_spectral(file_path))
+                if partial is not None:
+                    partial["metadata"] = collected_metadata
+                    return partial
+            elif magic.startswith(b"MAT"):
+                partial = _try(lambda: self._load_mat_spectral(file_path))
+                if partial is not None:
+                    partial["metadata"] = collected_metadata
+                    return partial
+
+        if ext not in (".xlsx", ".xls"):
+            partial = _try(lambda: self._load_excel_spectral(file_path))
+            if partial is not None:
+                partial["metadata"] = collected_metadata
+                return partial
+
+        if ext not in (".parquet", ".feather"):
+            partial = _try(lambda: self._load_parquet_spectral(file_path))
+            if partial is not None:
+                partial["metadata"] = collected_metadata
+                return partial
+
+        partial = _try(lambda: self._load_json_spectral(file_path))
+        if partial is not None:
+            partial["metadata"] = collected_metadata
+            return partial
+
+        partial = _try(lambda: self._load_yaml_spectral(file_path))
+        if partial is not None:
+            partial["metadata"] = collected_metadata
+            return partial
+
+        partial = _try(lambda: self._load_xml_spectral(file_path))
+        if partial is not None:
+            partial["metadata"] = collected_metadata
+            return partial
+
+        partial = _try(lambda: self._load_table_spectral(file_path))
+        if partial is not None:
+            partial["metadata"] = collected_metadata
+            return partial
+
+        partial = _try(lambda: self._raw_number_extraction(file_path))
+        if partial is not None:
+            partial["metadata"] = collected_metadata
+            return partial
+
+        return None
+
+    def _extract_archive_candidates(self, file_path: str) -> List[str]:
+        """Extract an archive (zip/tar) and return paths of candidate files
+        whose content is scanned for measurements and metadata. Never
+        raises; an unreadable or empty archive returns []."""
+        candidates: List[str] = []
+        extract_dir = os.path.join(
+            self.temp_directory, "content_scan",
+            os.path.splitext(os.path.basename(file_path))[0],
+        )
+        try:
+            os.makedirs(extract_dir, exist_ok=True)
+            if zipfile.is_zipfile(file_path):
+                with zipfile.ZipFile(file_path, "r") as zip_ref:
+                    total_size = sum(info.file_size for info in zip_ref.infolist())
+                    if total_size > self.max_file_size:
+                        self.log_error(
+                            f"ZIP file too large: {total_size} bytes > {self.max_file_size} bytes",
+                            ErrorSeverity.MEDIUM)
+                        return []
+                    zip_ref.extractall(extract_dir)
+            else:
+                import tarfile
+                with tarfile.open(file_path, "r:*") as tar_ref:
+                    safe_members = []
+                    total_size = 0
+                    for member in tar_ref.getmembers():
+                        if not member.isfile():
+                            continue
+                        total_size += member.size
+                        if total_size > self.max_file_size:
+                            self.log_error(
+                                f"Archive too large: {file_path}",
+                                ErrorSeverity.MEDIUM)
+                            return []
+                        safe_members.append(member)
+                    try:
+                        tar_ref.extractall(extract_dir, members=safe_members,
+                                           filter="data")
+                    except TypeError:
+                        tar_ref.extractall(extract_dir, members=safe_members)
+            for root, _dirs, files in os.walk(extract_dir):
+                for name in files:
+                    candidates.append(os.path.join(root, name))
+        except Exception as e:
+            self.logger.warning(f"Archive extraction failed for {file_path}: {e}")
+            return []
+        return candidates[:self._MAX_ARCHIVE_CANDIDATES]
+
+    def _load_excel_spectral(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Load measurement values from Excel workbooks (.xlsx/.xls).
+
+        Scans every sheet for a table with two or more numeric columns,
+        reuses the shared column identification, and collects non-spectral
+        cells as metadata. Requires openpyxl/xlrd; without them the
+        content-driven fallback chain takes over. Never raises."""
+        try:
+            xls = pd.ExcelFile(file_path)
+        except Exception as e:
+            self.logger.info(f"Excel parse failed ({e}); fallback chain: {file_path}")
+            return None
+
+        for sheet in xls.sheet_names:
+            try:
+                df = xls.parse(sheet)
+            except Exception:
+                continue
+            if df is None or df.empty or df.shape[1] < 2:
+                continue
+            coerced = df.apply(lambda col: col if pd.api.types.is_numeric_dtype(col)
+                               else pd.to_numeric(col, errors="coerce"))
+            if not (coerced.notna().sum(axis=1) >= 2).any():
+                continue
+            df = self._identify_spectral_columns(df)
+            if df is None:
+                continue
+            metadata = self._extract_metadata_from_dataframe(df)
+            metadata["excel_sheet"] = sheet
+            return {
+                "data": df,
+                "source_file": file_path,
+                "format": os.path.splitext(file_path)[1].lower(),
+                "wavelength_column": self._wavelength_col_of(df),
+                "intensity_column": self._intensity_col_of(df),
+                "metadata": metadata,
+            }
+        return None
+
+    def _load_parquet_spectral(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Load measurement values from Parquet (.parquet) and Feather
+        (.feather) columnar files. Requires pyarrow; without it the
+        content-driven fallback chain takes over. Never raises."""
+        try:
+            if file_path.lower().endswith(".feather"):
+                df = pd.read_feather(file_path)
+            else:
+                df = pd.read_parquet(file_path)
+        except Exception as e:
+            self.logger.info(f"Parquet/Feather parse failed ({e}); fallback chain: {file_path}")
+            return None
+        if df is None or df.empty or df.shape[1] < 2:
+            return None
+        df = self._identify_spectral_columns(df)
+        if df is None:
+            return None
+        return {
+            "data": df,
+            "source_file": file_path,
+            "format": os.path.splitext(file_path)[1].lower(),
+            "wavelength_column": self._wavelength_col_of(df),
+            "intensity_column": self._intensity_col_of(df),
+            "metadata": self._extract_metadata_from_dataframe(df),
+        }
+
+    def _identify_spectral_columns(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
+        """Identify wavelength/intensity columns in an arbitrary table.
+
+        Shared by the Excel/Parquet/Feather/YAML/XML/table loaders: name
+        patterns first (same multilingual lists as the CSV loader), then
+        numeric heuristics, then positional fallback. Renames the chosen
+        columns to the unified 'wavelength'/'intensity' names so callers
+        always get the unified schema. Returns a copy with the columns
+        set, or None when no plausible pair exists."""
+        df = df.copy()
+        wavelength_col = None
+        intensity_col = None
+        for col in df.columns:
+            col_lower = str(col).lower()
+            if any(pattern in col_lower for pattern in self._WAVELENGTH_PATTERNS):
+                wavelength_col = col
+            elif any(pattern in col_lower for pattern in self._INTENSITY_PATTERNS):
+                intensity_col = col
+        if not wavelength_col and not intensity_col:
+            numeric_cols = [c for c in df.columns
+                            if pd.api.types.is_numeric_dtype(df[c])]
+            if len(numeric_cols) >= 2:
+                wavelength_col, intensity_col = numeric_cols[0], numeric_cols[1]
+            elif len(numeric_cols) == 1 and len(df.columns) >= 2:
+                wavelength_col, intensity_col = df.columns[0], numeric_cols[0]
+        if not wavelength_col and len(df.columns) >= 1:
+            wavelength_col = df.columns[0]
+        if not intensity_col and len(df.columns) >= 2:
+            intensity_col = df.columns[1]
+        if wavelength_col is None or intensity_col is None:
+            return None
+        for spectral_col in (wavelength_col, intensity_col):
+            if not pd.api.types.is_numeric_dtype(df[spectral_col]):
+                df[spectral_col] = (
+                    df[spectral_col]
+                    .astype('string')
+                    .map(self._normalise_decimal_string)
+                )
+            df[spectral_col] = pd.to_numeric(df[spectral_col], errors='coerce')
+        df = df.rename(columns={wavelength_col: "wavelength",
+                                intensity_col: "intensity"})
+        return df
+
+    @staticmethod
+    def _wavelength_col_of(df: pd.DataFrame) -> Optional[str]:
+        return "wavelength" if "wavelength" in df.columns \
+            else (df.columns[0] if len(df.columns) else None)
+
+    @staticmethod
+    def _intensity_col_of(df: pd.DataFrame) -> Optional[str]:
+        return "intensity" if "intensity" in df.columns \
+            else (df.columns[1] if len(df.columns) > 1 else None)
+
+    def _load_yaml_spectral(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Load measurement values and metadata from YAML files.
+
+        Searches the parsed document for wavelength/intensity lists (name
+        patterns first, positional fallback), tables of row mappings, and
+        collects every scalar key as metadata. Never raises; returns None
+        for non-YAML content."""
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                text = f.read()
+        except OSError as e:
+            self.logger.warning(f"YAML read failed for {file_path}: {e}")
+            return None
+        try:
+            import yaml
+            parsed = yaml.safe_load(text)
+        except Exception:
+            return None
+        return self._structured_payload_to_spectral(parsed, file_path, ".yaml")
+
+    def _load_xml_spectral(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Load measurement values and metadata from XML files.
+
+        Handles the two layouts spectral XML exports use: attribute rows
+        (<point wavelength="400" intensity="0.1"/>) and element rows
+        (<row><wavelength>400</wavelength>...</row>). Collects scalar
+        elements as metadata. Never raises; returns None for non-XML."""
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                text = f.read()
+        except OSError as e:
+            self.logger.warning(f"XML read failed for {file_path}: {e}")
+            return None
+        if not text.lstrip().startswith("<"):
+            return None
+        try:
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(text)
+        except Exception:
+            return None
+
+        rows: List[Dict[str, Any]] = []
+        scalars: Dict[str, Any] = {}
+        for elem in root.iter():
+            tag = elem.tag.lower()
+            if elem.attrib and len(elem) == 0:
+                rows.append(dict(elem.attrib))
+            elif len(elem) == 0 and elem.text and elem.text.strip():
+                scalars[tag] = elem.text.strip()
+            elif len(elem) > 0 and tag in ("point", "row", "sample",
+                                          "measurement", "data", "spectrum"):
+                row = {}
+                for child in elem:
+                    if len(child) == 0 and child.text and child.text.strip():
+                        row[child.tag] = child.text.strip()
+                if row:
+                    rows.append(row)
+        payload: Any = rows if rows else (scalars if scalars else None)
+        if payload is None:
+            return None
+        return self._structured_payload_to_spectral(payload, file_path, ".xml")
+
+    def _structured_payload_to_spectral(self, parsed: Any, file_path: str,
+                                        fmt: str) -> Optional[Dict[str, Any]]:
+        """Turn a parsed YAML/XML/JSON-like structure into the unified
+        spectral schema: named wavelength/intensity lists first, then a
+        list of row dicts as a table, then a single scalar row. Scalar
+        (non-list) top-level keys always become metadata."""
+        if parsed is None:
+            return None
+        wavelength_col = None
+        intensity_col = None
+        df = None
+        if isinstance(parsed, dict):
+            for key, value in parsed.items():
+                key_lower = str(key).lower()
+                if not isinstance(value, (list, tuple)):
+                    continue
+                if any(p in key_lower for p in self._WAVELENGTH_PATTERNS):
+                    wavelength_col = key
+                elif any(p in key_lower for p in self._INTENSITY_PATTERNS):
+                    intensity_col = key
+            if wavelength_col is not None and intensity_col is not None:
+                try:
+                    df = pd.DataFrame({"wavelength": list(parsed[wavelength_col]),
+                                       "intensity": list(parsed[intensity_col])})
+                except Exception:
+                    df = None
+            if df is None:
+                list_rows = [v for v in parsed.values()
+                             if isinstance(v, (list, tuple)) and v
+                             and all(isinstance(r, (dict, list, tuple)) for r in v)]
+                if list_rows:
+                    try:
+                        df = pd.DataFrame(list_rows[0])
+                    except Exception:
+                        df = None
+            if df is None and wavelength_col is None and intensity_col is None:
+                row = {k: v for k, v in parsed.items()
+                       if not isinstance(v, (list, dict, tuple))}
+                if row:
+                    df = pd.DataFrame([row])
+        elif isinstance(parsed, list):
+            try:
+                df = pd.DataFrame(parsed)
+            except Exception:
+                df = None
+        if df is None or df.empty:
+            return None
+        df = self._identify_spectral_columns(df)
+        if df is None:
+            return None
+        metadata: Dict[str, Any] = {}
+        if isinstance(parsed, dict):
+            for key, value in parsed.items():
+                if not isinstance(value, (list, dict, tuple)):
+                    metadata[str(key)] = value
+        metadata.update(self._extract_metadata_from_dataframe(df))
+        return {
+            "data": df,
+            "source_file": file_path,
+            "format": os.path.splitext(file_path)[1].lower() or fmt,
+            "wavelength_column": self._wavelength_col_of(df),
+            "intensity_column": self._intensity_col_of(df),
+            "metadata": metadata,
+        }
+
+    def _load_table_spectral(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Generic table parse for any delimited text file.
+
+        Adaptive delimiter ladder (same scoring as the CSV loader), the
+        shared column identification, a metadata scan over the text lines
+        and metadata extraction from the table. Returns None when no
+        usable table is found. Never raises."""
+        best_df = None
+        best_score = -1.0
+        try:
+            for delimiter in [r'\s+', '\t', ',', ';', '|']:
+                try:
+                    candidate = pd.read_csv(file_path, sep=delimiter, engine="python")
+                except pd.errors.EmptyDataError:
+                    return None
+                except Exception:
+                    continue
+                score = self._score_delimiter_parse(candidate)
+                if score > best_score:
+                    best_score = score
+                    best_df = candidate
+                    if score >= 1.0:
+                        break
+        except Exception as e:
+            self.logger.warning(f"Table parse failed for {file_path}: {e}")
+            return None
+        if best_df is None or best_df.empty or best_score <= 0:
+            # Ragged exports (metadata lines without the data delimiter,
+            # comment prefixes, prose headers) defeat the strict parses.
+            # Filter line by line instead: every line whose fields
+            # contain two or more numbers becomes a data row, everything
+            # else is metadata. Delimiter-aware, so '900,15200' stays two
+            # values (no German-decimal token merge).
+            return self._load_line_filtered_spectral(file_path)
+        df = self._identify_spectral_columns(best_df)
+        if df is None:
+            return self._load_line_filtered_spectral(file_path)
+        metadata = self._extract_text_metadata(file_path)
+        metadata.update(self._extract_metadata_from_dataframe(df))
+        return {
+            "data": df,
+            "source_file": file_path,
+            "format": os.path.splitext(file_path)[1].lower() or ".txt",
+            "wavelength_column": self._wavelength_col_of(df),
+            "intensity_column": self._intensity_col_of(df),
+            "metadata": metadata,
+        }
+
+    def _load_line_filtered_spectral(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Line-filtered measurement extraction for ragged text exports.
+
+        Keeps only lines whose dominant-delimiter fields contain at least
+        two finite numbers as data rows; every other line is left to the
+        metadata scan. This catches files the strict table parses reject:
+        comment/metadata lines without the data delimiter, prose headers,
+        unknown extensions. Returns None when fewer than 3 data rows
+        exist. Never raises."""
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                lines = [ln.rstrip("\r\n") for ln in f if ln.strip()]
+        except Exception:
+            return None
+        if not lines:
+            return None
+
+        delimiter_counts = {sep: sum(1 for ln in lines if sep in ln)
+                            for sep in (",", ";", "\t", "|")}
+        sep = max(delimiter_counts, key=delimiter_counts.get)
+
+        pairs: List[Tuple[float, float]] = []
+        for ln in lines:
+            if sep not in ln:
+                continue
+            values: List[Optional[float]] = [self._coerce_number(fld.strip())
+                                            for fld in ln.split(sep)]
+            nums = [v for v in values if v is not None and math.isfinite(v)]
+            if len(nums) >= 2:
+                pairs.append((nums[0], nums[1]))
+        if len(pairs) < 3:
+            return None
+        wavelengths = [p[0] for p in pairs]
+        if max(wavelengths) - min(wavelengths) <= 0:
+            return None
+        df = pd.DataFrame({"wavelength": wavelengths,
+                           "intensity": [p[1] for p in pairs]})
+        metadata = self._extract_text_metadata(file_path)
+        metadata.update(self._extract_metadata_from_dataframe(df))
+        return {
+            "data": df,
+            "source_file": file_path,
+            "format": os.path.splitext(file_path)[1].lower() or ".txt",
+            "wavelength_column": "wavelength",
+            "intensity_column": "intensity",
+            "metadata": metadata,
+        }
+
+    def _extract_text_metadata(self, file_path: str) -> Dict[str, Any]:
+        """Scan the text lines of ANY file for metadata ('key: value').
+
+        Comment lines ('#', ';', '//'), 'Key: Value' patterns and
+        'Key = Value' pairs become metadata entries; keys are folded to
+        snake_case and mapped onto the canonical platform metadata
+        fields via alias lists. Never raises."""
+        metadata: Dict[str, Any] = {}
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()
+        except Exception:
+            return metadata
+
+        pattern = re.compile(
+            r"^\s*(?:[#;]+\s*)?(?://+\s*)?"
+            r"([A-Za-zÀ-ÿ][\w\sÀ-ÿ()\-/]{0,40}?)\s*[:=]\s*(.+)$")
+        for ln in lines[:500]:
+            line = ln.strip()
+            if not line:
+                continue
+            match = pattern.match(line)
+            if not match:
+                continue
+            key = match.group(1).strip().rstrip(":")
+            value = match.group(2).strip().strip('"\"')
+            if not key or not value or len(value) > 200:
+                continue
+            key_norm = re.sub(r"[\s/()\-]+", "_", key).strip("_").lower()
+            canonical = self._canonical_metadata_key(key_norm)
+            metadata[canonical if canonical else key_norm] = value
+        return metadata
+
+    _METADATA_ALIASES = {
+        "sample": "sample_id", "sample_id": "sample_id", "probe": "sample_id",
+        "sample_name": "sample_id", "probenname": "sample_id", "probe_id": "sample_id",
+        "instrument": "instrument_type", "instrument_type": "instrument_type",
+        "geraet": "instrument_type", "geraetetyp": "instrument_type",
+        "spectrometer": "instrument_type", "spektrometer": "instrument_type",
+        "device": "instrument_type", "geraet_name": "instrument_type",
+        "measurement_device": "instrument_type", "messgeraet": "instrument_type",
+        "sensor": "instrument_type", "sensor_typ": "instrument_type",
+        "operator": "operator_name", "operator_name": "operator_name",
+        "messperson": "operator_name", "benutzer": "operator_name", "user": "operator_name",
+        "timestamp": "timestamp", "zeit": "timestamp", "zeitstempel": "timestamp",
+        "datum": "timestamp", "date": "timestamp", "uhrzeit": "timestamp",
+        "measure_time": "timestamp", "messzeitpunkt": "timestamp",
+        "temperature": "temperature", "temperatur": "temperature",
+        "humidity": "humidity", "luftfeuchte": "humidity", "feuchte": "humidity",
+        "location": "location", "ort": "location", "standort": "location",
+        "integration_time": "integration_time", "integrationszeit": "integration_time",
+        "scan_count": "scan_count", "scans": "scan_count", "messungen": "scan_count",
+        "resolution": "resolution", "aufloesung": "resolution",
+        "notes": "notes", "notizen": "notes", "kommentar": "notes", "comment": "notes",
+        "wavelength_range": "wavelength_range", "wellenlaengenbereich": "wavelength_range",
+        "wellenlangenbereich": "wavelength_range", "range": "wavelength_range",
+        "serial_number": "serial_number", "seriennummer": "serial_number",
+    }
+
+    @classmethod
+    def _canonical_metadata_key(cls, key_norm: str) -> Optional[str]:
+        """Map a normalised metadata key onto the canonical field name."""
+        return cls._METADATA_ALIASES.get(key_norm)
 
     @staticmethod
     def _normalise_decimal_string(value: Any) -> Optional[str]:
@@ -972,7 +1615,7 @@ class EnhancedDataPreparationAgent(BaseAgent):
                 "format": os.path.splitext(file_path)[1].lower(),
                 "wavelength_column": "wavelength",
                 "intensity_column": "intensity",
-                "metadata": {}
+                "metadata": self._extract_text_metadata(file_path)
             }
             
         except Exception as e:
@@ -1902,21 +2545,23 @@ class EnhancedDataPreparationAgent(BaseAgent):
                     if os.path.exists(f if os.path.isabs(f) else os.path.join(self.input_directory, f))
                 ]
             else:
-                # Discover files in input directory
-                all_extensions = (self.SPECTRAL_EXTENSIONS + self.METADATA_EXTENSIONS + 
-                                self.IMAGE_EXTENSIONS + self.AUDIO_EXTENSIONS + self.ARCHIVE_EXTENSIONS)
+                # Discover files in input directory - file-type agnostic
+                # (MO 1): every non-hidden file is a candidate; the loader
+                # inspects the content to decide what it is.
                 files_to_process = [
                     os.path.join(self.input_directory, f)
                     for f in os.listdir(self.input_directory)
-                    if any(f.lower().endswith(ext) for ext in all_extensions)
+                    if os.path.isfile(os.path.join(self.input_directory, f))
+                    and not f.startswith('.')
                 ]
             
             if not files_to_process:
                 return self._create_success_output({
                     "status": "no_files_found",
                     "input_directory": self.input_directory,
-                    "supported_extensions": (self.SPECTRAL_EXTENSIONS + self.METADATA_EXTENSIONS + 
-                                           self.IMAGE_EXTENSIONS + self.AUDIO_EXTENSIONS + self.ARCHIVE_EXTENSIONS)
+                    "note": "Any file type is accepted; content is inspected to decide",
+                    "known_extensions": (self.SPECTRAL_EXTENSIONS + self.METADATA_EXTENSIONS + 
+                                        self.IMAGE_EXTENSIONS + self.AUDIO_EXTENSIONS + self.ARCHIVE_EXTENSIONS)
                 })
             
             self.logger.info(f"Starting processing of {len(files_to_process)} files")

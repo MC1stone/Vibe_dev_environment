@@ -41,9 +41,11 @@ def _tool_definitions():
         {
             "name": "ingest_dataset",
             "description": (
-                "Load a spectral data file in any supported format (CSV, "
-                "TXT, JSON, SPC, MATLAB, ...), extract metadata and spectral "
-                "data, and prepare the dataset for statistical analysis."
+                "Load a data file in ANY format (CSV, TXT, JSON, YAML, XML, "
+                "HDF5, SPC, MATLAB, Excel, Parquet, ZIP, unknown binary - "
+                "the content is inspected, not the extension), search it "
+                "for measurement values and metadata, and prepare the "
+                "dataset for statistical analysis."
             ),
             "inputSchema": {
                 "type": "object",

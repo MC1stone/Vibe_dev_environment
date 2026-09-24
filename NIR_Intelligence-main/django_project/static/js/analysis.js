@@ -228,7 +228,7 @@ function startAnalysis() {
     // The single consolidated workflow: data quality + spectral analysis +
     // statistics + neural networks + one comprehensive report.
     if (!fileUploadData || !fileUploadData.fileId) {
-        showError('Please upload a spectrum file first (.json, .csv or .txt).');
+        showError('Please upload a data file first (any file type).');
         return;
     }
 
