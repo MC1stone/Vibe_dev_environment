@@ -2,6 +2,7 @@
 Views for NIR_Mistral API
 """
 
+import math
 import os
 import sys
 import json
@@ -863,18 +864,13 @@ class FileUploadView(APIView):
                     'error': 'No file provided'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # Validate file type
-            valid_extensions = ['.txt', '.csv', '.json', '.h5', '.hdf5']
+            # File-type agnostic upload (MO 1): every file type is
+            # accepted; the content-driven loader extracts measurements
+            # and metadata, or reports honestly that none were found.
             file_extension = os.path.splitext(file.name)[1].lower()
             
-            if file_extension not in valid_extensions:
-                return Response({
-                    'success': False,
-                    'error': f'Invalid file type. Allowed: {", ".join(valid_extensions)}'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
             # Determine data format
-            data_format = file_extension[1:]  # Remove the dot
+            data_format = file_extension[1:] if file_extension else 'unknown'
             if data_format == 'hdf5':
                 data_format = 'h5'
             
@@ -924,7 +920,13 @@ class FileUploadView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def _parse_spectrum_file(self, file_path, data_format):
-        """Parse spectrum file to extract metadata"""
+        """Parse ANY uploaded file for metadata and measurements (MO 1).
+
+        Uses the content-driven S3 loader (all file formats, all
+        spectrometers): measurements and metadata are searched by content,
+        not by extension. Honest fallback: when the loader finds nothing,
+        the neutral defaults survive and data_points stays 0.
+        """
         metadata = {
             'spectral_type': 'absorbance',
             'wavelength_range_start': 700.0,
@@ -932,37 +934,46 @@ class FileUploadView(APIView):
             'resolution': 2.0,
             'data_points': 0
         }
-        
+
         try:
-            if data_format == 'txt':
-                with open(file_path, 'r') as f:
-                    lines = f.readlines()
-                
-                # Parse header for metadata
-                for line in lines:
-                    line = line.strip()
-                    if line.startswith('#'):
-                        if 'Sample:' in line:
-                            metadata['name'] = line.split('Sample:')[1].strip()
-                        elif 'Type:' in line:
-                            spectral_type = line.split('Type:')[1].strip().lower()
-                            if spectral_type in ['absorbance', 'reflectance', 'transmittance']:
-                                metadata['spectral_type'] = spectral_type
-                        elif 'Range:' in line:
-                            range_part = line.split('Range:')[1].strip()
-                            if '-' in range_part:
-                                start, end = range_part.replace('nm', '').split('-')
-                                metadata['wavelength_range_start'] = float(start.strip())
-                                metadata['wavelength_range_end'] = float(end.strip())
-                        elif 'Resolution:' in line:
-                            resolution = line.split('Resolution:')[1].strip().split()[0]
-                            metadata['resolution'] = float(resolution)
-                    else:
-                        # Count data points
-                        if ',' in line:
-                            metadata['data_points'] += 1
-            
+            from agents.data_preparation_agent import EnhancedDataPreparationAgent
+
+            framework_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            if framework_root not in sys.path:
+                sys.path.insert(0, framework_root)
+
+            loader = EnhancedDataPreparationAgent(
+                input_directory=os.path.dirname(file_path) or '.',
+                output_directory=tempfile.mkdtemp(prefix='spectrum_parse_'),
+            )
+            spectral = loader._load_spectral_data(file_path)
+            if spectral and spectral.get('data') is not None:
+                df = spectral['data']
+                wl_col = spectral.get('wavelength_column')
+                it_col = spectral.get('intensity_column')
+                if wl_col in df.columns and it_col in df.columns:
+                    pairs = [
+                        (float(w), float(i))
+                        for w, i in zip(df[wl_col].tolist(), df[it_col].tolist())
+                        if self._is_finite_number(w) and self._is_finite_number(i)
+                    ]
+                    if pairs:
+                        metadata['data_points'] = len(pairs)
+                        metadata['wavelength_range_start'] = min(p[0] for p in pairs)
+                        metadata['wavelength_range_end'] = max(p[0] for p in pairs)
+                extracted = spectral.get('metadata') or {}
+                if extracted.get('sample_id'):
+                    metadata['name'] = str(extracted['sample_id'])
+                if extracted.get('instrument_type'):
+                    metadata['instrument'] = str(extracted['instrument_type'])
         except Exception as e:
             logger.error(f"Error parsing spectrum file: {e}")
-        
+
         return metadata
+
+    @staticmethod
+    def _is_finite_number(value):
+        try:
+            return math.isfinite(float(value))
+        except (TypeError, ValueError):
+            return False

@@ -137,12 +137,12 @@
                     <div class="c-card__body">
                         <div class="drop-zone" id="dropZone">
                             <i class="bi bi-cloud-arrow-up" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 1rem;"></i>
-                            <p class="mb-0">Drag &amp; drop a spectrum file here (.csv, .txt, .json, .h5)</p>
+                            <p class="mb-0">Drag &amp; drop a data file here (any file type)</p>
                             <label for="fileInput" class="c-button c-button--secondary mt-2" style="cursor: pointer;">
                                 <i class="bi bi-folder2-open"></i>
                                 <span class="c-button__text">Choose file...</span>
                             </label>
-                            <input type="file" id="fileInput" accept=".csv,.txt,.json,.h5,.hdf5" style="display: none;" onchange="handleFileUpload(event)">
+                            <input type="file" id="fileInput" style="display: none;" onchange="handleFileUpload(event)">
                         </div>
                         <div id="wfStatus" class="mt-2 text-muted"></div>
                         <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
