@@ -96,6 +96,7 @@ class AnalysisResult:
     metadata_quality: Optional[MetadataQualityResult] = None
     generated_reports: List[GeneratedReport] = field(default_factory=list)
     calibration_results: Optional[Dict[str, Any]] = None
+    parameter_recommendations: List[Any] = field(default_factory=list)
     sensor_quality_results: Optional[Dict[str, Any]] = None
     statistical_analysis_results: Optional[Dict[str, Any]] = None
     neural_network_results: Optional[Dict[str, Any]] = None
@@ -697,6 +698,8 @@ class NIRAnalysisCrew:
             if spectral_output.status == AgentStatus.COMPLETED:
                 spectral_data = spectral_output.data
                 result.spectral_analysis = SpectralAnalysisResult(**spectral_data.get("spectral_analysis", {}))
+                result.parameter_recommendations = list(
+                    spectral_data.get("parameter_recommendations") or [])
                 self.logger.info(
                     f"Spectral analysis completed - Quality: {result.spectral_analysis.quality_grade.value}"
                 )

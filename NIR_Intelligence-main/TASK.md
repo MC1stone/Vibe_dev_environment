@@ -3,7 +3,74 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP28 - File-Type Agnostic Data Loading (MO 1)
+## Current Task: OP29 - Sensor Agent (Sensor Knowledge, Settings, Optimization)
+
+### Objective
+
+The platform knows its spectrometers only implicitly - adapter registry,
+parameter recommender and scattered metadata - but there is no single place
+that collects all sensor information used in the analyses. OP29 adds a
+sensor agent and catalog: registered adapters with capabilities, setting
+options and their ranges, usage statistics from the EXISTING database
+(SpectrumRecord.instrument_type + project preparation reports; no new
+tables), an informative /sensors/ sub-area of the web app, an assessment of
+the settings recorded in measurements (completeness + plausibility, honest
+about missing values) and deduplicated optimization suggestions from the
+platform's three existing recommendation sources.
+
+### Scope
+
+- `services/sensor_catalog.py`: sensor catalog service
+  - adapter profiles from the device registry (generic pkgutil scan - new
+    adapter modules are picked up automatically, no hardcoded list)
+  - instrument attribution: exact MODEL_ID match plus keyword aliases
+    ('SparkFun NIR Triad' -> sparkfun_triad); unknown instruments stay
+    unmatched (honest, no invented mapping)
+  - setting options: canonical OP28 setting fields merged with the
+    ParameterRecommenderAgent parameter catalogue (ranges, defaults);
+    'scans_to_average' mapped onto the canonical 'scan_count'
+  - usage statistics from the existing tables only (no new model/migration):
+    spectra count, projects, last use, recorded setting values, samples
+  - `assess_settings`: completeness + plausibility of recorded values
+    (min/max checks); missing parameters reported, never invented
+  - `merge_recommendations` / `get_optimization_suggestions`: the three
+    existing sources (analytical parameter recommendations, data-preparation
+    heuristics, generic OP21 sensor-quality texts) deduplicated per
+    parameter with priority analytical > heuristic > generic; conflicting
+    values are kept with both rationales (truthfulness), agreeing sources
+    are recorded
+- `agents/sensor_agent.py`: SensorAgent (operations 'collect' and 'usage')
+- `services/project_crew.py`: the sensor-quality report section now embeds
+  the deduplicated optimization suggestions and the setting assessment of
+  the dataset metadata; `agents/nir_analysis_crew.py` carries the spectral
+  agent's parameter_recommendations on the AnalysisResult so the merge has
+  the real analytical source
+- `django_project/api/project_views.py` + `project_urls.py`:
+  SensorListView (/projects/sensors/) and SensorDetailView
+  (/projects/sensors/<key>/) - adapter profiles, setting options, usage,
+  per-sensor assessment and suggestions
+- Templates `sensor_list.html`, `sensor_detail.html` + navigation entry
+- `tests/test_op29_sensor_agent.py` (53 checks) + CI matrix extended
+
+### Out of Scope
+
+- New database tables (explicit user constraint: use the existing database)
+- Device driver changes (the adapters stay as they are)
+- Remote device control / live acquisition (catalog only)
+
+### Success Criteria
+
+- All registered adapters are discovered and profiled with capabilities
+- Setting options with ranges from the recommender are listed and assessed
+  (completeness + plausibility) against recorded measurement metadata
+- Usage (spectra, projects, settings, samples) is read from the existing
+  database without a new migration
+- Optimization suggestions from analyses are deduplicated per parameter;
+  conflicts are shown, not silently overwritten
+- /sensors/ pages render (list + detail) and are linked in the navigation
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP28 - File-Type Agnostic Data Loading (MO 1)
 
 ### Objective
 
