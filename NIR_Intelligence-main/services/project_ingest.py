@@ -597,50 +597,111 @@ def _metadata_only_entry(file_record, file_path, loader) -> Dict[str, Any] | Non
     return entry
 
 
+def _propagate_project_metadata(datasets: List[Dict[str, Any]]) -> None:
+    """Fill measurement datasets with the metadata of the project's
+    description documents (OP34): a ZIP with Oel_Meta.txt + measurement
+    matrices carries operator/instrument/environment ONLY in the prose
+    file - the measurement entries themselves showed almost no metadata
+    in the report. The description metadata is project context: it fills
+    MISSING fields of the measurement entries (never overwrites), the
+    source is transparently recorded so the report shows where the value
+    came from. Never raises."""
+    try:
+        context_fields: Dict[str, str] = {}
+        for dataset in datasets:
+            if dataset.get("dataset_type") == "metadata" and dataset.get("usable"):
+                for key, value in (dataset.get("metadata") or {}).items():
+                    if value not in (None, "") and key not in context_fields:
+                        context_fields[key] = str(value)
+        if not context_fields:
+            return
+        for dataset in datasets:
+            if dataset.get("dataset_type") == "metadata":
+                continue
+            metadata = dataset.get("metadata") or {}
+            sources = dataset.setdefault("metadata_sources", {})
+            filled = False
+            for key, value in context_fields.items():
+                if metadata.get(key) in (None, ""):
+                    metadata[key] = value
+                    sources[key] = "projekt-kontext"
+                    filled = True
+            if filled:
+                dataset["metadata"] = metadata
+    except Exception:
+        logger.exception("Project metadata propagation failed (non-fatal)")
+
+
 def _ki_forward_questions(entry: Dict[str, Any],
                         standards: Dict[str, List[str]]) -> None:
     """KI asks the user explicitly for standard-relevant fields that the
-    data cannot provide itself (OP33): integration_time or instrument_model
-    are not derivable from the wavelength axis - the KI does NOT guess them
-    (anti-hallucination) but asks the user, naming the standards the field
-    unlocks. Never raises; without Ollama the deterministic template
-    question is used so the user is still asked."""
+    data cannot provide itself (OP33/OP34): instead of one isolated
+    question per field the KI CONSOLIDATES the missing fields thematically
+    (sensor: type/model/serial number, measurement parameters: integration
+    time) into one question per topic - the user answers a coherent
+    request, not a form letter series. The KI does NOT guess values
+    (anti-hallucination); it asks, naming the standards the fields unlock.
+    Never raises; without Ollama the deterministic template question is
+    used so the user is still asked."""
     try:
         metadata = entry.get("metadata") or {}
         questions = entry.setdefault("open_questions", [])
-        asked = {q.split("'")[1] for q in questions if q.startswith("KI-Frage")}
-        for field, prompt in (
-            ("integration_time",
+        asked_topics = {q.split("thema '")[1].split("'")[0]
+                        for q in questions if "thema '" in q}
+
+        topics = [
+            ("sensor",
+             ("instrument_type", "instrument_model", "serial_number"),
+             "Der Sensor ist nur unvollst\u00e4ndig dokumentiert "
+             "(Name/Typ, Modell, Seriennummer). Bitte geben Sie im "
+             "Metadaten-Editor die Sensorangaben zusammen an: "
+             "Sensor-Name/Typ, Modell und Seriennummer."),
+            ("messparameter",
+             ("integration_time",),
              "Die Integrationszeit ist nicht aus den Messdaten ableitbar. "
-             "Mit welcher Integrationszeit (ms) wurden die Spektren aufgenommen?"),
-            ("instrument_model",
-             "Das Gerätemodell ist nicht aus den Messdaten ableitbar. "
-             "Welches Spektrometer-Modell wurde verwendet?"),
-        ):
-            if metadata.get(field) or field in asked:
+             "Mit welcher Integrationszeit (ms) wurden die Spektren "
+             "aufgenommen?"),
+        ]
+
+        for topic, fields, template in topics:
+            if topic in asked_topics:
                 continue
-            std = [name for name, req in (standards or {}).items()
-                   if field in req]
-            std_part = f" (relevant für {', '.join(std)})" if std else ""
+            missing = [f for f in fields if not metadata.get(f)]
+            if not missing:
+                continue
+            std = sorted({name for name, req in (standards or {}).items()
+                          for f in missing if f in req})
+            std_part = f" (relevant f\u00fcr {', '.join(std)})" if std else ""
+            present = [f for f in fields if metadata.get(f)]
+            present_part = (f" Bekannt ist bereits: "
+                            f"{', '.join(f'{f}={metadata[f]}' for f in present)}."
+                            if present else "")
             question = None
             try:
                 from services.metadata_llm import OllamaMetadataClient
                 client = OllamaMetadataClient()
                 if client.is_available():
+                    fields_block = ", ".join(missing)
                     llm = client.chat(
-                        f"Formuliere eine kurze, höfliche deutsche Frage an "
-                        f"einen NIR-Spektroskopie-Nutzer nach dem fehlenden "
-                        f"Metadatenfeld '{field}'{std_part}. Antworte NUR mit "
-                        f"dem Fragetext.")
-                    if isinstance(llm, str) and llm.strip() and len(llm) <= 300:
+                        f"Formuliere EINE kurze, zusammenfassende deutsche "
+                        f"Frage an einen NIR-Spektroskopie-Nutzer nach den "
+                        f"fehlenden Sensor-/Mess-Metadaten: {fields_block}."
+                        f"{present_part} Nenne die Felder in einer Frage."
+                        f"{std_part} Antworte NUR mit dem Fragetext.")
+                    if isinstance(llm, str) and llm.strip() and len(llm) <= 400:
                         question = llm.strip()
             except Exception:
                 question = None
             if not question:
-                question = prompt
+                question = template
+            fields_part = ", ".join(missing)
+            known_part = (f" Bekannt ist bereits: "
+                         f"{', '.join(f'{f}={metadata[f]}' for f in present)}."
+                         if present else "")
             questions.append(
-                f"KI-Frage zu '{field}'{std_part}: {question} "
-                "Bitte im Metadaten-Editor ergänzen.")
+                f"KI-Frage zum Thema '{topic}'{std_part}: {question} "
+                f"Fehlende Felder: {fields_part}.{known_part} "
+                "Bitte im Metadaten-Editor erg\u00e4nzen.")
     except Exception:
         logger.exception("KI forward question pass failed (non-fatal)")
 
@@ -915,6 +976,7 @@ def build_preparation_report(project) -> Dict[str, Any]:
                     if entry.get("file_id") == str(f.id) else {}
             apply_metadata_overrides(entry, entry_overrides)
             datasets.append(entry)
+    _propagate_project_metadata(datasets)
     metadata_assessment = _assess_metadata(datasets)
     for dataset in datasets:
         if dataset.get("usable"):

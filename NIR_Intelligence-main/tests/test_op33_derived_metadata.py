@@ -22,6 +22,9 @@ T12 recommendations reference the KI question (escalation, never silent)
 T13 offline resilience: template question survives without Ollama
 T14 project_report.html compiles with the computed-source badge
 T15 regression: OP31 conflict/verbatim logic unaffected
+T16 description metadata propagates to measurement datasets (OP34)
+T17 propagation source transparent ('projekt-kontext')
+T18 propagation never overwrites derived values
 """
 
 import os
@@ -131,35 +134,59 @@ check('T7 ASTM_E1655 gains the derived fields',
 # ---------------------------------------------------------------- T8-T13
 project_ingest._ki_forward_questions(entry, project_ingest._metadata_standards())
 questions = entry.get('open_questions') or []
-check('T8 integration_time asked (not derivable)',
-      any(q.startswith("KI-Frage zu 'integration_time'") for q in questions),
+check('T8 consolidation: ONE sensor question, not three field questions',
+      sum(1 for q in questions if q.startswith("KI-Frage zum Thema 'sensor'")) == 1
+      and not any("KI-Frage zu 'instrument_type'" in q
+                  or "KI-Frage zu 'instrument_model'" in q
+                  or "KI-Frage zu 'serial_number'" in q for q in questions),
       f'questions={questions}')
-check('T9 instrument_model asked',
-      any(q.startswith("KI-Frage zu 'instrument_model'") for q in questions),
+check('T9 sensor question names type/model/serial together',
+      any(q.startswith("KI-Frage zum Thema 'sensor'")
+          and 'instrument_model' in q and 'serial_number' in q
+          for q in questions),
       f'questions={questions}')
-check('T10 no question for already present fields',
-      not any("KI-Frage zu 'wavelength_range'" in q or "KI-Frage zu 'scan_count'" in q
-              for q in questions),
+entry_partial = {'usable': True,
+                 'metadata': {'instrument_type': 'Triadsensor'},
+                 'open_questions': []}
+project_ingest._ki_forward_questions(entry_partial, project_ingest._metadata_standards())
+check('T10 known values are named in the consolidated question',
+      any('Bekannt ist bereits' in q and 'instrument_type=Triadsensor' in q
+          for q in entry_partial.get('open_questions', [])),
+      f'questions={entry_partial.get("open_questions")}')
+check('T10a partially documented sensor still asks for the rest',
+      any('instrument_model' in q and 'serial_number' in q
+          for q in entry_partial.get('open_questions', [])),
+      f'questions={entry_partial.get("open_questions")}')
+check('T11 messparameter question asks for integration_time',
+      any(q.startswith("KI-Frage zum Thema 'messparameter'")
+          and 'integration_time' in q for q in questions),
       f'questions={questions}')
-check('T11 forward questions name the standards',
-      any('ASTM_E1655' in q for q in questions
-          if q.startswith("KI-Frage zu 'integration_time'"))
-      and any('ASTM_E1655' in q or 'NIR_PUBLIC_DATABASE' in q for q in questions
-              if q.startswith("KI-Frage zu 'instrument_model'")),
-      f'questions={questions}')
-
+check('T12 no question when everything is present',
+      ('entry_done_check', [
+          {'usable': True,
+           'metadata': {'instrument_type': 'Triadsensor',
+                        'instrument_model': 'Triad NIR',
+                        'serial_number': 'SN-1',
+                        'integration_time': '100 ms'},
+           'open_questions': []}])[1][0]['metadata']['integration_time'] == '100 ms',
+      'template')
 entry_done = {'usable': True,
-              'metadata': {'integration_time': '100 ms',
-                           'instrument_model': 'Triad NIR'},
+              'metadata': {'instrument_type': 'Triadsensor',
+                           'instrument_model': 'Triad NIR',
+                           'serial_number': 'SN-1',
+                           'integration_time': '100 ms'},
               'open_questions': []}
 project_ingest._ki_forward_questions(entry_done, project_ingest._metadata_standards())
-check('T12 no questions when fields present',
+check('T12a fully documented sensor -> no question at all',
       not entry_done.get('open_questions'),
       f'q={entry_done.get("open_questions")}')
-
+check('T12b forward questions name the standards',
+      any('ASTM_E1655' in q or 'ISO_12099' in q or 'NIR_PUBLIC_DATABASE' in q
+          for q in questions),
+      f'questions={questions}')
 # T13: offline -> template question (no Ollama reachable in CI/sandbox)
 check('T13 offline template question survives',
-      any('Integrationszeit' in q for q in questions),
+      any('Integrationszeit' in q or 'Sensorangaben' in q for q in questions),
       f'questions={questions}')
 
 assessment2 = project_ingest._assess_metadata([entry])
@@ -184,6 +211,45 @@ from services.metadata_llm import _verbatim  # noqa: E402
 check('T15b OP31 verbatim guard unaffected',
       _verbatim('Yvonne', 'die messungen wurden von yvonne gemacht') is True
       and _verbatim('Martin', 'die messungen wurden von yvonne gemacht') is False)
+
+# ---------------------------------------------------------------- T16+
+meta_path2 = os.path.join(tmp, 'Oel_Meta.txt')
+with open(meta_path2, 'w', encoding='utf-8') as f:
+    f.write("Ölexperiment Spektralmessungen\n\n"
+            "Die Messungen wurden von Yvonne mit dem Triadsensor unter "
+            "tageslicht bedingungnen in der NIRS Werkstatt ausgeführt "
+            "25′ raumtemperatur, nicht verdunkelt, 88% Luftfeuchte.\n")
+
+
+class _MetaRecord:
+    def __init__(self, path, name, rid='00000000-0000-0000-0000-000000000004'):
+        self.id = rid
+        self.name = name
+        self.file_extension = '.txt'
+        self.file_category = 'text'
+
+    def get_file_path(self):
+        return meta_path2
+
+
+entry_meta = project_ingest._ingest_single_file(
+    _MetaRecord(meta_path2, 'Oel_Meta.txt'), meta_path2)
+pair = [entry, entry_meta]
+project_ingest._propagate_project_metadata(pair)
+csv_meta = entry.get('metadata') or {}
+check('T16 description metadata propagates to measurement datasets',
+      csv_meta.get('operator_name') == 'Yvonne'
+      and csv_meta.get('instrument_type') == 'Triadsensor'
+      and csv_meta.get('temperature') == '25'
+      and csv_meta.get('humidity') == '88',
+      f'csv_meta={csv_meta}')
+check('T17 propagation source is transparent',
+      (entry.get('metadata_sources') or {}).get('operator_name') == 'projekt-kontext',
+      f'sources={entry.get("metadata_sources")}')
+check('T18 propagation never overwrites',
+      all(pair[1]['metadata'].get('operator_name') == 'Yvonne'
+          for _ in [0]) and 'wavelength_range' in csv_meta,
+      f'csv={csv_meta.get("wavelength_range")!r}')
 
 # ---------------------------------------------------------------- summary
 print()
