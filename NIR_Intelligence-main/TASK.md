@@ -3,7 +3,51 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP31 - KI-First Metadata Extraction (Ollama/Mistral, Anti-Halluzination, Nutzer-Eskalation)
+## Current Task: OP32 - Standards-Based Metadata Display and KI Relevance Recommendations
+
+### Objective
+Der OP31-Report zeigte zwei vom Nutzer bestaetigte Schwaechen: (1) Die
+vorhandenen Metadaten wurden im Report nicht brauchbar angezeigt - Alias-
+Spiegel (operator/operator_name) erschienen doppelt, und (2) die
+Empfehlungen waren wertloser High-Level-Prozentsatz statt konkreter,
+standardsbezogener Aussagen. Der Nutzer erwartet: Die KI filtert, WELCHE
+Metadaten in den Standards (ASTM E1655, ISO 12099, EURACHEM,
+NIR_PUBLIC_DATABASE) stecken und welche dafuer - und vor allem fuer die
+NIR-Spektroskopie - interessant sind.
+
+### Scope
+- `services/metadata_llm.py`: `MetadataRelevanceService` (NEU) - KI-first
+  NIR-Relevanz-Bewertung mit Guard: nur Feldnamen aus den tatsaechlichen
+  present/missing-Listen, nur bekannte Standards; erfundene Felder/Normen
+  werden verworfen (nie angezeigt)
+- `services/project_ingest.py`:
+  - `_metadata_standards()` + `_standards_compliance()`: per-Standard
+    present/missing/satisfied-Verdict (deterministisch, single source of
+    truth = loader METADATA_STANDARDS)
+  - `_ki_relevance_pass()`: Mistral bewertet Relevanz + priorisiert
+    fehlende Felder mit Begruendung und Standard-Bezug
+  - `_assess_metadata()`: Alias-Spiegel raus aus dem Rating (Information
+    einmal anzeigen, unter dem kanonischen Namen)
+  - `_recommendations()`: konkrete Empfehlungen mit Standard-Bezug und
+    KI-Begruendung statt prozentualer High-Level-Aussage
+- `django_project/templates/project_report.html`: Standards-Konformitaets-
+  Tabelle (Standard/Vorhanden/Fehlt/Status) + KI-Einschaetzungs-Alert
+- `tests/test_op32_metadata_relevance.py` (19 Checks) + CI-Erweiterung
+
+### Out of Scope
+- Formatspezifische Header-Extraktion fuer binaere Formate (HDF5 attrs,
+  SPC/MAT-Header, JDX, EXIF) - folgt
+- Quarto-Report-Sektion 'metadata_evaluation' - folgt
+
+### Success Criteria
+- Metadaten werden dedupliziert im Report angezeigt (keine Alias-Doppel)
+- Standards-Konformitaet je Norm sichtbar (was fehlt fuer welchen Standard)
+- Empfehlungen nennen das Feld, den Standard und die KI-Begruendung
+- KI-Guard: erfundene Felder/Normen erscheinen nie im Report
+- Offline: deterministische Standards-Bewertung bleibt, nichts erfunden
+- Alle existierenden Matrizen bleiben gruen
+
+## Completed Task: OP31 - KI-First Metadata Extraction (Ollama/Mistral, Anti-Halluzination, Nutzer-Eskalation)
 
 ### Objective
 Die Metadaten-Erhebung war rein regelbasiert (regex) und die KI lieferte

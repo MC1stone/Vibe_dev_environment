@@ -235,6 +235,117 @@ class MetadataLLMService:
         }
 
 
+_RELEVANCE_PROMPT = """Du bewertest Mess-Metadaten eines NIR-Spektroskopie-Projekts.
+
+Vorhandene Metadatenfelder: {present}
+Fehlende, empfohlene Felder: {missing}
+Standards-Anforderungen:
+{standards}
+
+STRENGE REGELN (Versto\u00df = Verwerfung):
+1. NUR Felder aus den beiden Listen oben bewerten - keine erfundenen Feldnamen.
+2. NUR die genannten Standards referenzieren - keine erfundenen Normen.
+3. Keine Werte behaupten, die nicht in den Listen stehen.
+
+Antworte NUR mit JSON in exakt dieser Struktur:
+{{"nir_relevance": {{"feldname": "1-2 Saetze: warum dieses Feld fuer NIR-Spektroskopie bzw. diese Standards relevant ist"}},\n "priority_missing": [{{"field": "feldname", "reason": "warum das Fehlen fuer NIR problematisch ist", "standards": ["Norm"]}}],\n "summary": "2-3 Saetze Gesamteinschaetzung der Metadaten-Qualitaet fuer NIR"}}
+
+Text:
+{context}"""
+
+
+class MetadataRelevanceService:
+    """KI-first relevance assessment of the collected metadata (OP32).
+
+    The LLM judges WHICH metadata fields matter for NIR spectroscopy and
+    which of the standards (ASTM E1655, ISO 12099, ...) the fields satisfy
+    - so the report recommends concrete, prioritised fields instead of a
+    generic percentage. Guard in code, not prompt trust: only field names
+    that actually occur in the given present/missing lists survive, only
+    known standards are accepted; generated reasons are kept short and
+    attached to a verified field. Never raises; None when unavailable.
+    """
+
+    def __init__(self, client: Optional[OllamaMetadataClient] = None):
+        self.client = client or OllamaMetadataClient()
+        self.service = MetadataLLMService(client=self.client)
+
+    def assess(self, present: List[str], missing: List[str],
+               standards: Dict[str, List[str]],
+               context: str = "") -> Optional[Dict[str, Any]]:
+        """Assess NIR relevance of the metadata fields. Returns
+        {'nir_relevance': {field: reason}, 'priority_missing':
+        [{'field','reason','standards'}], 'summary': str} or None."""
+        known = set(present) | set(missing)
+        if not known:
+            return None
+        standards_block = "\n".join(
+            f"- {name}: {', '.join(fields)}" for name, fields in standards.items())
+        prompt = _RELEVANCE_PROMPT.format(
+            present=", ".join(sorted(present)) or "(keine)",
+            missing=", ".join(sorted(missing)) or "(keine)",
+            standards=standards_block or "(keine)",
+            context=(context or "")[:2000])
+        try:
+            raw = self.client.chat(prompt)
+        except Exception as e:
+            logger.info("LLM relevance assessment unavailable: %s", e)
+            return None
+        if not self.client.is_available():
+            return None
+        return self._validate(raw, known, set(standards))
+
+    def _validate(self, raw: Optional[str], known: set,
+                  standard_names: set) -> Optional[Dict[str, Any]]:
+        if not raw:
+            return None
+        try:
+            data = json.loads(raw)
+        except (ValueError, TypeError):
+            logger.warning("LLM relevance answer was not JSON: %.200s", raw)
+            return None
+        if not isinstance(data, dict):
+            return None
+        relevance: Dict[str, str] = {}
+        raw_rel = data.get("nir_relevance")
+        if isinstance(raw_rel, dict):
+            for name, reason in raw_rel.items():
+                canonical = _canonical_field_name(str(name))
+                if canonical in known and isinstance(reason, str) and reason.strip():
+                    relevance[canonical] = reason.strip()[:400]
+        priority: List[Dict[str, Any]] = []
+        raw_priority = data.get("priority_missing")
+        if isinstance(raw_priority, list):
+            for item in raw_priority:
+                if not isinstance(item, dict):
+                    continue
+                raw_name = str(item.get("field"))
+                # The guard accepts the name the LLM was given (exact list
+                # entry) or its canonical fold - both refer to a field the
+                # assessment actually holds, never an invented name.
+                canonical = raw_name if raw_name in known else _canonical_field_name(raw_name)
+                if canonical not in known:
+                    continue
+                reason = str(item.get("reason") or "").strip()
+                if not reason:
+                    continue
+                std = [str(x) for x in (item.get("standards") or [])
+                       if str(x) in standard_names]
+                priority.append({
+                    "field": canonical,
+                    "reason": reason[:400],
+                    "standards": std,
+                })
+        summary = str(data.get("summary") or "").strip()[:600] or None
+        if not relevance and not priority and not summary:
+            return None
+        return {
+            "nir_relevance": relevance,
+            "priority_missing": priority[:8],
+            "summary": summary,
+        }
+
+
 def _canonical_field_name(name: str) -> Optional[str]:
     """Fold an LLM field name onto the canonical platform fields."""
     if not isinstance(name, str):
