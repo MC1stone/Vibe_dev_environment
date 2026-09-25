@@ -37,13 +37,24 @@ def _figure_to_data_url(fig) -> str:
     return 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')
 
 
-def spectrum_chart_data_url(datasets: List[Dict[str, Any]]) -> str:
+def spectrum_chart_data_url(datasets: List[Dict[str, Any]],
+                             outlier_map=None,
+                             cleaned_medians=None) -> str:
     """One line per usable dataset (measurement data graphic, MO 6).
     Uses the full measurement series when available (full_series), otherwise
     the 64-point preparation preview. Returns '' without preview data or
-    matplotlib."""
+    matplotlib.
+
+    OP38: the preview/full series is the median over ALL measurements,
+    outliers included - so when the outlier analysis found outliers for a
+    dataset, the raw line is drawn DASHED GREY, labelled as 'Median (inkl.
+    Ausreissern)', and the cleaned median (over non-outlier measurements
+    only) is added as the solid blue curve. Without an outlier verdict for
+    a dataset the line stays exactly as before (backward compatible)."""
     if not MATPLOTLIB_AVAILABLE or not datasets:
         return ''
+    outlier_map = outlier_map or {}
+    cleaned_medians = cleaned_medians or {}
     usable = []
     for d in datasets:
         if d.get('wavelengths'):
@@ -58,16 +69,71 @@ def spectrum_chart_data_url(datasets: List[Dict[str, Any]]) -> str:
     if not usable:
         return ''
     fig, ax = plt.subplots(figsize=(8, 4.2))
+    has_cleaned = False
     for dataset in usable:
-        ax.plot(dataset['wavelengths'],
-                dataset['intensities'],
-                label=str(dataset['file_name']))
+        name = str(dataset['file_name'])
+        verdict = outlier_map.get(name)
+        outliers = (verdict.get('outlier_indices')
+                    if isinstance(verdict, dict) else None) or []
+        cleaned = cleaned_medians.get(name)
+        if outliers and cleaned and len(cleaned) == len(dataset['wavelengths']):
+            ax.plot(dataset['wavelengths'],
+                    dataset['intensities'],
+                    color='grey', alpha=0.7, ls='--', lw=1.2,
+                    label=f'{name}: Median (inkl. {len(outliers)} Ausreissern)')
+            ax.plot(dataset['wavelengths'],
+                    cleaned,
+                    color='#0d6efd', lw=2.2,
+                    label=f'{name}: bereinigt (ohne Ausreisser)')
+            has_cleaned = True
+        else:
+            ax.plot(dataset['wavelengths'],
+                    dataset['intensities'],
+                    label=name)
     ax.set_xlabel('Wellenlänge (nm)')
     ax.set_ylabel('Intensität')
-    ax.set_title('Messdaten aller Datensätze')
+    ax.set_title('Messdaten aller Datensätze'
+                 + (' - bereinigt nach Ausreisser-Analyse' if has_cleaned else ''))
     ax.legend(fontsize=8)
     ax.grid(alpha=0.3)
     return _figure_to_data_url(fig)
+
+
+def spectrum_outlier_map(per_agent: List[Dict[str, Any]],
+                         datasets: List[Dict[str, Any]]):
+    """OP38: collect the outlier verdicts and cleaned median spectra for
+    the usable datasets from the per-agent outlier sections. Returns
+    ({file_name: verdict_data}, {file_name: cleaned_median}) - the verdict
+    data is the honest per-dataset block (assessable, outlier_indices,
+    measurement_count) from the outlier_analysis section; cleaned medians
+    are computed from the dataset's measurement_samples. Never raises: a
+    missing/failed analysis simply leaves the dataset unmarked."""
+    verdicts: Dict[str, Dict[str, Any]] = {}
+    cleaned: Dict[str, List[float]] = {}
+    try:
+        from services.outlier_analysis import cleaned_median
+    except Exception:
+        return verdicts, cleaned
+    for section in per_agent or []:
+        if not isinstance(section, dict) or section.get('agent') != 'outlier_analysis':
+            continue
+        data = section.get('data') or {}
+        name = str(data.get('file_name') or '')
+        if not name or not data.get('assessable'):
+            continue
+        verdicts[name] = data
+    for dataset in datasets or []:
+        name = str(dataset.get('file_name') or '')
+        verdict = verdicts.get(name)
+        if not verdict:
+            continue
+        samples = dataset.get('measurement_samples') or []
+        wavelengths = dataset.get('wavelengths') or \
+            (dataset.get('preview') or {}).get('wavelengths') or []
+        curve = cleaned_median(samples, verdict)
+        if curve and wavelengths and len(curve) == len(wavelengths):
+            cleaned[name] = curve
+    return verdicts, cleaned
 
 
 def single_spectrum_chart_data_url(wavelengths: List[Any],
@@ -185,7 +251,7 @@ def _kpi_row(items: List[Any]) -> str:
 
 
 _CHART_TITLES = {
-    'spectrum': 'Hochgeladenes Spektrum (Messdaten)',
+    'spectrum': 'Messdaten-Spektrum (Median; bei Ausreissern zus\u00e4tzlich bereinigte Kurve)',
     'quality_bar': 'Qualitätsbewertung der Analysebereiche',
     'similarity_top3': 'Top-3 ähnlichste Spektren aus der Datenbank',
     'sensor_dashboard': 'Sensorqualitäts-Dashboard (SPC)',
@@ -379,7 +445,9 @@ def generate_final_html_report(project, crew_results: Dict[str, Any],
                 dataset['intensities'] = match.get('intensities', [])
     per_agent = crew_results.get('per_agent_reports', [])
 
-    spectrum_chart = spectrum_chart_data_url(datasets)
+    outlier_verdicts, cleaned_medians = spectrum_outlier_map(per_agent, datasets)
+    spectrum_chart = spectrum_chart_data_url(
+        datasets, outlier_map=outlier_verdicts, cleaned_medians=cleaned_medians)
     quality_chart = quality_bar_chart_data_url(per_agent)
     overview_keys = (['spectrum'] if spectrum_chart else []) + \
                     (['quality_bar'] if quality_chart else [])
@@ -387,9 +455,18 @@ def generate_final_html_report(project, crew_results: Dict[str, Any],
     charts = ''
     if spectrum_chart:
         number = next((f['number'] for f in figures if f['key'] == 'spectrum'), 0)
+        cleaned_note = ''
+        if cleaned_medians:
+            cleaned_note = ('<p class="muted small">Ausreisser-Hinweis: Die gestrichelte '
+                            'graue Kurve ist der Median inklusive der in der '
+                            'Ausreisser-Analyse gefundenen Abweichler; die '
+                            'durchgezogene Kurve zeigt den bereinigten Median '
+                            '(nur Messungen ohne Ausreisser) - nur diese ist '
+                            'f&uuml;r die Interpretation belastbar.</p>')
         charts += f'<h3>Messdaten (grafisch)</h3>' \
                  f'<div class="fig-block"><img class="chart" src="{spectrum_chart}" ' \
-                 f'alt="Messdaten-Plot">{_figure_caption(number, "spectrum")}</div>'
+                 f'alt="Messdaten-Plot">{_figure_caption(number, "spectrum")}' \
+                 f'{cleaned_note}</div>'
     if quality_chart:
         number = next((f['number'] for f in figures if f['key'] == 'quality_bar'), 0)
         charts += f'<h3>Auswertungsbewertung</h3>' \
