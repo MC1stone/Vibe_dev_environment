@@ -84,6 +84,29 @@
 
             <h6 class="mt-3"><i class="bi bi-tags me-1"></i>Erhobene Metadaten je Datensatz
                 <span class="text-muted fs-6">(Feld / Wert / Quelle: KI oder Datei / Bewertung)</span></h6>
+            {% if metadata_quality.standards_compliance %}
+            <div class="table-responsive">
+                <table class="table table-sm table-striped mb-2">
+                    <thead><tr><th>Standard</th><th>Vorhanden</th><th>Fehlt</th><th>Status</th></tr></thead>
+                    <tbody>
+                        {% for sc in metadata_quality.standards_compliance %}
+                        <tr>
+                            <td><strong>{{ sc.standard }}</strong></td>
+                            <td>{% for f in sc.present %}<code>{{ f }}</code>{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-muted">-</span>{% endfor %}</td>
+                            <td>{% for f in sc.missing %}<code>{{ f }}</code>{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-muted">-</span>{% endfor %}</td>
+                            <td>{% if sc.satisfied %}<span class="badge bg-success">erf&uuml;llt</span>{% else %}<span class="badge bg-warning text-dark">unvollst&auml;ndig</span>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            {% if metadata_quality.ki_relevance.summary %}
+            <div class="alert alert-info mb-2" role="note">
+                <strong><i class="bi bi-stars me-1"></i>KI-Einsch&auml;tzung (NIR-Relevanz):</strong>
+                {{ metadata_quality.ki_relevance.summary }}
+            </div>
+            {% endif %}
             <div class="accordion mb-3" id="metadataRating">
                 {% for d in datasets %}
                 {% if d.usable and d.metadata_rating %}

@@ -7,7 +7,7 @@
 import logging
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("Service.ProjectIngest")
 
@@ -594,6 +594,66 @@ def _metadata_only_entry(file_record, file_path, loader) -> Dict[str, Any] | Non
     return entry
 
 
+def _ki_relevance_pass(metadata_assessment: Dict[str, Any],
+                        datasets: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """KI-first NIR relevance assessment (OP32): Mistral judges which of
+    the collected metadata fields matter for NIR spectroscopy and which
+    standards they satisfy, so the recommendations become concrete and
+    prioritised instead of a generic percentage. Guarded in code: only
+    field names from the actual present/missing lists and only known
+    standards survive. Never raises; None offline (the report then keeps
+    the deterministic standards verdicts)."""
+    try:
+        from services.metadata_llm import MetadataRelevanceService
+        service = MetadataRelevanceService()
+        if not service.client.is_available():
+            metadata_assessment["ki_relevance_status"] = (
+                "nicht erreichbar (deterministische Standards-Bewertung)")
+            return None
+        present = list(metadata_assessment.get("metadata_fields") or [])
+        missing = list(metadata_assessment.get("missing_recommended_fields") or [])
+        context = " ".join(
+            str(d.get("file_name")) for d in datasets[:10])
+        relevance = service.assess(
+            present, missing, _metadata_standards(), context)
+        if relevance is None:
+            metadata_assessment["ki_relevance_status"] = (
+                "keine verwertbare Antwort (deterministische Bewertung)")
+        return relevance
+    except Exception:
+        logger.exception("KI relevance pass failed (non-fatal)")
+        return None
+
+
+def _metadata_standards() -> Dict[str, List[str]]:
+    """The NIR-relevant metadata standards (single source of truth). The
+    field lists mirror the loader's METADATA_STANDARDS so the assessment
+    and the KI relevance pass judge against the same requirements."""
+    try:
+        from agents.data_preparation_agent import EnhancedDataPreparationAgent
+        return dict(EnhancedDataPreparationAgent.METADATA_STANDARDS or {})
+    except Exception:
+        return {}
+
+
+def _standards_compliance(fields_found: Dict[str, int],
+                          standards: Dict[str, List[str]]) -> List[Dict[str, Any]]:
+    """Per-standard present/missing verdict for the report: the user sees
+    which standard is satisfied by which fields and what is still missing
+    - instead of a single high-level percentage."""
+    result = []
+    for name, required in (standards or {}).items():
+        present = [f for f in required if f in fields_found]
+        missing = [f for f in required if f not in fields_found]
+        result.append({
+            "standard": name,
+            "present": present,
+            "missing": missing,
+            "satisfied": not missing,
+        })
+    return result
+
+
 def _assess_metadata(datasets: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Assess metadata completeness across the usable datasets (MO 2-4).
     OP31: the assessment is field-level - every dataset carries its fields
@@ -602,11 +662,17 @@ def _assess_metadata(datasets: List[Dict[str, Any]]) -> Dict[str, Any]:
     usable = [d for d in datasets if d.get("usable")]
     assessed = {"datasets_usable": len(usable), "datasets_total": len(datasets)}
     fields_found: Dict[str, int] = {}
+    standards = _metadata_standards()
     for dataset in usable:
         sources = dataset.get("metadata_sources") or {}
         rating = {}
         for key, value in (dataset.get("metadata") or {}).items():
             fields_found[key] = fields_found.get(key, 0) + 1
+            # OP32: alias mirrors (operator/instrument/acquisition_time) hold
+            # the SAME value as their canonical twin - show the information
+            # once in the report, under the canonical name.
+            if key in RECOMMENDED_FIELD_ALIASES:
+                continue
             source = sources.get(key) or "deterministisch"
             rating[key] = {
                 "value": value,
@@ -626,6 +692,12 @@ def _assess_metadata(datasets: List[Dict[str, Any]]) -> Dict[str, Any]:
     assessed["overall_quality_score"] = round(
         100.0 * (len(recommended) - len(missing)) / len(recommended), 1
     ) if usable else 0.0
+    # OP32: standards compliance - which of the NIR-relevant standards
+    # (ASTM E1655, ISO 12099, ...) the collected fields satisfy, presented
+    # not as a percentage but as a per-standard present/missing verdict so
+    # the user knows WHAT to complete for WHICH standard.
+    assessed["standards_compliance"] = _standards_compliance(
+        fields_found, standards)
     # OP31: how much of the metadata the KI contributed (transparency about
     # the primary extractor) and the open questions that need an answer.
     ki_fields = sum(
@@ -639,7 +711,11 @@ def _assess_metadata(datasets: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def _recommendations(datasets: List[Dict[str, Any]], metadata_assessment: Dict[str, Any]) -> List[str]:
-    """Concrete improvement recommendations for the user (phase 1 report)."""
+    """Concrete improvement recommendations for the user (phase 1 report).
+    OP32: the KI relevance pass prioritises the missing fields by their
+    importance for NIR spectroscopy and the standards they unlock, so the
+    recommendations tell the user WHAT to complete for WHICH standard -
+    not a bare percentage."""
     recommendations: List[str] = []
     for dataset in datasets:
         if not dataset.get("usable"):
@@ -647,10 +723,22 @@ def _recommendations(datasets: List[Dict[str, Any]], metadata_assessment: Dict[s
                 f"„{dataset.get('file_name')}“ ist nicht als Spektrum auswertbar "
                 f"({dataset.get('reason')}). Bitte Datei prüfen und ggf. angepasst neu hochladen."
             )
+    relevance = metadata_assessment.get("ki_relevance") or {}
+    prioritised = {str(p.get("field")): p
+                   for p in relevance.get("priority_missing", [])}
     for field in metadata_assessment.get("missing_recommended_fields", []):
-        recommendations.append(
-            f"Metadatenfeld „{field}“ fehlt: ergänzen, um die Metadatenbewertung zu verbessern."
-        )
+        entry = prioritised.get(field)
+        if entry:
+            std = ", ".join(entry.get("standards") or [])
+            std_part = f" (relevant für {std})" if std else ""
+            recommendations.append(
+                f"Metadatenfeld „{field}“ fehlt{std_part}: {entry.get('reason')} "
+                "Bitte im Metadaten-Editor ergänzen."
+            )
+        else:
+            recommendations.append(
+                f"Metadatenfeld „{field}“ fehlt: ergänzen, um die Metadatenbewertung zu verbessern."
+            )
     # OP31: the KI escalates conflicts and open questions to the user -
     # they are recommendations that need an explicit answer, never silent.
     for dataset in datasets:
@@ -741,6 +829,9 @@ def build_preparation_report(project) -> Dict[str, Any]:
             apply_metadata_overrides(entry, entry_overrides)
             datasets.append(entry)
     metadata_assessment = _assess_metadata(datasets)
+    relevance = _ki_relevance_pass(metadata_assessment, datasets)
+    if relevance:
+        metadata_assessment["ki_relevance"] = relevance
     recommendations = _recommendations(datasets, metadata_assessment)
     usable_count = sum(1 for d in datasets if d.get("usable"))
     report = {
