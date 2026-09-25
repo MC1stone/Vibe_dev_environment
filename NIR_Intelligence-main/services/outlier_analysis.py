@@ -169,6 +169,30 @@ def outlier_charts(measurement_samples: List[List[float]],
     return charts
 
 
+def cleaned_median(measurement_samples: List[List[float]],
+                    verdict: Dict[str, Any]) -> Optional[List[float]]:
+    """Median spectrum over the NON-outlier measurements only (OP38):
+    the preparation preview is the median over ALL measurements, outliers
+    included - the cleaned median is what the spectrum figure should show
+    as the robust curve. Returns None when numpy is missing, the verdict is
+    not assessable, the samples are unusable or ALL measurements are
+    outliers (nothing left to clean - never invents a curve)."""
+    if not NUMPY_AVAILABLE or not verdict.get('assessable'):
+        return None
+    try:
+        matrix = np.asarray(measurement_samples, dtype=float)
+    except Exception:
+        return None
+    if matrix.ndim != 2 or matrix.shape[0] == 0:
+        return None
+    outliers = set(int(i) for i in (verdict.get('outlier_indices') or [])
+                   if 0 <= int(i) < matrix.shape[0])
+    inliers = [i for i in range(matrix.shape[0]) if i not in outliers]
+    if not inliers:
+        return None
+    return np.median(matrix[inliers], axis=0).tolist()
+
+
 def _short(name: str, limit: int = 40) -> str:
     name = str(name or 'Datensatz')
     return name if len(name) <= limit else name[:limit - 1] + '\u2026'

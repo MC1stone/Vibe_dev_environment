@@ -82,11 +82,17 @@ _CHART_EXPLANATIONS = {
                   "gut liefen und wo Handlungsbedarf besteht.",
     "spectrum": "das aufgenommene Spektrum der Messdaten. Die x-Achse zeigt die "
                 "Wellenl\u00e4nge in Nanometern (nm), die y-Achse die gemessene "
-                "Intensit\u00e4t. Auff\u00e4llige Erh\u00f6hungen (Peaks) und "
+                "Intensit\u00e4t. Die gezeichnete Kurve ist der Median \u00fcber alle "
+                "Messungen; hat die Ausreisser-Analyse Abweichler gefunden, ist "
+                "diese Roh-Kurve gestrichelt grau markiert und zus\u00e4tzlich wird "
+                "die bereinigte Kurve (Median nur \u00fcber die Messungen ohne "
+                "Ausreisser) als durchgezogene Linie gezeigt - nur diese ist "
+                "f\u00fcr die Interpretation belastbar. Auff\u00e4llige Erh\u00f6hungen (Peaks) und "
                 "Einbr\u00fcche (Absorptionsbanden) zeigen, bei welchen "
                 "Wellenl\u00e4ngen die Probe Licht absorbiert - daraus l\u00e4sst "
                 "sich auf Inhaltsstoffe wie Wasser, Zucker oder Pigmente "
-                "schliessen (siehe Interpretation der Spektren).",
+                "schliessen (siehe Interpretation der Spektren und die "
+                "Ausreisser-Analyse).",
     "similarity_top3": "die Messung (schwarze Kurve) zusammen mit den drei "
                        "\u00e4hnlichsten Spektren aus der Datenbank und dem "
                        "Projekt. Der \u00c4hnlichkeitswert (Sim) in der "

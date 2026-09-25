@@ -3,7 +3,42 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP37 - Dokumentierte Ausreisser-Analyse + KI-first Chatbot
+## Current Task: OP38 - Ehrliche Spektren-Darstellung nach Ausreisser-Analyse
+
+### Objective
+Abbildung 1 des Abschlussberichts zeigt die hochgeladenen Spektren als
+Median-Serie - bisher den Median ueber ALLE Messungen, Ausreisser
+inklusive. Damit stellte die Abbildung die Daten falsch dar, sobald die
+OP37-Analyse Abweichler fand. OP38 zeigt die Daten ehrlich: Bei
+Ausreissern wird die Roh-Kurve (Median inkl. Ausreissern) gestrichelt
+grau markiert und zusaetzlich der bereinigte Median (nur Messungen ohne
+Ausreisser) als durchgezogene Kurve gezeichnet - nichts wird versteckt,
+nichts erfunden.
+
+### Scope
+- `services/outlier_analysis.py`: `cleaned_median()` - Median-Spektrum nur
+  ueber die Nicht-Ausreisser-Messungen; ehrliches None bei nicht
+  bewertbarem Verdict oder wenn ALLE Messungen Ausreisser waeren
+- `services/project_report.py`:
+  - `spectrum_outlier_map()` - sammelt die Ausreisser-Verdicts und
+    bereinigten Median-Spektren aus den per-agent Sections + Datensaetzen
+  - `spectrum_chart_data_url(outlier_map, cleaned_medians)` - bei
+    Ausreissern: Roh-Kurve gestrichelt grau + bereinigte Kurve blau,
+    Diagramm-Titel mit 'bereinigt'-Suffix; ohne Verdict unveraendert
+    (backward kompatibel)
+  - ehrliche Bildunterschrift + Ausreisser-Hinweis unter Abbildung 1
+- `services/student_report.py`: Abbildung-1-Erklaerung beschreibt die
+  gestrichelte Roh-Kurve und die bereinigte Kurve
+- `tests/test_op38_spectrum_cleaned.py` (18 Checks) + CI-Zeile
+
+### Success Criteria
+- Abbildung 1 zeigt bei Ausreissern beide Kurven klar gekennzeichnet;
+  die bereinigte Kurve ist als belastbar ausgewiesen
+- Ohne Ausreisser-Befund bleibt die Darstellung exakt wie zuvor
+- Nicht bewertbare Analysen markieren nichts (keine False-Positive)
+- Alle Matrizen bleiben gruen (OP11/OP23/OP24/OP35/OP36/OP37 verifiziert)
+
+## Completed Task: OP37 - Dokumentierte Ausreisser-Analyse + KI-first Chatbot
 
 ### Objective
 Zwei Befunde aus dem aktuellen Oel-Projekt-Report: (1) Die Spektren-
