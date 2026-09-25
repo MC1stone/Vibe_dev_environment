@@ -172,7 +172,7 @@ img.chart { max-width: 100%; height: auto; border: 1px solid #dee2e6;
 pre.code { background: #212529; color: #e9ecef; padding: 14px; border-radius: 6px;
            overflow: auto; font-size: 0.78rem; max-height: 420px; }
 details { margin: 10px 0; } summary { cursor: pointer; font-weight: 600; }
-ul { padding-left: 20px; } .muted { color: #6c757d; }
+ul { padding-left: 20px; } .muted { color: #6c757d; }.small { font-size: 0.85rem; }.meta-table { font-size: 0.85rem; margin: 8px 0 14px; }.meta-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.75rem; }.meta-ki { background: #cfe2ff; color: #084293; }.meta-ctx { background: #d1e7dd; color: #0f5132; }.meta-file { background: #e9ecef; color: #495057; }
 """
 
 
@@ -296,6 +296,66 @@ def _source_code_html() -> str:
     return f'<div class="card">{"".join(parts)}</div>'
 
 
+def _metadata_overview_html(datasets: List[Dict[str, Any]],
+                             metadata_quality: Dict[str, Any]) -> str:
+    """Metadata overview section for the final report (OP35): per dataset
+    the collected fields with value and source (KI / computed from data /
+    project context / file / editor), the standards compliance verdicts and
+    the open KI questions - the same structure the project report shows,
+    so the Abschlussbericht documents what the analysis was based on."""
+    if not datasets:
+        return ''
+    blocks = []
+    for dataset in datasets:
+        rating = dataset.get('metadata_rating') or {}
+        rows = []
+        for field, r in rating.items():
+            if field == 'konflikte' or not isinstance(r, dict):
+                continue
+            source = str(r.get('source') or 'Datei')
+            badge = ('ki' if 'berechnet' in source
+                     else 'ki' if source.startswith('ki')
+                     else 'ctx' if source == 'projekt-kontext'
+                     else 'file')
+            rows.append(
+                f'<tr><td><code>{_escape(field)}</code></td>'
+                f'<td>{_escape(str(r.get("value", ""))[:80])}</td>'
+                f'<td><span class="meta-badge meta-{badge}">{_escape(source)}</span></td></tr>')
+        questions = dataset.get('open_questions') or []
+        q_html = ''.join(f'<li>{_escape(q)}</li>' for q in questions)
+        q_block = (f'<p class="muted small"><strong>Offene KI-Fragen:</strong></p>'
+                   f'<ul>{q_html}</ul>') if q_html else ''
+        if rows:
+            blocks.append(
+                f'<h3>{_escape(dataset.get("file_name", "?"))}</h3>'
+                f'<table class="meta-table"><thead><tr><th>Feld</th><th>Wert</th>'
+                f'<th>Quelle</th></tr></thead><tbody>{"".join(rows)}</tbody></table>'
+                f'{q_block}')
+    standards = metadata_quality.get('standards_compliance') or []
+    std_rows = ''.join(
+        f'<tr><td>{_escape(c.get("standard", "?"))}</td>'
+        f'<td>{_escape(", ".join(c.get("present") or [])) or "-"}</td>'
+        f'<td>{_escape(", ".join(c.get("missing") or [])) or "-"}</td>'
+        f'<td>{"erf&uuml;llt" if c.get("satisfied") else "unvollst&auml;ndig"}</td></tr>'
+        for c in standards)
+    std_block = ''
+    if std_rows:
+        std_block = ('<p class="muted small"><strong>Standards-Konformit&auml;t:</strong></p>'
+                     '<table class="meta-table"><thead><tr><th>Standard</th>'
+                     '<th>Vorhanden</th><th>Fehlt</th><th>Status</th></tr></thead>'
+                     f'<tbody>{std_rows}</tbody></table>')
+    ki = metadata_quality.get('ki_relevance') or {}
+    ki_block = ''
+    if ki.get('summary'):
+        ki_block = (f'<p class="muted small"><strong>KI-Einsch&auml;tzung '
+                    f'(NIR-Relevanz):</strong> {_escape(ki["summary"])}</p>')
+    body = ''.join(blocks)
+    if not body and not std_block and not ki_block:
+        return ''
+    return (f'<h2>Metadaten-&Uuml;bersicht</h2>'
+            f'<div class="card">{ki_block}{std_block}{body}</div>')
+
+
 def generate_final_html_report(project, crew_results: Dict[str, Any],
                                 full_series: Optional[List[Dict[str, Any]]] = None) -> str:
     """Render the final comprehensive project report (self-contained HTML
@@ -387,6 +447,8 @@ Request-ID: {_escape(crew_results.get('request_id', '-'))}</p>
 
 <h2>Übersicht &amp; Grafiken</h2>
 <div class="card">{charts or '<p class="muted">Keine Grafiken verfügbar.</p>'}</div>
+
+{_metadata_overview_html(datasets, preparation.get('metadata_quality') or {})}
 
 <h2>Agenten-Berichte (je Bereich)</h2>
 {agent_html}

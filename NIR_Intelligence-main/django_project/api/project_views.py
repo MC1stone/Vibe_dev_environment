@@ -266,13 +266,34 @@ def _metadata_editor_fields(dataset: dict, recommended_fields: list) -> list:
     for name in metadata:
         if name and name not in names:
             names.append(name)
+    # OP35: the fields the KI explicitly asked for (forward questions) are
+    # offered as empty inputs as soon as the edit mode opens - the user
+    # answers the question where it was asked, no field name hunting.
+    import re as _re
+    for question in (dataset.get('open_questions') or []):
+        match = _re.search(r'Fehlende Felder: ([^.]+)', str(question))
+        if match:
+            for name in match.group(1).split(','):
+                name = name.strip()
+                if name and name not in names:
+                    names.append(name)
     # The recommended field ('operator') and its canonical loader twin
     # ('operator_name') hold the SAME value after the alias sync - show
     # the information once, under the recommended name, so the user does
     # not see redundant fields in the editor.
+    from services.project_ingest import RECOMMENDED_FIELD_ALIASES as _ALIASES
+
+    def _value_of(name):
+        value = metadata.get(name)
+        if value in (None, ''):
+            canonical = _ALIASES.get(name)
+            if canonical:
+                value = metadata.get(canonical, '')
+        return value or ''
+
     return [{
         'name': name,
-        'value': metadata.get(name, ''),
+        'value': _value_of(name),
         'recommended': name in (recommended_fields or []),
     } for name in names
         if name not in RECOMMENDED_FIELD_ALIASES.values()]
