@@ -157,9 +157,10 @@ html = project_report._agent_section_html(
               'findings': findings},
      'charts': charts},
     section_figures=figures)
+chart_area = html.split('<details>')[0]  # OP39: source code follows as details
 check('T12 report renders outlier charts with captions',
-      'outlier_distance' not in html  # img src is a data url, alt text instead
-      and 'Ausreisser-Abst' in html
+      'outlier_distance' not in chart_area  # img src is a data url, alt instead
+      and 'Ausreisser-Abst' in chart_area
       and f"Abbildung {fig_map.get('outlier_distance')}" in html,
       f'fig_map={fig_map}')
 check('T13 findings rendered as Befunde paragraphs',

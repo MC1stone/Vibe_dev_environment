@@ -556,3 +556,22 @@ class ProjectFinalReportView(TemplateView):
             raise Http404('Final report not generated yet')
         with open(project.final_report_path, 'r', encoding='utf-8') as handle:
             return HttpResponse(handle.read(), content_type='text/html; charset=utf-8')
+
+class ProjectFinalReportMarkdownView(TemplateView):
+    """Serve the final report as Markdown download (OP39): renders the
+    Markdown variant on demand from the stored crew results - no stored
+    path needed, same data basis as the HTML report."""
+
+    def get(self, request, project_id):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=' + request.get_full_path())
+        project = _get_project(project_id, request.user)
+        if not project.final_report_path or not os.path.exists(project.final_report_path):
+            raise Http404('Final report not generated yet')
+        from services.project_report import generate_markdown_report
+        path = generate_markdown_report(project, project.crew_results or {})
+        with open(path, 'r', encoding='utf-8') as handle:
+            response = HttpResponse(handle.read(), content_type='text/markdown; charset=utf-8')
+            response['Content-Disposition'] = (
+                f'attachment; filename="final_report_{project.id}.md"')
+            return response

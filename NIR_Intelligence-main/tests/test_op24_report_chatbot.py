@@ -222,7 +222,11 @@ if html_path:
     check("T3d embedded base present in the report",
           "var KB = [" in content)
     check("T3e single chatbot instance in the report",
-          content.count("chatbot-section") == 2)  # section id + css/js ref
+          # exactly one widget: the section id appears once; further hits
+          # are css rules and the embedded source code (OP39 print rule)
+          content.count('id="chatbot-section"') == 1
+          and content.count('chatbot-form') <= 2
+          and content.count("Fragen zur Analyse") == 1)
     check("T3f report has no raw markdown leftovers", "{%" not in content)
 
 print(f"OP24 report chatbot matrix: {passed} passed, {failed} failed")

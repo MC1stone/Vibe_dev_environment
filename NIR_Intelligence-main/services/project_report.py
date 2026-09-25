@@ -239,6 +239,24 @@ pre.code { background: #212529; color: #e9ecef; padding: 14px; border-radius: 6p
            overflow: auto; font-size: 0.78rem; max-height: 420px; }
 details { margin: 10px 0; } summary { cursor: pointer; font-weight: 600; }
 ul { padding-left: 20px; } .muted { color: #6c757d; }.small { font-size: 0.85rem; }.meta-table { font-size: 0.85rem; margin: 8px 0 14px; }.meta-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.75rem; }.meta-ki { background: #cfe2ff; color: #084293; }.meta-ctx { background: #d1e7dd; color: #0f5132; }.meta-file { background: #e9ecef; color: #495057; }
+.print-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.print-actions button, .print-actions a { padding: 8px 16px;
+  border: 1px solid #0d6efd; border-radius: 6px; background: #0d6efd;
+  color: #fff; cursor: pointer; font-size: 0.9rem; text-decoration: none; }
+.eq-block { background: #f8f9fa; border: 1px solid #dee2e6;
+  border-left: 4px solid #0d6efd; border-radius: 6px; padding: 12px 16px;
+  margin: 10px 0; }
+.eq-block code { font-size: 0.85rem; }
+@media print {
+  .print-actions, #chatbot-section { display: none !important; }
+  body { background: #fff; }
+  .container { max-width: 100%; padding: 0; }
+  .card { border: 1px solid #999; page-break-inside: avoid; }
+  details { page-break-inside: avoid; }
+  details > pre.code { max-height: none; }
+  img.chart, .fig-block img { max-width: 100%; page-break-inside: avoid; }
+  h2 { page-break-after: avoid; }
+}
 """
 
 
@@ -274,6 +292,94 @@ _CHART_TITLES = {
     'outlier_distance': 'Ausreisser-Abstände (robuster z-Score, SNV + MAD)',
     'outlier_overlay': 'Spektren mit markierten Ausreissern',
 }
+
+AGENT_SOURCE_FILES = {
+    'spectral_analysis': ['agents/spectral_analysis_agent.py',
+                          'services/similarity_charts.py'],
+    'metadata_quality': ['agents/metadata_quality_agent.py'],
+    'sensor_quality': ['agents/sensor_quality_agent.py',
+                       'services/sensor_charts.py'],
+    'statistical_analysis': ['agents/statistical_analysis_agent.py',
+                             'services/pca_charts.py'],
+    'neural_network': ['agents/neural_network_agent.py',
+                       'services/xai_charts.py'],
+    'calibration': ['agents/calibration_agent.py',
+                    'services/calibration_charts.py'],
+    'faiss_similarity': ['agents/faiss_agent.py',
+                          'services/spectrum_similarity.py'],
+    'outlier_analysis': ['services/outlier_analysis.py'],
+}
+
+_SOURCE_CACHE: Dict[str, str] = {}
+
+
+def _source_code(rel_path: str) -> str:
+    cached = _SOURCE_CACHE.get(rel_path)
+    if cached is not None:
+        return cached
+    path = PROJECT_ROOT / rel_path
+    code = ''
+    if path.exists():
+        code = _escape(path.read_text(encoding='utf-8', errors='replace'))
+    _SOURCE_CACHE[rel_path] = code
+    return code
+
+
+def _equation_html(equation: Dict[str, Any]) -> str:
+    if not isinstance(equation, dict) or equation.get('status') != 'ok':
+        return ''
+    target = _escape(equation.get('target_name', 'Zielwert'))
+    intercept = equation.get('intercept', 0.0)
+    method = _escape(equation.get('method', 'PLS'))
+    r2 = equation.get('r2_fit')
+    rmsec = equation.get('rmsec')
+    terms = equation.get('top_terms') or []
+    rows = ''.join(
+        f'<tr><td>{_escape(t.get("channel_index"))}</td>'
+        f'<td>{_escape(t.get("wavelength_nm"))}</td>'
+        f'<td>{_escape(f"{t.get("coefficient", 0.0):+.4f}")}</td>'
+        f'<td>{_escape(t.get("channel_mean"))}</td>'
+        f'<td>{_escape(t.get("channel_std"))}</td></tr>'
+        for t in terms)
+    stats = ''
+    if r2 is not None and rmsec is not None:
+        stats = (f' &middot; R&sup2;<sub>fit</sub> = {_escape(f"{r2:.4f}")}'
+                 f' &middot; RMSEC = {_escape(f"{rmsec:.4f}")} {target}')
+    return ('<div class="eq-block"><p><b>Kalibrierungsgleichung</b> '
+            f'({method}):</p>'
+            f'<p><code>{target} = {_escape(f"{intercept:.4f}")} '
+            '+ &Sigma;<sub>i</sub> coef<sub>i</sub> '
+            '&middot; (x<sub>i</sub> &minus; mean<sub>i</sub>) / '
+            'std<sub>i</sub></code></p>'
+            '<p class="small muted">Standardisierte Kanäle (z-Scores); '
+            'die vollständige Kanal-Statistik (mean_i, std_i) und alle '
+            'Koeffizienten stehen im Abschnitts-Datensatz '
+            f'(<code>calibration_equation</code>).</p>'
+            f'<p class="small">Fit über {terms and "die" or ""}'
+            f'{_escape(equation.get("num_samples"))} Messungen '
+            f'({stats.strip()})</p>'
+            '<table class="meta-table"><thead><tr><th>Kanal</th>'
+            '<th>Wellenlänge (nm)</th><th>Koeffizient</th>'
+            '<th>Kanal-Mittelwert</th><th>Kanal-Stdabw.</th></tr></thead>'
+            f'<tbody>{rows}</tbody></table>'
+            '<p class="small muted">Ausführbar: y = intercept + '
+            'sum(coef_i * (x_i - mean_i)/std_i) über alle Kanäle; '
+            f'in-sample-Fit, Kreuzvalidierung siehe Ref. vs. Pred.</p></div>')
+
+
+def _section_source_html(section: Dict[str, Any]) -> str:
+    rel_paths = AGENT_SOURCE_FILES.get(str(section.get('agent', ''))) or []
+    if not rel_paths:
+        return ''
+    parts = []
+    for rel_path in rel_paths:
+        code = _source_code(rel_path)
+        if not code:
+            continue
+        parts.append(f'<details><summary>Quellcode: {_escape(rel_path)} '
+                     '(ausführbar)</summary>'
+                     f'<pre class="code"><code>{code}</code></pre></details>')
+    return ''.join(parts)
 
 
 def _figure_caption(number: int, key: str) -> str:
@@ -333,9 +439,15 @@ def _agent_section_html(section: Dict[str, Any],
             for k, url in charts.items() if url)
         note = _escape(section.get('charts_note') or 'PCA-Diagramme')
         charts_html = f'<h3>{note}</h3>{imgs}'
+    equation_html = ''
+    data = section.get('data') or {}
+    if isinstance(data, dict) and data.get('calibration_equation'):
+        equation_html = _equation_html(data.get('calibration_equation'))
+    source_html = _section_source_html(section)
     return (f'<div class="card"><h3>{_escape(section.get("title", section.get("agent", "Agent")))} '
             f'<span class="badge {badge}">{_escape(status)}</span></h3>'
-            f'{table}{charts_html}{findings_html}{recs}</div>')
+            f'{table}{equation_html}{charts_html}{findings_html}{recs}'
+            f'{source_html}</div>')
 
 
 def _original_data_html(datasets: List[Dict[str, Any]]) -> str:
@@ -429,6 +541,130 @@ def _metadata_overview_html(datasets: List[Dict[str, Any]],
             f'<div class="card">{ki_block}{std_block}{body}</div>')
 
 
+def _md_table(headers: List[str], rows: List[List[str]]) -> str:
+    head = '| ' + ' | '.join(headers) + ' |'
+    sep = '|' + '|'.join(['---'] * len(headers)) + '|'
+    body = ''.join('\n| ' + ' | '.join(str(c) for c in row) + ' |'
+                   for row in rows)
+    return head + '\n' + sep + body
+
+
+def _md_equation(equation: Dict[str, Any]) -> str:
+    if not isinstance(equation, dict) or equation.get('status') != 'ok':
+        return ''
+    target = str(equation.get('target_name', 'Zielwert'))
+    lines = [f"**Kalibrierungsgleichung ({equation.get('method', 'PLS')}):**",
+             '',
+             f"`{target} = {equation.get('intercept', 0.0):.4f} "
+             "+ SUM_i coef_i * (x_i - mean_i) / std_i`",
+             '']
+    terms = equation.get('top_terms') or []
+    if terms:
+        lines.append(_md_table(
+            ['Kanal', 'Wellenlänge (nm)', 'Koeffizient',
+             'Kanal-Mittelwert', 'Kanal-Stdabw.'],
+            [[str(t.get('channel_index')), str(t.get('wavelength_nm')),
+              f"{t.get('coefficient', 0.0):+.4f}", str(t.get('channel_mean')),
+              str(t.get('channel_std'))] for t in terms]))
+        lines.append('')
+    stats = (f"R²_fit = {equation.get('r2_fit', 0.0):.4f}, "
+             f"RMSEC = {equation.get('rmsec', 0.0):.4f} "
+             f"({equation.get('num_samples')} Messungen, in-sample-Fit; "
+             "Kreuzvalidierung siehe Ref. vs. Pred).")
+    lines.append(stats)
+    return '\n'.join(lines) + '\n'
+
+
+def _md_source(section: Dict[str, Any]) -> str:
+    parts = []
+    for rel_path in (AGENT_SOURCE_FILES.get(str(section.get('agent', '')))
+                     or []):
+        path = PROJECT_ROOT / rel_path
+        if not path.exists():
+            continue
+        code = path.read_text(encoding='utf-8', errors='replace')
+        fence = '```'
+        while fence + 'python' in code or fence in code.split(fence)[:-1]:
+            fence += '`'
+        parts.append(f'**Quellcode: `{rel_path}` (ausführbar)**\n\n'
+                     f'{fence}python\n{code}\n{fence}\n')
+    return '\n'.join(parts)
+
+
+def generate_markdown_report(project, crew_results: Dict[str, Any],
+                             full_series: Optional[List[Dict[str, Any]]] = None) -> str:
+    """Render the final report as Markdown (OP39): same structure as the
+    HTML report (KPIs, metadata overview, per-agent sections with findings,
+    charts as figure references, calibration equation, source code per
+    section) - download/print friendly. Returns the file path."""
+    preparation = project.preparation_report or {}
+    datasets = [d for d in preparation.get('datasets', []) if d.get('usable')]
+    per_agent = crew_results.get('per_agent_reports', [])
+    figures = _figure_registry(per_agent, overview_keys=['spectrum'])
+    lines = [f"# {project.name} – Abschlussbericht (Markdown)",
+             '',
+             f"Projekt-ID: {project.id} · "
+             f"Datum: {datetime.now().strftime('%d.%m.%Y %H:%M')} · "
+             f"Request-ID: {crew_results.get('request_id', '-')}",
+             '',
+             '## KPIs',
+             '']
+    lines.append(_md_table(
+        ['Kennzahl', 'Wert'],
+        [['Gesamtqualität',
+          round(float(crew_results.get('overall_quality_score') or 0), 1)],
+         ['Datensätze analysiert',
+          crew_results.get('datasets_analyzed'
+                           ) if crew_results.get('datasets_analyzed'
+                                                 ) is not None else len(datasets)],
+         ['Agenten-Berichte', len(per_agent)],
+         ['Bearbeitungszeit (s)',
+          round(float(crew_results.get('processing_time') or 0), 1)]]))
+    lines.append('')
+    for dataset in datasets:
+        rating = dataset.get('metadata_rating') or {}
+        rows = [[f, str(r.get('value', ''))[:60], str(r.get('source', ''))]
+                for f, r in rating.items()
+                if f != 'konflikte' and isinstance(r, dict)]
+        if rows:
+            lines += [f"### Metadaten: {dataset.get('file_name', '?')}", '',
+                      _md_table(['Feld', 'Wert', 'Quelle'], rows), '']
+    for section in per_agent:
+        agent = section.get('agent', '?')
+        figs = [f for f in figures if f.get('section_index')
+                and per_agent[f['section_index']].get('agent') == agent]
+        lines += [f"## {section.get('title', agent)}"
+                  f" ({section.get('status', '?')})", '']
+        data = section.get('data') or {}
+        rows = [(k, v) for k, v in _metric_rows(data)
+                if k != 'calibration_equation' and not k.startswith('calibration_equation.')]
+        if rows:
+            lines += [_md_table(['Feld', 'Wert'],
+                                [[k, str(v)[:120]] for k, v in rows]), '']
+        if figs:
+            lines += ['Abbildungen: '
+                      + ', '.join(f"{f['number']} "
+                                  f"({_CHART_TITLES.get(f['key'], f['key'])})"
+                                  for f in figs), '']
+        equation = data.get('calibration_equation') if isinstance(data, dict) else None
+        if equation:
+            lines += [_md_equation(equation), '']
+        for finding in (data.get('findings') if isinstance(data, dict) else []) or []:
+            lines += [f"- {finding}"]
+        if (data.get('findings') if isinstance(data, dict) else None):
+            lines.append('')
+        source = _md_source(section)
+        if source:
+            lines += [source, '']
+    output_dir = PROJECT_ROOT / 'output' / 'projects' / 'reports'
+    output_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    output_file = output_dir / f'final_{project.id}_{timestamp}.md'
+    output_file.write_text('\n'.join(lines), encoding='utf-8')
+    logger.info('Markdown project report written: %s', output_file)
+    return str(output_file)
+
+
 def generate_final_html_report(project, crew_results: Dict[str, Any],
                                 full_series: Optional[List[Dict[str, Any]]] = None) -> str:
     """Render the final comprehensive project report (self-contained HTML
@@ -520,6 +756,10 @@ def generate_final_html_report(project, crew_results: Dict[str, Any],
 <p class="muted">Projekt-ID: {_escape(project.id)} ·
 Datum: {_escape(datetime.now().strftime('%d.%m.%Y %H:%M'))} ·
 Request-ID: {_escape(crew_results.get('request_id', '-'))}</p>
+<div class="print-actions">
+<button onclick="window.print()" title="Drucken oder als PDF speichern (Browser-Dialog)">Drucken / PDF</button>
+<a href="/projects/{_escape(project.id)}/final-report/markdown/" title="Bericht als Markdown-Datei herunterladen">Markdown-Download</a>
+</div>
 
 {_kpi_row([
     ('Gesamtqualität', round(float(crew_results.get('overall_quality_score') or 0), 1)),
