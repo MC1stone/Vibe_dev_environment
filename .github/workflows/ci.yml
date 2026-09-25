@@ -71,6 +71,7 @@ jobs:
           python tests/test_op36_target_agnostic.py
           python tests/test_op37_outlier_chatbot.py
           python tests/test_op38_spectrum_cleaned.py
+          python tests/test_op39_equation_export_source.py
 
       - name: Django system check
         run: python django_project/manage.py check

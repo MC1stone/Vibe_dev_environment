@@ -25,6 +25,80 @@ import numpy as np
 
 logger = logging.getLogger("Service.CalibrationCharts")
 
+MAX_EQUATION_TERMS = 12
+
+
+def calibration_equation(calibration_samples: List[List[float]],
+                         reference_values: List[float],
+                         wavelengths: Optional[List[float]] = None,
+                         target_name: str = "Zielwert",
+                         max_terms: int = MAX_EQUATION_TERMS) -> Dict[str, Any]:
+    """Fit the PLS calibration on ALL calibration samples and return the
+    explicit linear calibration equation (OP39): intercept + coefficient
+    per wavelength/channel, R²/RMSEC (in-sample, documented as such) and
+    the top-weighted terms for the report. Standardised inputs (mean 0,
+    unit variance per channel), so the coefficients are comparable - the
+    returned per-channel (mean, std) pair documents the scaling and makes
+    the equation executable: y = intercept + sum(coef_i * (x_i - mean_i)/std_i).
+    Returns {'status': 'unavailable', 'reason': ...} honestly when the data
+    is insufficient (no invention, never raises)."""
+    unavailable = {'status': 'unavailable',
+                   'reason': 'zu wenige Kalibrationsmessungen'}
+    if not NUMPY_EQUIVALENT:
+        return {'status': 'unavailable', 'reason': 'numpy nicht verfügbar'}
+    try:
+        matrix = _as_matrix(calibration_samples)
+        if matrix is None or reference_values is None:
+            return unavailable
+        y = np.asarray(reference_values, dtype=float).ravel()
+        if y.size != matrix.shape[0] or np.unique(y).size < 3:
+            return unavailable
+        from sklearn.cross_decomposition import PLSRegression
+        n_components = max(1, min(10, matrix.shape[0] - 1, matrix.shape[1]))
+        pls = PLSRegression(n_components=n_components).fit(matrix, y)
+        coefficients = np.asarray(pls.coef_, dtype=float).ravel()
+        predictions = pls.predict(matrix).ravel()
+        ss_res = float(np.sum((y - predictions) ** 2))
+        ss_tot = float(np.sum((y - np.mean(y)) ** 2))
+        r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+        rmsec = float(np.sqrt(ss_res / y.size))
+        wl = np.asarray(wavelengths, dtype=float) if wavelengths else \
+            np.arange(matrix.shape[1], dtype=float)
+        if wl.size != matrix.shape[1]:
+            wl = np.arange(matrix.shape[1], dtype=float)
+        channel_mean = matrix.mean(axis=0)
+        channel_std = np.where(matrix.std(axis=0, ddof=1) < 1e-12,
+                                1.0, matrix.std(axis=0, ddof=1))
+        order = np.argsort(-np.abs(coefficients))
+        terms = [{'channel_index': int(i),
+                  'wavelength_nm': float(wl[i]),
+                  'coefficient': float(coefficients[i]),
+                  'channel_mean': float(channel_mean[i]),
+                  'channel_std': float(channel_std[i])}
+                 for i in order[:max_terms]]
+        return {
+            'status': 'ok',
+            'method': f'PLS ({n_components} Komponenten)',
+            'n_components': int(n_components),
+            'target_name': target_name,
+            'intercept': float(np.ravel(pls.intercept_)[0]),
+            'coefficients': [float(c) for c in coefficients],
+            'wavelengths_nm': [float(w) for w in wl],
+            'channel_mean': [float(m) for m in channel_mean],
+            'channel_std': [float(s) for s in channel_std],
+            'top_terms': terms,
+            'num_samples': int(matrix.shape[0]),
+            'num_channels': int(matrix.shape[1]),
+            'r2_fit': float(r2),
+            'rmsec': float(rmsec),
+            'note': ('Fit über alle Kalibrationsmessungen (in-sample); '
+                     'Kreuzvalidierung siehe Ref. vs. Pred-Diagramm'),
+        }
+    except Exception:
+        logger.exception("Calibration equation failed (non-fatal)")
+        return {'status': 'unavailable',
+                'reason': 'Kalibration konnte nicht gefittet werden'}
+
 try:
     import matplotlib
     matplotlib.use("Agg")
@@ -39,6 +113,9 @@ def _figure_to_data_url(fig) -> str:
     fig.savefig(buf, format="png", dpi=110, bbox_inches="tight")
     plt.close(fig)
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+
+
+NUMPY_EQUIVALENT = True  # numpy is a hard import of this module
 
 
 def _as_matrix(samples) -> Optional[np.ndarray]:

@@ -3,7 +3,50 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP38 - Ehrliche Spektren-Darstellung nach Ausreisser-Analyse
+## Current Task: OP39 - Kalibrierungsgleichung + Print/MD-Export + Quellcode je Abschnitt
+
+### Objective
+Drei Luecken im Abschlussbericht: (1) Die Kalibrierungsgleichung fehlt -
+der Report zeigte nur R2/CV-Scores und Diagramme, aber nicht die
+explizite Gleichung (Intercept + Koeffizienten je Kanal). (2) Keine
+Print-/Export-Option: weder Drucken/PDF noch Markdown. (3) Der Quellcode
+der Auswertungen stand nur global (3 Dateien) am Report-Ende, nicht je
+Abschnitt als ausfuehrbarer Code.
+
+### Scope
+- `services/calibration_charts.py`: `calibration_equation()` - PLS-Fit ueber
+  alle Kalibrationsmessungen, standardisierte Kanaele: Intercept +
+  Koeffizient je Kanal, R2_fit/RMSEC (in-sample, dokumentiert), Top-Terme
+  nach |Koeffizient|; ehrliches 'unavailable' bei unzureichenden Daten
+- `services/project_crew.py`: Gleichung in die Kalibrations-Sektion
+- `services/project_report.py`:
+  - `_equation_html()` - Gleichungsblock mit Intercept, Formel
+    (y = intercept + SUM coef_i*(x_i-mean_i)/std_i) und Top-Term-Tabelle
+  - `AGENT_SOURCE_FILES` + `_section_source_html()` - Quellcode je
+    Agent-Sektion als ausfuehrbaren Code (details/pre)
+  - Print-Button (window.print -> PDF via Browser-Dialog), @media print
+    CSS (Chatbot/Buttons ausgeblendet, Page-Breaks)
+  - Markdown-Download-Link + `generate_markdown_report()` -
+    vollstaendiger MD-Bericht (KPIs, Metadaten, Sektionen, Gleichung,
+    Quellcode-Fences)
+- `django_project/api/project_views.py` + `project_urls.py`:
+  `ProjectFinalReportMarkdownView` (/projects/<id>/final-report/markdown/)
+- `tests/test_op39_equation_export_source.py` (16 Checks) + CI-Zeile;
+  OP24/OP37-Matrizen an die neuen Vertraege angepasst (Quellcode im
+  Report enthaelt jetzt legitime String-Treffer)
+
+### Success Criteria
+- Kalibrierungsgleichung (PLS, standardisiert) erscheint im HTML- und
+  MD-Bericht mit Intercept, Koeffizienten und Kanal-Statistik - und ist
+  ausfuehrbar reproduzierbar
+- Drucken/PDF (Browser-Dialog) und Markdown-Download verfuegbar;
+  Print-CSS blendet Interaktivitaet aus
+- Quellcode jedes Auswertungsmoduls steht im zugehoerigen Abschnitt
+  (8 Agent-Keys gemappt) als ausfuehrbarer Code
+- Zu wenige/unklare Daten -> ehrliches 'unavailable', keine Erfindung
+- Alle Matrizen bleiben gruen
+
+## Completed Task: OP38 - Ehrliche Spektren-Darstellung nach Ausreisser-Analyse
 
 ### Objective
 Abbildung 1 des Abschlussberichts zeigt die hochgeladenen Spektren als

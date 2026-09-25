@@ -281,19 +281,32 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
             })())
         calibration_samples = (dataset.get('calibration_samples') or [])
         reference_values = (dataset.get('reference_values') or [])
+        target_name = (dataset.get('metadata', {}).get('target_name') or 'Zielwert')
         if calibration_samples and reference_values:
             try:
-                from services.calibration_charts import calibration_chart_data_urls
+                from services.calibration_charts import (
+                    calibration_chart_data_urls, calibration_equation)
                 cal_section['charts'] = calibration_chart_data_urls(
                     calibration_samples, reference_values,
                     dataset.get('preview', {}).get('wavelengths', []),
-                    target_name=(dataset.get('metadata', {})
-                                 .get('target_name') or 'Zielwert'),
+                    target_name=target_name,
                 )
                 if cal_section.get('charts'):
                     cal_section['charts_note'] = (
                         f"{len(cal_section['charts'])} Kalibrierungs-Diagramme aus "
                         f"{len(calibration_samples)} Kalibrationsmessungen")
+                equation = calibration_equation(
+                    calibration_samples, reference_values,
+                    dataset.get('preview', {}).get('wavelengths', []),
+                    target_name=target_name)
+                if equation.get('status') == 'ok':
+                    cal_section['data'] = dict(cal_section.get('data') or {})
+                    cal_section['data']['calibration_equation'] = equation
+                    cal_section['data']['equation_note'] = (
+                        'Kalibrierungsgleichung (OP39): PLS-Modell, standardisierte '
+                        'Kanäle - y = intercept + Summe(coef_i * (x_i - mean_i)/std_i) '
+                        'über alle Kanäle; die Top-Termine und Kanal-Statistiken '
+                        'stehen in der Tabelle.')
             except Exception:
                 logger.exception('Calibration chart rendering failed (non-fatal)')
         sections.append(cal_section)
