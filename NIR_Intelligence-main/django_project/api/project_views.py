@@ -405,6 +405,16 @@ class ProjectReingestView(APIView if DRF_AVAILABLE else object):
         })
 
 
+def _project_dataset_names(project, file_id: str) -> list:
+    """Inner dataset names of one project file (OP30): an archive file
+    yields one dataset per inner file ('OEL-MK_Train(1).csv'), a direct
+    file yields none. Read from the stored preparation report - no
+    re-ingest, and an empty report means no inner datasets exist."""
+    datasets = (project.preparation_report or {}).get('datasets', [])
+    return [d.get('file_name', '') for d in datasets
+            if str(d.get('file_id', '')).startswith(f'{file_id}:')]
+
+
 class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
     """Edit dataset metadata online (OP13): the user enters/updates metadata
     fields per file directly on the project page; the overrides are stored
@@ -429,6 +439,11 @@ class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
                             status=status.HTTP_400_BAD_REQUEST)
 
         known_file_ids = {str(f.id) for f in project.files.all()}
+        # OP30: files inside an archive carry the inner id
+        # '<archive-file-id>:<inner-name>' in their editor form.
+        known_file_ids.update(
+            f'{fid}:{name}' for fid in known_file_ids
+            for name in _project_dataset_names(project, fid))
         overrides = dict(project.metadata_overrides or {})
         for file_id, fields in metadata.items():
             if str(file_id) not in known_file_ids:

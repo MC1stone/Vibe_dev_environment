@@ -281,16 +281,15 @@ def _extract_numeric_reference(metadata: Dict[str, Any]) -> List[Dict[str, Any]]
     return references
 
 
-def ingest_file(file_record) -> Dict[str, Any]:
-    """Ingest one GenericFile into a dataset entry for the preparation report.
+def ingest_file(file_record) -> Dict[str, Any] | List[Dict[str, Any]]:
+    """Ingest one GenericFile into a dataset entry (or several entries when
+    the file is an archive, OP30) for the preparation report.
 
     Returns a dict with dataset info (wavelengths/intensities preview,
-    quality metrics, metadata) or a usable=False marker with the reason.
-    Never raises: unusable files are reported, not fatal, so the user can
-    adapt and re-upload.
+    quality metrics, metadata) or a usable=False marker with the reason;
+    an archive returns one entry per inner file. Never raises: unusable
+    files are reported, not fatal, so the user can adapt and re-upload.
     """
-    from agents.data_preparation_agent import EnhancedDataPreparationAgent
-
     entry: Dict[str, Any] = {
         "file_id": str(file_record.id),
         "file_name": file_record.name,
@@ -302,28 +301,150 @@ def ingest_file(file_record) -> Dict[str, Any]:
         entry.update({"usable": False, "reason": "File not found on server"})
         return entry
 
+    # OP30: an archive is a container, not a spectrum file - every inner
+    # file is ingested with the same rules as a directly uploaded file.
+    archive = _archive_entries(file_record, file_path)
+    if archive is not None:
+        return archive
+
+    return _ingest_single_file(file_record, file_path)
+
+
+class _InnerFileRecord:
+    """Minimal GenericFile stand-in for one file extracted from an archive
+    (OP30): carries the inner file's identity so the shared ingest path
+    (_metadata_only_entry, wide-format ingest) works unchanged."""
+
+    def __init__(self, file_id: str, name: str):
+        self.id = file_id
+        self.name = name
+        self.file_extension = Path(name).suffix.lower() or ".txt"
+        self.file_category = "archive_inner"
+
+
+def _extract_archive_members(file_path: str, loader) -> List[str]:
+    """Extract archive members into a FRESH unique directory (OP30): the
+    loader's own scan reuses one directory per archive basename, so two
+    project uploads with the same archive name would see each other's
+    inner files. Each project ingest therefore extracts into its own
+    temporary directory. Size guard and candidate cap follow the loader
+    contract. Never raises."""
+    import os
+    import tarfile
+    import tempfile
+    import zipfile
+
+    try:
+        extract_dir = tempfile.mkdtemp(prefix="nir_project_archive_")
+        if zipfile.is_zipfile(file_path):
+            with zipfile.ZipFile(file_path, "r") as zip_ref:
+                total_size = sum(info.file_size for info in zip_ref.infolist())
+                if total_size > loader.max_file_size:
+                    return []
+                zip_ref.extractall(extract_dir)
+        else:
+            with tarfile.open(file_path, "r:*") as tar_ref:
+                safe_members = []
+                total_size = 0
+                for member in tar_ref.getmembers():
+                    if not member.isfile():
+                        continue
+                    total_size += member.size
+                    if total_size > loader.max_file_size:
+                        return []
+                    safe_members.append(member)
+                try:
+                    tar_ref.extractall(extract_dir, members=safe_members,
+                                       filter="data")
+                except TypeError:
+                    tar_ref.extractall(extract_dir, members=safe_members)
+        members = []
+        for root, _dirs, files in os.walk(extract_dir):
+            for name in files:
+                members.append(os.path.join(root, name))
+    except Exception:
+        return []
+    return members[:loader._MAX_ARCHIVE_CANDIDATES]
+
+
+def _archive_entries(file_record, file_path: str) -> List[Dict[str, Any]] | None:
+    """An archive (ZIP/tar) is a container of files, not one spectrum file
+    (OP30): a project ZIP bundles a description and several measurement
+    files (train/test). Treating the archive as a single spectrum file
+    picks ONE inner file and garbles its columns into a fake wavelength
+    axis ('No finite wavelength/intensity rows'). Instead every inner file
+    is extracted and ingested with the same rules as a directly uploaded
+    file (wide format -> two-column -> metadata source), each under its own
+    name and id ('<archive-file-id>:<inner-name>') so the editor shows one
+    row per inner file. Returns None when the file is not an archive or
+    extraction failed - the caller then runs the single-file path.
+    Never raises."""
+    import os
+    import tarfile
+    import zipfile
+
+    archive_ext = os.path.splitext(file_path)[1].lower()
+    try:
+        is_archive = zipfile.is_zipfile(file_path) or (
+            archive_ext in (".tar", ".tar.gz", ".tgz", ".gz", ".bz2", ".xz")
+            and tarfile.is_tarfile(file_path))
+    except Exception:
+        return None
+    if not is_archive:
+        return None
+    from agents.data_preparation_agent import EnhancedDataPreparationAgent
+    loader = EnhancedDataPreparationAgent(
+        input_directory=str(Path(file_path).parent),
+        output_directory=str(Path(file_path).parent / "processed"),
+    )
+    candidates = _extract_archive_members(file_path, loader)
+    if not candidates:
+        return None
+    entries: List[Dict[str, Any]] = []
+    for candidate in candidates:
+        name = Path(candidate).name
+        inner = _InnerFileRecord(f"{file_record.id}:{name}", name)
+        entry = _ingest_single_file(inner, candidate)
+        entry["archive_file"] = file_record.name
+        entries.append(entry)
+    return entries
+
+
+def _ingest_single_file(record, file_path: str) -> Dict[str, Any]:
+    """Ingest one concrete file path (a directly uploaded file or a file
+    extracted from an archive, OP30) into a dataset entry with the shared
+    rules: wide-format detection first, then the S3 two-column loader,
+    then the metadata-only source. Never raises."""
+    entry: Dict[str, Any] = {
+        "file_id": str(record.id),
+        "file_name": record.name,
+        "file_extension": record.file_extension,
+        "file_category": record.file_category,
+    }
+
     # OP14: multi-channel wide-format exports (one row per measurement, one
     # column per wavelength channel, e.g. A_410..L_940) must not go through
     # the two-column loader - it garbles channels and counters into a fake
     # wavelength axis. Detect first, fall back to the S3 loader.
     wide = _detect_wide_format(file_path)
     if wide:
-        entry.update(_ingest_wide_format(file_record, file_path, wide))
+        entry.update(_ingest_wide_format(record, file_path, wide))
         logger.info('Wide-format ingest for %s: %s channels, %s measurements',
-                    file_record.name, len(wide['channel_columns']),
+                    file_path, len(wide['channel_columns']),
                     wide['measurement_count'])
         return entry
 
+    from agents.data_preparation_agent import EnhancedDataPreparationAgent
     loader = EnhancedDataPreparationAgent(
         input_directory=str(Path(file_path).parent),
         output_directory=str(Path(file_path).parent / "processed"),
     )
     spectral = loader._load_spectral_data(file_path)
     if not spectral or spectral.get("data") is None or len(spectral.get("data", [])) == 0:
-        text_metadata = _metadata_only_entry(file_record, file_path, loader)
+        text_metadata = _metadata_only_entry(record, file_path, loader)
         if text_metadata is not None:
             logger.info('Metadata-only ingest for %s (description file with '
-                        'no measurement values)', file_record.name)
+                        'no measurement values)', file_path)
             return text_metadata
         entry.update({"usable": False, "reason": "Not parseable as spectral data (S3 loader)"})
         return entry
@@ -342,7 +463,8 @@ def ingest_file(file_record) -> Dict[str, Any]:
 
     wavelengths = [p[0] for p in pairs]
     intensities = [p[1] for p in pairs]
-    _sync_recommended_aliases(entry.get("metadata") or {})
+    metadata = spectral.get("metadata") or {}
+    _sync_recommended_aliases(metadata)
     entry.update({
         "usable": True,
         "dataset_type": "measurement",
@@ -355,8 +477,8 @@ def ingest_file(file_record) -> Dict[str, Any]:
             "wavelengths": wavelengths[:64],
             "intensities": intensities[:64],
         },
-        "metadata": spectral.get("metadata") or {},
-        "numeric_references": _extract_numeric_reference(spectral.get("metadata") or {}),
+        "metadata": metadata,
+        "numeric_references": _extract_numeric_reference(metadata),
     })
     return entry
 
@@ -485,9 +607,19 @@ def build_preparation_report(project) -> Dict[str, Any]:
     overrides = getattr(project, "metadata_overrides", None) or {}
     datasets = []
     for f in project.files.all():
-        entry = ingest_file(f)
-        apply_metadata_overrides(entry, overrides.get(str(f.id), {}))
-        datasets.append(entry)
+        entries = ingest_file(f)
+        if isinstance(entries, dict):
+            entries = [entries]
+        for entry in entries:
+            # Metadata overrides are keyed by file id; inner archive files
+            # carry the '<archive-id>:<name>' key of their inner entry (OP30)
+            # while direct files keep the plain file id.
+            entry_overrides = overrides.get(str(entry.get("file_id")), None)
+            if entry_overrides is None:
+                entry_overrides = overrides.get(str(f.id), {}) \
+                    if entry.get("file_id") == str(f.id) else {}
+            apply_metadata_overrides(entry, entry_overrides)
+            datasets.append(entry)
     metadata_assessment = _assess_metadata(datasets)
     recommendations = _recommendations(datasets, metadata_assessment)
     usable_count = sum(1 for d in datasets if d.get("usable"))

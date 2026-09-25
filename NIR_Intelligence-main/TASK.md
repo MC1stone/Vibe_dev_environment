@@ -3,7 +3,50 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP29 - Sensor Agent (Sensor Knowledge, Settings, Optimization)
+## Current Task: OP30 - Archive Ingest (ZIP as Container, not Spectrum File)
+
+### Objective
+The user's oil experiment arrived as one ZIP bundling a prose description
+(Oel_Meta.txt) and two wide-format measurement matrices (OEL-MK_Train(1).csv,
+OEL_MK_Test.csv). The project ingest treated the archive as a single
+spectrum file: the content-driven loader picked ONE inner file (the test
+matrix) and garbled its 'Probe'/'Brix' columns into a fake wavelength axis,
+so the preparation report ended with 'No finite wavelength/intensity rows',
+the description was lost and every other inner file was silently dropped.
+
+### Scope
+- `services/project_ingest.py`:
+  - `_ingest_single_file`: shared ingest path (wide format -> two-column
+    loader -> metadata source) for direct files and archive members; the
+    OP28 alias sync now runs on the actual metadata dict (was a no-op
+    before the entry's metadata was set)
+  - `_archive_entries` + `_extract_archive_members`: an archive yields one
+    dataset per inner file, extracted into a fresh unique directory (the
+    loader's shared scan directory would mix same-named uploads); inner
+    datasets carry the id '<archive-file-id>:<inner-name>' and their
+    archive origin, size guard and candidate cap follow the loader contract
+  - `build_preparation_report` flattens the entries and applies the OP13
+    metadata overrides per inner dataset id
+- `django_project/api/project_views.py`: ProjectMetadataView accepts inner
+  archive dataset ids (validated against the stored preparation report)
+- `tests/test_op30_archive_ingest.py` (19 checks) + CI matrix extension
+
+### Out of Scope
+- The S3 loader's archive scan (used for single-file spectral loads)
+- Upload/storage layer changes (the ZIP stays one stored project file)
+- The crew analysis of multiple datasets (unchanged: one run per dataset)
+
+### Success Criteria
+- The oil ZIP ingests as 3 usable datasets: train + test wide-format
+  measurements with the real channel axis and the description as a
+  metadata source (operator=Yvonne, instrument=Triadsensor)
+- No inner file is lost and no fake wavelength axis is produced
+- Metadata overrides work for inner datasets in the online editor
+- Broken inner files are reported honestly, not fatal
+- All existing test matrices stay green (no regressions)
+
+## Completed Task: OP29 - Sensor Agent (Sensor Knowledge, Settings, Optimization)
+
 
 ### Objective
 
