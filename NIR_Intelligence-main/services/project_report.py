@@ -239,7 +239,9 @@ pre.code { background: #212529; color: #e9ecef; padding: 14px; border-radius: 6p
            overflow: auto; font-size: 0.78rem; max-height: 420px; }
 details { margin: 10px 0; } summary { cursor: pointer; font-weight: 600; }
 ul { padding-left: 20px; } .muted { color: #6c757d; }.small { font-size: 0.85rem; }.meta-table { font-size: 0.85rem; margin: 8px 0 14px; }.meta-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.75rem; }.meta-ki { background: #cfe2ff; color: #084293; }.meta-ctx { background: #d1e7dd; color: #0f5132; }.meta-file { background: #e9ecef; color: #495057; }
-.print-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.print-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; align-items: center; }
+.src-toggle { display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.85rem; color: #495057; cursor: pointer; }
 .print-actions button, .print-actions a { padding: 8px 16px;
   border: 1px solid #0d6efd; border-radius: 6px; background: #0d6efd;
   color: #fff; cursor: pointer; font-size: 0.9rem; text-decoration: none; }
@@ -252,7 +254,7 @@ ul { padding-left: 20px; } .muted { color: #6c757d; }.small { font-size: 0.85rem
   body { background: #fff; }
   .container { max-width: 100%; padding: 0; }
   .card { border: 1px solid #999; page-break-inside: avoid; }
-  details { page-break-inside: avoid; }
+  details > summary { font-size: 0.9rem; }
   details > pre.code { max-height: none; }
   img.chart, .fig-block img { max-width: 100%; page-break-inside: avoid; }
   h2 { page-break-after: avoid; }
@@ -757,6 +759,9 @@ def generate_final_html_report(project, crew_results: Dict[str, Any],
 Datum: {_escape(datetime.now().strftime('%d.%m.%Y %H:%M'))} ·
 Request-ID: {_escape(crew_results.get('request_id', '-'))}</p>
 <div class="print-actions">
+<label class="src-toggle"><input type="checkbox" id="print-source-toggle"
+       onchange="var show=this.checked;document.querySelectorAll('details').forEach(function(d){{if(d.querySelector('pre.code')){{d.open=show;}}}});">
+Quellcode im Ausdruck einbeziehen</label>
 <button onclick="window.print()" title="Drucken oder als PDF speichern (Browser-Dialog)">Drucken / PDF</button>
 <a href="/projects/{_escape(project.id)}/final-report/markdown/" title="Bericht als Markdown-Datei herunterladen">Markdown-Download</a>
 </div>

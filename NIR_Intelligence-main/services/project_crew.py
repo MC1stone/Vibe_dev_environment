@@ -475,6 +475,15 @@ def run_project_crew(project) -> Dict[str, Any]:
         intensities = dataset.get('preview', {}).get('intensities', [])
         if not wavelengths:
             continue
+        _meta = dict(dataset.get('metadata') or {})
+        # OP40: required standard fields the dataset already carries
+        # under another name - map instead of demanding redundant input
+        if not _meta.get('sample_id'):
+            _meta['sample_id'] = dataset.get('file_name', '')
+        if not _meta.get('measurement_date') and _meta.get('timestamp'):
+            _meta['measurement_date'] = _meta['timestamp']
+        if not _meta.get('instrument_type') and _meta.get('instrument'):
+            _meta['instrument_type'] = _meta['instrument']
         request_obj = AnalysisRequest(
             sample_id=dataset.get('file_name', str(dataset.get('file_id'))),
             spectral_data={'wavelengths': wavelengths, 'intensities': intensities},
@@ -484,7 +493,7 @@ def run_project_crew(project) -> Dict[str, Any]:
                       'calibration_samples': dataset.get('calibration_samples') or [],
                       **({'reference_values': dataset['reference_values']}
                          if dataset.get('reference_values') else {}),
-                      **(dataset.get('metadata') or {})},
+                      **_meta},
             file_paths=[],
             analysis_mode=AnalysisMode.STANDARD,
             report_type=ReportType.COMPREHENSIVE,
