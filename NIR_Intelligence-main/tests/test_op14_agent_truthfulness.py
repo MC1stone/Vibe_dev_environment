@@ -194,8 +194,9 @@ project.crew_results = None
 project.final_report_path = None
 results = run_project_crew(project)
 statuses = {r["agent"]: r["status"] for r in results["per_agent_reports"]}
-check("T6d all seven agent sections completed",
-      len(statuses) == 7 and set(statuses.values()) == {"completed"}, str(statuses))
+check("T6d all eight agent sections completed",
+      len(statuses) == 8 and set(statuses.values()) == {"completed"}
+      and "outlier_analysis" in statuses, str(statuses))
 check("T6e no 'outside expected range' in the crew result",
       all("outside expected range" not in str(results).lower() for _ in [0]))
 report_html = Path(project.final_report_path).read_text(encoding="utf-8")
