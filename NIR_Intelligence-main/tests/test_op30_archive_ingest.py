@@ -250,6 +250,80 @@ check('T8a nested archive yields the inner measurement dataset',
           for e in nested_entries),
       f'entries={[(e.get("file_name"), e.get("usable")) for e in nested_entries]}')
 
+# ---------------------------------------------------------------- T9
+# ProjectMetadataView must accept inner archive ids AND survive several
+# project files (the OP30 inner-id expansion once mutated the known-file
+# set while iterating it -> RuntimeError -> HTML 500 page -> the editor
+# JS reported 'Unexpected token <').
+import django  # noqa: E402
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'nir_web.settings')
+sys.path.insert(0, str(PROJECT / 'django_project'))
+django.setup()
+from django.conf import settings  # noqa: E402
+
+if 'testserver' not in settings.ALLOWED_HOSTS:
+    settings.ALLOWED_HOSTS.append('testserver')
+
+from django.contrib.auth import get_user_model  # noqa: E402
+from django.test import Client  # noqa: E402
+from django.core.files.uploadedfile import SimpleUploadedFile  # noqa: E402
+
+User = get_user_model()
+try:
+    User.objects.filter(username='op30tester').first()
+except Exception:
+    from django.core.management import call_command
+    call_command('migrate', interactive=False, verbosity=0)
+
+user = User.objects.filter(username='op30tester').first()
+if user is None:
+    user = User(username='op30tester', email='op30tester@test.local')
+user.set_password('op30test')
+user.is_staff = True
+user.save()
+
+# Upload the oil ZIP directly (two project files would also trigger the
+# bug; the ZIP alone keeps the check focused on the archive path).
+with open(zip_path, 'rb') as f:
+    zip_bytes = f.read()
+c = Client()
+check('T9a login works', c.login(username='op30tester', password='op30test'))
+r = c.post('/api/files/upload/', {
+    'files': SimpleUploadedFile('OEL_MK.zip', zip_bytes,
+                                content_type='application/zip')
+}, format='multipart')
+uploaded = r.json().get('uploaded_files', [])
+check('T9b oil ZIP upload works', len(uploaded) == 1, f'r={r.content[:200]}')
+r = c.post('/api/projects/create/',
+           data={'file_ids': uploaded, 'name': 'OP30 Archive Test'},
+           content_type='application/json')
+live_pid = r.json().get('project_id')
+check('T9c project created', bool(live_pid), f'r={r.content[:200]}')
+
+# The metadata editor lists the inner datasets; pick the description.
+r = c.get(f'/projects/{live_pid}/')
+page = r.content.decode('utf-8', errors='replace')
+inner_form_ids = [seg.split('"')[0] for seg in page.split('data-file-id="')[1:]]
+check('T9d editor shows one form per inner dataset',
+      len(inner_form_ids) == 3, f'ids={inner_form_ids}')
+desc_id = next((i for i in inner_form_ids if 'Meta' in i), None)
+check('T9e description dataset editable', desc_id is not None,
+      f'ids={inner_form_ids}')
+
+r = c.post(f'/api/projects/{live_pid}/metadata/',
+           data={'metadata': {desc_id: {'operator': 'Martin'}}},
+           content_type='application/json')
+check('T9f metadata update on inner dataset returns JSON (no HTML 500)',
+      r.status_code == 200, f'status={r.status_code} body={r.content[:200]}')
+try:
+    body = r.json()
+except ValueError:
+    body = {}
+check('T9g metadata update succeeded',
+      body.get('success') is True, f'body={body}')
+check('T9h overridden operator reflected in the report',
+      body.get('metadata_quality_score') is not None, f'body={body}')
+
 # ---------------------------------------------------------------- summary
 print()
 print(f'OP30 archive ingest matrix: {PASS} passed, {FAIL} failed')

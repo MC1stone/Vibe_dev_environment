@@ -440,9 +440,11 @@ class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
 
         known_file_ids = {str(f.id) for f in project.files.all()}
         # OP30: files inside an archive carry the inner id
-        # '<archive-file-id>:<inner-name>' in their editor form.
+        # '<archive-file-id>:<inner-name>' in their editor form. Built
+        # from a snapshot of the plain file ids (mutating the set while
+        # iterating it raises RuntimeError in Python).
         known_file_ids.update(
-            f'{fid}:{name}' for fid in known_file_ids
+            f'{fid}:{name}' for fid in list(known_file_ids)
             for name in _project_dataset_names(project, fid))
         overrides = dict(project.metadata_overrides or {})
         for file_id, fields in metadata.items():
