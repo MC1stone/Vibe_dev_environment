@@ -36,6 +36,13 @@ im Report und fragt nur fuer Nicht-Ableitbares explizit nach.
 ### Success Criteria
 - wavelength_range/resolution/scan_count werden aus den Daten berechnet
   und mit Quellen-Badge im Report angezeigt (nicht mehr 'fehlend')
+- OP34-Nacharbeit: KI-Fragen werden THEMATISCH konsolidiert (eine Frage
+  pro Thema: Sensor = Name/Typ + Modell + Seriennummer zusammen,
+  Messparameter = Integrationszeit), bekannte Werte werden in der Frage
+  genannt; Metadaten-Accordion im Report standardmaessig aufgeklappt
+  (Werte sichtbar, nicht nur Bewertung); Beschreibungs-Metadaten
+  propagieren als Projekt-Kontext auf die Mess-Datensaetze
+  (Quelle 'projekt-kontext', nie ueberschreibend)
 - ASTM_E1655-Konformitaet steigt durch die abgeleiteten Felder
 - Nicht ableitbare Felder werden ueber KI-Fragen eskaliert (nie geraten)
 - Vorhandene Werte werden nie ueberschrieben
