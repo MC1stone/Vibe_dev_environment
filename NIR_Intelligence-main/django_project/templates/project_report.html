@@ -129,7 +129,7 @@
                                     <tr>
                                         <td><code>{{ field }}</code></td>
                                         <td>{{ r.value|truncatechars:60 }}</td>
-                                        <td>{% if 'ki' in r.source %}<span class="badge bg-primary">{{ r.source }}</span>{% else %}<span class="badge bg-light text-dark">{{ r.source }}</span>{% endif %}</td>
+                                        <td>{% if 'berechnet' in r.source %}<span class="badge bg-info text-dark">{{ r.source }}</span>{% elif 'ki' in r.source %}<span class="badge bg-primary">{{ r.source }}</span>{% else %}<span class="badge bg-light text-dark">{{ r.source }}</span>{% endif %}</td>
                                         <td>{% if r.rating == 'konflikt' %}<span class="badge bg-danger">Konflikt – klären</span>{% else %}<span class="badge bg-success">ok</span>{% endif %}</td>
                                     </tr>
                                     {% endif %}

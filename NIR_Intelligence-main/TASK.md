@@ -3,7 +3,46 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP32 - Standards-Based Metadata Display and KI Relevance Recommendations
+## Current Task: OP33 - KI Derived Metadata (Predict/Suggest from Data) and Forward Questions
+
+### Objective
+Der OP32-Report listete wavelength_range, resolution, integration_time und
+instrument_model als fehlend - aber ausser der Integrationszeit kann alles
+aus den geladenen Daten berechnet werden. Der Nutzer erwartet: Die KI
+analysiert die Daten, leitet die Werte ab (predict/suggest), exposes sie
+im Report und fragt nur fuer Nicht-Ableitbares explizit nach.
+
+### Scope
+- `services/project_ingest.py`:
+  - `_derived_metadata_pass()`: wavelength_range + resolution aus der
+    eigenen Wellenlaengenachse (num_points/Spanne), scan_count aus der
+    Messanzahl des Wide-Exports - Quelle 'ki (aus Daten berechnet)';
+    nie ueberschreibend, nur fuellend; nur fuer usable Datasets
+  - `_ki_forward_questions()`: fuer nicht ableitbare Standard-Felder
+    (integration_time, instrument_model) fragt die KI den Nutzer
+    explizit (Ollama-Formulierung, offline deterministische
+    Template-Frage), mit Standard-Bezug und Dedup
+  - Integration in alle Ingest-Pfade + build_preparation_report
+    (Assessment laeuft nach den Forward-Fragen erneut)
+- `django_project/templates/project_report.html`: Badge fuer
+  berechnete Quellen ('ki (aus Daten berechnet)')
+- `tests/test_op33_derived_metadata.py` (17 Checks) + CI-Erweiterung
+
+### Out of Scope
+- Formatspezifische Header-Extraktion fuer binaere Formate (HDF5 attrs,
+  SPC/MAT-Header, JDX, EXIF) - folgt
+- Quarto-Report-Sektion 'metadata_evaluation' - folgt
+
+### Success Criteria
+- wavelength_range/resolution/scan_count werden aus den Daten berechnet
+  und mit Quellen-Badge im Report angezeigt (nicht mehr 'fehlend')
+- ASTM_E1655-Konformitaet steigt durch die abgeleiteten Felder
+- Nicht ableitbare Felder werden ueber KI-Fragen eskaliert (nie geraten)
+- Vorhandene Werte werden nie ueberschrieben
+- Offline: Template-Frage bleibt, nichts wird erfunden
+- Alle existierenden Matrizen bleiben gruen
+
+## Completed Task: OP32 - Standards-Based Metadata Display and KI Relevance Recommendations
 
 ### Objective
 Der OP31-Report zeigte zwei vom Nutzer bestaetigte Schwaechen: (1) Die
