@@ -197,6 +197,7 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
             reference_columns,
             key=lambda r: 0 if any(k in str(r['name']).lower()
                                     for k in target_keys) else 1)
+        target_name = None
         for ref in ordered_refs:
             target = pd.to_numeric(df[ref['name']], errors='coerce')
             if target.is_monotonic_increasing or target.is_monotonic_decreasing:
@@ -215,6 +216,7 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
                 for row in rows[channel_names].to_numpy().tolist()
             ]
             reference_values = [float(v) for v in rows['__target'].tolist()]
+            target_name = str(ref['name'])
             break
 
     return {
@@ -236,6 +238,7 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
             'measurement_count': wide['measurement_count'],
             'channel_names': [c for c, _ in channels],
             'saturated_measurements': saturated_measurements,
+            'target_name': target_name,
             **({'reference_values': reference_values}
                if reference_values is not None else {}),
         },
@@ -648,6 +651,21 @@ def _ki_forward_questions(entry: Dict[str, Any],
         questions = entry.setdefault("open_questions", [])
         asked_topics = {q.split("thema '")[1].split("'")[0]
                         for q in questions if "thema '" in q}
+        # Zielwert-Thema: nur fragen, wenn weder Metadaten noch die
+        # Messwertlisten einen Rueckschluss zulassen (target_name fehlt und
+        # keine geeignete Referenzspalte existiert).
+        if not (metadata.get("target_name") or entry.get("reference_values")):
+            if "zielwert" not in asked_topics:
+                std = sorted({name for name, req in (standards or {}).items()
+                              if "reference_values" in req})
+                std_part = (f" (relevant fuer {', '.join(std)})" if std
+                            else "")
+                questions.append(
+                    "KI-Frage zum Thema 'zielwert'" + std_part + ": "
+                    "Es konnte kein eindeutiger Zielwert (Kalibrationsziel) "
+                    "aus den Messdaten oder Metadaten abgeleitet werden. "
+                    "Fehlende Felder: target_name. "
+                    "Bitte im Metadaten-Editor ergaenzen.")
 
         topics = [
             ("sensor",

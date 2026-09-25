@@ -81,6 +81,11 @@ class ChatbotAgent(BaseAgent):
             per_agent = list(context.get("per_agent_reports") or [])
             crew_results = context.get("crew_results") or {}
             datasets = list(context.get("datasets") or [])
+            target_unit = next(
+                (str((d.get("metadata") or {}).get("target_name"))
+                 for d in datasets
+                 if (d.get("metadata") or {}).get("target_name")),
+                "Zieleinheit")
             overview_keys = list(context.get("overview_keys") or [])
             figures = self._figure_keys(per_agent, overview_keys)
 
@@ -236,11 +241,11 @@ class ChatbotAgent(BaseAgent):
                         f"Wie gut ist das {name}-Modell?",
                         f"Das {name}-Modell erreicht "
                         + (f"R\u00b2 = {_fmt(r2)}" if r2 is not None else "keinen R\u00b2-Wert")
-                        + (f" und RMSE = {_fmt(rmse)} \u00b0Brix"
+                        + (f" und RMSE = {_fmt(rmse)} {target_unit}"
                            if rmse is not None else "")
                         + ". R\u00b2 (Bestimmtheitsmass) sagt aus, wie viel der "
                         "Streuung das Modell erkl\u00e4rt (1 = perfekt). Der RMSE "
-                        "ist der mittlere Vorhersagefehler in \u00b0Brix. "
+                        f"ist der mittlere Vorhersagefehler in {target_unit}. "
                         + (f"Abbildung {fig_pred} zeigt Vorhersage gegen "
                            "Referenzwert." if fig_pred else ""),
                         ["cnn", "neuronales", "netz", "modell", "r2", "rmse",
@@ -370,8 +375,8 @@ class ChatbotAgent(BaseAgent):
                 "PLS (Partial Least Squares) ist eine Regressionsmethode der "
                 "Chemometrie: Sie b\u00fcndelt viele stark korrelierte "
                 "Wellenl\u00e4ngen zu wenigen latenten Komponenten und berechnet "
-                "damit eine Vorhersagegleichung f\u00fcr den Zielwert (z. B. "
-                "Brix). Vorteil gegen\u00fcber klassischer Regression: Sie "
+                "damit eine Vorhersagegleichung f\u00fcr den Zielwert. "
+                "Vorteil gegen\u00fcber klassischer Regression: Sie "
                 "funktioniert auch, wenn die Wellenl\u00e4ngenzahl die "
                 "Probenzahl \u00fcbersteigt (Multikollinearit\u00e4t).",
                 ["pls", "partial least", "methode", "regression", "chemometrie"])

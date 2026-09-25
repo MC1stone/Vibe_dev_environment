@@ -100,7 +100,8 @@ joined = " ".join(quality)
 check("T2a best model R2 reported", "R\u00b2 = 0.820" in joined, joined[:120])
 check("T2b R2 explained in plain language", "Bestimmtheitsmass" in joined)
 check("T2c CNN R2 reported for comparison", "0.595" in joined)
-check("T2d RMSE reported with unit", "0.627" in joined and "\u00b0Brix" in joined)
+check("T2d RMSE reported with unit",
+      "0.627" in joined and "Zieleinheit" in joined)
 check("T2e honest RMSEP note (no invented validation set)",
       "RMSEP" in joined and "liegt nicht vor" in joined)
 check("T2f quality graded in words", any(g in joined for g in
