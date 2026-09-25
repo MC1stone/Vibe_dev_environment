@@ -69,6 +69,7 @@ jobs:
           python tests/test_op33_derived_metadata.py
           python tests/test_op35_metadata_editor_report.py
           python tests/test_op36_target_agnostic.py
+          python tests/test_op37_outlier_chatbot.py
 
       - name: Django system check
         run: python django_project/manage.py check

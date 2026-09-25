@@ -3,7 +3,50 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP36 - Zielwert-Agnostizismus ueber die gesamte Kette
+## Current Task: OP37 - Dokumentierte Ausreisser-Analyse + KI-first Chatbot
+
+### Objective
+Zwei Befunde aus dem aktuellen Oel-Projekt-Report: (1) Die Spektren-
+Darstellung zeigt keine Ausreisser-Analyse - Abweichler werden weder
+erkannt noch dokumentiert. (2) Der Chatbot ist sehr eingeschraenkt: er
+matcht nur statische Stichwoerter gegen ~10 Eintraege statt die lokale
+KI (Ollama/Mistral) zu nutzen, die laut Vorgabe immer mit Prioritaet
+laufen soll.
+
+### Scope
+- `services/outlier_analysis.py` (NEU): robuste, deterministische
+  Ausreisser-Erkennung ueber alle Messungen (SNV-Normalisierung +
+  robuster z-Score/MAD gegen das Median-Spektrum, Schwelle |z| = 3.5),
+  ehrliches 'nicht bewertbar'-Verdict bei < 5 Messungen; zwei Charts
+  (Abstands-Plot mit Schwelle, Spektrum-Overlay mit rot markierten
+  Ausreissern) + deutsche Befundtexte - nichts wird erfunden
+- `services/project_crew.py`: `_outlier_section()` - eigene Berichts-
+  Sektion 'Ausreisser-Analyse' mit Charts, Zahlen und Befunden
+- `services/project_report.py`: Chart-Titel + 'Befunde'-Absatz in der
+  Agenten-Sektion (Charts + Textdokumentation)
+- `services/student_report.py`: Ausreisser-Befunde in der Diskussion
+  (Fehlerquellen) dokumentiert
+- `agents/chatbot_agent.py`: KB-Kategorie 'Ausreisser' mit konkreten
+  Zahlen + Abbildungs-Links
+- `services/report_chatbot.py`: KI-first - jede Frage geht zuerst an
+  /api/chatbot/message/ (Ollama/Mistral, RAG-Kontext aus den echten
+  Berichtsfakten, bis zu 6 Turns History, 'KI denkt'-Zustand);
+  Keyword-KB nur noch klar gekennzeichneter Offline-Fallback
+  (jetzt Top-2-Treffer statt Einzelmatch)
+- `tests/test_op37_outlier_chatbot.py` (24 Checks) + CI-Zeile;
+  OP24-Matrix an das neue KI-first-Vertrag angepasst (lokaler Endpoint
+  erlaubt, externe URLs weiterhin verboten)
+
+### Success Criteria
+- Ausreisser werden statistisch erkannt (SNV + MAD), visualisiert
+  (2 Charts) und im Report, in der Diskussion und im Chatbot
+  dokumentiert
+- Zu wenige Messungen -> ehrliches 'nicht bewertbar', keine Erfindung
+- Chatbot nutzt die lokale KI mit Berichts-Kontext und History;
+  offline faellt er auf die KB zurueck (gekennzeichnet)
+- Alle Matrizen bleiben gruen
+
+## Completed Task: OP36 - Zielwert-Agnostizismus ueber die gesamte Kette
 
 ### Objective
 Nicht jede Kalibration misst Brix - Oel-Projekte kalibrieren z. B. auf

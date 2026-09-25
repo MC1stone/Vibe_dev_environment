@@ -205,6 +205,8 @@ _CHART_TITLES = {
     'ref_vs_pred': 'Referenz vs. Vorhersage (PLS-Kreuzvalidierung)',
     'reg_coefficients': 'Regressionskoeffizienten pro Wellenlänge',
     'rmsecv_vs_n': 'RMSECV vs. Anzahl PLS-Komponenten',
+    'outlier_distance': 'Ausreisser-Abstände (robuster z-Score, SNV + MAD)',
+    'outlier_overlay': 'Spektren mit markierten Ausreissern',
 }
 
 
@@ -248,6 +250,11 @@ def _agent_section_html(section: Dict[str, Any],
     if recommendations:
         items = ''.join(f'<li>{_escape(r)}</li>' for r in recommendations)
         recs = f'<h3>Empfehlungen</h3><ul>{items}</ul>'
+    findings = (section.get('data', {}) or {}).get('findings') or []
+    findings_html = ''
+    if findings:
+        paras = ''.join(f'<p>{_escape(f)}</p>' for f in findings)
+        findings_html = f'<h3>Befunde</h3>{paras}'
     charts_html = ''
     charts = section.get('charts') or {}
     if charts:
@@ -262,7 +269,7 @@ def _agent_section_html(section: Dict[str, Any],
         charts_html = f'<h3>{note}</h3>{imgs}'
     return (f'<div class="card"><h3>{_escape(section.get("title", section.get("agent", "Agent")))} '
             f'<span class="badge {badge}">{_escape(status)}</span></h3>'
-            f'{table}{charts_html}{recs}</div>')
+            f'{table}{charts_html}{findings_html}{recs}</div>')
 
 
 def _original_data_html(datasets: List[Dict[str, Any]]) -> str:

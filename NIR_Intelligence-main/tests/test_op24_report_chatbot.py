@@ -158,10 +158,10 @@ match = re.search(r'var KB = (\[.*?\]);', widget, re.S)
 embedded = json.loads(match.group(1)) if match else []
 check("T2c embedded base equals the agent output",
       embedded == kb, f"{len(embedded)} vs {len(kb)}")
-check("T2d offline widget: no external URLs or network calls",
-      "http://" not in widget.replace("http://localhost", "")
-      and "https://" not in widget and "fetch(" not in widget
-      and "XMLHttpRequest" not in widget)
+check("T2d widget: KI-first local endpoint only, no external URLs",
+      "http://" not in widget and "https://" not in widget
+      and "XMLHttpRequest" not in widget
+      and "fetch('/api/chatbot/message/'" in widget)
 check("T2e script closing tag escaped in the JSON payload",
       "</script" not in re.search(r'var KB = (\[.*?\]);', widget, re.S).group(1))
 check("T2f empty knowledge base -> no widget", build_chatbot_widget([]) == "")

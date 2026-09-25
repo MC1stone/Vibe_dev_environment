@@ -207,6 +207,26 @@ class ChatbotAgent(BaseAgent):
                         str(rec), ["verbessern", "optimieren", "empfehlung",
                                    "ma\u00dfnahme", "tip", "rauschen", "drift"])
 
+            # --- outlier analysis (OP37) ---------------------------------------
+            outlier = self._find(per_agent, "outlier_analysis")
+            if outlier:
+                data = outlier.get("data") or {}
+                fig_dist = self._fig(figures, "outlier_distance")
+                fig_overlay = self._fig(figures, "outlier_overlay")
+                for finding in (data.get("findings") or []):
+                    add("Ausreisser",
+                        "Gibt es Ausreisser in den Messungen?",
+                        str(finding)
+                        + (f" Abbildung {fig_dist} zeigt die Abst\u00e4nde "
+                           "zur Schwelle, Abbildung "
+                           f"{fig_overlay} die Spektren mit markierten "
+                           "Ausreissern."
+                           if fig_dist and fig_overlay else ""),
+                        ["ausreisser", "ausreisseranalyse", "outlier",
+                         "abweichung", "auffaellig", "ausnahme",
+                         "messung", "pruefen", "z-score", "mad"],
+                        fig_dist)
+
             # --- statistics / PCA ---------------------------------------------
             stats = self._find(per_agent, "statistical_analysis")
             if stats:
