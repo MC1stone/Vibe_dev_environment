@@ -514,6 +514,7 @@ def _ingest_single_file(record, file_path: str) -> Dict[str, Any]:
         logger.info('Wide-format ingest for %s: %s channels, %s measurements',
                     file_path, len(wide['channel_columns']),
                     wide['measurement_count'])
+        _derived_metadata_pass(entry)
         _ki_metadata_pass(entry, file_path, _make_loader(file_path))
         return entry
 
@@ -563,6 +564,7 @@ def _ingest_single_file(record, file_path: str) -> Dict[str, Any]:
         "metadata": metadata,
         "numeric_references": _extract_numeric_reference(metadata),
     })
+    _derived_metadata_pass(entry)
     _ki_metadata_pass(entry, file_path, loader)
     return entry
 
@@ -590,8 +592,57 @@ def _metadata_only_entry(file_record, file_path, loader) -> Dict[str, Any] | Non
         "dataset_type": "metadata",
         "metadata": metadata,
     }
+    _derived_metadata_pass(entry)
     _ki_metadata_pass(entry, file_path, loader)
     return entry
+
+
+def _ki_forward_questions(entry: Dict[str, Any],
+                        standards: Dict[str, List[str]]) -> None:
+    """KI asks the user explicitly for standard-relevant fields that the
+    data cannot provide itself (OP33): integration_time or instrument_model
+    are not derivable from the wavelength axis - the KI does NOT guess them
+    (anti-hallucination) but asks the user, naming the standards the field
+    unlocks. Never raises; without Ollama the deterministic template
+    question is used so the user is still asked."""
+    try:
+        metadata = entry.get("metadata") or {}
+        questions = entry.setdefault("open_questions", [])
+        asked = {q.split("'")[1] for q in questions if q.startswith("KI-Frage")}
+        for field, prompt in (
+            ("integration_time",
+             "Die Integrationszeit ist nicht aus den Messdaten ableitbar. "
+             "Mit welcher Integrationszeit (ms) wurden die Spektren aufgenommen?"),
+            ("instrument_model",
+             "Das Gerätemodell ist nicht aus den Messdaten ableitbar. "
+             "Welches Spektrometer-Modell wurde verwendet?"),
+        ):
+            if metadata.get(field) or field in asked:
+                continue
+            std = [name for name, req in (standards or {}).items()
+                   if field in req]
+            std_part = f" (relevant für {', '.join(std)})" if std else ""
+            question = None
+            try:
+                from services.metadata_llm import OllamaMetadataClient
+                client = OllamaMetadataClient()
+                if client.is_available():
+                    llm = client.chat(
+                        f"Formuliere eine kurze, höfliche deutsche Frage an "
+                        f"einen NIR-Spektroskopie-Nutzer nach dem fehlenden "
+                        f"Metadatenfeld '{field}'{std_part}. Antworte NUR mit "
+                        f"dem Fragetext.")
+                    if isinstance(llm, str) and llm.strip() and len(llm) <= 300:
+                        question = llm.strip()
+            except Exception:
+                question = None
+            if not question:
+                question = prompt
+            questions.append(
+                f"KI-Frage zu '{field}'{std_part}: {question} "
+                "Bitte im Metadaten-Editor ergänzen.")
+    except Exception:
+        logger.exception("KI forward question pass failed (non-fatal)")
 
 
 def _ki_relevance_pass(metadata_assessment: Dict[str, Any],
@@ -623,6 +674,42 @@ def _ki_relevance_pass(metadata_assessment: Dict[str, Any],
     except Exception:
         logger.exception("KI relevance pass failed (non-fatal)")
         return None
+
+
+def _derived_metadata_pass(entry: Dict[str, Any]) -> None:
+    """Derive standard-relevant metadata from the loaded measurement data
+    (OP33): wavelength_range and resolution are hard facts computed from
+    the dataset's own wavelength axis - the KI exposes them to the user as
+    suggestions instead of listing them as 'missing' when the data already
+    carries the answer. scan_count mirrors the measurement count of wide
+    exports. Fields the data cannot provide (integration_time,
+    instrument_model) stay honestly missing - the KI forward-question pass
+    asks the user for them. Never raises, never overwrites."""
+    try:
+        if not entry.get("usable"):
+            return
+        metadata = entry.setdefault("metadata", {})
+        sources = entry.setdefault("metadata_sources", {})
+        wmin = entry.get("wavelength_min")
+        wmax = entry.get("wavelength_max")
+        num = entry.get("num_points")
+        if wmin is None or wmax is None or num in (None, 0):
+            return
+        wmin = float(wmin)
+        wmax = float(wmax)
+        if not metadata.get("wavelength_range"):
+            span = wmax - wmin
+            metadata["wavelength_range"] = f"{wmin:.1f}-{wmax:.1f} nm ({span:.1f} nm Spanne, {num} Punkte)"
+            sources["wavelength_range"] = "ki (aus Daten berechnet)"
+        if not metadata.get("resolution") and num > 1 and wmax > wmin:
+            step = (wmax - wmin) / (num - 1)
+            metadata["resolution"] = f"{step:.2f} nm ({num} Punkte)"
+            sources["resolution"] = "ki (aus Daten berechnet)"
+        if not metadata.get("scan_count") and entry.get("num_measurements"):
+            metadata["scan_count"] = str(entry["num_measurements"])
+            sources["scan_count"] = "ki (aus Daten berechnet)"
+    except Exception:
+        logger.exception("Derived metadata pass failed (non-fatal)")
 
 
 def _metadata_standards() -> Dict[str, List[str]]:
@@ -828,6 +915,10 @@ def build_preparation_report(project) -> Dict[str, Any]:
                     if entry.get("file_id") == str(f.id) else {}
             apply_metadata_overrides(entry, entry_overrides)
             datasets.append(entry)
+    metadata_assessment = _assess_metadata(datasets)
+    for dataset in datasets:
+        if dataset.get("usable"):
+            _ki_forward_questions(dataset, _metadata_standards())
     metadata_assessment = _assess_metadata(datasets)
     relevance = _ki_relevance_pass(metadata_assessment, datasets)
     if relevance:

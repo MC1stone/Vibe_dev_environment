@@ -66,6 +66,7 @@ jobs:
           python tests/test_op30_archive_ingest.py
           python tests/test_op31_metadata_llm.py
           python tests/test_op32_metadata_relevance.py
+          python tests/test_op33_derived_metadata.py
 
       - name: Django system check
         run: python django_project/manage.py check
