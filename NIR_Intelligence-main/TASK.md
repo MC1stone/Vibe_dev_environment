@@ -3,7 +3,36 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP33 - KI Derived Metadata (Predict/Suggest from Data) and Forward Questions
+## Current Task: OP35 - KI-Felder im Editor bereitstellen + Metadaten-Uebersicht im Abschlussbericht
+
+### Objective
+Nach OP34 zwei Restpunkte: (1) Die von der KI angefragten Felder
+(instrument_model, serial_number, integration_time) sollen bereitstehen,
+sobald der Editiermodus geoeffnet wird - die Antwort direkt ins angebotene
+Feld tippen statt Feldnamen zu suchen. (2) Eine Metadaten-Uebersicht
+gehoert in den Abschlussbericht, damit dokumentiert ist, worauf die
+Analyse beruht.
+
+### Scope
+- `django_project/api/project_views.py` `_metadata_editor_fields`:
+  KI-angefragte Felder werden aus den open_questions geparsest
+  ('Fehlende Felder: ...') und als leere Eingaben angeboten; Alias-Felder
+  greifen auf den kanonischen Zwilling zurueck (operator zeigt
+  operator_name-Wert, wenn nur dieser existiert)
+- `services/project_report.py` `_metadata_overview_html` (NEU):
+  Abschlussbericht-Sektion 'Metadaten-Uebersicht' - je Datensatz
+  Feld/Wert/Quelle mit Badges (ki berechnet / projekt-kontext / Datei),
+  Standards-Konformitaet, offene KI-Fragen, KI-Gesamteinschaetzung
+- `tests/test_op35_metadata_editor_report.py` (13 Checks) + CI-Zeile
+
+### Success Criteria
+- Editiermodus zeigt alle KI-angefragten Felder als leere Inputs
+- Bestehende Werte bleiben prefilled (auch Alias-Rueckgriff)
+- Abschlussbericht dokumentiert Metadaten, Quellen, Standards, offene Fragen
+- Leere Daten -> keine Sektion (ehrlich, nichts erfunden)
+- Alle Matrizen bleiben gruen
+
+
 
 ### Objective
 Der OP32-Report listete wavelength_range, resolution, integration_time und
