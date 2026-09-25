@@ -3,7 +3,54 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP39 - Kalibrierungsgleichung + Print/MD-Export + Quellcode je Abschnitt
+## Current Task: OP40 - Ehrliche Metadaten-Bewertung + optionaler Quellcode-Druck
+
+### Objective
+Zwei Befunde: (1) Die Metadaten wurden im Editor nach dem Bearbeiten mit
+100% bewertet, im Abschlussbericht aber nur als 'Fair' - zwei
+Bewertungssysteme mit widerspruechlicher Logik. (2) Der Quellcode soll
+beim Drucken optional ein-/ausschaltbar sein.
+
+### Root Cause (reproduziert)
+Der MetadataQualityAgent des Crews bewertete jedes Feld gegen ALLE 5
+Standards (ISO 19115, Dublin Core, JSON-LD, Schema.org, NIR Custom):
+Unbekannte Felder (humidity, temperature, ...) scoring 0/5 zogen die
+Consistency auf 3.1% -> 'fair', obwohl Completeness und Accuracy 100%
+waren. Daten-Payload-Keys (measurement_samples, ...) wurden als
+Metadaten-Felder bewertet; fehlende Pflichtfelder wurden gar nicht
+erfasst (completeness zaehlte nur nicht-leere Werte unter den
+gelieferten Keys); Empfehlungen verlangten ISO/Dublin-Core-Konformitaet
+fuer NIR-Spektren.
+
+### Scope
+- `agents/metadata_quality_agent.py`:
+  - Consistency nur ueber Standards, die das Feld ueberhaupt regeln
+    (`_standard_field_names()`); unbekannte Felder verwaessern nichts
+  - Payload-Keys (`measurement_samples`, `reference_values`, ...) werden
+    nicht als Metadaten bewertet
+  - Pflichtfelder des NIR-Standards werden auch bei ABWESENHEIT
+    erfasst - Completeness misst 'Pflichtfelder vorhanden'
+  - `required`-Flag wird gesetzt -> `missing_required_fields` ehrlich
+  - Empfehlungen nur fuer NIR-relevante Standards (kein ISO/Dublin-Core-
+    Rauschen)
+- `services/project_crew.py`: vorhandene Information auf die
+  Pflichtfeld-Namen gemappt (sample_id=file_name,
+  measurement_date=timestamp, instrument_type=instrument) statt
+  redundante Eingabe zu verlangen
+- `services/project_report.py`: Druck-Option 'Quellcode im Ausdruck
+  einbeziehen' - Checkbox oeffnet/schliesst alle Quellcode-Details vor
+  dem Drucken (window.print)
+- `tests/test_op40_metadata_consistency_print.py` (13 Checks) + CI-Zeile
+
+### Success Criteria
+- Vollstaendig dokumentierte Metadaten -> Score 100 / 'excellent' im
+  Abschlussbericht (konsistent mit dem Editor-Score), nicht 'fair'
+- Fehlende Pflichtfelder werden ehrlich genannt (missing list), Score
+  sinkt entsprechend - keine Erfindung, keine Verwaesserung
+- Quellcode-Druck optional per Checkbox
+- Alle Matrizen bleiben gruen
+
+## Completed Task: OP39 - Kalibrierungsgleichung + Print/MD-Export + Quellcode je Abschnitt
 
 ### Objective
 Drei Luecken im Abschlussbericht: (1) Die Kalibrierungsgleichung fehlt -

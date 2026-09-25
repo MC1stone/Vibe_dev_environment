@@ -186,6 +186,16 @@ class MetadataQualityAgent(BaseAgent):
             "quality_thresholds", {"excellent": 90, "good": 75, "fair": 50, "poor": 25}
         )
 
+        # OP40: internal data-context keys the crew passes alongside the
+        # real metadata - they are payload, not descriptive metadata, and
+        # must not dilute the quality score.
+        self.context_payload_keys = {
+            "file_name", "file_extension", "file_path",
+            "measurement_samples", "calibration_samples",
+            "reference_values", "saturated_measurements",
+            "channel_count", "measurement_count", "channel_names",
+            "target_name", "metadata_user_entered", "editor_fields",
+        }
         self.logger.info("MetadataQualityAgent initialized")
 
     def initialize(self) -> AgentOutput:
@@ -404,10 +414,14 @@ class MetadataQualityAgent(BaseAgent):
 
     def assess_field_quality(self, field_name: str, value: Any, category: MetadataFieldCategory) -> MetadataField:
         """Assess the quality of a single metadata field"""
+        required_anywhere = any(
+            field_name in config["required_fields"]
+            for config in self.standards.values())
         field = MetadataField(
             name=field_name,
             value=value,
             category=category,
+            required=required_anywhere,
             present=value is not None and value != "",
             quality_score=1.0,
             issues=[],
@@ -479,6 +493,16 @@ class MetadataQualityAgent(BaseAgent):
 
         return field
 
+    def _standard_field_names(self) -> Dict[str, set]:
+        """Map standard value -> all field names that standard regulates
+        (required + optional). OP40: the consistency score only judges a
+        field by the standards that actually mention it."""
+        mapping: Dict[str, set] = {}
+        for standard, config in self.standards.items():
+            mapping[standard.value] = set(config["required_fields"]) | \
+                set(config["optional_fields"])
+        return mapping
+
     def assess_metadata_quality(self, metadata: Dict[str, Any], sample_id: str = "unknown") -> MetadataQualityResult:
         """Assess the overall quality of metadata"""
         try:
@@ -503,12 +527,24 @@ class MetadataQualityAgent(BaseAgent):
                 result.recommendations.append("No metadata provided. Please add metadata for proper analysis.")
                 return result
 
+            # OP40: the required fields of the NIR custom standard are
+            # assessed even when ABSENT - completeness must measure
+            # 'required fields present', not 'non-empty values among
+            # whatever keys were passed in'.
+            assessed_keys = [k for k in metadata.keys()
+                             if k not in self.context_payload_keys]
+            for required_name in self.standards[
+                    MetadataStandard.CUSTOM_NIR]["required_fields"]:
+                if required_name not in assessed_keys:
+                    metadata.setdefault(required_name, None)
             # Assess each field
             total_fields = 0
             present_fields = 0
             quality_scores = []
 
             for field_name, value in metadata.items():
+                if field_name in self.context_payload_keys:
+                    continue  # OP40: payload keys are not metadata fields
                 category = self.field_categories.get(field_name, MetadataFieldCategory.IDENTIFICATION)
                 field_assessment = self.assess_field_quality(field_name, value, category)
                 result.fields_assessed.append(field_assessment)
@@ -528,12 +564,24 @@ class MetadataQualityAgent(BaseAgent):
             if quality_scores:
                 result.accuracy_score = (sum(quality_scores) / len(quality_scores)) * 100
 
-            # Calculate consistency score (based on standard compliance)
+            # Calculate consistency score (based on standard compliance).
+            # OP40: only standards that actually REGULATE the field count -
+            # a field no standard mentions must not dilute the consistency
+            # (before, every unknown field scored 0/5 and dragged a fully
+            # documented NIR dataset to 'fair').
             consistency_scores = []
+            standard_fields = self._standard_field_names()
             for field in result.fields_assessed:
                 if field.standard_compliance:
-                    compliance_count = sum(field.standard_compliance.values())
-                    total_standards = len(field.standard_compliance)
+                    regulated = {
+                        std: compliant for std, compliant
+                        in field.standard_compliance.items()
+                        if field.name in standard_fields.get(std, ())
+                    }
+                    if not regulated:
+                        continue
+                    compliance_count = sum(regulated.values())
+                    total_standards = len(regulated)
                     consistency_scores.append(compliance_count / total_standards if total_standards > 0 else 0)
 
             if consistency_scores:
@@ -642,8 +690,14 @@ class MetadataQualityAgent(BaseAgent):
                 "Consider adopting ISO 19115 or Dublin Core standards."
             )
 
-        # Standard-specific recommendations
+        # Standard-specific recommendations. OP40: only standards relevant
+        # for spectral/NIR data - web/geodata standards (ISO 19115, Dublin
+        # Core, JSON-LD, Schema.org) would produce noise recommendations
+        # for every NIR dataset.
+        relevant_standards = {MetadataStandard.CUSTOM_NIR.value}
         for standard, score in result.standards_compliance.items():
+            if standard not in relevant_standards:
+                continue
             if score < 50:
                 recommendations.append(
                     f"Improve {standard} compliance (currently {score:.0f}%). "
