@@ -64,6 +64,7 @@ jobs:
           python tests/test_op28_file_type_agnostic.py
           python tests/test_op29_sensor_agent.py
           python tests/test_op30_archive_ingest.py
+          python tests/test_op31_metadata_llm.py
 
       - name: Django system check
         run: python django_project/manage.py check

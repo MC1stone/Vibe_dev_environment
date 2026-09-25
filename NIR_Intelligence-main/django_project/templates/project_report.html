@@ -69,6 +69,62 @@
                 </table>
             </div>
 
+            <!-- OP31: field-level metadata rating (field / value / source / rating) -->
+            {% if metadata_quality.open_questions %}
+            <div class="alert alert-warning mt-3 mb-2" role="alert">
+                <strong><i class="bi bi-question-circle me-1"></i>Offene KI-Fragen zu Ihren Metadaten:</strong>
+                <ul class="mb-0 mt-1">
+                    {% for q in metadata_quality.open_questions %}
+                    <li>{{ q }}</li>
+                    {% endfor %}
+                </ul>
+                <p class="mb-0 mt-1 small">Bitte klären Sie diese Fragen im Metadaten-Editor unten – die KI entscheidet nicht stillschweigend für Sie.</p>
+            </div>
+            {% endif %}
+
+            <h6 class="mt-3"><i class="bi bi-tags me-1"></i>Erhobene Metadaten je Datensatz
+                <span class="text-muted fs-6">(Feld / Wert / Quelle: KI oder Datei / Bewertung)</span></h6>
+            <div class="accordion mb-3" id="metadataRating">
+                {% for d in datasets %}
+                {% if d.usable and d.metadata_rating %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#mrate-{{ forloop.counter }}">
+                            <i class="bi bi-file-earmark-text me-2"></i>{{ d.file_name }}
+                            <span class="badge bg-secondary ms-2">{{ d.metadata_rating.items|length }} Felder</span>
+                        </button>
+                    </h2>
+                    <div id="mrate-{{ forloop.counter }}" class="accordion-collapse collapse"
+                         data-bs-parent="#metadataRating">
+                        <div class="accordion-body">
+                            <table class="table table-sm">
+                                <thead><tr><th>Feld</th><th>Wert</th><th>Quelle</th><th>Bewertung</th></tr></thead>
+                                <tbody>
+                                    {% for field, r in d.metadata_rating.items %}
+                                    {% if field != 'konflikte' %}
+                                    <tr>
+                                        <td><code>{{ field }}</code></td>
+                                        <td>{{ r.value|truncatechars:60 }}</td>
+                                        <td>{% if 'ki' in r.source %}<span class="badge bg-primary">{{ r.source }}</span>{% else %}<span class="badge bg-light text-dark">{{ r.source }}</span>{% endif %}</td>
+                                        <td>{% if r.rating == 'konflikt' %}<span class="badge bg-danger">Konflikt – klären</span>{% else %}<span class="badge bg-success">ok</span>{% endif %}</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% if d.metadata_rating.konflikte %}
+                            <div class="alert alert-danger mb-0"><strong>Konflikte:</strong>
+                                <ul class="mb-0">{% for k in d.metadata_rating.konflikte %}<li>{{ k }}</li>{% endfor %}</ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
             <h6><i class="bi bi-lightbulb me-1"></i>Verbesserungsvorschläge</h6>
             <ul class="mb-2">
                 {% for rec in recommendations %}

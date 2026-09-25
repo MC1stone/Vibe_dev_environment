@@ -3,7 +3,56 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP30 - Archive Ingest (ZIP as Container, not Spectrum File)
+## Current Task: OP31 - KI-First Metadata Extraction (Ollama/Mistral, Anti-Halluzination, Nutzer-Eskalation)
+
+### Objective
+Die Metadaten-Erhebung war rein regelbasiert (regex) und die KI lieferte
+keinen Beitrag, obwohl Ollama mit Mistral lokal immer verfuegbar ist.
+Zusaetzlich gab es zwei uneinheitliche Rating-Systeme und die Metadaten
+fehlten im Projektbericht. Der Nutzer erwartet: KI liest Metadaten aus
+allen Dateiformaten (auch aus Headern/Prosa), mit Prioritaet, ein Rating
+ueber die Qualitaet, Anzeige im Reporting nach der Struktur, die die KI
+nutzt - und strikt ohne Halluzination: Bei Fragen oder Konflikten muss
+die KI ueber den Chatbot auf das Problem hinweisen und explizit nach
+einer Loesung fragen, statt stillschweigend zu entscheiden.
+
+### Scope
+- `services/metadata_llm.py` (NEU): `OllamaMetadataClient` (Ollama
+  /api/chat, format=json, is_available()), `MetadataLLMService` mit
+  injizierbarem Client, `_verbatim()`-Guard + `_canonical_field_name()`
+- Anti-Halluzination IN CODE, nicht per Prompt-Vertrauen: jeder LLM-Wert
+  muss wortwoertlich im Quelltext stehen, sonst Verwerfung; unbekannte
+  Feldnamen werden verworfen (nur CANONICAL_FIELDS + Alias-Folding)
+- `services/project_ingest.py`: `_ki_metadata_pass` (KI-first auf allen
+  drei Ingest-Pfaden), `_file_text_for_llm`, `_make_loader`,
+  feldgenaues Rating (`metadata_rating` mit Quelle/Bewertung je Feld,
+  `konflikte`-Liste), Empfehlungen fuer offene Fragen
+- `agents/chatbot_agent.py`: Kategorie 'KI-Metadaten' - jede offene Frage
+  wird zum KB-Eintrag mit expliziter Aufforderung an den Nutzer
+- `django_project/templates/project_report.html`: Warning-Alert fuer
+  offene KI-Fragen + Accordion 'Erhobene Metadaten je Datensatz'
+  (Feld/Wert/Quelle/Bewertung, KI-Badge, Konflikt-Badge)
+- `tests/test_op31_metadata_llm.py` (25 Checks) + CI-Matrix-Erweiterung
+
+### Out of Scope
+- Formatspezifische Header-Extraktion fuer binaere Formate (HDF5 attrs,
+  SPC/MAT-Header, JDX-'##', EXIF) - Folge-Schritt
+- Die Quarto-Report-Sektion 'metadata_evaluation' (task_definition.yaml)
+- Messwerte-Loading bleibt deterministisch (nur Metadaten sind KI-first)
+
+### Success Criteria
+- Mistral ist der PRIMAERE Metadaten-Extraktor (KI-first), deterministisch
+  nur noch Validierung/Absicherung; Messwerte-Loading unveraendert
+- Kein Halluzinieren: Verbatim-Guard im Code, erfundene Werte/Felder
+  werden verworfen und dokumentiert (llm_rejected_values)
+- Konflikte werden NIE still aufgeloest: Hard fact gewinnt, Konflikt
+  landet in open_questions -> Empfehlung + Chatbot + Report-Alert
+- Offline-Resilienz: ohne Ollama ueberlebt die deterministische
+  Extraktion, nichts wird erfunden, nichts geht verloren
+- Metadaten-Rating je Feld im Projektbericht sichtbar (Struktur der KI)
+- Alle existierenden Test-Matrizen bleiben gruen (keine Regressionen)
+
+## Completed Task: OP30 - Archive Ingest (ZIP as Container, not Spectrum File)
 
 ### Objective
 The user's oil experiment arrived as one ZIP bundling a prose description
