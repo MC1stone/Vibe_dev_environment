@@ -298,7 +298,43 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
                 logger.exception('Calibration chart rendering failed (non-fatal)')
         sections.append(cal_section)
     sections.append(_similarity_section(project, dataset))
+    sections.append(_outlier_section(dataset))
     return sections
+
+
+def _outlier_section(dataset: Dict[str, Any]) -> Dict[str, Any]:
+    """OP37: documented outlier analysis for the dataset's measurement
+    replicas - robust z-score (SNV + MAD) against the median spectrum,
+    rendered charts and German findings. Never raises; honest verdict
+    when there are too few measurements to assess."""
+    from services.outlier_analysis import analyse_dataset
+    try:
+        result = analyse_dataset(dataset)
+    except Exception:
+        logger.exception('Outlier analysis failed (non-fatal)')
+        result = {'file_name': dataset.get('file_name', 'Datensatz'),
+                  'verdict': {'assessable': False,
+                              'reason': 'interner Fehler'},
+                  'charts': {}, 'findings': []}
+    section: Dict[str, Any] = {
+        'agent': 'outlier_analysis',
+        'title': 'Ausreisser-Analyse',
+        'status': 'completed',
+        'data': {
+            'file_name': result['file_name'],
+            'assessable': bool(result['verdict'].get('assessable')),
+            'measurement_count': result['verdict'].get('measurement_count', 0),
+            'outlier_indices': result['verdict'].get('outlier_indices', []),
+            'threshold': result['verdict'].get('threshold'),
+            'findings': result['findings'],
+        },
+    }
+    if result['charts']:
+        section['charts'] = result['charts']
+        section['charts_note'] = (
+            f"{len(result['charts'])} Ausreisser-Diagramme aus "
+            f"{result['verdict'].get('measurement_count', 0)} Messungen")
+    return section
 
 
 def _metadata_quality_dict(result) -> Dict[str, Any]:

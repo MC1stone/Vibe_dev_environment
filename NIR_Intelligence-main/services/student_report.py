@@ -365,6 +365,10 @@ def error_source_items(per_agent: List[Dict[str, Any]]) -> List[str]:
         if issues:
             items.append("Die Spektralanalyse meldet konkrete Auff\u00e4lligkeiten: "
                          + "; ".join(str(i) for i in issues) + ".")
+    outlier = _find_section(per_agent, "outlier_analysis")
+    if outlier:
+        for finding in (outlier.get("data") or {}).get("findings") or []:
+            items.append(f"Ausreisser-Analyse: {finding}")
     sensor = _find_section(per_agent, "sensor_quality")
     if sensor:
         data = sensor.get("data") or {}
