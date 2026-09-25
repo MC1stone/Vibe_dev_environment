@@ -404,6 +404,22 @@ class ChatbotAgent(BaseAgent):
                 ["rmse", "rmsecv", "rmsep", "fehler", "validierung",
                  "unterschied"])
 
+            # --- KI-Metadatenfragen (OP31) ---------------------------------
+            # The KI metadata extraction escalates conflicts and open
+            # questions explicitly to the user - the chatbot carries them
+            # as first-class entries that ask for an answer (never silent).
+            for dataset in datasets:
+                for question in (dataset.get("open_questions") or []):
+                    name = str(dataset.get("file_name", "?"))
+                    add("KI-Metadaten",
+                        f"Welche offenen Metadatenfragen gibt es zu {name}?",
+                        f"Die KI hat eine offene Frage zu „{name}“: {question} "
+                        "Bitte kl\u00e4ren Sie diese im Metadaten-Editor der "
+                        "Projektseite, damit die Metadatenbewertung korrekt "
+                        "rechnet.",
+                        ["metadaten", "frage", "fragen", "konflikt", "ki",
+                         "offen", "kl\u00e4ren", str(name).lower()])
+
             if not entries:
                 add("Projekt", "Was kann ich hier fragen?",
                     "Es liegen noch keine detaillierten Analysedaten vor. "

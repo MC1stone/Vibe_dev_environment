@@ -410,6 +410,88 @@ def _archive_entries(file_record, file_path: str) -> List[Dict[str, Any]] | None
     return entries
 
 
+def _file_text_for_llm(file_path: str, loader) -> str:
+    """The text a file contributes to the LLM metadata extraction: the
+    raw text lines when readable, plus the metadata key/value pairs the
+    deterministic layer already collected (so the KI sees header facts
+    of binary/structured formats too). Never raises."""
+    parts = []
+    try:
+        from agents.data_preparation_agent import read_text_lines
+        lines = read_text_lines(file_path)
+        text = "".join(ln for ln in lines[:400] if ln.strip())
+        if text.strip():
+            parts.append(text[:6000])
+    except Exception:
+        pass
+    return "\n".join(parts)
+
+
+def _make_loader(file_path: str):
+    """One loader instance for a file's directory (shared by the spectral
+    load and the KI metadata pass)."""
+    from agents.data_preparation_agent import EnhancedDataPreparationAgent
+    return EnhancedDataPreparationAgent(
+        input_directory=str(Path(file_path).parent),
+        output_directory=str(Path(file_path).parent / "processed"),
+    )
+
+
+def _ki_metadata_pass(entry: Dict[str, Any], file_path: str, loader) -> None:
+    """KI-first metadata extraction (OP31): Mistral via Ollama reads the
+    file text and extracts the canonical metadata fields BEFORE the
+    deterministic result is final. Strict anti-hallucination: values the
+    LLM reports without verbatim evidence are rejected in code
+    (services/metadata_llm.py). Hard facts win: when the deterministic
+    layer already holds a value for a field and the LLM disagrees, the
+    conflict is recorded and escalated to the user (open_questions) -
+    never silently resolved. Never raises; without Ollama the entry
+    keeps its deterministic metadata (resilience)."""
+    try:
+        from services.metadata_llm import MetadataLLMService
+        text = _file_text_for_llm(file_path, loader)
+        if not text.strip():
+            return
+        service = MetadataLLMService()
+        if not service.client.is_available():
+            entry["metadata_sources"] = entry.get("metadata_sources") or {}
+            entry["metadata_sources"]["llm"] = "nicht erreichbar (deterministisch)"
+            return
+        result = service.extract(text, file_name=str(entry.get("file_name")))
+        if result is None:
+            return
+        metadata = entry.setdefault("metadata", {})
+        sources = entry.setdefault("metadata_sources", {})
+        questions = entry.setdefault("open_questions", [])
+        for field, payload in result.get("fields", {}).items():
+            value = str(payload.get("value") or "").strip()
+            existing = metadata.get(field)
+            if existing in (None, ""):
+                # KI-first: the LLM found what the deterministic layer missed
+                metadata[field] = value
+                sources[field] = "ki"
+            elif _norm_value(existing) != _norm_value(value):
+                # Conflict: the deterministic hard fact wins, the LLM
+                # disagreement is escalated to the user (never hidden).
+                questions.append(
+                    f"Metadatenkonflikt für '{field}': Deterministische "
+                    f"Extraktion lief '{existing}', die KI las '{value}'. "
+                    f"Welcher Wert ist korrekt?")
+                sources[field] = f"konflikt (deterministisch: '{existing}', ki: '{value}')"
+            else:
+                sources[field] = "ki bestätigt"
+        for q in result.get("questions", []):
+            questions.append(f"KI-Frage zu '{entry.get('file_name')}': {q}")
+        if result.get("rejected"):
+            entry["llm_rejected_values"] = result["rejected"]
+    except Exception:
+        logger.exception("LLM metadata pass failed (non-fatal): %s", file_path)
+
+
+def _norm_value(value: Any) -> str:
+    return str(value if value is not None else "").strip().lower()
+
+
 def _ingest_single_file(record, file_path: str) -> Dict[str, Any]:
     """Ingest one concrete file path (a directly uploaded file or a file
     extracted from an archive, OP30) into a dataset entry with the shared
@@ -432,6 +514,7 @@ def _ingest_single_file(record, file_path: str) -> Dict[str, Any]:
         logger.info('Wide-format ingest for %s: %s channels, %s measurements',
                     file_path, len(wide['channel_columns']),
                     wide['measurement_count'])
+        _ki_metadata_pass(entry, file_path, _make_loader(file_path))
         return entry
 
     from agents.data_preparation_agent import EnhancedDataPreparationAgent
@@ -480,6 +563,7 @@ def _ingest_single_file(record, file_path: str) -> Dict[str, Any]:
         "metadata": metadata,
         "numeric_references": _extract_numeric_reference(metadata),
     })
+    _ki_metadata_pass(entry, file_path, loader)
     return entry
 
 
@@ -497,7 +581,7 @@ def _metadata_only_entry(file_record, file_path, loader) -> Dict[str, Any] | Non
     if not metadata or all(key == "description" for key in metadata):
         return None
     _sync_recommended_aliases(metadata)
-    return {
+    entry = {
         "file_id": str(file_record.id),
         "file_name": file_record.name,
         "file_extension": file_record.file_extension,
@@ -506,16 +590,35 @@ def _metadata_only_entry(file_record, file_path, loader) -> Dict[str, Any] | Non
         "dataset_type": "metadata",
         "metadata": metadata,
     }
+    _ki_metadata_pass(entry, file_path, loader)
+    return entry
 
 
 def _assess_metadata(datasets: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Assess metadata completeness across the usable datasets (MO 2-4)."""
+    """Assess metadata completeness across the usable datasets (MO 2-4).
+    OP31: the assessment is field-level - every dataset carries its fields
+    with the source (ki / header / editor / deterministic) and a per-field
+    rating, so the user sees WHERE each value came from and how good it is."""
     usable = [d for d in datasets if d.get("usable")]
     assessed = {"datasets_usable": len(usable), "datasets_total": len(datasets)}
     fields_found: Dict[str, int] = {}
     for dataset in usable:
-        for key in dataset.get("metadata", {}):
+        sources = dataset.get("metadata_sources") or {}
+        rating = {}
+        for key, value in (dataset.get("metadata") or {}).items():
             fields_found[key] = fields_found.get(key, 0) + 1
+            source = sources.get(key) or "deterministisch"
+            rating[key] = {
+                "value": value,
+                "source": source,
+                "rating": "konflikt" if "konflikt" in str(source) else "ok",
+            }
+        if rating:
+            dataset["metadata_rating"] = rating
+        conflicts = [q for q in (dataset.get("open_questions") or [])
+                     if "Konflikt" in q or "konflikt" in q]
+        if conflicts:
+            dataset.setdefault("metadata_rating", {})["konflikte"] = conflicts
     assessed["metadata_fields"] = sorted(fields_found)
     recommended = RECOMMENDED_METADATA_FIELDS
     missing = [f for f in recommended if f not in fields_found]
@@ -523,6 +626,15 @@ def _assess_metadata(datasets: List[Dict[str, Any]]) -> Dict[str, Any]:
     assessed["overall_quality_score"] = round(
         100.0 * (len(recommended) - len(missing)) / len(recommended), 1
     ) if usable else 0.0
+    # OP31: how much of the metadata the KI contributed (transparency about
+    # the primary extractor) and the open questions that need an answer.
+    ki_fields = sum(
+        1 for d in usable
+        for s in (d.get("metadata_sources") or {}).values()
+        if str(s).startswith("ki"))
+    assessed["ki_extracted_fields"] = ki_fields
+    assessed["open_questions"] = [
+        q for d in datasets for q in (d.get("open_questions") or [])]
     return assessed
 
 
@@ -539,6 +651,14 @@ def _recommendations(datasets: List[Dict[str, Any]], metadata_assessment: Dict[s
         recommendations.append(
             f"Metadatenfeld „{field}“ fehlt: ergänzen, um die Metadatenbewertung zu verbessern."
         )
+    # OP31: the KI escalates conflicts and open questions to the user -
+    # they are recommendations that need an explicit answer, never silent.
+    for dataset in datasets:
+        for question in (dataset.get("open_questions") or []):
+            recommendations.append(
+                f"Offene KI-Frage zu „{dataset.get('file_name')}“: {question} "
+                "Bitte im Metadaten-Editor klären."
+            )
     if not recommendations:
         recommendations.append(
             "Alle Dateien sind als Messdaten verwertbar und die Metadaten sind vollständig - "
