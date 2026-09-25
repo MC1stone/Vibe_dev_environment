@@ -257,6 +257,7 @@ def _metadata_editor_fields(dataset: dict, recommended_fields: list) -> list:
     values disappear from the form on reload) plus all fields the user has
     already entered, each prefilled with its current value.
     """
+    from services.project_ingest import RECOMMENDED_FIELD_ALIASES
     metadata = dataset.get('metadata') or {}
     names = []
     for name in list(recommended_fields or []):
@@ -265,11 +266,16 @@ def _metadata_editor_fields(dataset: dict, recommended_fields: list) -> list:
     for name in metadata:
         if name and name not in names:
             names.append(name)
+    # The recommended field ('operator') and its canonical loader twin
+    # ('operator_name') hold the SAME value after the alias sync - show
+    # the information once, under the recommended name, so the user does
+    # not see redundant fields in the editor.
     return [{
         'name': name,
         'value': metadata.get(name, ''),
         'recommended': name in (recommended_fields or []),
-    } for name in names]
+    } for name in names
+        if name not in RECOMMENDED_FIELD_ALIASES.values()]
 
 
 class ProjectDetailView(TemplateView):
