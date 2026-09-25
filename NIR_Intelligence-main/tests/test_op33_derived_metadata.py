@@ -174,7 +174,9 @@ entry_done = {'usable': True,
               'metadata': {'instrument_type': 'Triadsensor',
                            'instrument_model': 'Triad NIR',
                            'serial_number': 'SN-1',
-                           'integration_time': '100 ms'},
+                           'integration_time': '100 ms',
+                           'target_name': 'Brix'},
+              'reference_values': [11.0, 12.5, 13.0],
               'open_questions': []}
 project_ingest._ki_forward_questions(entry_done, project_ingest._metadata_standards())
 check('T12a fully documented sensor -> no question at all',

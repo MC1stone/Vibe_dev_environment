@@ -3,7 +3,45 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP35 - KI-Felder im Editor bereitstellen + Metadaten-Uebersicht im Abschlussbericht
+## Current Task: OP36 - Zielwert-Agnostizismus ueber die gesamte Kette
+
+### Objective
+Nicht jede Kalibration misst Brix - Oel-Projekte kalibrieren z. B. auf
+Fett- oder Wassergehalt. Die Plattform muss zielwert-agnostisch sein:
+Der Zielwert (Kalibrationsziel) wird aus den Daten/Metadaten abgeleitet
+und nur angefragt, wenn kein Rueckschluss moeglich ist (nie Brix
+hartkodiert, nichts geraten - Anti-Halluzination).
+
+### Scope
+- `services/project_ingest.py`:
+  - Wide-Ingest zeichnet die gewaehlte Referenzspalte als
+    `target_name` in den Dataset-Metadaten auf
+  - `_ki_forward_questions()`: neues Thema 'zielwert' - fragt genau
+    dann, wenn weder `target_name` noch `reference_values` vorliegen
+    (eindeutige Eskalation, thematische Dedup, Editor-Feld genannt)
+- `services/calibration_charts.py`: `calibration_chart_data_urls(...,
+  target_name)` - Ref-vs-Pred- und RMSECV-Labels tragen den Zielwert
+- `services/xai_charts.py`: `xai_chart_data_urls(..., target_name)` -
+  Prediction-vs-Actual-Labels tragen den Zielwert
+- `services/project_crew.py`: reicht `target_name` aus den
+  Dataset-Metadaten an beide Chart-Builder durch
+- `services/student_report.py`: `_dataset_target_name()` - Analyt und
+  RMSE-Einheiten kommen aus `target_name` (neutraler Fallback
+  'Zieleinheit'/'Zielwert'), Brix-Formulierungen entfernt
+- `agents/chatbot_agent.py`: RMSE-Antworten nutzen den Zielwert aus dem
+  Dataset-Kontext (Fallback 'Zieleinheit'), PLS-Glossar neutral
+- `tests/test_op36_target_agnostic.py` (25 Checks) + CI-Zeile;
+  OP23/OP33-Matrizen an das zielwert-agnostische Verhalten angepasst
+
+### Success Criteria
+- Beliebige Referenzspalte (nicht nur Brix) wird als Zielwert
+  aufgezeichnet und in Charts/Berichten/Chatbot benutzt
+- Keine Zielwert-Frage, wenn die Daten den Zielwert hergeben
+- Zielwert-Frage mit klarer Eskalation, wenn nichts ableitbar ist
+- Keine Brix-Hardcodes mehr im Plattform-Quellcode
+- Alle Matrizen bleiben gruen
+
+## Completed Task: OP35 - KI-Felder im Editor bereitstellen + Metadaten-Uebersicht im Abschlussbericht
 
 ### Objective
 Nach OP34 zwei Restpunkte: (1) Die von der KI angefragten Felder

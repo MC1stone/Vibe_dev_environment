@@ -262,6 +262,8 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
                     calibration_samples, reference_values,
                     dataset.get('preview', {}).get('wavelengths', []),
                     epochs=60,
+                    target_name=(dataset.get('metadata', {})
+                                 .get('target_name') or 'Zielwert'),
                 )
                 if nn_section.get('charts'):
                     nn_section['charts_note'] = (
@@ -285,6 +287,8 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
                 cal_section['charts'] = calibration_chart_data_urls(
                     calibration_samples, reference_values,
                     dataset.get('preview', {}).get('wavelengths', []),
+                    target_name=(dataset.get('metadata', {})
+                                 .get('target_name') or 'Zielwert'),
                 )
                 if cal_section.get('charts'):
                     cal_section['charts_note'] = (

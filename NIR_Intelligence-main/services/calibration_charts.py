@@ -68,7 +68,8 @@ def _pls_ref_vs_pred(matrix: np.ndarray, y: np.ndarray):
 
 
 def _ref_vs_pred(y_true: np.ndarray, y_pred: np.ndarray, r2: float,
-                 rmse: float, method_note: str) -> str:
+                 rmse: float, method_note: str,
+                 target_name: str = "Zielwert") -> str:
     fig, ax = plt.subplots(figsize=(6.5, 5))
     ax.scatter(y_true, y_pred, s=60, alpha=0.8, edgecolors="k")
     lo = float(min(y_true.min(), y_pred.min()))
@@ -78,10 +79,10 @@ def _ref_vs_pred(y_true: np.ndarray, y_pred: np.ndarray, r2: float,
             label="Ideal (y = x)")
     ax.set_xlim(lo - pad, hi + pad)
     ax.set_ylim(lo - pad, hi + pad)
-    ax.set_xlabel("Referenz (Brix)")
-    ax.set_ylabel("Kreuzvalidierte Vorhersage (Brix)")
+    ax.set_xlabel(f"Referenz ({target_name})")
+    ax.set_ylabel(f"Kreuzvalidierte Vorhersage ({target_name})")
     ax.set_title("Ref. vs. Pred (Kreuzvalidierung)\n"
-                 f"R\u00b2cv = {r2:.3f}, RMSECV = {rmse:.3f} \u00b0Brix")
+                 f"R\u00b2cv = {r2:.3f}, RMSECV = {rmse:.3f} {target_name}")
     if method_note:
         ax.text(0.03, 0.97, method_note, transform=ax.transAxes, fontsize=8,
                 va="top", ha="left", color="#0d6efd")
@@ -105,13 +106,13 @@ def _reg_coefficients(coefficients: np.ndarray, wavelengths: np.ndarray,
 
 
 def _rmsecv_vs_n(n_values: List[int], rmsecv_values: List[float],
-                 best_n: int) -> str:
+                 best_n: int, target_name: str = "Zielwert") -> str:
     fig, ax = plt.subplots(figsize=(7, 4.5))
     ax.plot(n_values, rmsecv_values, "o-", color="#0d6efd", ms=5)
     ax.axvline(best_n, color="#d62728", ls="--", lw=1,
                label=f"Optimum: n = {best_n}")
     ax.set_xlabel("Anzahl PLS-Komponenten (n)")
-    ax.set_ylabel("RMSECV (\u00b0Brix)")
+    ax.set_ylabel(f"RMSECV ({target_name})")
     ax.set_title("RMSECV vs. Anzahl Komponenten\n(Wie komplex muss das Modell sein?)")
     ax.legend(fontsize=8)
     ax.grid(alpha=0.3)
@@ -120,7 +121,8 @@ def _rmsecv_vs_n(n_values: List[int], rmsecv_values: List[float],
 
 def calibration_chart_data_urls(calibration_samples: List[List[float]],
                                 reference_values: List[float],
-                                wavelengths: List[float]) -> Dict[str, str]:
+                                wavelengths: List[float],
+                                target_name: str = "Zielwert") -> Dict[str, str]:
     """Render the three standard calibration plots from the real data.
 
     Returns a dict of base64 PNG data URLs (keys: ref_vs_pred,
@@ -154,7 +156,8 @@ def calibration_chart_data_urls(calibration_samples: List[List[float]],
         r2_cv = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
         rmsecv = float(np.sqrt(ss_res / y.size))
         method_note = f"PLS ({n_components} Komponenten), {folds}-fache Kreuzvalidierung"
-        charts["ref_vs_pred"] = _ref_vs_pred(y, y_pred, r2_cv, rmsecv, method_note)
+        charts["ref_vs_pred"] = _ref_vs_pred(y, y_pred, r2_cv, rmsecv,
+                                            method_note, target_name)
 
         # --- Regression coefficients --------------------------------------
         pls = PLSRegression(n_components=n_components).fit(matrix, y)
@@ -179,7 +182,8 @@ def calibration_chart_data_urls(calibration_samples: List[List[float]],
         if not n_values:
             return {k: v for k, v in charts.items() if k != "rmsecv_vs_n"}
         best_n = n_values[int(np.argmin(rmsecv_values))]
-        charts["rmsecv_vs_n"] = _rmsecv_vs_n(n_values, rmsecv_values, best_n)
+        charts["rmsecv_vs_n"] = _rmsecv_vs_n(n_values, rmsecv_values, best_n,
+                                           target_name)
     except Exception:
         logger.exception("Calibration chart rendering failed (non-fatal)")
         return {}

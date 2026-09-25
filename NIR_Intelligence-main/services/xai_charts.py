@@ -112,14 +112,15 @@ def _train_model(matrix: np.ndarray, y: np.ndarray, wavelengths: np.ndarray, epo
     }
 
 
-def _prediction_vs_actual(y_pred, y_true) -> str:
+def _prediction_vs_actual(y_pred, y_true,
+                          target_name: str = "Zielwert") -> str:
     fig, ax = plt.subplots(figsize=(6.5, 5))
     ax.scatter(y_true, y_pred, s=60, alpha=0.8, edgecolors="k")
     lo = float(min(y_true.min(), y_pred.min()))
     hi = float(max(y_true.max(), y_pred.max()))
     ax.plot([lo, hi], [lo, hi], "r--", lw=1, label="Ideal (y = x)")
-    ax.set_xlabel("Tatsächlich (Brix)")
-    ax.set_ylabel("Vorhergesagt (Brix)")
+    ax.set_xlabel(f"Tatsächlich ({target_name})")
+    ax.set_ylabel(f"Vorhergesagt ({target_name})")
     ax.set_title("Prediction vs. Actual (Test-Split)")
     ax.legend(fontsize=8)
     ax.grid(alpha=0.3)
@@ -208,7 +209,8 @@ def _attention_chart(attention: np.ndarray, wavelengths: np.ndarray) -> str:
 def xai_chart_data_urls(calibration_samples: List[List[float]],
                         reference_values: List[float],
                         wavelengths: List[float],
-                        epochs: int = 60) -> Dict[str, str]:
+                        epochs: int = 60,
+                        target_name: str = "Zielwert") -> Dict[str, str]:
     """Train the CNN calibration model and render the seven XAI plots.
 
     Returns a dict of base64 PNG data URLs (keys: prediction_vs_actual,
@@ -246,7 +248,8 @@ def xai_chart_data_urls(calibration_samples: List[List[float]],
             y_pred_scaled.reshape(-1, 1)).ravel()
         y_true = ctx["y_scaler"].inverse_transform(
             ctx["y_test"].reshape(-1, 1)).ravel()
-        charts["prediction_vs_actual"] = _prediction_vs_actual(y_pred, y_true)
+        charts["prediction_vs_actual"] = _prediction_vs_actual(
+            y_pred, y_true, target_name)
 
         # --- Loss curves --------------------------------------------------
         charts["loss_curves"] = _loss_curves(ctx["history"])

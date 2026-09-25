@@ -236,10 +236,10 @@ def interpret_spectra(wavelengths: List[Any], intensities: List[Any],
     if analyte:
         sentences.append(
             f"Der Zielwert ({analyte}) wird im NIR vor allem \u00fcber "
-            "O-H- und C-H-Oberschwingungen getragen: Bei Brix (Zuckergehalt, "
-            "grad Brix) sind das die Zucker-\u00fcber Wasser- und "
-            "Bindungsbanden, in denen sich eine Gehalts\u00e4nderung direkt "
-            "als Intensit\u00e4ts\u00e4nderung zeigt.")
+            "O-H- und C-H-Oberschwingungen getragen: Gehalts\u00e4nderungen "
+            "zeigen sich direkt als Intensit\u00e4ts\u00e4nderung in den "
+            "jeweiligen Bindungsbanden; die Regressionskoeffizienten der "
+            "Kalibration zeigen, welche Bereiche das Modell konkret nutzt.")
     else:
         sentences.append(
             "Der Zielwert der Kalibration wird im NIR \u00fcber O-H- und "
@@ -265,7 +265,21 @@ def _grade_r2(r2: float) -> str:
     return "unzureichend f\u00fcr quantitative Aussagen"
 
 
-def model_quality_paragraphs(per_agent: List[Dict[str, Any]]) -> List[str]:
+def _dataset_target_name(datasets: List[Dict[str, Any]]) -> Optional[str]:
+    """Return the calibration target recorded at ingest (target-agnostic).
+
+    OP36: the analyte is no longer hardcoded to Brix - it comes from the
+    target_name metadata captured during wide-format ingest. None when no
+    dataset recorded a target (then the report stays neutral).
+    """
+    for dataset in datasets or []:
+        name = (dataset.get("metadata") or {}).get("target_name")
+        if name:
+            return str(name)
+    return None
+
+def model_quality_paragraphs(per_agent: List[Dict[str, Any]],
+                              target_name: Optional[str] = None) -> List[str]:
     """Assess the model quality from the real agent results (R2, RMSE).
     PLS = Partial Least Squares (ein regressionsverfahren, das viele
     korrelierte Wellenl\u00e4ngen zu wenigen Komponenten zusammenfasst)."""
@@ -321,11 +335,13 @@ def model_quality_paragraphs(per_agent: List[Dict[str, Any]]) -> List[str]:
             "m\u00f6glich.")
 
     if rmse_values:
+        target_unit = target_name if target_name else "Zieleinheit"
         for name, rmse in rmse_values:
             paragraphs.append(
                 f"Der {name}-Root Mean Square Error (RMSE) betr\u00e4gt "
-                f"{rmse:.3f} \u00b0Brix - die Vorhersage weicht im Mittel "
-                f"um etwa {rmse:.1f} \u00b0Brix vom Referenzwert ab. F\u00fcr "
+                f"{rmse:.3f} {target_unit} - die Vorhersage weicht im Mittel "
+                f"um etwa {rmse:.1f} {target_unit} vom Referenzwert ab. "
+                "F\u00fcr "
                 "eine Freigabemessung sollte der Fehler deutlich kleiner als "
                 "die relevante Gehaltsdifferenz der Proben sein.")
         paragraphs.append(
@@ -498,14 +514,15 @@ def build_student_sections(per_agent: List[Dict[str, Any]],
     analyte = None
     calibration = _find_section(per_agent, "calibration")
     if calibration:
-        analyte = "\u00b0Brix (Zuckergehalt)"
+        analyte = _dataset_target_name(datasets)
 
     spectra_sentences = interpret_spectra(wavelengths, intensities, analyte=analyte)
     spectra_html = "".join(f"<p>{s}</p>" for s in spectra_sentences) or \
         "<p class=\"muted\">Keine Spektraldaten f\u00fcr eine Interpretation.</p>"
 
     quality_html = "".join(f"<p>{p}</p>"
-                           for p in model_quality_paragraphs(per_agent))
+                           for p in model_quality_paragraphs(
+                               per_agent, target_name=analyte))
 
     errors = error_source_items(per_agent)
     errors_html = "".join(f"<li>{_esc(e)}</li>" for e in errors)
