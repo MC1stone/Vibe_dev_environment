@@ -310,6 +310,47 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - Offen (Zielumgebung): End-to-End-Klick im Browser nach `git pull`
   (Upload einer CSV → Auto-Analyse → Chatbot-Frage).
 
+### FL6 — Superlink/Supernode-Deployment + ILIAS Course Agent im eigenen Container — ✅ ERLEDIGT
+
+- FL1-Offenpunkt (Zielumgebung) adressiert: das Compose-Deployment ist jetzt
+  gegen laufende Container verkabelt und testbar —
+  `scripts/flower_superlink_entry.py` (NEU) startet den echten
+  flower-superlink (flwr 1.38: `flower_superlink --insecure` mit
+  Fleet-API-Adresse) und bootstrappt danach die ServerApp aus
+  `services/flower_apps.py` (FedAvg/FedProx, Runden/Strategie über
+  FLOWER_*-Env konfigurierbar, Neustart des ServerApp-Subprozesses bei Exit).
+  `scripts/flower_supernode_entry.py` (NEU) verbindet einen Supernode über
+  `flwr_clientapp --superlink` mit dem FL1-`NirFlwrClient` (S9-Ridge-Semantik,
+  nur Parameter-Updates im Payload — Rohspektren bleiben lokal);
+  Trainingsdaten aus FLOWER_CLIENT_DATA (.npz), fehlt die Datei ehrlich:
+  synthetischer Platzhalter mit Warnhinweis (kein Fake-Betrieb).
+- `docker-compose.yml` + `docker-compose.prod.yml` (ANGEPASST): flower_server
+  startet den Superlink-Entry (flwr wird im Command gepinnt), neuer Service
+  flower_client (Supernode, FLOWER_SUPERLINK_ADDRESS=flower_server:9092,
+  FLOWER_CLIENT_GROUP=sparkfun_triad, depends_on flower_server), Ports
+  5555/5556/9091/9092 gemappt.
+- ILIAS-Kursentwicklung im eigenen Container:
+  `agents/ilias_course_agent.py` (NEU) — `IliasCourseAgent` mit
+  Curriculum-Katalog aus echten Plattform-Fähigkeiten (Datenimport,
+  Metadaten, Sensorik, Chemometrie, Föderiertes Lernen), Lernziele mit
+  Bloom-Leveln, `sync_curriculum` (Kurs-Wiederverwendung per OP2-Lookup,
+  Sync als Lernpfad über die S8-`ILIASLearningService`-Schnittstelle),
+  Operationen develop/sync/status; jede ILIAS-Störung degradiert ehrlich.
+  `scripts/ilias_course_agent_runner.py` (NEU): kontinuierlicher Runner
+  (--interval/--once), State in output/ilias_course_agent_state.json.
+  Neuer Compose-Service ilias_course_agent (Dockerfile.django,
+  PYTHONPATH=/app:/app/agents, ILIAS_URL=http://ilias:80,
+  depends_on ilias, restart unless-stopped) in beiden Compose-Dateien.
+- Verifikation: `tests/test_fl6_deployment_ilias_agent.py` 35/35 grün
+  (Compose-Wiring beider Dateien, Entry-Skript-Verträge, Katalog- und
+  Sync-Contract mit Stub-Transport, Runner-Smoketest gegen unerreichbares
+  ILIAS mit ehrlichem degraded-Abschluss, exit 0). Regressionen: FL1 21/21,
+  FL2 20/20, FL3 25/25, FL4 20/20, FL5 16/16, S9 28/28, S8 26/26,
+  OP2 31/31, OP3 45/45 grün.
+- Offen (Zielumgebung): live superlink/supernode-Föderationsrunde gegen
+  laufende Container (Container-Runtime auf dem Zielrechner noetig); echter
+  Kurs-Sync gegen ILIAS mit aktivierter OAuth2/REST-API.
+
 ### FL5 — ILIAS-Koordination föderierter Gruppen — ✅ ERLEDIGT
 - `services/federated_ilias_service.py` (NEU): föderierte Gruppen-Sessions
   als ILIAS-Kurs-Kontext — `create_session_context` (Kurs-Wiederverwendung

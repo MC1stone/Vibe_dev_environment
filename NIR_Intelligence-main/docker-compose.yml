@@ -111,16 +111,36 @@ services:
     networks:
       - nir_network
 
-  # Flower Federated Learning Server
+  # Flower Federated Learning Server (FL1: SuperLink transport)
   flower_server:
     image: python:3.12-slim
-    command: tail -f /dev/null
+    command: sh -c "pip install --no-cache-dir 'flwr>=1.4.0' numpy > /dev/null 2>&1; python scripts/flower_superlink_entry.py"
     ports:
       - "5555:5555"
       - "5556:5556"
+      - "9091:9091"
+      - "9092:9092"
     volumes:
+      - ./services:/app/services
+      - ./agents:/app/agents
       - ./scripts:/app/scripts
     working_dir: /app
+    networks:
+      - nir_network
+  # Federated learning client node (FL1: one SuperNode per group)
+  flower_client:
+    image: python:3.12-slim
+    command: sh -c "pip install --no-cache-dir 'flwr>=1.4.0' numpy > /dev/null 2>&1; python scripts/flower_supernode_entry.py"
+    volumes:
+      - ./services:/app/services
+      - ./agents:/app/agents
+      - ./scripts:/app/scripts
+    working_dir: /app
+    environment:
+      - FLOWER_SUPERLINK_ADDRESS=flower_server:9092
+      - FLOWER_CLIENT_GROUP=sparkfun_triad
+    depends_on:
+      - flower_server
     networks:
       - nir_network
 
@@ -173,6 +193,27 @@ services:
     depends_on:
       postgresql:
         condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - nir_network
+
+  # ILIAS course development agent in its own container (FL5 follow-up):
+  # continuously develops NIR curricula and syncs them to the ILIAS container
+  ilias_course_agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.django
+    working_dir: /app
+    command: python scripts/ilias_course_agent_runner.py
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app:/app/agents
+      - ILIAS_URL=http://ilias:80
+      - ILIAS_API_CLIENT_ID=${ILIAS_API_CLIENT_ID:-}
+      - ILIAS_API_CLIENT_SECRET=${ILIAS_API_CLIENT_SECRET:-}
+    depends_on:
+      - ilias
     restart: unless-stopped
     networks:
       - nir_network
