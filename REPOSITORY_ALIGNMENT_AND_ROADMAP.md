@@ -310,9 +310,93 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - Offen (Zielumgebung): End-to-End-Klick im Browser nach `git pull`
   (Upload einer CSV → Auto-Analyse → Chatbot-Frage).
 
-### OP3a — Echter flwr-Client-Server-Betrieb (S9) — OFFEN
-- FederatedLearningService-Kern an den Flower-Transport
-  (`services/flower_server.py`) gegen laufende Container anbinden.
+### FL5 — ILIAS-Koordination föderierter Gruppen — ✅ ERLEDIGT
+- `services/federated_ilias_service.py` (NEU): föderierte Gruppen-Sessions
+  als ILIAS-Kurs-Kontext — `create_session_context` (Kurs-Wiederverwendung
+  per OP2-Titel-Lookup statt Duplikat-Anlage), `sync_round_status` (pro Runde
+  metadata-only Status in den Kurs-Kontext: Runde, Gruppen, aggregierte
+  Qualitätswerte — Privacy-Vertrag im Code erzwungen: Payloads mit
+  `params`/`spectra`/Rohdaten werden verworfen).
+- Baut auf dem OP2-API-Client (`IliasApiClient`/`IliasTokenClient`) auf,
+  Transport injizierbar; jede ILIAS-Störung degradiert ehrlich (die
+  föderierte Session selbst bleibt davon unberührt — FL1-FL4 laufen
+  local-only weiter).
+- Verifikation: `tests/test_fl5_federated_ilias.py` 16/16 grün (Stub-
+  Transport: Kontext-Wiederverwendung, Anlage, Runden-Sync,
+  Privacy-Rejects, Degradationspfade, HTTP-Fehler ehrlich gemeldet).
+  OP2-Regression 31/31, S8-Regression 26/26 grün.
+- Offen (Zielumgebung): Sync gegen echte ILIAS-Kurse mit aktivierter
+  OAuth2/REST-API (OP2-Offenpunkt gilt entsprechend).
+
+### FL4 — Föderierte Sessions: Django-API + Consent-UI — ✅ ERLEDIGT
+- `django_project/api/federated_views.py` (NEU): Consent-gesteuerte API —
+  `POST /api/federated/consent/` (explizites Opt-in, Default `local_only`
+  gemäß WORKFLOW_INTEGRATION.md), `GET /api/federated/status/` (Session-,
+  Runtime- und SecAgg-Status), `POST /api/federated/rounds/` (föderierte
+  Kalibrationsrunde über FL2; 403 ohne Consent, 400 bei invalidem Payload,
+  503 bei sklearn-Deferral — Kern `run_federated_round` von DRF entkoppelt),
+  `GET /api/federated/privacy/` (DP-Accountant + SecAgg + Privacy-Vertrag).
+- `federated.html` (NEU) + Nav-Eintrag `Föderiert`: Consent-Panel
+  (erteilen/widerrufen mit ehrlichem local_only-Hinweis), Session-Status-
+  und Privacy-Box; Route `/federated/` registriert.
+- Verifikation: `tests/test_fl4_federated_ui.py` 20/20 grün (echte
+  Django-Template-Kompilierung, URL-Wiring, Consent-Gate funktional
+  am Kern, Runde über echte non-IID-Shards); `manage.py check` ohne
+  Befunde; OP3-Regression 45/45, OP25-Regression 65/65 grün.
+
+### FL3 — Differential Privacy + Secure Aggregation — ✅ ERLEDIGT
+- `services/federated_privacy.py` (NEU): echtes Differential Privacy statt
+  FlowerAgent-Simulation — L2-Clipping des Parameter-Updates als
+  Sensitivitätsschranke, Gauß-Mechanismus mit sigma aus (ε, δ)
+  (`sigma >= sqrt(2*ln(1.25/delta))/epsilon`), `PrivacyAccountant` mit
+  ehrlicher Kompositions-Obere-Schranke über die Runden (Gesamt-ε/-δ,
+  Budget-Erschöpfung) und `dp_utility_cost` als ehrliche Utility-Messung
+  (L2-Distanz clean vs. privatisiert).
+- `secure_aggregation_available()`: ehrliche Verfügbarkeitsprüfung gegen das
+  installierte flwr — verifiziert: flwr 1.38 liefert echtes
+  `SecAggPlusWorkflow` (serverseitige blinde Aggregation); kein flwr bzw.
+  kein SecAgg → ehrliches `unavailable` mit Begründung (OP14/OP18-Regel,
+  nichts simuliert).
+- Verifikation: `tests/test_fl3_federated_privacy.py` 25/25 grün — Mechanik
+  (Clipping, Rauschen empirisch gegen sigma, Budget-Komposition),
+  Integration mit dem echten FL2-PLS-Update, Privacy-Level-Mapping im
+  FlowerAgent. Regressionen: S9 28/28, FL1 21/21, FL2 20/20 grün.
+
+### FL2 — Föderierte Kalibrationsmodelle (PLS) — ✅ ERLEDIGT
+- `services/federated_calibration.py` (NEU): föderierte PLS-Kalibration
+  auf scikit-learn-Basis (bereits Plattform-Abhängigkeit, task_definition-
+  Kalibrationsmethode `pls`) — Clients trainieren eine lokale PLS-Kalibration
+  auf ihrem non-IID-Shard und teilen ausschließlich Hyperplatten-Parameter
+  (Koeffizienten + Intercept, beispielgewichtet aggregiert); Rohspektren
+  bleiben lokal (Privacy-Audit im Service verdrahtet).
+- Sharding über die OP15-Provenanz-Dimensionen (`instrument_type` /
+  `sample_type`): `shard_spectra_database()` übernimmt SpectrumRecord-artige
+  Dikte; Records ohne Referenzwert werden ehrlich übersprungen.
+- Verifikation: `tests/test_fl2_federated_calibration.py` 20/20 grün —
+  echtes PLS-Fit, FedAvg-Hyperplatten-Aggregation, föderiertes Modell schlägt
+  local-only auf gepoolten Daten (1.77 < 2.39 RMSE) und nähert sich dem
+  gepoolten Optimum (1.689); sklearn-optional (ehrlicher Skip in CI).
+  Regressionen: S9 28/28, FL1 21/21 grün.
+
+### OP3a — Echter flwr-Client-Server-Betrieb (S9) — ✅ ERLEDIGT (FL1)
+- `services/flower_apps.py` (NEU): Flower-App-Paar auf flwr-1.x-API —
+  `make_server_app` (ServerApp mit FedAvg/FedProx-Strategie, Runden-Konfiguration),
+  `NirFlwrClient` (NumPyClient, dessen lokales Training identisch zum
+  S9-Ridge-Update aus `FederatedLearningService.client_update` ist — nur
+  Parameter-Updates im Payload, Rohspektren bleiben lokal),
+  `make_client_fn` (Client-Fabrik über non-IID-Shards: ein SuperNode je
+  Spektrometergruppe), `run_federated_training` (Läuft über die
+  flwr-Simulation-Engine mit dem identischen App-Code, der im Deployment
+  über flower-superlink/flower-supernode läuft — Compose-Service
+  flower_server bleibt der Produktionstransport im nir_network).
+- Verifikation: `tests/test_fl1_flwr_runtime.py` 21/21 grün — Offline-
+  Verträge (S9-Ridge-Semantik, Privacy-Payload, Gruppen-Metriken) laufen
+  ohne flwr; echte Föderationsläufe (FedAvg + FedProx, 1–3 Runden über
+  non-IID-Spektrometer-Shards) über die flwr-Simulation verifiziert
+  (flwr 1.38); CI ohne flwr degradiert ehrlich auf die Offline-Verträge.
+  S9-Regression 28/28 grün.
+- Offen (Zielumgebung): Compose-Deployment-Test superlink/supernode gegen
+  laufende Container (benötigt Container-Runtime auf dem Zielrechner).
 
 ### OP7 — Upload → Crew-Analyse → Quarto-Bericht (PR-#1-Ziel im Leading-Projekt) — ✅ ERLEDIGT
 - **Kontext:** PR #1 fixte die Pipeline im eingefrorenen Legacy-Ansatz
