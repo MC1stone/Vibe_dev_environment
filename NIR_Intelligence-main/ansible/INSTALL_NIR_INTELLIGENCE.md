@@ -8,13 +8,18 @@ gleichen Ergebnis.
 ## Voraussetzungen auf dem Zielsystem
 
 1. Frisch installiertes Debian 13 (mit `sudo`-fähigem Benutzer)
-2. Ansible installiert (auf dem Zielsystem selbst, da `localhost`):
+2. Ansible wird automatisch vom Bootstrap-Skript installiert, falls es
+   fehlt (apt-Paket `ansible`; Fallback `pipx`). Die manuelle Installation
+   entfällt damit:
    ```bash
-   sudo apt update
-   sudo apt install -y ansible
+   sudo bash /mnt/ventoy/ansible/bootstrap_install.sh
    ```
-   (Alternativ genügt `pipx install ansible-core`, falls Debian das Paket
-   `ansible` nicht führen sollte.)
+   (Hinweis: bewusst das Vollpaket `ansible`, nicht nur `ansible-core` —
+   die `ansible.cfg` nutzt den `yaml`-Stdout-Callback sowie
+   `profile_tasks`/`timer` aus `community.general`, die im Core-Paket
+   fehlen und den Lauf zum Absturz bringen. Manuell:
+   `sudo apt install -y ansible`, alternativ `pipx install --include-deps
+   ansible`.)
 3. Ventoy-Stick nach `/mnt/ventoy` einhängen:
    ```bash
    sudo mkdir -p /mnt/ventoy
@@ -27,6 +32,19 @@ gleichen Ergebnis.
      des entpackten Ordners)
 
 ## Ausführung
+
+**Ein Befehl (empfohlen)** — installiert fehlendes Ansible und startet das
+Playbook direkt:
+
+```bash
+sudo bash /mnt/ventoy/ansible/bootstrap_install.sh
+```
+
+Das Skript ist idempotent: ist `ansible-playbook` bereits vorhanden,
+entfällt die Installation; Argumente werden durchgereicht (z. B.
+`--extra-vars "ventoy_mount=/media/$USER/VENTOY"`).
+
+**Manuell** (wenn Ansible bereits installiert ist):
 
 ```bash
 cd /pfad/zum/repo/NIR_Intelligence-main/ansible
