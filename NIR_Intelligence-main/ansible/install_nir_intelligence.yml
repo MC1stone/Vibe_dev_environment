@@ -53,42 +53,76 @@
     verify_command: "systemctl is-active {{ service_name }}"
     verify_timeout: 30
 
+    # ---- Pre-Flight ----------------------------------------------------------
+    # Maximale Wartezeit in Sekunden je stat-Check. Ein haengender Mount
+    # (z. B. defekter/entfernter USB-Stick, der noch als gemountet
+    # registriert ist) blockiert jeden Dateizugriff - ohne Timeout steht
+    # das Playbook still. Bei Ueberschreitung bricht der Pre-Flight mit
+    # klarer Meldung ab statt endlos zu warten.
+    preflight_timeout: 10
+
   tasks:
     # ==========================================================================
     # 0. Pre-Flight-Checks: Ventoy-Stick und Installationsquelle vorhanden
     # ==========================================================================
-    - name: Pruefe, ob der Ventoy-Stick eingehaengt ist
-      ansible.builtin.stat:
-        path: "{{ ventoy_mount }}"
-      register: ventoy_mount_state
+    # Die stat-Checks laufen mit Timeout: ein haengender Mount (z. B.
+    # entfernte/defekte USB-Medien, die noch als gemountet registriert sind)
+    # blockiert jeden Dateizugriff im Kernel (D-State). Ohne Timeout steht
+    # das Playbook dann still; mit Timeout bricht der Pre-Flight nach
+    # preflight_timeout Sekunden mit klarer Diagnose ab.
+    - name: Pre-Flight-Checks gegen haengende Mounts absichern
+      block:
+        - name: Pruefe, ob der Ventoy-Stick eingehaengt ist
+          ansible.builtin.stat:
+            path: "{{ ventoy_mount }}"
+          async: "{{ preflight_timeout }}"
+          poll: 1
+          register: ventoy_mount_state
 
-    - name: Breche ab, wenn der Ventoy-Stick nicht eingehaengt ist
-      ansible.builtin.fail:
-        msg: >-
-          Der Ventoy-Stick ist nicht unter {{ ventoy_mount }} eingehaengt.
-          Bitte den Stick mounten und das Playbook erneut ausfuehren.
-      when: not ventoy_mount_state.stat.exists
+        - name: Breche ab, wenn der Ventoy-Stick nicht eingehaengt ist
+          ansible.builtin.fail:
+            msg: >-
+              Der Ventoy-Stick ist nicht unter {{ ventoy_mount }} eingehaengt.
+              Bitte den Stick mounten und das Playbook erneut ausfuehren.
+          when: not ventoy_mount_state.stat.exists
 
-    - name: Pruefe, ob das .deb-Paket auf dem Stick liegt
-      ansible.builtin.stat:
-        path: "{{ deb_path }}"
-      register: deb_file_state
+        - name: Pruefe, ob das .deb-Paket auf dem Stick liegt
+          ansible.builtin.stat:
+            path: "{{ deb_path }}"
+          async: "{{ preflight_timeout }}"
+          poll: 1
+          register: deb_file_state
 
-    - name: Pruefe, ob das Archiv auf dem Stick liegt
-      ansible.builtin.stat:
-        path: "{{ archive_path }}"
-      register: archive_file_state
+        - name: Pruefe, ob das Archiv auf dem Stick liegt
+          ansible.builtin.stat:
+            path: "{{ archive_path }}"
+          async: "{{ preflight_timeout }}"
+          poll: 1
+          register: archive_file_state
 
-    - name: Breche ab, wenn weder .deb-Paket noch Archiv gefunden wurden
-      ansible.builtin.fail:
-        msg: >-
-          Weder {{ deb_path }} noch {{ archive_path }} wurden gefunden.
-          Bitte die Eigenentwicklung auf den Ventoy-Stick kopieren.
-      when: not deb_file_state.stat.exists and not archive_file_state.stat.exists
+        - name: Breche ab, wenn weder .deb-Paket noch Archiv gefunden wurden
+          ansible.builtin.fail:
+            msg: >-
+              Weder {{ deb_path }} noch {{ archive_path }} wurden gefunden.
+              Bitte die Eigenentwicklung auf den Ventoy-Stick kopieren.
+          when: not deb_file_state.stat.exists and not archive_file_state.stat.exists
 
-    - name: Festlegung der Installationsmethode
-      ansible.builtin.set_fact:
-        install_method: "{{ 'deb' if deb_file_state.stat.exists else 'archive' }}"
+        - name: Festlegung der Installationsmethode
+          ansible.builtin.set_fact:
+            install_method: "{{ 'deb' if deb_file_state.stat.exists else 'archive' }}"
+
+      rescue:
+        - name: Pre-Flight wegen haengender Dateizugriffe abgebrochen
+          ansible.builtin.fail:
+            msg: >-
+              Die Pre-Flight-Checks konnten {{ ventoy_mount }} (oder die
+              Installationsquelle darauf) innerhalb von
+              {{ preflight_timeout }} Sekunden nicht erreichen. Der
+              Mount haengt vermutlich im Kernel (z. B. entfernte/defekte
+              USB-Medien). Diagnose auf dem Zielsystem:
+              mount | grep -i ventoy, timeout {{ preflight_timeout }}
+              stat {{ ventoy_mount }}, lsblk -f. Danach den Stick neu
+              mounten und das Playbook erneut ausfuehren.
 
     - name: Installationsmethode bekanntgeben
       ansible.builtin.debug:
