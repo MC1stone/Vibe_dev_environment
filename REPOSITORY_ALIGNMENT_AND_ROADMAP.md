@@ -310,6 +310,24 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - Offen (Zielumgebung): End-to-End-Klick im Browser nach `git pull`
   (Upload einer CSV → Auto-Analyse → Chatbot-Frage).
 
+### FL3 — Differential Privacy + Secure Aggregation — ✅ ERLEDIGT
+- `services/federated_privacy.py` (NEU): echtes Differential Privacy statt
+  FlowerAgent-Simulation — L2-Clipping des Parameter-Updates als
+  Sensitivitätsschranke, Gauß-Mechanismus mit sigma aus (ε, δ)
+  (`sigma >= sqrt(2*ln(1.25/delta))/epsilon`), `PrivacyAccountant` mit
+  ehrlicher Kompositions-Obere-Schranke über die Runden (Gesamt-ε/-δ,
+  Budget-Erschöpfung) und `dp_utility_cost` als ehrliche Utility-Messung
+  (L2-Distanz clean vs. privatisiert).
+- `secure_aggregation_available()`: ehrliche Verfügbarkeitsprüfung gegen das
+  installierte flwr — verifiziert: flwr 1.38 liefert echtes
+  `SecAggPlusWorkflow` (serverseitige blinde Aggregation); kein flwr bzw.
+  kein SecAgg → ehrliches `unavailable` mit Begründung (OP14/OP18-Regel,
+  nichts simuliert).
+- Verifikation: `tests/test_fl3_federated_privacy.py` 25/25 grün — Mechanik
+  (Clipping, Rauschen empirisch gegen sigma, Budget-Komposition),
+  Integration mit dem echten FL2-PLS-Update, Privacy-Level-Mapping im
+  FlowerAgent. Regressionen: S9 28/28, FL1 21/21, FL2 20/20 grün.
+
 ### FL2 — Föderierte Kalibrationsmodelle (PLS) — ✅ ERLEDIGT
 - `services/federated_calibration.py` (NEU): föderierte PLS-Kalibration
   auf scikit-learn-Basis (bereits Plattform-Abhängigkeit, task_definition-

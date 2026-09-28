@@ -24,7 +24,12 @@ ILIAS-Kopplung (FL5).
   (instrument_type/sample_type), nur Hyperplatten-Parameter im Payload;
   `tests/test_fl2_federated_calibration.py` 20/20 (fed < local-only auf
   gepoolten Daten, Naeherung ans gepoolte Optimum); Regressionen S9/FL1 gruen.
-- FL3 — OFFEN: echtes Differential Privacy + Secure Aggregation
+- FL3 — ✅ ERLEDIGT: `services/federated_privacy.py` — echtes DP
+  (L2-Clipping + Gauß-Mechanismus mit sigma aus epsilon/delta,
+  PrivacyAccountant mit Kompositions-Obere-Schranke, ehrliche Utility-
+  Messung) und ehrliche SecAgg-Verfuegbarkeitspruefung (flwr 1.38 liefert
+  echtes SecAggPlusWorkflow); `tests/test_fl3_federated_privacy.py` 25/25;
+  Regressionen S9/FL1/FL2 gruen.
 - FL4 — OFFEN: Django-UI (Runden-Dashboard, Consent)
 - FL5 — OFFEN: ILIAS-Kopplung föderierter Gruppen
 

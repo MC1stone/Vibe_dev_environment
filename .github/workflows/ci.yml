@@ -37,6 +37,7 @@ jobs:
           python tests/test_s9_federated_learning.py
           python tests/test_fl1_flwr_runtime.py
           python tests/test_fl2_federated_calibration.py
+          python tests/test_fl3_federated_privacy.py
           python tests/test_op1_embedding_pipeline.py
           python tests/test_op2_ilias_token_flow.py
           python tests/test_op3_platform_ui.py
