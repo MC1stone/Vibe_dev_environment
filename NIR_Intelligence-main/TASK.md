@@ -3,52 +3,46 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: FL-Ausbau — Federated Learning FL1-FL5 (Entwicklungszweig vibe/federated-learning-ausbau-53a9e6)
+## Current Task: FL6 — Superlink/Supernode-Deployment + ILIAS Course Agent im eigenen Container (Entwicklungszweig vibe/fl-deployment-ilias-agent-53a9e6)
 
 ### Objective
-Federated Learning gemaess Implementationsplan
-(FEDERATED_LEARNING_IMPLEMENTATIONSPLAN.md) ausbauen: echter flwr-Betrieb
-(FL1/OP3a), echte Kalibrationsmodelle (FL2), Differential Privacy +
-Secure Aggregation (FL3), Django-UI + Consent-Workflow (FL4),
-ILIAS-Kopplung (FL5).
+Die zwei offenen Punkte angehen: (a) der FL1-Zielumgebungs-Punkt
+Compose-Deployment superlink/supernode gegen laufende Container wird
+verkabelt und testbar gemacht; (b) ILIAS-Kursentwicklung laeuft in einem
+eigenen Container mit einem dedizierten IliasCourseAgent, der
+kontinuierlich Kurse fuer das System entwickelt und via S8-Sync nach
+ILIAS pusht.
 
 ### Status
-- FL1 — ✅ ERLEDIGT: `services/flower_apps.py` (ServerApp/ClientApp auf
-  flwr-1.x, S9-Ridge-Semantik im Client, non-IID-Sharding, Privacy-Vertrag);
-  `tests/test_fl1_flwr_runtime.py` 21/21 (echte Simulation mit flwr 1.38,
-  Offline-Vertraege ohne flwr, ehrlicher Skip in CI); S9-Regression 28/28.
-  Offen (Zielumgebung): superlink/supernode-Deployment-Test gegen laufende
-  Container.
-- FL2 — ✅ ERLEDIGT: `services/federated_calibration.py` — föderierte
-  PLS-Kalibration (sklearn), Sharding ueber OP15-Provenanz
-  (instrument_type/sample_type), nur Hyperplatten-Parameter im Payload;
-  `tests/test_fl2_federated_calibration.py` 20/20 (fed < local-only auf
-  gepoolten Daten, Naeherung ans gepoolte Optimum); Regressionen S9/FL1 gruen.
-- FL3 — ✅ ERLEDIGT: `services/federated_privacy.py` — echtes DP
-  (L2-Clipping + Gauß-Mechanismus mit sigma aus epsilon/delta,
-  PrivacyAccountant mit Kompositions-Obere-Schranke, ehrliche Utility-
-  Messung) und ehrliche SecAgg-Verfuegbarkeitspruefung (flwr 1.38 liefert
-  echtes SecAggPlusWorkflow); `tests/test_fl3_federated_privacy.py` 25/25;
-  Regressionen S9/FL1/FL2 gruen.
-- FL4 — ✅ ERLEDIGT: `api/federated_views.py` (Consent-API, Status, Runden,
-  Privacy-Endpunkt; Consent-Gate 403, Deferral 503), `federated.html` +
-  Nav-Eintrag, Route /federated/; `tests/test_fl4_federated_ui.py` 20/20,
-  manage.py check ohne Befunde, OP3/OP25-Regressionen gruen.
-- FL5 — ✅ ERLEDIGT: `services/federated_ilias_service.py` — föderierte
-  Gruppen-Sessions als ILIAS-Kurs-Kontext (Wiederverwendung per OP2-Lookup),
-  Runden-Sync metadata-only mit Privacy-Vertrag im Code, ehrliche
-  Degradation; `tests/test_fl5_federated_ilias.py` 16/16; OP2/S8-Regressionen
-  gruen. Offen (Zielumgebung): echter Sync gegen laufendes ILIAS (OAuth2).
+- FL6a Deployment-Verkabelung — ✅ ERLEDIGT: `scripts/flower_superlink_entry.py`
+  (flower-superlink CLI + ServerApp-Bootstrap aus services/flower_apps.py),
+  `scripts/flower_supernode_entry.py` (Supernode mit NirFlwrClient aus FL1,
+  FLOWER_CLIENT_DATA .npz oder ehrlicher Synthetic-Warnhinweis),
+  `docker-compose.yml` + `docker-compose.prod.yml`: flower_server startet den
+  Superlink, neuer flower_client-Service (Supernode, FLOWER_SUPERLINK_ADDRESS,
+  FLOWER_CLIENT_GROUP), saemtliche Fleet/ServerAPI-Ports gemappt.
+- FL6b ILIAS Course Agent — ✅ ERLEDIGT: `agents/ilias_course_agent.py`
+  (Curriculum-Katalog aus echten Plattform-Faehigkeiten: Datenimport,
+  Metadaten, Sensorik, Chemometrie, Föderiertes Lernen — Lernziele mit
+  Bloom-Leveln), `scripts/ilias_course_agent_runner.py` (kontinuierlicher
+  Runner mit --interval/--once, State in output/, ehrliches
+  degraded-Handling), neuer ilias_course_agent-Container (Dockerfile.django,
+  depends_on ilias, restart unless-stopped) in beiden Compose-Dateien.
+- Verifikation: `tests/test_fl6_deployment_ilias_agent.py` 35/35 gruen
+  (Compose-Wiring, Entry-Vertraege, Katalog, Stub-Transport-Sync,
+  Runner-Smoketest gegen unerreichbares ILIAS mit ehrlichem exit 0);
+  Regressionen FL1 21/21, FL2 20/20, FL3 25/25, FL4 20/20, FL5 16/16,
+  S9 28/28, S8 26/26, OP2 31/31, OP3 45/45 gruen.
+- Offen (Zielumgebung): live superlink/supernode-Runde gegen laufende
+  Container (Container-Runtime noetig); echter Kurs-Sync gegen ILIAS mit
+  aktivierter OAuth2/REST-API (OP2-Offenpunkt gilt entsprechend).
 
-Alle FL-Schritte (FL1-FL5) damit abgeschlossen; Implementationsplan
-vollstaendig umgesetzt. Offene Zielumgebungs-Punkte: superlink/supernode-
-Deployment-Test (FL1), echte ILIAS-Sync (FL5).
-
-### Success Criteria (FL1)
-- Der S9-Kern läuft unverändert über den echten Flower-Transport
-- Nur Parameter-Updates im Payload (PrivacyAuditor-Vertrag bleibt)
-- FedAvg und FedProx über non-IID-Spektrometer-Shards verifiziert
-- Alle bestehenden Matrizen bleiben grün
+### Success Criteria (FL6)
+- Superlink/Supernode-Deployment ist in beiden Compose-Dateien verkabelt
+- Der Supernode nutzt den FL1-NirFlwrClient (S9-Semantik, Privacy-Vertrag)
+- ILIAS-Kursentwicklung laeuft als eigener Container-Agent kontinuierlich
+- Ehrliches degraded-Handling bei unerreichbarem ILIAS (kein Fake-Erfolg)
+- Alle bestehenden Matrizen bleiben gruen
 
 ## Completed Task: OP44 - Bugfix: .deb-postinst installiert die systemd-Unit nicht
 

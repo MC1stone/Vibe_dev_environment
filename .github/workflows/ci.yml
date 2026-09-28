@@ -40,6 +40,7 @@ jobs:
           python tests/test_fl3_federated_privacy.py
           python tests/test_fl4_federated_ui.py
           python tests/test_fl5_federated_ilias.py
+          python tests/test_fl6_deployment_ilias_agent.py
           python tests/test_op1_embedding_pipeline.py
           python tests/test_op2_ilias_token_flow.py
           python tests/test_op3_platform_ui.py
