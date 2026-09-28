@@ -135,16 +135,23 @@ if block_task:
               'mount | grep -i ventoy' in str(msg)
               and 'lsblk -f' in str(msg))
 
-# pre-flight fail guards still inside the block (unchanged semantics)
+# Die erwarteten Abbrueche liegen NACH dem Block: der rescue greift bei
+# jedem Fehler im Block - die klaren OP26-Meldungen duerfen nicht von der
+# Timeout-Diagnose ueberschrieben werden (OP42-Korrektur).
 block_names = [t.get('name') for t in _flatten(block_task.get('block') or [])] \
     if block_task else []
-check('T4f missing-stick fail guard inside the block',
-      'Breche ab, wenn der Ventoy-Stick nicht eingehaengt ist' in block_names)
-check('T4g missing-source fail guard inside the block',
-      'Breche ab, wenn weder .deb-Paket noch Archiv gefunden wurden'
-      in block_names)
-check('T4h method selection inside the block',
-      'Festlegung der Installationsmethode' in block_names)
+check('T4f missing-stick fail guard outside the rescue block',
+      _task('Breche ab, wenn der Ventoy-Stick nicht eingehaengt ist') is not None
+      and 'Breche ab, wenn der Ventoy-Stick nicht eingehaengt ist'
+      not in block_names)
+check('T4g missing-source fail guard outside the rescue block',
+      _task('Breche ab, wenn weder .deb-Paket noch Archiv gefunden wurden')
+      is not None
+      and 'Breche ab, wenn weder .deb-Paket noch Archiv gefunden wurden'
+      not in block_names)
+check('T4h method selection outside the rescue block',
+      _task('Festlegung der Installationsmethode') is not None
+      and 'Festlegung der Installationsmethode' not in block_names)
 
 # install method debug stays outside the block (runs after successful pre-flight)
 top_names = [t.get('name') for t in play.get('tasks', [])]

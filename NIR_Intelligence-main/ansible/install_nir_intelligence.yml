@@ -79,13 +79,6 @@
           poll: 1
           register: ventoy_mount_state
 
-        - name: Breche ab, wenn der Ventoy-Stick nicht eingehaengt ist
-          ansible.builtin.fail:
-            msg: >-
-              Der Ventoy-Stick ist nicht unter {{ ventoy_mount }} eingehaengt.
-              Bitte den Stick mounten und das Playbook erneut ausfuehren.
-          when: not ventoy_mount_state.stat.exists
-
         - name: Pruefe, ob das .deb-Paket auf dem Stick liegt
           ansible.builtin.stat:
             path: "{{ deb_path }}"
@@ -100,17 +93,6 @@
           poll: 1
           register: archive_file_state
 
-        - name: Breche ab, wenn weder .deb-Paket noch Archiv gefunden wurden
-          ansible.builtin.fail:
-            msg: >-
-              Weder {{ deb_path }} noch {{ archive_path }} wurden gefunden.
-              Bitte die Eigenentwicklung auf den Ventoy-Stick kopieren.
-          when: not deb_file_state.stat.exists and not archive_file_state.stat.exists
-
-        - name: Festlegung der Installationsmethode
-          ansible.builtin.set_fact:
-            install_method: "{{ 'deb' if deb_file_state.stat.exists else 'archive' }}"
-
       rescue:
         - name: Pre-Flight wegen haengender Dateizugriffe abgebrochen
           ansible.builtin.fail:
@@ -123,6 +105,27 @@
               mount | grep -i ventoy, timeout {{ preflight_timeout }}
               stat {{ ventoy_mount }}, lsblk -f. Danach den Stick neu
               mounten und das Playbook erneut ausfuehren.
+
+    # Die erwarteten Abbrueche liegen bewusst NACH dem Block: der rescue
+    # greift bei jedem Fehler im Block - die klaren OP26-Meldungen duerfen
+    # nicht von der Timeout-Diagnose ueberschrieben werden.
+    - name: Breche ab, wenn der Ventoy-Stick nicht eingehaengt ist
+      ansible.builtin.fail:
+        msg: >-
+          Der Ventoy-Stick ist nicht unter {{ ventoy_mount }} eingehaengt.
+          Bitte den Stick mounten und das Playbook erneut ausfuehren.
+      when: not ventoy_mount_state.stat.exists
+
+    - name: Breche ab, wenn weder .deb-Paket noch Archiv gefunden wurden
+      ansible.builtin.fail:
+        msg: >-
+          Weder {{ deb_path }} noch {{ archive_path }} wurden gefunden.
+          Bitte die Eigenentwicklung auf den Ventoy-Stick kopieren.
+      when: not deb_file_state.stat.exists and not archive_file_state.stat.exists
+
+    - name: Festlegung der Installationsmethode
+      ansible.builtin.set_fact:
+        install_method: "{{ 'deb' if deb_file_state.stat.exists else 'archive' }}"
 
     - name: Installationsmethode bekanntgeben
       ansible.builtin.debug:

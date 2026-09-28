@@ -3,7 +3,49 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP41 - Pre-Flight-Timeout gegen haengende Mounts (OP26-Playbook)
+## Current Task: OP42 - Bootstrap: Ansible-Installation + Playbook-Start in einem Aufruf
+
+### Objective
+Die Installation auf der Zielmaschine soll auf einen einzigen Befehl
+zusammenschrumpfen: Statt Ansible erst manuell zu installieren und dann
+manuell das Playbook zu starten, soll ein Bootstrap-Skript fehlendes
+Ansible installieren und das OP26-Playbook direkt ausfuehren.
+
+### Root Cause (reproduziert)
+Der Guide verlangte zwei manuelle Schritte (apt install ansible, dann
+ansible-playbook-Aufruf). Bei der Sandbox-Verifikation zu OP41 zeigte
+sich zudem: Die ansible.cfg nutzt den 'yaml'-Stdout-Callback sowie
+profile_tasks/timer aus community.general - mit nacktem ansible-core
+crashed der Lauf ('Could not load yaml callback plugin'). Das Skript
+muss daher das Vollpaket 'ansible' installieren, nicht nur den Core.
+
+### Scope
+- `ansible/bootstrap_install.sh`: prueft ansible-playbook; fehlt es,
+  Installation via apt (Fallback pipx mit --include-deps, PATH-Erweiterung);
+  danach exec des OP26-Playbooks (-i localhost, -c local). Als root oder
+  mit passwortlosem sudo laeuft es direkt, andernfalls --ask-become-pass.
+  Argumente werden ans Playbook durchgereicht (z. B. --extra-vars).
+  Idempotent; set -euo pipefail; bash -n sauber.
+- `ansible/INSTALL_NIR_INTELLIGENCE.md`: Bootstrap als empfohlener
+  Ein-Befehl-Weg dokumentiert (Voraussetzungen + Ausfuehrung); Hinweis,
+  warum das Vollpaket statt ansible-core
+- `tests/test_op42_bootstrap_script.py` (Struktur-Matrix) + CI-Zeile
+
+### Out of Scope
+- Automatisches Mounten des Ventoy-Sticks (bleibt manueller Schritt,
+  siehe Guide-Schritt 3)
+- Veraenderung des OP26-Playbooks selbst (OP41-Timeout bleibt unberuehrt)
+- Unattended-Installation des Debian-Basissystems
+
+### Success Criteria
+- Ein Befehl auf der Zielmaschine genuegt: fehlendes Ansible wird
+  installiert, das Playbook startet
+- Ist Ansible bereits vorhanden, entfaellt die Installation (idempotent)
+- Mit nacktem ansible-core ohne community.general crashed die ansible.cfg
+  - das Skript installiert deshalb das Vollpaket
+- Alle bestehenden Matrizen bleiben gruen (OP26/OP41-Regression)
+
+## Completed Task: OP41 - Pre-Flight-Timeout gegen haengende Mounts (OP26-Playbook)
 
 ### Objective
 Auf der Zielmaschine (Linux Mint) haengte das OP26-Installationsplaybook am
@@ -26,9 +68,13 @@ Dateisystem liegen - passend zur Beobachtung, dass nur Task 3 haengte.
   - Neue Variable `preflight_timeout` (Standard 10 s)
   - Die drei Pre-Flight-`stat`-Checks laufen mit `async`/`poll` und
     brechen nach dem Timeout ab, statt endlos zu blockieren
-  - Neuer `block`/`rescue` um die Pre-Flight-Sektion: Bei Timeout bricht
-    das Playbook mit klarer Diagnose-Meldung ab (mount | grep -i ventoy,
+  - Neuer `block`/`rescue` um die stat-Checks: Bei Timeout bricht das
+    Playbook mit klarer Diagnose-Meldung ab (mount | grep -i ventoy,
     timeout-Stat-Check, lsblk -f, Neustart-Hinweis) statt still zu stehen
+  - Korrektur (OP42-Verifikation): Die erwarteten fail-Abbrueche und die
+    Methodenwahl liegen NACH dem Block - der rescue greift bei jedem
+    Fehler im Block und haette sonst die klaren OP26-Meldungen mit der
+    Timeout-Diagnose ueberschrieben
   - Bestehende Aufgaben, Installationsmethoden und Variablen unberuehrt
 - `ansible/INSTALL_NIR_INTELLIGENCE.md`: `preflight_timeout` in der
   Variablen-Tabelle, Fehlerbehandlung-Sektion dokumentiert das Timeout
