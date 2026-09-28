@@ -310,6 +310,24 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - Offen (Zielumgebung): End-to-End-Klick im Browser nach `git pull`
   (Upload einer CSV → Auto-Analyse → Chatbot-Frage).
 
+### FL5 — ILIAS-Koordination föderierter Gruppen — ✅ ERLEDIGT
+- `services/federated_ilias_service.py` (NEU): föderierte Gruppen-Sessions
+  als ILIAS-Kurs-Kontext — `create_session_context` (Kurs-Wiederverwendung
+  per OP2-Titel-Lookup statt Duplikat-Anlage), `sync_round_status` (pro Runde
+  metadata-only Status in den Kurs-Kontext: Runde, Gruppen, aggregierte
+  Qualitätswerte — Privacy-Vertrag im Code erzwungen: Payloads mit
+  `params`/`spectra`/Rohdaten werden verworfen).
+- Baut auf dem OP2-API-Client (`IliasApiClient`/`IliasTokenClient`) auf,
+  Transport injizierbar; jede ILIAS-Störung degradiert ehrlich (die
+  föderierte Session selbst bleibt davon unberührt — FL1-FL4 laufen
+  local-only weiter).
+- Verifikation: `tests/test_fl5_federated_ilias.py` 16/16 grün (Stub-
+  Transport: Kontext-Wiederverwendung, Anlage, Runden-Sync,
+  Privacy-Rejects, Degradationspfade, HTTP-Fehler ehrlich gemeldet).
+  OP2-Regression 31/31, S8-Regression 26/26 grün.
+- Offen (Zielumgebung): Sync gegen echte ILIAS-Kurse mit aktivierter
+  OAuth2/REST-API (OP2-Offenpunkt gilt entsprechend).
+
 ### FL4 — Föderierte Sessions: Django-API + Consent-UI — ✅ ERLEDIGT
 - `django_project/api/federated_views.py` (NEU): Consent-gesteuerte API —
   `POST /api/federated/consent/` (explizites Opt-in, Default `local_only`

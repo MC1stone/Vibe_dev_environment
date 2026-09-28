@@ -34,7 +34,15 @@ ILIAS-Kopplung (FL5).
   Privacy-Endpunkt; Consent-Gate 403, Deferral 503), `federated.html` +
   Nav-Eintrag, Route /federated/; `tests/test_fl4_federated_ui.py` 20/20,
   manage.py check ohne Befunde, OP3/OP25-Regressionen gruen.
-- FL5 — OFFEN: ILIAS-Kopplung föderierter Gruppen
+- FL5 — ✅ ERLEDIGT: `services/federated_ilias_service.py` — föderierte
+  Gruppen-Sessions als ILIAS-Kurs-Kontext (Wiederverwendung per OP2-Lookup),
+  Runden-Sync metadata-only mit Privacy-Vertrag im Code, ehrliche
+  Degradation; `tests/test_fl5_federated_ilias.py` 16/16; OP2/S8-Regressionen
+  gruen. Offen (Zielumgebung): echter Sync gegen laufendes ILIAS (OAuth2).
+
+Alle FL-Schritte (FL1-FL5) damit abgeschlossen; Implementationsplan
+vollstaendig umgesetzt. Offene Zielumgebungs-Punkte: superlink/supernode-
+Deployment-Test (FL1), echte ILIAS-Sync (FL5).
 
 ### Success Criteria (FL1)
 - Der S9-Kern läuft unverändert über den echten Flower-Transport
