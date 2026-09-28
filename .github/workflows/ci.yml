@@ -75,6 +75,7 @@ jobs:
           python tests/test_op40_metadata_consistency_print.py
           python tests/test_op41_preflight_timeout.py
           python tests/test_op42_bootstrap_script.py
+          python tests/test_op43_ventoy_stick.py
 
       - name: Django system check
         run: python django_project/manage.py check

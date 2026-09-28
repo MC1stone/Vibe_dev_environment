@@ -3,7 +3,44 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP42 - Bootstrap: Ansible-Installation + Playbook-Start in einem Aufruf
+## Current Task: OP43 - Ventoy-Stick-Inhalt per Skript erstellen
+
+### Objective
+Der Stick-Inhalt (Playbook, Bootstrap, .deb, tar.gz, Guide) soll nicht
+mehr manuell zusammengestellt werden, sondern per Skript aus dem Repo
+gebaut werden - optional direkt auf den gemounteten Stick kopiert.
+
+### Root Cause (reproduziert)
+Die OP26/OP27/OP42-Artefakte lagen in verschiedenen Verzeichnissen
+(packaging/, ansible/, dist/); das Zusammensuchen und Kopieren auf den
+Stick war manueller Aufwand mit Fehlquellen (vergessene Dateien,
+veraltete Builds). Der Stick-Ordner hatte keine verifizierte Struktur.
+
+### Scope
+- `packaging/build_ventoy_stick.sh`: baut das .deb (via build_deb.sh,
+  ueberspringt bei fehlendem dpkg-deb) und das tar.gz im OP26/OP27-Layout
+  (Wurzel nir_intelligence/, install.sh an der Spitze, ohne Caches/Dev-DB),
+  kopiert Playbook + bootstrap_install.sh + Guide nach
+  dist/ventoy_stick/ansible/, verifiziert das Staging und kopiert bei
+  Angabe eines Mountpunkts direkt auf den Stick. Idempotent,
+  set -euo pipefail.
+- `ansible/INSTALL_NIR_INTELLIGENCE.md`: Abschnitt zum Stick-Bau ergaenzt
+- `tests/test_op43_ventoy_stick.py` (Struktur-Matrix) + CI-Zeile
+
+### Out of Scope
+- Ventoy-Installation/Bootloader selbst (Stick-Setup bleibt extern)
+- Aenderungen an build_deb.sh, install.sh oder dem Playbook
+
+### Success Criteria
+- Ein Befehl erzeugt den vollstaendigen, verifizierten ansible-Payload
+  (Playbook, Bootstrap, .deb, tar.gz, Guide)
+- tar.gz erfuellt die OP26-Erwartung (nir_intelligence/install.sh);
+  .deb via build_deb.sh (OP27)
+- Mountpunkt-Argument kopiert direkt auf den Stick und meldet den
+  Bootstrap-Einzeiler
+- Alle bestehenden Matrizen bleiben gruen
+
+## Completed Task: OP42 - Bootstrap: Ansible-Installation + Playbook-Start in einem Aufruf
 
 ### Objective
 Die Installation auf der Zielmaschine soll auf einen einzigen Befehl

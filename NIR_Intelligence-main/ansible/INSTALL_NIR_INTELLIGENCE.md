@@ -31,6 +31,15 @@ gleichen Ergebnis.
    - `nir_intelligence_main.tar.gz` (mit `install.sh` im Wurzelverzeichnis
      des entpackten Ordners)
 
+   **Stick-Inhalt bauen (ein Befehl):**
+   ```bash
+   ./packaging/build_ventoy_stick.sh /mnt/ventoy
+   ```
+   Das Skript baut das `.deb` (via `build_deb.sh`) und das `tar.gz`
+   (OP26/OP27-Layout), kopiert Playbook, `bootstrap_install.sh` und diesen
+   Guide nach `dist/ventoy_stick/ansible/` und — bei Angabe eines
+   Mountpunkts — direkt auf den Stick. Der Stick ist danach einsatzbereit.
+
 ## Ausführung
 
 **Ein Befehl (empfohlen)** — installiert fehlendes Ansible und startet das
