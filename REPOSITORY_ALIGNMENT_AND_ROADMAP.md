@@ -310,6 +310,22 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - Offen (Zielumgebung): End-to-End-Klick im Browser nach `git pull`
   (Upload einer CSV → Auto-Analyse → Chatbot-Frage).
 
+### FL2 — Föderierte Kalibrationsmodelle (PLS) — ✅ ERLEDIGT
+- `services/federated_calibration.py` (NEU): föderierte PLS-Kalibration
+  auf scikit-learn-Basis (bereits Plattform-Abhängigkeit, task_definition-
+  Kalibrationsmethode `pls`) — Clients trainieren eine lokale PLS-Kalibration
+  auf ihrem non-IID-Shard und teilen ausschließlich Hyperplatten-Parameter
+  (Koeffizienten + Intercept, beispielgewichtet aggregiert); Rohspektren
+  bleiben lokal (Privacy-Audit im Service verdrahtet).
+- Sharding über die OP15-Provenanz-Dimensionen (`instrument_type` /
+  `sample_type`): `shard_spectra_database()` übernimmt SpectrumRecord-artige
+  Dikte; Records ohne Referenzwert werden ehrlich übersprungen.
+- Verifikation: `tests/test_fl2_federated_calibration.py` 20/20 grün —
+  echtes PLS-Fit, FedAvg-Hyperplatten-Aggregation, föderiertes Modell schlägt
+  local-only auf gepoolten Daten (1.77 < 2.39 RMSE) und nähert sich dem
+  gepoolten Optimum (1.689); sklearn-optional (ehrlicher Skip in CI).
+  Regressionen: S9 28/28, FL1 21/21 grün.
+
 ### OP3a — Echter flwr-Client-Server-Betrieb (S9) — ✅ ERLEDIGT (FL1)
 - `services/flower_apps.py` (NEU): Flower-App-Paar auf flwr-1.x-API —
   `make_server_app` (ServerApp mit FedAvg/FedProx-Strategie, Runden-Konfiguration),

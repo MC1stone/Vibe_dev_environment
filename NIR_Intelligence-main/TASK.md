@@ -19,7 +19,11 @@ ILIAS-Kopplung (FL5).
   Offline-Vertraege ohne flwr, ehrlicher Skip in CI); S9-Regression 28/28.
   Offen (Zielumgebung): superlink/supernode-Deployment-Test gegen laufende
   Container.
-- FL2 — OFFEN: PLS/MLP-Kalibrationsmodelle im föderierten Training
+- FL2 — ✅ ERLEDIGT: `services/federated_calibration.py` — föderierte
+  PLS-Kalibration (sklearn), Sharding ueber OP15-Provenanz
+  (instrument_type/sample_type), nur Hyperplatten-Parameter im Payload;
+  `tests/test_fl2_federated_calibration.py` 20/20 (fed < local-only auf
+  gepoolten Daten, Naeherung ans gepoolte Optimum); Regressionen S9/FL1 gruen.
 - FL3 — OFFEN: echtes Differential Privacy + Secure Aggregation
 - FL4 — OFFEN: Django-UI (Runden-Dashboard, Consent)
 - FL5 — OFFEN: ILIAS-Kopplung föderierter Gruppen
