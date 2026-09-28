@@ -55,6 +55,13 @@ if [ -f "${SERVICE_SRC}" ]; then
     systemctl daemon-reload || true
     systemctl enable "${SERVICE_NAME}.service" >/dev/null 2>&1 || true
     systemctl restart "${SERVICE_NAME}.service" || true
+    if systemctl is-active --quiet "${SERVICE_NAME}.service"; then
+        echo "-- service ${SERVICE_NAME} active (web UI: http://127.0.0.1:8000)"
+    else
+        echo "WARNING: service ${SERVICE_NAME} is NOT active." \
+             "Diagnose: systemctl status ${SERVICE_NAME} -l;" \
+             "journalctl -u ${SERVICE_NAME} -n 50" >&2
+    fi
 else
     echo "NOTE: no service file found - start via" \
          "${VENV_DIR}/bin/python manage.py runserver 127.0.0.1:8000" >&2

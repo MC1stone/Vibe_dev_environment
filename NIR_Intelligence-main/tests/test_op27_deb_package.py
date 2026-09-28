@@ -81,6 +81,11 @@ check('T3e postinst migrates the database',
       'manage.py migrate' in postinst)
 check('T3f postinst enables and restarts the service',
       'systemctl enable' in postinst and 'systemctl restart' in postinst)
+check('T3f-b postinst installs the unit file (bugfix: enable/restart alone'
+      ' cannot find a service that was never installed)',
+      'install -m 644' in postinst
+      and '/etc/systemd/system/${SERVICE_NAME}.service' in postinst
+      and 'packaging/nir_intelligence.service' in postinst)
 check('T3g postinst guarded by configure case (idempotent)',
       'configure' in postinst)
 

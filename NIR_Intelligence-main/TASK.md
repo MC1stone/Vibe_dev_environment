@@ -3,7 +3,46 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP43 - Ventoy-Stick-Inhalt per Skript erstellen
+## Current Task: OP44 - Bugfix: .deb-postinst installiert die systemd-Unit nicht
+
+### Objective (Zielumgebungs-Feedback 28.09.)
+Stick-Durchlauf mit angepasstem Mount-Pfad erfolgreich (OP41/OP42/OP43
+wirkten). Aber: Der Dienst wurde nicht automatisch gestartet; die
+Installation meldete, dass kein Service unter dem Namen zu finden sei;
+auch ein manueller Start brachte die Web-UI nicht zum Laufen. Die
+Installation unter /opt/nir_intelligence ist korrekt (by design).
+
+### Root Cause (reproduziert)
+`packaging/DEBIAN/postinst` (.deb-Methode) rief nur systemctl
+daemon-reload/enable/restart auf - installierte die Unit-Datei aber
+NIE nach /etc/systemd/system/ (anders als install.sh der Archiv-Methode).
+Enable/restart liefen stumm mit `|| true` ueber den Fehler hinweg: kein
+Service-File, keine Meldung. Folglich: kein Autostart, kein manueller
+Start moeglich, keine Diagnose.
+
+### Scope
+- `packaging/DEBIAN/postinst`: Unit-Datei wird (falls im Payload vorhanden)
+  per `install -m 644` nach /etc/systemd/system/ installiert - analog zur
+  Archiv-Methode; danach ehrliche Status-Ausgabe (active -> Web-UI-Hinweis,
+  inactive -> WARNING mit systemctl-status/journalctl-Diagnose-Hinweisen)
+- `packaging/install.sh`: gleiche ehrliche Status-Ausgabe ergaenzt
+- `tests/test_op27_deb_package.py`: neuer Check T3f-b (postinst-Vertrag:
+  Unit-Installation, nicht nur enable/restart)
+
+### Out of Scope
+- Productive Webserver (gunicorn/nginx) - bleibt Dev-Server auf Loopback
+  (OP27-Design)
+- Zielspezifische Ursachen fuer 'Web-UI lief nicht' (z. B. fehlgeschlagene
+  pip-Dependencies): die neue WARNING-Ausgabe liefert jetzt die Diagnose-
+  Befehle (systemctl status, journalctl)
+
+### Success Criteria
+- .deb-Installation legt /etc/systemd/system/nir_intelligence.service an
+- Beide Installationswege melden den Service-Status ehrlich mit
+  Diagnose-Hinweisen statt still zu uebergehen
+- OP27-Matrix prueft den Unit-Installations-Vertrag; alle Matrizen gruen
+
+## Completed Task: OP43 - Ventoy-Stick-Inhalt per Skript erstellen
 
 ### Objective
 Der Stick-Inhalt (Playbook, Bootstrap, .deb, tar.gz, Guide) soll nicht
