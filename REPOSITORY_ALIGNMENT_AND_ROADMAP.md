@@ -310,6 +310,22 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - Offen (Zielumgebung): End-to-End-Klick im Browser nach `git pull`
   (Upload einer CSV → Auto-Analyse → Chatbot-Frage).
 
+### FL4 — Föderierte Sessions: Django-API + Consent-UI — ✅ ERLEDIGT
+- `django_project/api/federated_views.py` (NEU): Consent-gesteuerte API —
+  `POST /api/federated/consent/` (explizites Opt-in, Default `local_only`
+  gemäß WORKFLOW_INTEGRATION.md), `GET /api/federated/status/` (Session-,
+  Runtime- und SecAgg-Status), `POST /api/federated/rounds/` (föderierte
+  Kalibrationsrunde über FL2; 403 ohne Consent, 400 bei invalidem Payload,
+  503 bei sklearn-Deferral — Kern `run_federated_round` von DRF entkoppelt),
+  `GET /api/federated/privacy/` (DP-Accountant + SecAgg + Privacy-Vertrag).
+- `federated.html` (NEU) + Nav-Eintrag `Föderiert`: Consent-Panel
+  (erteilen/widerrufen mit ehrlichem local_only-Hinweis), Session-Status-
+  und Privacy-Box; Route `/federated/` registriert.
+- Verifikation: `tests/test_fl4_federated_ui.py` 20/20 grün (echte
+  Django-Template-Kompilierung, URL-Wiring, Consent-Gate funktional
+  am Kern, Runde über echte non-IID-Shards); `manage.py check` ohne
+  Befunde; OP3-Regression 45/45, OP25-Regression 65/65 grün.
+
 ### FL3 — Differential Privacy + Secure Aggregation — ✅ ERLEDIGT
 - `services/federated_privacy.py` (NEU): echtes Differential Privacy statt
   FlowerAgent-Simulation — L2-Clipping des Parameter-Updates als

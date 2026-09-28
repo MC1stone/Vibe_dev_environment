@@ -30,7 +30,10 @@ ILIAS-Kopplung (FL5).
   Messung) und ehrliche SecAgg-Verfuegbarkeitspruefung (flwr 1.38 liefert
   echtes SecAggPlusWorkflow); `tests/test_fl3_federated_privacy.py` 25/25;
   Regressionen S9/FL1/FL2 gruen.
-- FL4 — OFFEN: Django-UI (Runden-Dashboard, Consent)
+- FL4 — ✅ ERLEDIGT: `api/federated_views.py` (Consent-API, Status, Runden,
+  Privacy-Endpunkt; Consent-Gate 403, Deferral 503), `federated.html` +
+  Nav-Eintrag, Route /federated/; `tests/test_fl4_federated_ui.py` 20/20,
+  manage.py check ohne Befunde, OP3/OP25-Regressionen gruen.
 - FL5 — OFFEN: ILIAS-Kopplung föderierter Gruppen
 
 ### Success Criteria (FL1)

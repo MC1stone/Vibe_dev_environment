@@ -80,6 +80,7 @@ urlpatterns = [
     path('spectra/', TemplateView.as_view(template_name='spectra.html'), name='spectra-page'),
     path('files/', TemplateView.as_view(template_name='files.html'), name='files-page'),
     path('analysis/report/<uuid:file_id>/', FileCrewReportView.as_view(), name='file-crew-report'),    path('chatbot/', TemplateView.as_view(template_name='chatbot.html'), name='chatbot-page'),    path('ilias/', TemplateView.as_view(template_name='ilias.html'), name='ilias-page'),
+    path('federated/', TemplateView.as_view(template_name='federated.html'), name='federated-page'),
     path('analysis/', TemplateView.as_view(template_name='analysis.html'), name='analysis-page'),
     path('jobs/', TemplateView.as_view(template_name='jobs.html'), name='jobs-page'),
     path('settings/', TemplateView.as_view(template_name='settings.html'), name='settings-page'),
@@ -96,6 +97,8 @@ urlpatterns = [
     
     # ILIAS learning path API (roadmap S8)
     path('api/ilias/', include('api.ilias_urls')),
+    # Federated learning API (FL4)
+    path('api/federated/', include('api.federated_urls')),
     
     # Quarto Report API
     path('api/reports/generate/spectral/', generate_spectral_report, name='generate-spectral-report'),

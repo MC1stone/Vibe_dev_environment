@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}NIR Intelligence - Federated Learning{% endblock %}
+{% block content %}
+<section class="o-section">
+    <div class="o-container">
+        <div class="c-page-header">
+            <div>
+                <h1 class="c-page-header__title">
+                    <i class="bi bi-diagram-3"></i> Federated Learning
+                </h1>
+                <p class="c-page-header__subtitle">
+                    Föderierte Kalibration über verteilte Spektrometer-Setups (FL1-FL3) -
+                    nur Modellparameter verlassen den Client, Rohspektren bleiben lokal
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="c-button c-button--outline-primary" onclick="refreshFederatedStatus()">
+                    <i class="bi bi-arrow-clockwise c-button__icon"></i>
+                    <span class="c-button__text">Status aktualisieren</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="c-card h-100">
+                    <div class="c-card__header">
+                        <h2 class="c-card__title mb-0"><i class="bi bi-shield-check"></i> Einwilligung (Consent)</h2>
+                    </div>
+                    <div class="c-card__body">
+                        <div class="alert alert-warning mb-sm" id="consentAlert" style="display:none;">
+                            Federated Learning ist deaktiviert (local_only ist der Default).
+                            Übermittle explizite Einwilligung, um föderierte Runden zu starten.
+                        </div>
+                        <div class="alert alert-success mb-sm" id="consentGivenBox" style="display:none;">
+                            Einwilligung erteilt - föderierte Runden sind freigegeben.
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="c-button c-button--primary" onclick="setConsent(true)">
+                                <i class="bi bi-check2-circle c-button__icon"></i>
+                                <span class="c-button__text">Einwilligung erteilen</span>
+                            </button>
+                            <button class="c-button c-button--outline-primary" onclick="setConsent(false)">
+                                <i class="bi bi-x-circle c-button__icon"></i>
+                                <span class="c-button__text">Widerrufen</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="c-card h-100">
+                    <div class="c-card__header">
+                        <h2 class="c-card__title mb-0"><i class="bi bi-activity"></i> Session-Status</h2>
+                    </div>
+                    <div class="c-card__body">
+                        <div id="federatedStatusBox">
+                            <div class="text-center py-lg">
+                                <div class="c-loading-overlay__spinner" style="width: 2rem; height: 2rem; border-width: 0.2rem;"></div>
+                                <p class="mt-sm text-muted mb-0">Lade Status...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="c-card">
+                    <div class="c-card__header">
+                        <h2 class="c-card__title mb-0"><i class="bi bi-shield-lock"></i> Privacy-Status</h2>
+                    </div>
+                    <div class="c-card__body">
+                        <div id="federatedPrivacyBox">
+                            <div class="text-center py-lg">
+                                <div class="c-loading-overlay__spinner" style="width: 2rem; height: 2rem; border-width: 0.2rem;"></div>
+                                <p class="mt-sm text-muted mb-0">Lade Privacy-Status...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+function getCookie(name) {
+    const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return m ? decodeURIComponent(m.pop()) : '';
+}
+
+async function fetchFederated(endpoint, options = {}) {
+    const headers = Object.assign({'Content-Type': 'application/json'}, options.headers || {});
+    headers['X-CSRFToken'] = getCookie('csrftoken');
+    const resp = await fetch('/api/federated/' + endpoint + '/', Object.assign({}, options, {headers}));
+    return resp;
+}
+
+async function refreshFederatedStatus() {
+    const box = document.getElementById('federatedStatusBox');
+    try {
+        const resp = await fetchFederated('status');
+        const data = await resp.json();
+        box.innerHTML = '<pre class="mb-0" style="white-space: pre-wrap;">' +
+            JSON.stringify(data, null, 2).replace(/</g, '&lt;') + '</pre>';
+        const consent = data.consent_given;
+        document.getElementById('consentAlert').style.display = consent ? 'none' : '';
+        document.getElementById('consentGivenBox').style.display = consent ? '' : 'none';
+    } catch (err) {
+        box.innerHTML = '<div class="alert alert-danger mb-0">Status nicht erreichbar: ' + err + '</div>';
+    }
+}
+
+async function setConsent(value) {
+    try {
+        await fetchFederated('consent', {method: 'POST', body: JSON.stringify({consent: value})});
+        await refreshFederatedStatus();
+    } catch (err) {
+        alert('Consent-Übertragung fehlgeschlagen: ' + err);
+    }
+}
+
+async function refreshFederatedPrivacy() {
+    const box = document.getElementById('federatedPrivacyBox');
+    try {
+        const resp = await fetch('/api/federated/privacy/');
+        const data = await resp.json();
+        box.innerHTML = '<pre class="mb-0" style="white-space: pre-wrap;">' +
+            JSON.stringify(data, null, 2).replace(/</g, '&lt;') + '</pre>';
+    } catch (err) {
+        box.innerHTML = '<div class="alert alert-danger mb-0">Privacy-Status nicht erreichbar: ' + err + '</div>';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    refreshFederatedStatus();
+    refreshFederatedPrivacy();
+});
+</script>
+{% endblock %}
