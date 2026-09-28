@@ -3,7 +3,34 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP44 - Bugfix: .deb-postinst installiert die systemd-Unit nicht
+## Current Task: FL-Ausbau — Federated Learning FL1-FL5 (Entwicklungszweig vibe/federated-learning-ausbau-53a9e6)
+
+### Objective
+Federated Learning gemaess Implementationsplan
+(FEDERATED_LEARNING_IMPLEMENTATIONSPLAN.md) ausbauen: echter flwr-Betrieb
+(FL1/OP3a), echte Kalibrationsmodelle (FL2), Differential Privacy +
+Secure Aggregation (FL3), Django-UI + Consent-Workflow (FL4),
+ILIAS-Kopplung (FL5).
+
+### Status
+- FL1 — ✅ ERLEDIGT: `services/flower_apps.py` (ServerApp/ClientApp auf
+  flwr-1.x, S9-Ridge-Semantik im Client, non-IID-Sharding, Privacy-Vertrag);
+  `tests/test_fl1_flwr_runtime.py` 21/21 (echte Simulation mit flwr 1.38,
+  Offline-Vertraege ohne flwr, ehrlicher Skip in CI); S9-Regression 28/28.
+  Offen (Zielumgebung): superlink/supernode-Deployment-Test gegen laufende
+  Container.
+- FL2 — OFFEN: PLS/MLP-Kalibrationsmodelle im föderierten Training
+- FL3 — OFFEN: echtes Differential Privacy + Secure Aggregation
+- FL4 — OFFEN: Django-UI (Runden-Dashboard, Consent)
+- FL5 — OFFEN: ILIAS-Kopplung föderierter Gruppen
+
+### Success Criteria (FL1)
+- Der S9-Kern läuft unverändert über den echten Flower-Transport
+- Nur Parameter-Updates im Payload (PrivacyAuditor-Vertrag bleibt)
+- FedAvg und FedProx über non-IID-Spektrometer-Shards verifiziert
+- Alle bestehenden Matrizen bleiben grün
+
+## Completed Task: OP44 - Bugfix: .deb-postinst installiert die systemd-Unit nicht
 
 ### Objective (Zielumgebungs-Feedback 28.09.)
 Stick-Durchlauf mit angepasstem Mount-Pfad erfolgreich (OP41/OP42/OP43

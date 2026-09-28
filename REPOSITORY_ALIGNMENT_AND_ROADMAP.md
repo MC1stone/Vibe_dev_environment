@@ -310,9 +310,25 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - Offen (Zielumgebung): End-to-End-Klick im Browser nach `git pull`
   (Upload einer CSV → Auto-Analyse → Chatbot-Frage).
 
-### OP3a — Echter flwr-Client-Server-Betrieb (S9) — OFFEN
-- FederatedLearningService-Kern an den Flower-Transport
-  (`services/flower_server.py`) gegen laufende Container anbinden.
+### OP3a — Echter flwr-Client-Server-Betrieb (S9) — ✅ ERLEDIGT (FL1)
+- `services/flower_apps.py` (NEU): Flower-App-Paar auf flwr-1.x-API —
+  `make_server_app` (ServerApp mit FedAvg/FedProx-Strategie, Runden-Konfiguration),
+  `NirFlwrClient` (NumPyClient, dessen lokales Training identisch zum
+  S9-Ridge-Update aus `FederatedLearningService.client_update` ist — nur
+  Parameter-Updates im Payload, Rohspektren bleiben lokal),
+  `make_client_fn` (Client-Fabrik über non-IID-Shards: ein SuperNode je
+  Spektrometergruppe), `run_federated_training` (Läuft über die
+  flwr-Simulation-Engine mit dem identischen App-Code, der im Deployment
+  über flower-superlink/flower-supernode läuft — Compose-Service
+  flower_server bleibt der Produktionstransport im nir_network).
+- Verifikation: `tests/test_fl1_flwr_runtime.py` 21/21 grün — Offline-
+  Verträge (S9-Ridge-Semantik, Privacy-Payload, Gruppen-Metriken) laufen
+  ohne flwr; echte Föderationsläufe (FedAvg + FedProx, 1–3 Runden über
+  non-IID-Spektrometer-Shards) über die flwr-Simulation verifiziert
+  (flwr 1.38); CI ohne flwr degradiert ehrlich auf die Offline-Verträge.
+  S9-Regression 28/28 grün.
+- Offen (Zielumgebung): Compose-Deployment-Test superlink/supernode gegen
+  laufende Container (benötigt Container-Runtime auf dem Zielrechner).
 
 ### OP7 — Upload → Crew-Analyse → Quarto-Bericht (PR-#1-Ziel im Leading-Projekt) — ✅ ERLEDIGT
 - **Kontext:** PR #1 fixte die Pipeline im eingefrorenen Legacy-Ansatz
