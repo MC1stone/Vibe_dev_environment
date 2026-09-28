@@ -67,6 +67,14 @@ bei Bedarf oder per `--extra-vars` überschrieben werden:
 
 - Ohne eingehängten Stick bzw. ohne `.deb`/Archiv bricht das Playbook vor
   jeder Änderung mit einer klaren Fehlermeldung ab.
+- Hängt der Mount im Kernel (z. B. entfernte/defekte USB-Medien, die noch
+  als gemountet registriert sind), blockiert jeder Dateizugriff. Die
+  Pre-Flight-`stat`-Checks laufen deshalb mit Timeout (`preflight_timeout`,
+  Standard 10 s): Das Playbook bricht nach Ablauf mit einer
+  Diagnose-Meldung ab (`mount | grep -i ventoy`,
+  `timeout 10 stat /mnt/ventoy`, `lsblk -f`) statt endlos still zu stehen.
+  Ein Kernel-D-State lässt sich nicht immer killen - im Zweifel hilft nur
+  ein Neustart; danach den Stick neu mounten und erneut ausführen.
 - Schlägt die Paketinstallation oder `install.sh` fehl, greift der
   jeweilige `rescue`-Block und meldet Diagnose-Hinweise
   (`dpkg-deb --info …` bzw. `tar -tzf …`).

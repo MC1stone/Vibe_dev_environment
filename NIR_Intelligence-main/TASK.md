@@ -3,7 +3,51 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP40 - Ehrliche Metadaten-Bewertung + optionaler Quellcode-Druck
+## Current Task: OP41 - Pre-Flight-Timeout gegen haengende Mounts (OP26-Playbook)
+
+### Objective
+Auf der Zielmaschine (Linux Mint) haengte das OP26-Installationsplaybook am
+Task 'Pruefe, ob das .deb-Paket auf dem Stick liegt' (stat auf
+{{ deb_path }}) - ohne Fehlermeldung, ohne Abbruch. Ein haengender Mount
+(entfernte/defekte USB-Medien, die noch als gemountet registriert sind)
+blockiert jeden Dateizugriff im Kernel (D-State); stat blockiert dann
+endlos.
+
+### Root Cause (reproduziert)
+Ein `stat` blockiert, wenn der Pfad in einen Mount zeigt, der im Kernel
+haengt: Der Systemcall kommt nie zurueck, das Playbook steht still. Die
+Pre-Flight-Checks des OP26-Playbooks hatten kein Timeout. Task 1 (stat auf
+den Mountpunkt) kann durchlaufen, wenn nur tiefere Verzeichnispfade
+(die `ansible/`-Subdirectory bzw. die Datei selbst) im haengenden
+Dateisystem liegen - passend zur Beobachtung, dass nur Task 3 haengte.
+
+### Scope
+- `ansible/install_nir_intelligence.yml`:
+  - Neue Variable `preflight_timeout` (Standard 10 s)
+  - Die drei Pre-Flight-`stat`-Checks laufen mit `async`/`poll` und
+    brechen nach dem Timeout ab, statt endlos zu blockieren
+  - Neuer `block`/`rescue` um die Pre-Flight-Sektion: Bei Timeout bricht
+    das Playbook mit klarer Diagnose-Meldung ab (mount | grep -i ventoy,
+    timeout-Stat-Check, lsblk -f, Neustart-Hinweis) statt still zu stehen
+  - Bestehende Aufgaben, Installationsmethoden und Variablen unberuehrt
+- `ansible/INSTALL_NIR_INTELLIGENCE.md`: `preflight_timeout` in der
+  Variablen-Tabelle, Fehlerbehandlung-Sektion dokumentiert das Timeout
+- `tests/test_op41_preflight_timeout.py` (Struktur-Matrix) + CI-Zeile
+
+### Out of Scope
+- Fix der Zielmaschine selbst (Mount-Problem ist Umgebungs-Sache,
+  Diagnose-Hinweise werden nur gemeldet)
+- Aenderungen an den Installationsmethoden (.deb/Archiv), group_vars oder
+  am OP27-Packaging
+
+### Success Criteria
+- Die Pre-Flight-Checks erreichen einen gesunden Mount in Sekunden
+  (Verhalten unveraendert, alle `when`-Guards funktionieren weiter)
+- Bei einem haengenden Mount bricht das Playbook nach `preflight_timeout`
+  Sekunden mit klarer Diagnose-Meldung ab statt endlos zu blockieren
+- Alle bestehenden Matrizen bleiben gruen (OP26-Regression)
+
+## Completed Task: OP40 - Ehrliche Metadaten-Bewertung + optionaler Quellcode-Druck
 
 ### Objective
 Zwei Befunde: (1) Die Metadaten wurden im Editor nach dem Bearbeiten mit
