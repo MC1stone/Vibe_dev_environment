@@ -29,6 +29,7 @@ try:
     FLWR_AVAILABLE = True
 except ImportError:
     FLWR_AVAILABLE = False
+    NumPyClient = object
 
 from .federated_learning_service import (
     FederatedLearningService,
