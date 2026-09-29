@@ -167,7 +167,9 @@ check('T5c verification task marked changed_when: false',
 check('T5d apt uses state: present (install tasks)',
       all((t.get('ansible.builtin.apt') or {}).get('state') == 'present'
           for t in tasks if 'ansible.builtin.apt' in t
-          and (t.get('ansible.builtin.apt') or {}).get('name')))
+          and (t.get('ansible.builtin.apt') or {}).get('name')
+          and (t.get('ansible.builtin.apt') or {}).get('purge') is None),
+      'the OP47 purge task (name + state absent + purge) is the only allowed exception')
 check('T5e method selection based on file existence (not run-always)',
       _task('Festlegung der Installationsmethode') is not None
       and "deb_file_state.stat.exists" in src)

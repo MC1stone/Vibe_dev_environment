@@ -157,14 +157,16 @@
             mode: "0644"
             remote_src: true
 
+        - name: Entferne eine vorhandene Paketversion (garantiert Neuinstallation)
+          ansible.builtin.apt:
+            name: nir-intelligence-main
+            state: absent
+            purge: true
+
         - name: Installiere das .deb-Paket mit apt
           ansible.builtin.apt:
             deb: "{{ deb_staging_path }}"
             state: present
-            # OP46: force erzwingt die (Neu-)Installation auch bei
-            # identischer Versionsnummer - sonst behandelt dpkg einen
-            # Rebuild als "already installed" und postinst laeuft nie.
-            force: true
           register: deb_install_result
 
         - name: Entferne das .deb-Paket aus /tmp
