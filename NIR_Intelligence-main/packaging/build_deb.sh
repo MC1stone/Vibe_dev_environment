@@ -8,7 +8,7 @@
 
 set -e
 
-VERSION="${1:-1.0.0}"
+VERSION="${1:-1.1.0}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 STAGE="$(mktemp -d /tmp/nir_deb_build.XXXXXX)"
 APP_DIR="${STAGE}/opt/nir_intelligence"
