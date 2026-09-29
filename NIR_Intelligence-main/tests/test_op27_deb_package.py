@@ -59,6 +59,13 @@ control = CONTROL.read_text(encoding='utf-8')
 check('T2a package name nir-intelligence-main',
       'Package: nir-intelligence-main' in control)
 check('T2b version field present', 'Version:' in control)
+# OP46: build default and control file must agree, and must be > 1.0.0 so
+# dpkg treats a rebuilt payload as an upgrade (postinst runs again)
+check('T2b-1 version bumped past 1.0.0 (OP46)',
+      'Version: 1.1.0' in control)
+build_src = BUILD.read_text(encoding='utf-8')
+check('T2b-2 build_deb.sh default version matches control (OP46)',
+      'VERSION="${1:-1.1.0}"' in build_src)
 check('T2c architecture all', 'Architecture: all' in control)
 check('T2d depends on python3/venv/pip/sqlite3',
       'python3' in control and 'python3-venv' in control

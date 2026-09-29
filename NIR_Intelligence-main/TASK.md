@@ -3,7 +3,31 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP45 — Host-Backend-Stack fuer die Bare-Metal-Installation (Ollama, Qdrant, Redis)
+## Current Task: OP46 — Bugfix: Rebuild wird von dpkg als "already installed" uebergangen
+
+### Objective (Zielumgebungs-Feedback Mint, 2. Runde)
+Nach OP45 funktionierte der neue Stick auf der Zielmaschine nicht: Der
+`.deb`-Rebuild trug weiterhin Version 1.0.0 - dpkg fuehrte das Paket als
+bereits installiert, `apt state: present` installierte nichts nach, postinst
+lief nie. Folge: kein /opt/nir_intelligence-Neuaufbau, Meldung "Backend-Stack-
+Skript fehlt im Payload" (aus dem neuen Playbook, weil die OP45-Dateien nie
+entpackt wurden).
+
+### Scope
+- `ansible/install_nir_intelligence.yml`: `force: true` beim apt-deb-Install
+  erzwingt die (Neu-)Installation auch bei identischer Versionsnummer
+- `packaging/build_deb.sh` + `packaging/DEBIAN/control`: Default-Version 1.1.0
+  (Rebuilds sind von dpkg klar als Upgrade unterscheidbar)
+- `tests/test_op27_deb_package.py`: T2b-1/T2b-2 (Version-Bump-Vertrag)
+- `tests/test_op45_host_backend_stack.py`: T4f (Playbook erzwingt Neuinstallation)
+
+### Success Criteria
+- Ein Rebuild des .deb wird auf der Zielmaschine garantiert neu installiert
+  (postinst laeuft, OP45-Backend-Stack startet)
+- `dpkg -l` zeigt die installierte Version (1.1.0) - Stand am Ziel sichtbar
+- Alle bestehenden Matrizen bleiben gruen
+
+## Completed Task: OP45 — Host-Backend-Stack fuer die Bare-Metal-Installation (Ollama, Qdrant, Redis)
 
 ### Objective (Zielumgebungs-Feedback Mint)
 Die Installation (OP26-OP44) lief auf Mint problemlos durch und der
