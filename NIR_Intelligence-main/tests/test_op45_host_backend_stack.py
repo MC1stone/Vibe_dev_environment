@@ -107,6 +107,11 @@ check('T2d start script detects missing docker with install hint',
       'docker' in src and 'apt-get' in src and 'ERROR' in src)
 check('T2e start script detects missing compose (v2 plugin or legacy)',
       'docker compose' in src and 'docker-compose' in src)
+check('T2e-1 compose invoked as separate argv words, not one quoted string',
+      'compose_cmd=(docker compose)' in src
+      and '"${compose_cmd[@]}"' in src
+      and '"docker compose"' not in src,
+      'quoting "docker compose" makes bash look for a binary named "docker compose"')
 check('T2f start script detects an unreachable docker daemon',
       'docker info' in src)
 check('T2g start script runs compose up -d against the backend file',
