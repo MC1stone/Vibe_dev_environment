@@ -167,9 +167,11 @@ check('T4d playbook reports a clear hint when docker/compose is missing',
 check('T4e backend stack start guarded by docker+compose+script checks',
       'compose_version_result.rc == 0' in playbook_src
       and 'backend_script_state.stat.exists' in playbook_src)
-check('T4f playbook forces deb reinstall on rebuilt payloads (OP46)',
-      any((t.get('ansible.builtin.apt') or {}).get('force') is True
-          for t in tasks))
+check('T4f playbook purges an installed package before deb install (OP47)',
+      any((t.get('ansible.builtin.apt') or {}).get('state') == 'absent'
+          and (t.get('ansible.builtin.apt') or {}).get('purge') is True
+          for t in tasks),
+      'apt force: true does NOT reinstall an identical version; a purge task before install guarantees postinst runs')
 
 # ---------------------------------------------------------------------------
 # T5: payload wiring (.deb + ventoy archive)

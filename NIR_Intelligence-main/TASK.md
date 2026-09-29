@@ -3,7 +3,32 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP46 — Bugfix: Rebuild wird von dpkg als "already installed" uebergangen
+## Current Task: OP47 - Bugfix: Rebuild wird bei identischer Version nicht neu installiert
+
+### Objective (Zielumgebungs-Feedback Mint, 3. Runde)
+Nach OP45/OP46 lief die Installation, aber der apt-deb-Install zeigte "ok"
+statt "changed": Der Stick-.deb trug dieselbe Version (1.1.0) wie das bereits
+installierte Paket (der Quoting-Hotfix PR #100 hatte keinen Version-Bump).
+apt installiert bei identischer Version nicht nach - postinst lief nie, das
+kaputte (sed-gemanipulierte) Skript blieb in /opt liegen.
+Zusaetzliche Erkenntnis: ansible apt force: true ist nur --force-yes und
+erzwingt KEINE Neuinstallation bei identischer Version.
+
+### Scope
+- ansible/install_nir_intelligence.yml: Purge-Task (name nir-intelligence-main,
+  state absent, purge) VOR dem deb-Install - garantiert Neuinstallation auch
+  bei identischer Versionsnummer; force: true entfernt ( wirkungslos)
+- packaging/build_deb.sh + DEBIAN/control: Version 1.2.0
+- test_op26: T5d erlaubt den Purge-Task als einzige Ausnahme
+- test_op27: T2b-1/T2b-2 auf 1.2.0
+- test_op45: T4f prueft den Purge-Vertrag statt force
+
+### Success Criteria
+- Ein Rebuild (auch identische Version) wird garantiert neu installiert
+- dpkg -l zeigt die installierte Version (1.2.0)
+- Alle bestehenden Matrizen bleiben gruen
+
+## Completed Task: OP46 — Bugfix: Rebuild wird von dpkg als "already installed" uebergangen
 
 ### Objective (Zielumgebungs-Feedback Mint, 2. Runde)
 Nach OP45 funktionierte der neue Stick auf der Zielmaschine nicht: Der
