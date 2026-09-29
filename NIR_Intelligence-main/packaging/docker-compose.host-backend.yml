@@ -1,0 +1,70 @@
+# Host-Backend-Stack (OP45): Analyse-Backends fuer die Bare-Metal-Installation
+# (/opt/nir_intelligence, systemd-Django auf 127.0.0.1:8000).
+#
+# Der volle Entwicklungs-Stack (docker-compose.yml) laeuft mit Container-Namen
+# (http://ollama:11434, http://qdrant:6333) - nur innerhalb des Docker-Netzes
+# aufloesbar. Die systemd-Django-App laeuft AUF dem Host und erreicht diese
+# Dienste nur ueber localhost. Diese Datei startet genau die Dienste, die die
+# Agenten/Analysen brauchen, mit Port-Freigabe an den Host:
+#
+#   - ollama  (LLM-Backend, Mistral)        -> http://localhost:11434
+#   - qdrant  (Vektor-DB fuer Aehnlichkeit)  -> http://localhost:6333
+#   - redis   (Cache/Queue)                 -> localhost:6379
+#
+# Start:  docker compose -f docker-compose.host-backend.yml up -d
+# (wird von start_backend_stack.sh / der Installation OP45 aufgerufen)
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: nir_ollama
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    networks:
+      - nir_backend
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: nir_qdrant
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - nir_backend
+
+  redis:
+    image: redis:7-alpine
+    container_name: nir_redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - nir_backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  nir_backend:
+    driver: bridge
+
+volumes:
+  ollama_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  redis_data:
+    driver: local

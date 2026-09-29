@@ -67,6 +67,20 @@ else
          "${VENV_DIR}/bin/python manage.py runserver 127.0.0.1:8000" >&2
 fi
 
+# --- host backend stack (OP45) ---------------------------------------------
+# Django auf dem Host erreicht Ollama/Qdrant/Redis nur, wenn der Backend-Stack
+# laeuft. Ohne ihn sind die KI-Analysen degraded.
+if [ -f "${APP_DIR}/packaging/docker-compose.host-backend.yml" ]; then
+    echo "-- starte Host-Backend-Stack (Ollama, Qdrant, Redis; OP45)"
+    bash "${APP_DIR}/packaging/start_backend_stack.sh" || \
+        echo "WARNING: Backend-Stack nicht vollstaendig gestartet." \
+             "KI-Analysen sind ohne ihn degraded. Starten mit:" \
+             "bash ${APP_DIR}/packaging/start_backend_stack.sh" >&2
+else
+    echo "WARNING: Backend-Stack fehlt im Payload -" \
+         "KI-Analysen sind ohne Ollama/Qdrant degraded." >&2
+fi
+
 # --- completion marker (OP26 playbook idempotency guard) ----------------------
 touch "${APP_DIR}/.install_completed"
 

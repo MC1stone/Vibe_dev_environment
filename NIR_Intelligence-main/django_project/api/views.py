@@ -178,11 +178,11 @@ class HealthCheckView(APIView):
         docker_services = {}
         
         # Check Qdrant
-        qdrant_url = getattr(settings, 'QDRANT_URL', 'http://qdrant:6333')
+        qdrant_url = getattr(settings, 'QDRANT_URL', 'http://localhost:6333')
         docker_services['qdrant'] = self._check_service_health(qdrant_url, 'Qdrant')
         
         # Check Ollama
-        ollama_url = getattr(settings, 'OLLAMA_URL', 'http://ollama:11434')
+        ollama_url = getattr(settings, 'OLLAMA_URL', 'http://localhost:11434')
         docker_services['ollama'] = self._check_service_health(ollama_url, 'Ollama')
         
         # Check Faiss

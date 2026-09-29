@@ -30,7 +30,7 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("Service.MetadataLLM")
 
-OLLAMA_DEFAULT_URL = "http://ollama:11434"
+OLLAMA_DEFAULT_URL = "http://localhost:11434"
 DEFAULT_LLM_MODEL = "mistral"
 
 # Canonical platform metadata fields (task_definition.yaml categories +

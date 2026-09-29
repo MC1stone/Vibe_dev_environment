@@ -22,11 +22,15 @@ mkdir -p "${APP_DIR}/packaging" "${DIST_DIR}"
 
 # --- application payload ---------------------------------------------------
 for item in django_project agents services config templates tasks skills \
-            docs requirements.txt README.md path_config.py; do
+            docs scripts requirements.txt README.md path_config.py; do
     if [ -e "${ROOT}/${item}" ]; then
         cp -r "${ROOT}/${item}" "${APP_DIR}/"
     fi
 done
+# OP45 host backend stack ships inside packaging/
+cp "${ROOT}/packaging/docker-compose.host-backend.yml" "${APP_DIR}/packaging/"
+cp "${ROOT}/packaging/start_backend_stack.sh" "${APP_DIR}/packaging/"
+chmod 755 "${APP_DIR}/packaging/start_backend_stack.sh"
 
 # strip caches and heavy build output from the payload
 find "${APP_DIR}" -type d -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
@@ -45,6 +49,10 @@ chmod 644 "${STAGE}/DEBIAN/control"
 
 # sanity: the archive installer must sit at the expected location
 test -f "${APP_DIR}/install.sh"
+# sanity: the OP45 host backend stack must sit at the expected location
+test -f "${APP_DIR}/packaging/docker-compose.host-backend.yml"
+test -f "${APP_DIR}/packaging/start_backend_stack.sh"
+test -x "${APP_DIR}/packaging/start_backend_stack.sh"
 
 echo "-- staged payload: $(du -sh "${APP_DIR}" | cut -f1)"
 

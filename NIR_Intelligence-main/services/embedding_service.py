@@ -24,7 +24,7 @@ except ImportError:
     requests = None
     REQUESTS_AVAILABLE = False
 
-OLLAMA_DEFAULT_URL = "http://ollama:11434"
+OLLAMA_DEFAULT_URL = "http://localhost:11434"
 DEFAULT_EMBEDDING_MODEL = "nomic-embed-text:latest"
 DEFAULT_COLLECTION = "nir_spectra"
 DEFAULT_VECTOR_SIZE_HINT = 768

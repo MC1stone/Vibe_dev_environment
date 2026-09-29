@@ -15,12 +15,20 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .base_agent import AgentOutput, AgentStatus, BaseAgent, ErrorSeverity
 
+
+def _host_url(container_name: str, port: int) -> str:
+    """Container-URL im Docker-Netz, localhost auf dem Host (OP45)"""
+    inside = os.environ.get("NIR_DOCKER_STACK") == "1"
+    host = container_name if inside else "localhost"
+    return f"http://{host}:{port}"
+
+
 DEFAULT_TOOLS = [
-    {"name": "qdrant", "url": "http://qdrant:6333", "health_path": "/healthz"},
-    {"name": "faiss", "url": "http://faiss:8081", "health_path": "/"},
-    {"name": "ollama", "url": "http://ollama:11434", "health_path": "/api/tags"},
-    {"name": "ilias", "url": "http://ilias:80", "health_path": "/"},
-    {"name": "django_app", "url": "http://django_app:8000", "health_path": "/api/health/"},
+    {"name": "qdrant", "url": _host_url("qdrant", 6333), "health_path": "/healthz"},
+    {"name": "faiss", "url": _host_url("faiss", 8081), "health_path": "/"},
+    {"name": "ollama", "url": _host_url("ollama", 11434), "health_path": "/api/tags"},
+    {"name": "ilias", "url": _host_url("ilias", 80), "health_path": "/"},
+    {"name": "django_app", "url": _host_url("django_app", 8000), "health_path": "/api/health/"},
 ]
 
 
