@@ -3,7 +3,50 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: FL6 — Superlink/Supernode-Deployment + ILIAS Course Agent im eigenen Container (Entwicklungszweig vibe/fl-deployment-ilias-agent-53a9e6)
+## Current Task: OP45 — Host-Backend-Stack fuer die Bare-Metal-Installation (Ollama, Qdrant, Redis)
+
+### Objective (Zielumgebungs-Feedback Mint)
+Die Installation (OP26-OP44) lief auf Mint problemlos durch und der
+Django-Service war aktiv - aber es liefen KEINE Docker-Container. Der komplette
+Analyse-Backend-Stack (Ollama/Mistral, Qdrant, Redis) existiert nur als
+Docker-Compose-Entwicklungsumgebung und wurde nirgends installiert oder
+gestartet. Zusaetzlich rief die Host-Django-App die Backends mit
+Container-Namen auf (http://ollama:11434), die ausserhalb des Docker-Netzes
+nicht aufloesbar sind. Folglich waren alle KI-Analysen degraded.
+
+### Scope
+- `packaging/docker-compose.host-backend.yml`: Ollama, Qdrant, Redis als
+  eigener Host-Stack mit Port-Freigabe an 127.0.0.1 (kein Port-8000-Konflikt
+  mit dem systemd-Django, persistente Volumes)
+- `packaging/start_backend_stack.sh`: idempotenter Start (Docker/Compose-
+  Praefix-Checks mit klaren Fehlermeldungen, compose up -d, bounded
+  Ollama-Health-Wait, Mistral-Modell-Pull falls fehlend)
+- `packaging/DEBIAN/postinst` + `packaging/install.sh`: starten den Stack
+  nach der App-Installation, mit ehrlichem WARNING (kein Fake-Erfolg)
+- `ansible/install_nir_intelligence.yml`: praefueft Docker/Compose, startet
+  den Stack, meldet klare Hinweise wenn Docker fehlt
+- `packaging/build_deb.sh` + `packaging/build_ventoy_stick.sh`: Payload
+  enthaelt Compose-File und Start-Skript (beide Wege)
+- Host-auflösbare Defaults: `settings.py` (OLLAMA_URL, QDRANT_URL/HOST/PORT,
+  REDIS_URL aus env mit localhost-Default), chatbot_views/views/services
+  defaulten auf localhost; `agents/mcp_agent.py` loest Container-vs-Host per
+  NIR_DOCKER_STACK (Dockerfile.django/Dockerfile.prod setzen es=1)
+- `tests/test_op45_host_backend_stack.py` (CI-matrix)
+
+### Out of Scope
+- PostgreSQL/FAISS/ILIAS/Flower im Host-Stack (Bare-Metal-Pfad nutzt SQLite;
+  diese Dienste sind nur im Entwicklungs-Compose-Stack relevant)
+- Productive Webserver (bleibt Dev-Server, OP27-Design)
+
+### Success Criteria
+- Nach der Installation laufen Ollama, Qdrant, Redis als Container und die
+  systemd-Django-App erreicht sie unter localhost (Analysen nicht degraded)
+- Fehlendes Docker/Compose bricht die Installation nicht ab, sondern
+  meldet den Nachhol-Weg klar
+- Docker-Entwicklungsstack unveraendert funktionsfaehig (NIR_DOCKER_STACK=1)
+- Alle bestehenden Matrizen bleiben gruen
+
+## Completed Task: FL6 — Superlink/Supernode-Deployment + ILIAS Course Agent im eigenen Container (Entwicklungszweig vibe/fl-deployment-ilias-agent-53a9e6)
 
 ### Objective
 Die zwei offenen Punkte angehen: (a) der FL1-Zielumgebungs-Punkt

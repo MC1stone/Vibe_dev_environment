@@ -49,11 +49,12 @@ APP_DIR="${ARCHIVE_STAGE}/nir_intelligence"
 mkdir -p "${APP_DIR}"
 
 for item in django_project agents services config templates tasks skills \
-            docs requirements.txt README.md path_config.py; do
+            docs scripts requirements.txt README.md path_config.py; do
     if [ -e "${ROOT}/${item}" ]; then
         cp -r "${ROOT}/${item}" "${APP_DIR}/"
     fi
 done
+# OP45 host backend stack ships inside packaging/ (staged below)
 find "${APP_DIR}" -type d -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
 find "${APP_DIR}" -type d -name '.pytest_cache' -prune -exec rm -rf {} + 2>/dev/null || true
 rm -rf "${APP_DIR}/django_project/db.sqlite3" \
@@ -63,8 +64,10 @@ rm -rf "${APP_DIR}/django_project/db.sqlite3" \
 cp -r "${ROOT}/packaging" "${APP_DIR}/packaging"
 cp "${ROOT}/packaging/install.sh" "${APP_DIR}/install.sh"
 chmod 755 "${APP_DIR}/install.sh"
-
+test -x "${APP_DIR}/packaging/start_backend_stack.sh"
 test -f "${APP_DIR}/install.sh"
+test -f "${APP_DIR}/packaging/docker-compose.host-backend.yml"
+test -f "${APP_DIR}/packaging/start_backend_stack.sh"
 tar -czf "${TARBALL}" -C "${ARCHIVE_STAGE}" nir_intelligence
 echo "-- archiv gebaut: ${TARBALL}"
 

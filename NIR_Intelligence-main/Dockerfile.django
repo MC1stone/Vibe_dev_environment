@@ -32,6 +32,7 @@ ENV DJANGO_SETTINGS_MODULE=nir_web.settings
 ENV DATABASE_URL=postgres://nir_user:nir_password_change_me@postgresql:5432/nir_mistral
 ENV QDRANT_URL=http://qdrant:6333
 ENV OLLAMA_URL=http://ollama:11434
+ENV NIR_DOCKER_STACK=1
 ENV REDIS_URL=redis://redis:6379/0
 ENV DEBUG=1
 ENV SECRET_KEY=your-secret-key-here-change-in-production

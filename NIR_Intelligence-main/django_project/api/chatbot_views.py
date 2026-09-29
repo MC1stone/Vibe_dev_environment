@@ -16,9 +16,9 @@ def _get_chatbot_service():
     from services.chatbot_service import create_chatbot_service
 
     return create_chatbot_service(config={
-        "ollama_url": getattr(settings_local(), "OLLAMA_URL", "http://ollama:11434"),
+        "ollama_url": getattr(settings_local(), "OLLAMA_URL", "http://localhost:11434"),
         "model": getattr(settings_local(), "OLLAMA_MODEL", "mistral:latest"),
-        "qdrant_host": getattr(settings_local(), "QDRANT_HOST", "qdrant"),
+        "qdrant_host": getattr(settings_local(), "QDRANT_HOST", "localhost"),
         "qdrant_port": getattr(settings_local(), "QDRANT_PORT", 6333),
     })
 

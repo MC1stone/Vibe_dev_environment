@@ -24,6 +24,19 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,::1').split(',')
 
+# Analyse-Backend-Dienste (OP45): Im Docker-Stack sind die Container-Namen
+# gesetzt (Dockerfile.django/compose setzen OLLAMA_URL/QDRANT_URL explizit).
+# Auf dem Host (Bare-Metal-Installation, systemd-Django) erreicht die App die
+# OP45-Backend-Container (packaging/docker-compose.host-backend.yml) ueber
+# localhost - Container-Namen wie http://ollama:11434 sind dort nicht aufloesbar.
+OLLAMA_URL = os.getenv('OLLAMA_URL', 'http://localhost:11434')
+OLLAMA_MODEL = os.getenv('NIR_LLM_MODEL', 'mistral:latest')
+QDRANT_URL = os.getenv('QDRANT_URL', 'http://localhost:6333')
+QDRANT_HOST = os.getenv('QDRANT_HOST', 'localhost')
+QDRANT_PORT = int(os.getenv('QDRANT_PORT', '6333'))
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
+FAISS_URL = os.getenv('FAISS_URL', 'http://localhost:8081')
+
 # Application definition
 def get_installed_apps():
     """Dynamically build INSTALLED_APPS to handle missing modules gracefully"""

@@ -18,7 +18,7 @@ except ImportError:
     requests = None
     REQUESTS_AVAILABLE = False
 
-OLLAMA_DEFAULT_URL = "http://ollama:11434"
+OLLAMA_DEFAULT_URL = "http://localhost:11434"
 DEFAULT_MODEL = "mistral:latest"
 RAG_COLLECTION = "nir_spectra"
 

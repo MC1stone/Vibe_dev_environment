@@ -283,6 +283,61 @@
       when: >
         service_file_state.stat.exists and service_check_enabled | bool
 
+    # ==========================================================================
+    # 5. Host-Backend-Stack (OP45): Ollama, Qdrant, Redis als Docker-Container
+    # ==========================================================================
+    # Die systemd-Django-App laeuft auf dem Host und erreicht die Analyse-
+    # Backends nur ueber localhost. Ohne den Stack sind die KI-Analysen
+    # degraded (Mistral-Chatbot, Qdrant-Aehnlichkeit, Redis-Cache).
+    - name: Pruefe, ob Docker verfuegbar ist
+      ansible.builtin.command:
+        cmd: "docker --version"
+      register: docker_version_result
+      changed_when: false
+      failed_when: false
+
+    - name: Pruefe, ob Docker Compose verfuegbar ist
+      ansible.builtin.command:
+        cmd: "docker compose version"
+      register: compose_version_result
+      changed_when: false
+      failed_when: false
+      when: docker_version_result.rc == 0
+
+    - name: Pruefe, ob das Backend-Stack-Skript installiert wurde
+      ansible.builtin.stat:
+        path: "{{ opt_install_dir }}/packaging/start_backend_stack.sh"
+      register: backend_script_state
+
+    - name: Starte den Host-Backend-Stack (OP45)
+      ansible.builtin.command:
+        cmd: "bash {{ opt_install_dir }}/packaging/start_backend_stack.sh"
+      when: >
+        docker_version_result.rc == 0 and
+        compose_version_result.rc is defined and compose_version_result.rc == 0 and
+        backend_script_state.stat.exists
+
+    - name: Hinweis - Docker/Compose fehlt, Backend-Stack manuell starten
+      ansible.builtin.debug:
+        msg: >-
+          Docker bzw. Docker Compose ist nicht verfuegbar - der Backend-Stack
+          (Ollama, Qdrant, Redis) wurde nicht gestartet. Ohne ihn sind die
+          KI-Analysen degraded. Installation per apt-get install -y docker.io
+          docker-compose-v2, danach bash
+          {{ opt_install_dir }}/packaging/start_backend_stack.sh
+      when: >
+        docker_version_result.rc != 0 or
+        compose_version_result.rc is not defined or compose_version_result.rc != 0
+
+    - name: Hinweis - Backend-Stack-Skript fehlt im Payload
+      ansible.builtin.debug:
+        msg: >-
+          Das Backend-Stack-Skript fehlt unter
+          {{ opt_install_dir }}/packaging/ - der Payload ist veraltet
+          (OP45). Neu bauen mit packaging/build_deb.sh bzw.
+          packaging/build_ventoy_stick.sh.
+      when: not backend_script_state.stat.exists
+
     - name: Verifikation uebersprungen (kein Dienst, nur Installation)
       ansible.builtin.debug:
         msg: >-

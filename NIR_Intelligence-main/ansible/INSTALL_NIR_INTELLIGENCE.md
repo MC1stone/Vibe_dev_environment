@@ -114,3 +114,39 @@ bei Bedarf oder per `--extra-vars` überschrieben werden:
 - `unarchive` nutzt `creates:` gegen `install.sh`, `command` gegen
   `.install_completed` — ein zweiter Lauf führt die Skripte nicht erneut aus.
 - Der Dienst wird nur gestartet/aktiviert, wenn er nicht schon läuft.
+
+## Host-Backend-Stack (OP45)
+
+Die systemd-Django-App laeuft auf dem Host (`127.0.0.1:8000`). Die
+Analyse-Backends laufen als Docker-Container mit Port-Freigabe an
+`127.0.0.1` - nur so erreicht die Host-App Ollama (Mistral), Qdrant
+(Aehnlichkeitssuche) und Redis (Cache). Ohne den Stack sind alle
+KI-Analysen degraded.
+
+Das Playbook prueft Docker und Docker Compose und startet den Stack dann
+automatisch:
+
+    bash /opt/nir_intelligence/packaging/start_backend_stack.sh
+
+Manuell (z. B. nach einem Reboot, falls Docker erst spaeter startet):
+
+    sudo bash /opt/nir_intelligence/packaging/start_backend_stack.sh
+
+Fehlt Docker oder Compose, bricht die Installation nicht ab - das Playbook
+meldet einen klaren Hinweis (Installation z. B. per
+`apt-get install -y docker.io docker-compose-v2` auf Mint/Debian/Ubuntu)
+und die KI-Analysen bleiben bis zum Stack-Start degraded. Das Skript ist
+idempotent: Ein erneuter Lauf startet fehlende Container nach und zieht
+das Mistral-Modell nur, wenn es fehlt.
+
+Dienste nach dem Start:
+
+| Dienst | Adresse (Host) |
+|---|---|
+| Django (systemd) | `http://127.0.0.1:8000` |
+| Ollama | `http://127.0.0.1:11434` |
+| Qdrant | `http://127.0.0.1:6333` |
+| Redis | `redis://127.0.0.1:6379` |
+
+Diagnose: `docker logs nir_ollama`, `docker logs nir_qdrant`,
+`docker compose -f /opt/nir_intelligence/packaging/docker-compose.host-backend.yml ps`.

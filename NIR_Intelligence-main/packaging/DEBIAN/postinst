@@ -68,6 +68,20 @@ case "$1" in
             echo "NOTE: systemd not available - start the app via" \
                  "${VENV_DIR}/bin/python ${APP_DIR}/django_project/manage.py runserver 127.0.0.1:8000" >&2
         fi
+
+        # --- host backend stack (OP45) -------------------------------------
+        # Django auf dem Host erreicht Ollama/Qdrant/Redis nur, wenn der
+        # Backend-Stack laeuft. Ohne ihn sind die KI-Analysen degraded.
+        if [ -x "${APP_DIR}/packaging/start_backend_stack.sh" ]; then
+            echo "-- starte Host-Backend-Stack (Ollama, Qdrant, Redis; OP45)"
+            bash "${APP_DIR}/packaging/start_backend_stack.sh" || \
+                echo "WARNING: Backend-Stack nicht vollstaendig gestartet." \
+                     "KI-Analysen sind ohne ihn degraded. Starten mit:" \
+                     "bash ${APP_DIR}/packaging/start_backend_stack.sh" >&2
+        else
+            echo "WARNING: Backend-Stack-Skript fehlt im Payload -" \
+                 "KI-Analysen sind ohne Ollama/Qdrant degraded." >&2
+        fi
         ;;
 esac
 
