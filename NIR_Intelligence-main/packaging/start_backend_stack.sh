@@ -28,16 +28,15 @@ if ! command -v docker >/dev/null 2>&1; then
     exit 1
 fi
 
-COMPOSE_CMDS=("docker compose")
-if ! docker compose version >/dev/null 2>&1; then
-    if command -v docker-compose >/dev/null 2>&1; then
-        COMPOSE_CMDS=("docker-compose")
-    else
-        echo "ERROR: Docker Compose ist nicht verfuegbar." >&2
-        echo "  Installation: sudo apt-get install -y docker-compose-v2" >&2
-        echo "  (oder das Compose-Plugin: https://docs.docker.com/compose/install/)" >&2
-        exit 1
-    fi
+if docker compose version >/dev/null 2>&1; then
+    compose_cmd=(docker compose)
+elif command -v docker-compose >/dev/null 2>&1; then
+    compose_cmd=(docker-compose)
+else
+    echo "ERROR: Docker Compose ist nicht verfuegbar." >&2
+    echo "  Installation: sudo apt-get install -y docker-compose-v2" >&2
+    echo "  (oder das Compose-Plugin: https://docs.docker.com/compose/install/)" >&2
+    exit 1
 fi
 
 if ! docker info >/dev/null 2>&1; then
@@ -47,9 +46,9 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 echo "-- starte ollama, qdrant, redis (Compose: ${COMPOSE_FILE})"
-if ! "${COMPOSE_CMDS[@]}" -f "${COMPOSE_FILE}" up -d; then
+if ! "${compose_cmd[@]}" -f "${COMPOSE_FILE}" up -d; then
     echo "ERROR: docker compose up fehlgeschlagen." >&2
-    echo "  Diagnose: ${COMPOSE_CMDS[@]} -f ${COMPOSE_FILE} ps; docker logs nir_ollama" >&2
+    echo "  Diagnose: ${compose_cmd[*]} -f ${COMPOSE_FILE} ps; docker logs nir_ollama" >&2
     exit 1
 fi
 
