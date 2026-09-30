@@ -1,0 +1,55 @@
+---
+title: "Spectrometer Calibration Report"
+author: "NIR Intelligence Platform"
+format: html
+date: "`r Sys.Date()`"
+---
+
+# Spectrometer Calibration Report
+
+## Calibration Overview
+
+Instrument: `r params$instrument_type`
+Calibration Date: `r params$calibration_date`
+
+## Calibration Results
+
+### Performance Metrics
+- **R² Score**: `r params$r2_score`
+- **RMSE**: `r params$rmse`
+- **Calibration Points**: `r params$calibration_points`
+
+### Parameter Recommendations
+
+#### Current Parameters
+`r ifelse(length(params$current_parameters) > 0, paste("- ", names(params$current_parameters), ": ", unlist(params$current_parameters), collapse = "\n- "), "No current parameters")`
+
+#### Recommended Parameters
+`r ifelse(length(params$recommended_parameters) > 0, paste("- ", names(params$recommended_parameters), ": ", unlist(params$recommended_parameters), collapse = "\n- "), "No recommendations")`
+
+## Calibration Curves
+
+```{r}
+if (exists("params$wavelengths") && exists("params$measured") && exists("params$reference")) {
+  plot(params$wavelengths, params$measured, type = "l", col = "blue", 
+       xlab = "Wavelength (nm)", ylab = "Intensity", 
+       main = "Calibration Curve", ylim = range(min(c(params$measured, params$reference)), 
+                                                max(c(params$measured, params$reference))))
+  lines(params$wavelengths, params$reference, col = "red")
+  legend("topright", legend = c("Measured", "Reference"), col = c("blue", "red"), lty = 1)
+}
+```
+
+## Validation Results
+
+### Cross-Validation
+- **Mean R²**: `r params$cv_mean_r2`
+- **Std Dev R²**: `r params$cv_std_r2`
+- **Validation Samples**: `r params$validation_samples`
+
+### Residual Analysis
+```{r}
+if (exists("params$residuals")) {
+  hist(params$residuals, main = "Residual Distribution", xlab = "Residuals")
+}
+```

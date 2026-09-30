@@ -3554,3 +3554,66 @@ msgstr "Zur Analyse freigegeben"
 # OP48e: template UI text
 msgid "Zur Datenbank"
 msgstr "To the database"
+# OP49: sensor DIY page
+msgid "Aktiv gepflegte Plattform"
+msgstr "Actively maintained platform"
+# OP49: sensor DIY page
+msgid "Aktiv, STL-Dateien verfügbar"
+msgstr "Active, STL files available"
+# OP49: sensor DIY page
+msgid "Aktuelles, druckbares Modell"
+msgstr "Current, printable model"
+# OP49: sensor DIY page
+msgid "Bauanleitungen und Tutorials"
+msgstr "Build guides and tutorials"
+# OP49: sensor DIY page
+msgid "DIY-Spektrometer"
+msgstr "DIY spectrometers"
+# OP49: sensor DIY page
+msgid "DIY-Spektrometer Übersicht"
+msgstr "DIY spectrometer overview"
+# OP49: sensor DIY page
+msgid "Die Web-Suche nach unbekannten Sensoren ist standardmäßig deaktiviert (Offline-Plattform). Aktivierung über die Umgebungsvariable NIR_SENSOR_WEBSEARCH=1 mit erreichbarem Ollama."
+msgstr "The web search for unknown sensors is disabled by default (offline platform). Enable it via the environment variable NIR_SENSOR_WEBSEARCH=1 with a reachable Ollama instance."
+# OP49: sensor DIY page
+msgid "Eigenschaften"
+msgstr "Features"
+# OP49: sensor DIY page
+msgid "Ergebnisse werden als extern und unverifiziert markiert (Ehrlichkeitsregel)."
+msgstr "Results are marked as external and unverified (honesty rule)."
+# OP49: sensor DIY page
+msgid "Externe, unverifizierte Information des lokalen Ollama-Modells"
+msgstr "External, unverified information from the local Ollama model"
+# OP49: sensor DIY page
+msgid "Geeignet für"
+msgstr "Suited for"
+# OP49: sensor DIY page
+msgid "Hinweis: Diese Projekte sind überwiegend VIS-Spektrometer (400–1100 nm). Für echte NIR-Spektroskopie (900–2500 nm) sind sie nur bedingt geeignet."
+msgstr "Note: these projects are mostly VIS spectrometers (400–1100 nm). They are only of limited use for true NIR spectroscopy (900–2500 nm)."
+# OP49: sensor DIY page
+msgid "Kuratierte Übersicht dokumentierter DIY-Spektrometer-Projekte mit funktionierenden Links. Alle Angaben stammen aus den Projekseiten selbst; die Plattform hat die Geräte nicht selbst vermessen."
+msgstr "Curated overview of documented DIY spectrometer projects with working links. All details come from the project pages themselves; the platform has not measured these devices."
+# OP49: sensor DIY page
+msgid "Ollama ist nicht erreichbar. Suche aktivieren: Ollama starten (Standard http://localhost:11434)."
+msgstr "Ollama is not reachable. To enable the search: start Ollama (default http://localhost:11434)."
+# OP49: sensor DIY page
+msgid "Projektseiten"
+msgstr "Project pages"
+# OP49: sensor DIY page
+msgid "Sensor- oder Gerätename, z. B. TriadSensor"
+msgstr "Sensor or device name, e.g. TriadSensor"
+# OP49: sensor DIY page
+msgid "Sensor-Suche (Ollama, Opt-in)"
+msgstr "Sensor search (Ollama, opt-in)"
+# OP49: sensor DIY page
+msgid "Suchen"
+msgstr "Search"
+# OP49: sensor DIY page
+msgid "Verfügbar, Dokumentation vorhanden"
+msgstr "Available, documentation provided"
+# OP49: sensor DIY page
+msgid "Wissenschaftlich publiziertes Projekt"
+msgstr "Scientifically published project"
+# OP49: sensor DIY page
+msgid "Zur Sensor-Übersicht"
+msgstr "To the sensor overview"

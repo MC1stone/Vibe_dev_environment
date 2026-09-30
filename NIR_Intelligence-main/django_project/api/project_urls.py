@@ -13,6 +13,7 @@ from .project_views import (
     ProjectFinalReportMarkdownView,
     SensorListView,
     SensorDetailView,
+    DiySpectrometerView,
     SpectrumDatabaseView,
     SpectrumDatabaseDetailView,
 )
@@ -31,5 +32,6 @@ urlpatterns = [
     path('database/', SpectrumDatabaseView.as_view(), name='spectrum-database'),
     path('database/<uuid:spectrum_id>/', SpectrumDatabaseDetailView.as_view(), name='spectrum-detail'),
     path('sensors/', SensorListView.as_view(), name='sensor-list'),
+    path('sensors/diy/', DiySpectrometerView.as_view(), name='sensor-diy'),
     path('sensors/<str:sensor_key>/', SensorDetailView.as_view(), name='sensor-detail'),
 ]

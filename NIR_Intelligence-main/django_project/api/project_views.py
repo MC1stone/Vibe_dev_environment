@@ -196,6 +196,149 @@ class SensorDetailView(TemplateView):
         return render(request, self.template_name, context)
 
 
+
+
+class DiySpectrometerView(TemplateView):
+    """DIY spectrometer overview (OP49): curated list of documented DIY
+    spectrometer projects with working links, plus the opt-in sensor websearch
+    lookup via the local Ollama instance (disabled by default)."""
+    template_name = 'sensor_diy.html'
+
+    DIY_PROJECTS = [
+        {
+            'name': 'OpenSpectrometer',
+            'status': gettext('Aktiv, STL-Dateien verfügbar'),
+            'urls': [
+                ('Printables', 'https://www.printables.com/model/848877-openspectrometer-v1'),
+                ('GitHub', 'https://github.com/mlinmg/DIY-Free-Spectrometer'),
+            ],
+            'features': [
+                'Vollständig 3D-druckbares Gehäuse',
+                'CCD/CMOS-basierter Spektrometer-Aufbau',
+                'Für wissenschaftliche Messungen ausgelegt',
+                'Erweiterbar mit Raspberry Pi und eigener Software',
+            ],
+            'suited_for': [
+                'Laborprojekte',
+                'Umweltanalytik',
+                'Spektralanalyse von LEDs, Lasern und Lichtquellen',
+            ],
+        },
+        {
+            'name': 'DIY Spectroscope (Thingiverse)',
+            'status': gettext('Verfügbar, Dokumentation vorhanden'),
+            'urls': [
+                ('Thingiverse', 'https://www.thingiverse.com/thing:4729351'),
+            ],
+            'features': [
+                '1000 Linien/mm Beugungsgitter',
+                '~0,1 mm Spalt',
+                'Auflösung unter 2 nm',
+                'Kalibrierte Genauigkeit ca. 0,35 nm Standardabweichung',
+                'Unterstützt Webcam, DSLR oder Astro-Kamera',
+            ],
+            'suited_for': [
+                'Eines der leistungsstärksten Open-Source-Spektrometer',
+            ],
+        },
+        {
+            'name': 'Public Lab Desktop Spectrometer',
+            'status': gettext('Aktiv gepflegte Plattform'),
+            'urls': [
+                ('Projektbeschreibung', 'https://publiclab.org/wiki/raw/21568'),
+                ('GitHub', 'https://github.com/publiclab/spectrometer3'),
+                ('Spectral Workbench', 'https://spectralworkbench.org/'),
+            ],
+            'features': [
+                'USB-Webcam als Sensor',
+                'Browserbasierte Auswertung',
+                'Open-Source Hardware und Software',
+                'Zahlreiche Umbauten als 3D-Druck-Versionen verfügbar',
+                'Typisch etwa 45 USD Materialkosten',
+            ],
+            'suited_for': [
+                'Open-Science-Community-Projekte',
+                'Bildungsarbeit',
+            ],
+        },
+        {
+            'name': 'Smartphone-CD-Spektrometer',
+            'status': gettext('Aktuelles, druckbares Modell'),
+            'urls': [
+                ('MakerWorld', 'https://makerworld.com/en/models/1459435-mobile-spectrometer'),
+            ],
+            'features': [
+                'Smartphone-Kamera als Sensor',
+                'CD als Beugungsgitter',
+                'Spaltbreite 0,1 bis 0,2 mm',
+                'Für Smartphone-Kameras bis 16 mm Objektivdurchmesser geeignet',
+                'Komplett 3D-druckbar',
+                'Oft unter 10 € inklusive Druckmaterial',
+            ],
+            'suited_for': [
+                'Schnelle Einstiegsprojekte',
+                'Demonstrationen im Unterricht',
+            ],
+        },
+        {
+            'name': 'SpecPhone / DualSpec',
+            'status': gettext('Wissenschaftlich publiziertes Projekt'),
+            'urls': [
+                ('Smith Lab', 'https://www.adamsmithlab.org/specphone'),
+                ('Thingiverse (STL)', 'https://www.thingiverse.com/thing:3404762'),
+            ],
+            'features': [
+                'Nutzt Standard-10-mm-Küvetten',
+                'Wechselbare Spaltmodule von 0,1 bis 5 mm',
+                'Dual-Beam-Design mit Referenzstrahl',
+                'Für quantitative Konzentrationsmessungen geeignet',
+            ],
+            'suited_for': [
+                'Quantitative Messungen',
+                'Wissenschaftliche Arbeiten',
+            ],
+        },
+    ]
+
+    TUTORIAL_LINKS = [
+        ('Bauanleitungen.pro - Spektroskop',
+         'https://www.bauanleitungen.pro/Spektroskop'),
+        ('Eureca - DIY-Spektrometer',
+         'https://www.eureca.de/5109-0-DIY-Spektrometer.html'),
+        ('Printed Labs Uni Bayreuth - BasisSpek',
+         'https://printedlabs.uni-bayreuth.de/de/modelldatenbank/_spektrometer/spektroskopie/_basicspec/content'),
+        ('Uni Würzburg Didaktik - Low-Cost VIS-Spektrometer',
+         'https://www.chemie.uni-wuerzburg.de/didaktik/lehrpersonen/low-cost-messgeraete/vis-spektrometer/'),
+        ('Umwelt-Campus - MINT-Absorptions-Spektrometer',
+         'https://www.umwelt-campus.de/iot-werkstatt/tutorials/mint-absorptions-spektrometer'),
+        ('Public Lab - Video Spectrometer Construction',
+         'https://publiclab.org/#wiki/video-spectrometer-construction'),
+        ('Reddit r/Optics - Cheap DIY Spectrometer',
+         'https://www.reddit.com/r/Optics/comments/z9zxde/my_cheap_diy_spectrometer_sharpest_peak_has_a/'),
+    ]
+
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=' + request.get_full_path())
+        from services.sensor_websearch import (
+            ollama_available, websearch_enabled,
+        )
+        websearch_query = request.GET.get('q', '').strip()
+        websearch_result = None
+        if websearch_query and websearch_enabled():
+            from services.sensor_websearch import search_sensor
+            websearch_result = search_sensor(websearch_query)
+        context = {
+            'page_title': gettext('DIY-Spektrometer'),
+            'projects': self.DIY_PROJECTS,
+            'tutorials': self.TUTORIAL_LINKS,
+            'websearch_enabled': websearch_enabled(),
+            'ollama_available': ollama_available(),
+            'websearch_query': websearch_query,
+            'websearch_result': websearch_result,
+        }
+        return render(request, self.template_name, context)
+
 def _get_project(project_id, user):
     try:
         return AnalysisProject.objects.get(id=project_id, user=user)

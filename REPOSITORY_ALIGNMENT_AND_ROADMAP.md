@@ -557,6 +557,26 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - [x] OP48e Übersetzungscontent: 22 zusätzliche EU-Kataloge als ehrlich leere .po-Dateien (Übersetzung durch native Speaker/Fachlehrkräfte, kein Fake — fr fällt ehrlich auf Default zurück); Chatbot-System-Prompt sprachabhängig (Antwort-Sprache = Anfrage-Sprache); Quarto-Berichtssprache pro Aufruf konfigurierbar (QuartoConfig.lang, Default de, lang-Platzhalter in allen 7 qmd-Templates); ILIAS-Sync trägt die aktive Sprache des initiierenden Nutzers im Payload. Testmatrix 62/62 grün; Regressionen S6/FL4/FL5/OP24/OP11/OP23/OP3/OP25 grün.
 - [x] OP48f Rest-Templates: alle 19 verbleibenden UI-Templates (dashboard, analysis, files, agents, spectra, jobs, settings, documentation, projects, register, workflow_list, workflow_results, sensor_list, sensor_detail, spectrum_database, spectrum_detail, crew_report, project_report, dashboard_colorful) auf `{% trans %}` umgestellt; präexistente Defekte in workflow_list/workflow_results repariert (verstümmelte `{%`-Präfixe, `|format` → `floatformat:2`, `|sum(attribute=…)` → `|length`); 706 Template-msgids in die Kataloge gepflegt (de: 513 neue Übersetzungen inkl. aller Fließtexte; en: 611 identity + 33 deutsche msgids rückübersetzt); msgfmt clean, render_check ALL OK; OP48-Testmatrix 62/62 grün; Regressionen OP3 (45/45), OP25 (65/65), OP8 (77/77), OP8-Crew (38/38), OP15 (44/44) grün. OP48 damit abgeschlossen.
 
+### OP49 — Sensor-Websearch (Opt-in) + DIY-Spektrometer-Übersicht — ABGESCHLOSSEN
+- [x] Opt-in Sensor-Websearch: `services/sensor_websearch.py` fragt bei
+  unbekannten Sensoren das lokale Ollama ab (`NIR_SENSOR_WEBSEARCH=1`,
+  Default off; `NIR_SENSOR_WEBSEARCH_URL`/`NIR_SENSOR_WEBSEARCH_MODEL`
+  konfigurierbar); Ergebnisse als extern/unverifiziert markiert
+  (Ehrlichkeitsregel); SensorAgent (`collect`) liefert die websearch-Sektion
+  nur bei aktivem Opt-in — Offline-/CI-Verhalten unverändert.
+- [x] DIY-Spektrometer-Übersicht: `/api/projects/sensors/diy/`
+  (DiySpectrometerView + sensor_diy.html) mit 5 kuratierten Projekten
+  (OpenSpectrometer, DIY Spectroscope Thingiverse, Public Lab Desktop
+  Spectrometer, Smartphone-CD-Spektrometer, SpecPhone/DualSpec), 7
+  Bauanleitungs-/Tutorial-Links und Opt-in-Ollama-Suche auf der Seite;
+  verlinkt von der Sensor-Übersicht; Route vor sensor-detail registriert;
+  21 neue msgids in de/en-Katalogen (i18n-konform, OP48-Muster).
+- [x] Verifikation: Testmatrix `tests/test_op49_sensor_diy.py` 23/23 grün;
+  Regressionen OP29 (53/53), OP48 (62/62) grün; `manage.py check` ohne
+  Befunde; CI um OP49-Matrix erweitert.
+- Offen (Zielumgebung): Ollama dort starten und `NIR_SENSOR_WEBSEARCH=1`
+  setzen, dann Sensor-Suche mit einem realen unbekannten Sensor testen.
+
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.

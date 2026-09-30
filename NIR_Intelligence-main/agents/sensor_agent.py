@@ -46,6 +46,10 @@ class SensorAgent(BaseAgent):
         metadata = context.get("metadata") or {}
         setting_assessment = assess_settings(
             metadata, profiles.get("setting_options"))
+        from services.sensor_websearch import summarize_unmatched, websearch_enabled
+        websearch_results = []
+        if websearch_enabled() and profiles.get("unmatched_usage"):
+            websearch_results = summarize_unmatched(profiles["unmatched_usage"])
         return {
             "operation": "collect",
             "registered_sensors": profiles["registered_sensors"],
@@ -54,6 +58,11 @@ class SensorAgent(BaseAgent):
             "unmatched_usage": profiles["unmatched_usage"],
             "setting_assessment": setting_assessment,
             "optimization_suggestions": suggestions,
+            "websearch": {
+                "enabled": websearch_enabled(),
+                "external_unverified": True,
+                "results": websearch_results,
+            },
         }
 
     def execute(self, context: Dict[str, Any]) -> AgentOutput:
