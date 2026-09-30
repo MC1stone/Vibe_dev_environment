@@ -406,3 +406,331 @@ msgstr "Noch kein Benutzerkonto?"
 #: templates/login.html:335
 msgid "Sign up"
 msgstr "Registrieren"
+
+# OP48c: JavaScript user-facing message
+msgid "Agent configuration saved successfully!"
+msgstr "Agent-Konfiguration erfolgreich gespeichert!"
+
+# OP48c: JavaScript user-facing message
+msgid "Agent execution started successfully!"
+msgstr "Agent-Ausführung erfolgreich gestartet!"
+
+# OP48c: JavaScript user-facing message
+msgid "Agent not found"
+msgstr "Agent nicht gefunden"
+
+# OP48c: JavaScript user-facing message
+msgid "Analysis failed: "
+msgstr "Analyse fehlgeschlagen: "
+
+# OP48c: JavaScript user-facing message
+msgid "Analysis results not found."
+msgstr "Analyseergebnisse nicht gefunden."
+
+# OP48c: JavaScript user-facing message
+msgid "Analysis started successfully!"
+msgstr "Analyse erfolgreich gestartet!"
+
+# OP48c: JavaScript user-facing message
+msgid "Authentication error. Please refresh the page and try again."
+msgstr "Authentifizierungsfehler. Bitte laden Sie die Seite neu und versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Auto-analysis started for uploaded spectra"
+msgstr "Auto-Analyse für hochgeladene Spektren gestartet"
+
+# OP48c: JavaScript user-facing message
+msgid "Complete analysis finished - the report is ready."
+msgstr "Vollständige Analyse abgeschlossen - der Bericht ist bereit."
+
+# OP48c: JavaScript user-facing message
+msgid "{count} files analysis started successfully!"
+msgstr "{count} Dateien: Analyse erfolgreich gestartet!"
+
+# OP48c: JavaScript user-facing message
+msgid "{count} files deleted successfully!"
+msgstr "{count} Dateien erfolgreich gelöscht!"
+
+# OP48c: JavaScript user-facing message
+msgid "{count} job/jobs created successfully!"
+msgstr "{count} Job(s) erfolgreich erstellt!"
+
+# OP48c: JavaScript user-facing message
+msgid "{count} job/jobs deleted successfully!"
+msgstr "{count} Job(s) erfolgreich gelöscht!"
+
+# OP48c: JavaScript user-facing message
+msgid "{count} spectrum/spectra uploaded successfully!"
+msgstr "{count} Spektrum/Spektren erfolgreich hochgeladen!"
+
+# OP48c: JavaScript user-facing message
+msgid "Error!"
+msgstr "Fehler!"
+
+# OP48c: JavaScript user-facing message
+msgid "Error deleting file: "
+msgstr "Fehler beim Löschen der Datei: "
+
+# OP48c: JavaScript user-facing message
+msgid "Error deleting file. Please try again."
+msgstr "Fehler beim Löschen der Datei. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Error deleting files: "
+msgstr "Fehler beim Löschen der Dateien: "
+
+# OP48c: JavaScript user-facing message
+msgid "Error deleting files. Please try again."
+msgstr "Fehler beim Löschen der Dateien. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Error starting analysis: "
+msgstr "Fehler beim Starten der Analyse: "
+
+# OP48c: JavaScript user-facing message
+msgid "Error starting analysis. Please try again."
+msgstr "Fehler beim Starten der Analyse. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Error uploading files: "
+msgstr "Fehler beim Hochladen der Dateien: "
+
+# OP48c: JavaScript user-facing message
+msgid "Error uploading files. Please try again."
+msgstr "Fehler beim Hochladen der Dateien. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Export functionality would download: "
+msgstr "Export-Funktionalität würde herunterladen: "
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to cancel job: "
+msgstr "Fehler beim Abbrechen des Jobs: "
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to cancel job. Please try again."
+msgstr "Fehler beim Abbrechen des Jobs. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to create job: "
+msgstr "Fehler beim Erstellen des Jobs: "
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to create job. Please try again."
+msgstr "Fehler beim Erstellen des Jobs. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to create jobs. Please try again."
+msgstr "Fehler beim Erstellen der Jobs. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to delete jobs. Please try again."
+msgstr "Fehler beim Löschen der Jobs. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to delete spectra. Please try again."
+msgstr "Fehler beim Löschen der Spektren. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to download spectrum. Please try again."
+msgstr "Fehler beim Herunterladen des Spektrums. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to execute agent. Please try again."
+msgstr "Fehler bei der Agent-Ausführung. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to export analysis results."
+msgstr "Fehler beim Exportieren der Analyseergebnisse."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to load analysis results."
+msgstr "Fehler beim Laden der Analyseergebnisse."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to load jobs. Please try again."
+msgstr "Fehler beim Laden der Jobs. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to load spectra. Please try again."
+msgstr "Fehler beim Laden der Spektren. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to load the report for this analysis."
+msgstr "Fehler beim Laden des Berichts für diese Analyse."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to retry job: "
+msgstr "Fehler beim Wiederholen des Jobs: "
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to retry job. Please try again."
+msgstr "Fehler beim Wiederholen des Jobs. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to run analysis: "
+msgstr "Fehler beim Ausführen der Analyse: "
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to save agent configuration. Please try again."
+msgstr "Fehler beim Speichern der Agent-Konfiguration. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to save configuration: "
+msgstr "Fehler beim Speichern der Konfiguration: "
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to start agent execution: "
+msgstr "Fehler beim Starten der Agent-Ausführung: "
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to start analysis: "
+msgstr "Fehler beim Starten der Analyse: "
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to start analysis. Please try again."
+msgstr "Fehler beim Starten der Analyse. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "Failed to start batch analysis. Please try again."
+msgstr "Fehler beim Starten der Batch-Analyse. Bitte versuchen Sie es erneut."
+
+# OP48c: JavaScript user-facing message
+msgid "File deleted successfully!"
+msgstr "Datei erfolgreich gelöscht!"
+
+# OP48c: JavaScript user-facing message
+msgid "File \"{name}\" is too large. Maximum size is 10MB."
+msgstr "Die Datei \"{name}\" ist zu groß. Maximale Größe ist 10MB."
+
+# OP48c: JavaScript user-facing message
+msgid "Files uploaded successfully!"
+msgstr "Dateien erfolgreich hochgeladen!"
+
+# OP48c: JavaScript user-facing message
+msgid "File uploaded: "
+msgstr "Datei hochgeladen: "
+
+# OP48c: JavaScript user-facing message
+msgid "Job cancellation requested!"
+msgstr "Job-Abbruch angefordert!"
+
+# OP48c: JavaScript user-facing message
+msgid "Job created successfully!"
+msgstr "Job erfolgreich erstellt!"
+
+# OP48c: JavaScript user-facing message
+msgid "Job not found"
+msgstr "Job nicht gefunden"
+
+# OP48c: JavaScript user-facing message
+msgid "Job retry started successfully!"
+msgstr "Job-Wiederholung erfolgreich gestartet!"
+
+# OP48c: JavaScript user-facing message
+msgid "No analysis results available to export."
+msgstr "Keine Analyseergebnisse zum Exportieren verfügbar."
+
+# OP48c: JavaScript user-facing message
+msgid "No analysis results available to view report."
+msgstr "Keine Analyseergebnisse zum Anzeigen des Berichts verfügbar."
+
+# OP48c: JavaScript user-facing message
+msgid "No files to export."
+msgstr "Keine Dateien zum Exportieren."
+
+# OP48c: JavaScript user-facing message
+msgid "No jobs selected for deletion"
+msgstr "Keine Jobs zum Löschen ausgewählt"
+
+# OP48c: JavaScript user-facing message
+msgid "No reports available for export."
+msgstr "Keine Berichte zum Exportieren verfügbar."
+
+# OP48c: JavaScript user-facing message
+msgid "No report was generated for this analysis."
+msgstr "Für diese Analyse wurde kein Bericht erstellt."
+
+# OP48c: JavaScript user-facing message
+msgid "No spectrum selected"
+msgstr "Kein Spektrum ausgewählt"
+
+# OP48c: JavaScript user-facing message
+msgid "No spectrum selected for deletion"
+msgstr "Kein Spektrum zum Löschen ausgewählt"
+
+# OP48c: JavaScript user-facing message
+msgid "Only Crew AI agents can be configured"
+msgstr "Nur Crew-AI-Agents können konfiguriert werden"
+
+# OP48c: JavaScript user-facing message
+msgid "Only running or pending jobs can be cancelled"
+msgstr "Nur laufende oder ausstehende Jobs können abgebrochen werden"
+
+# OP48c: JavaScript user-facing message
+msgid "Please enter a job name"
+msgstr "Bitte geben Sie einen Job-Namen ein"
+
+# OP48c: JavaScript user-facing message
+msgid "Please fill in all required fields"
+msgstr "Bitte füllen Sie alle Pflichtfelder aus"
+
+# OP48c: JavaScript user-facing message
+msgid "Please fill in the required fields (Sample Name and Sample ID)"
+msgstr "Bitte füllen Sie die Pflichtfelder aus (Probenname und Proben-ID)"
+
+# OP48c: JavaScript user-facing message
+msgid "Please log in to view spectra. Authentication is required."
+msgstr "Bitte melden Sie sich an, um Spektren zu sehen. Authentifizierung erforderlich."
+
+# OP48c: JavaScript user-facing message
+msgid "Please select at least one file to analyze."
+msgstr "Bitte wählen Sie mindestens eine Datei zur Analyse aus."
+
+# OP48c: JavaScript user-facing message
+msgid "Please select at least one file to delete."
+msgstr "Bitte wählen Sie mindestens eine Datei zum Löschen aus."
+
+# OP48c: JavaScript user-facing message
+msgid "Please select at least one file to upload"
+msgstr "Bitte wählen Sie mindestens eine Datei zum Hochladen aus"
+
+# OP48c: JavaScript user-facing message
+msgid "Please select at least one file to upload."
+msgstr "Bitte wählen Sie mindestens eine Datei zum Hochladen aus."
+
+# OP48c: JavaScript user-facing message
+msgid "Please select at least one job to delete"
+msgstr "Bitte wählen Sie mindestens einen Job zum Löschen aus"
+
+# OP48c: JavaScript user-facing message
+msgid "Please select at least one spectrum"
+msgstr "Bitte wählen Sie mindestens ein Spektrum aus"
+
+# OP48c: JavaScript user-facing message
+msgid "Please select at least one spectrum to analyze"
+msgstr "Bitte wählen Sie mindestens ein Spektrum zur Analyse aus"
+
+# OP48c: JavaScript user-facing message
+msgid "Please select at least one spectrum to delete"
+msgstr "Bitte wählen Sie mindestens ein Spektrum zum Löschen aus"
+
+# OP48c: JavaScript user-facing message
+msgid "Please upload a data file first (any file type)."
+msgstr "Bitte laden Sie zuerst eine Datendatei hoch (beliebiger Dateityp)."
+
+# OP48c: JavaScript user-facing message
+msgid "Spectrum not found"
+msgstr "Spektrum nicht gefunden"
+
+# OP48c: JavaScript user-facing message
+msgid "Success!"
+msgstr "Erfolg!"
+
+# OP48c: JavaScript user-facing message
+msgid "Unknown error"
+msgstr "Unbekannter Fehler"
+
+# OP48c: JavaScript user-facing message
+msgid "Upload failed: "
+msgstr "Hochladen fehlgeschlagen: "

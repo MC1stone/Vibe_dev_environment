@@ -552,7 +552,8 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
   Seiten in de+en, T5b Umschalter, T5c/d html-lang).
   Verifikation: 36/36 grün; Regressionen OP3 (angepasst: trans-Tag-Library +
   msgid "Projects"), OP7, OP8, FL4 grün; manage.py check ohne Befunde.
-- Offen: OP48c (JS-Strings), OP48d (Backend-Meldungen/Chatbot/Quarto), OP48e
+- [x] OP48c JS-Strings: `/js-i18n/`-Endpunkt (verhandelter Katalog als JS-Bootstrap, `?format=json` für Tests; Bugfix: LocaleMiddleware erzwingt bei präfix-losen URLs LANGUAGE_CODE — Cookie/Accept-Language-Verhandlung daher im View selbst), `i18n.js` (nirGettext/nirInterpolate, ehrlicher msgid-Fallback), base.html lädt Katalog+Helper vor main.js; alle benutzersichtbaren JS-Meldungen in files/agents/analysis/jobs/spectra.js auf nirGettext umgestellt (82 msgids, Kataloge de/en ergänzt); Testmatrix 46/46 grün, Regressionen OP3/OP25/OP15/FL4 grün; `node --check` sauber.
+- Offen: OP48d (Backend-Meldungen/Chatbot/Quarto), OP48e
   (Übersetzungscontent, ILIAS); weitere Templates (analysis, files, dashboard,
   agents, spectra, jobs, settings, documentation u. a.) folgen inkrementell.
 

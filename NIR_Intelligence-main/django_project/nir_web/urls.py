@@ -22,6 +22,7 @@ from api.views import (
     FlowerAIAuthView, ILIASAuthView, FederatedLearningView
 )
 from api.file_views import FileCrewReportView
+from api.i18n_views import js_catalog_json, i18n_status
 from api.quarto_views import (
     generate_spectral_report, generate_metadata_report,
     get_report_templates, check_quarto_status,
@@ -31,6 +32,9 @@ from api.quarto_views import (
 # OP48: language switch endpoint (API-agnostic, no prefix)
 urlpatterns = [
     path('i18n/', include('django.conf.urls.i18n')),
+    # OP48c: JS translation catalog (language-aware, unprefixed API route)
+    path('js-i18n/', js_catalog_json, name='js-i18n-catalog'),
+    path('api/i18n/status/', i18n_status, name='i18n-status'),
     # Admin
     path('admin/', admin.site.urls),
     

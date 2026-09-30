@@ -133,7 +133,7 @@ function loadJobs() {
         .catch(error => {
             console.error('Error loading jobs:', error);
             hideLoading();
-            showError('Failed to load jobs. Please try again.');
+            showError(nirGettext('Failed to load jobs. Please try again.'));
         });
 }
 
@@ -408,7 +408,7 @@ function showJobDetails(jobId) {
     const job = allJobs.find(j => j.id === jobId);
     
     if (!job) {
-        showError('Job not found');
+        showError(nirGettext('Job not found'));
         return;
     }
     
@@ -649,7 +649,7 @@ function createJob() {
     const notifyOnComplete = document.getElementById('jobNotifyOnComplete').checked;
     
     if (!jobName || !analysisType || !agent) {
-        showError('Please fill in all required fields');
+        showError(nirGettext('Please fill in all required fields'));
         return;
     }
     
@@ -661,7 +661,7 @@ function createJob() {
     });
     
     if (selectedSpectra.length === 0) {
-        showError('Please select at least one spectrum');
+        showError(nirGettext('Please select at least one spectrum'));
         return;
     }
     
@@ -709,7 +709,7 @@ function createJob() {
                 const successful = responses.filter(r => r && r.data && r.data.success).length;
                 
                 if (successful > 0) {
-                    showSuccess(`${successful} job/jobs created successfully!`);
+                    showSuccess(nirInterpolate(nirGettext('{count} job/jobs created successfully!'), {count: successful}));
                     
                     // Close modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('createJobModal'));
@@ -724,7 +724,7 @@ function createJob() {
             .catch(error => {
                 console.error('Error creating jobs:', error);
                 hideLoading();
-                showError('Failed to create jobs. Please try again.');
+                showError(nirGettext('Failed to create jobs. Please try again.'));
             });
     } else {
         // For non-Crew AI agents, use the regular API
@@ -743,7 +743,7 @@ function createJob() {
                 hideLoading();
                 
                 if (response.data && response.data.id) {
-                    showSuccess('Job created successfully!');
+                    showSuccess(nirGettext('Job created successfully!'));
                     
                     // Close modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('createJobModal'));
@@ -754,13 +754,13 @@ function createJob() {
                     // Refresh jobs list
                     loadJobs();
                 } else {
-                    showError('Failed to create job: ' + (response.data.error || 'Unknown error'));
+                    showError(nirGettext('Failed to create job: ') + (response.data.error || nirGettext('Unknown error')));
                 }
             })
             .catch(error => {
                 console.error('Error creating job:', error);
                 hideLoading();
-                showError('Failed to create job. Please try again.');
+                showError(nirGettext('Failed to create job. Please try again.'));
             });
     }
 }
@@ -773,7 +773,7 @@ function retryJob(jobId) {
     const job = allJobs.find(j => j.id === jobId);
     
     if (!job) {
-        showError('Job not found');
+        showError(nirGettext('Job not found'));
         return;
     }
     
@@ -808,7 +808,7 @@ function retryJob(jobId) {
                 hideLoading();
                 
                 if (response.data && response.data.success) {
-                    showSuccess('Job retry started successfully!');
+                    showSuccess(nirGettext('Job retry started successfully!'));
                     
                     // Close modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('jobDetailsModal'));
@@ -819,13 +819,13 @@ function retryJob(jobId) {
                     // Refresh jobs list
                     loadJobs();
                 } else {
-                    showError('Failed to retry job: ' + (response.data.error || 'Unknown error'));
+                    showError(nirGettext('Failed to retry job: ') + (response.data.error || nirGettext('Unknown error')));
                 }
             })
             .catch(error => {
                 console.error('Error retrying job:', error);
                 hideLoading();
-                showError('Failed to retry job. Please try again.');
+                showError(nirGettext('Failed to retry job. Please try again.'));
             });
     } else {
         // For regular jobs
@@ -834,7 +834,7 @@ function retryJob(jobId) {
                 hideLoading();
                 
                 if (response.data && response.data.success) {
-                    showSuccess('Job retry started successfully!');
+                    showSuccess(nirGettext('Job retry started successfully!'));
                     
                     // Close modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('jobDetailsModal'));
@@ -845,13 +845,13 @@ function retryJob(jobId) {
                     // Refresh jobs list
                     loadJobs();
                 } else {
-                    showError('Failed to retry job: ' + (response.data.error || 'Unknown error'));
+                    showError(nirGettext('Failed to retry job: ') + (response.data.error || nirGettext('Unknown error')));
                 }
             })
             .catch(error => {
                 console.error('Error retrying job:', error);
                 hideLoading();
-                showError('Failed to retry job. Please try again.');
+                showError(nirGettext('Failed to retry job. Please try again.'));
             });
     }
 }
@@ -864,12 +864,12 @@ function cancelJob(jobId) {
     const job = allJobs.find(j => j.id === jobId);
     
     if (!job) {
-        showError('Job not found');
+        showError(nirGettext('Job not found'));
         return;
     }
     
     if (job.status !== 'running' && job.status !== 'pending') {
-        showError('Only running or pending jobs can be cancelled');
+        showError(nirGettext('Only running or pending jobs can be cancelled'));
         return;
     }
     
@@ -887,7 +887,7 @@ function cancelJob(jobId) {
                 hideLoading();
                 
                 if (response.data && response.data.success) {
-                    showSuccess('Job cancellation requested!');
+                    showSuccess(nirGettext('Job cancellation requested!'));
                     
                     // Update job status locally
                     job.status = 'cancelled';
@@ -901,13 +901,13 @@ function cancelJob(jobId) {
                     // Refresh jobs list
                     loadJobs();
                 } else {
-                    showError('Failed to cancel job: ' + (response.data.error || 'Unknown error'));
+                    showError(nirGettext('Failed to cancel job: ') + (response.data.error || nirGettext('Unknown error')));
                 }
             })
             .catch(error => {
                 console.error('Error cancelling job:', error);
                 hideLoading();
-                showError('Failed to cancel job. Please try again.');
+                showError(nirGettext('Failed to cancel job. Please try again.'));
             });
     } else {
         // For regular jobs
@@ -916,7 +916,7 @@ function cancelJob(jobId) {
                 hideLoading();
                 
                 if (response.data && response.data.success) {
-                    showSuccess('Job cancellation requested!');
+                    showSuccess(nirGettext('Job cancellation requested!'));
                     
                     // Update job status locally
                     job.status = 'cancelled';
@@ -930,13 +930,13 @@ function cancelJob(jobId) {
                     // Refresh jobs list
                     loadJobs();
                 } else {
-                    showError('Failed to cancel job: ' + (response.data.error || 'Unknown error'));
+                    showError(nirGettext('Failed to cancel job: ') + (response.data.error || nirGettext('Unknown error')));
                 }
             })
             .catch(error => {
                 console.error('Error cancelling job:', error);
                 hideLoading();
-                showError('Failed to cancel job. Please try again.');
+                showError(nirGettext('Failed to cancel job. Please try again.'));
             });
     }
 }
@@ -949,7 +949,7 @@ function viewJobReport(jobId) {
     const job = allJobs.find(j => j.id === jobId);
     
     if (!job) {
-        showError('Job not found');
+        showError(nirGettext('Job not found'));
         return;
     }
     
@@ -1003,7 +1003,7 @@ function toggleJobSelection(jobId) {
 
 function deleteSelectedJobs() {
     if (selectedJobs.length === 0) {
-        showError('Please select at least one job to delete');
+        showError(nirGettext('Please select at least one job to delete'));
         return;
     }
     
@@ -1019,7 +1019,7 @@ function deleteSpectrum(spectrumId) {
     currentSpectrum = allSpectra.find(s => s.id === spectrumId);
     
     if (!currentSpectrum) {
-        showError('Spectrum not found');
+        showError(nirGettext('Spectrum not found'));
         return;
     }
     
@@ -1057,7 +1057,7 @@ function confirmDelete() {
                 const successful = responses.filter(r => r.status === 200 || r.status === 204).length;
                 
                 if (successful > 0) {
-                    showSuccess(`${successful} job/jobs deleted successfully!`);
+                    showSuccess(nirInterpolate(nirGettext('{count} job/jobs deleted successfully!'), {count: successful}));
                     
                     // Close modal
                     const deleteModal = bootstrap.Modal.getInstance(document.getElementById('jobsDeleteConfirmationModal'));
@@ -1075,10 +1075,10 @@ function confirmDelete() {
             .catch(error => {
                 console.error('Error deleting jobs:', error);
                 hideLoading();
-                showError('Failed to delete jobs. Please try again.');
+                showError(nirGettext('Failed to delete jobs. Please try again.'));
             });
     } else {
-        showError('No jobs selected for deletion');
+        showError(nirGettext('No jobs selected for deletion'));
     }
 }
 
@@ -1155,11 +1155,11 @@ function hideLoading() {
 }
 
 function showSuccess(message) {
-    showToast('Success!', message, 'success');
+    showToast(nirGettext('Success!'), message, 'success');
 }
 
 function showError(message) {
-    showToast('Error!', message, 'danger');
+    showToast(nirGettext('Error!'), message, 'danger');
 }
 
 function showToast(title, message, type) {

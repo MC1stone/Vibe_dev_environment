@@ -176,6 +176,97 @@ except ImportError:
     check('T4a compilemessages runs clean', False, 'django.core.management missing')
 
 # ---------------------------------------------------------------------------
+# T6: OP48c - JS localization (catalog endpoint, i18n.js, base.html wiring)
+# ---------------------------------------------------------------------------
+import json as _json  # noqa: E402
+
+js_dir = (Path(__file__).resolve().parent.parent / 'django_project'
+          / 'static' / 'js')
+
+# T6a: catalog endpoint serves negotiated JS bootstrap (default de)
+resp = client.get('/js-i18n/')
+body_js = resp.content.decode()
+check('T6a /js-i18n/ serves JS bootstrap (de)',
+      resp.status_code == 200
+      and 'window.NIR_I18N_CATALOG' in body_js
+      and resp['Content-Type'].startswith('application/javascript'))
+
+# T6b: ?format=json returns plain JSON with catalog dict
+resp = client.get('/js-i18n/?format=json')
+try:
+    data = resp.json()
+except Exception:
+    data = {}
+check('T6b /js-i18n/?format=json returns catalog dict',
+      resp.status_code == 200 and isinstance(data.get('catalog'), dict))
+
+# T6c: Accept-Language switches the catalog language (en)
+resp = client.get('/js-i18n/?format=json', HTTP_ACCEPT_LANGUAGE='en')
+data_en = resp.json() if resp.status_code == 200 else {}
+check('T6c Accept-Language=en yields en catalog',
+      data_en.get('language') == 'en'
+      and data_en.get('catalog', {}).get('Projects') == 'Projects')
+
+# T6d: cookie django_language switches the catalog language (en)
+c2 = Client()
+c2.cookies.load({'django_language': 'en'})
+resp = c2.get('/js-i18n/?format=json')
+data_ck = resp.json() if resp.status_code == 200 else {}
+check('T6d django_language cookie yields en catalog',
+      data_ck.get('language') == 'en'
+      and data_ck.get('catalog', {}).get('Projects') == 'Projects')
+
+# T6e: default de catalog translates a JS msgid (fresh client: no cookie)
+resp = Client().get('/js-i18n/?format=json')
+data_de = resp.json() if resp.status_code == 200 else {}
+check('T6e default de catalog translates JS msgid',
+      data_de.get('language') == 'de'
+      and data_de.get('catalog', {}).get(
+          'Please select at least one file to upload.') is not None
+      and data_de['catalog'].get(
+          'Please select at least one file to upload.') != 'Please select at least one file to upload.')
+
+# T6f: i18n status endpoint (unprefixed API contract)
+resp = client.get('/api/i18n/status/')
+st = resp.json() if resp.status_code == 200 else {}
+check('T6f /api/i18n/status/ contract',
+      resp.status_code == 200 and 'language' in st
+      and isinstance(st.get('catalog_entries'), int))
+
+# T6g: i18n.js helper file exists and exposes nirGettext fallback
+i18n_js = (js_dir / 'i18n.js').read_text(encoding='utf-8')
+check('T6g i18n.js exposes nirGettext/nirInterpolate',
+      'window.nirGettext' in i18n_js
+      and 'window.nirInterpolate' in i18n_js)
+
+# T6h: base.html loads catalog bootstrap + helper before main.js
+base_html = (Path(__file__).resolve().parent.parent / 'django_project'
+             / 'templates' / 'base.html').read_text(encoding='utf-8')
+pos_catalog = base_html.find('js-i18n-catalog')
+pos_helper = base_html.find("js/i18n.js")
+pos_main = base_html.find("js/main.js")
+check('T6h base.html wires catalog + i18n.js before main.js',
+      0 < pos_catalog < pos_helper < pos_main)
+
+# T6i: JS msgids present in compiled de catalog (spot checks)
+catalog_de = data_de.get('catalog', {})
+js_msgids = [
+    'Files uploaded successfully!',
+    'Job created successfully!',
+    'Spectrum not found',
+    'Success!',
+    'Unknown error',
+]
+missing = [m for m in js_msgids if not catalog_de.get(m)]
+check('T6i JS msgids translated in de catalog', not missing, str(missing))
+
+# T6j: page scripts use nirGettext for user-facing messages
+files_js = (js_dir / 'files.js').read_text(encoding='utf-8')
+check('T6j files.js uses nirGettext (no bare alert literals left)',
+      'nirGettext(' in files_js
+      and "alert('" not in files_js)
+
+# ---------------------------------------------------------------------------
 # summary
 # ---------------------------------------------------------------------------
 print(f'\nOP48 i18n infrastructure: {PASS} passed, {FAIL} failed')

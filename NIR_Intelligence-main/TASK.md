@@ -19,7 +19,16 @@ Die Plattform (UI, Backend-Meldungen, Berichte, ILIAS-Sync) soll fuer alle
   chatbot/ilias/federated lokalisiert, 24-Sprachen-Umschalter, Kataloge
   de/en vollstaendig (94 msgids), Testmatrix 36/36 gruen, Regressionen
   OP3/OP7/OP8/FL4 gruen.
-- Offen: OP48c JS-Strings, OP48d Backend-Meldungen/Chatbot/Quarto,
+- OP48c JS-Strings - ERLEDIGT: /js-i18n/ Endpunkt (verhandelter Katalog
+  als JS-Bootstrap, ?format=json fuer Tests; Fix: LocaleMiddleware erzwingt
+  bei praefix-loser URL LANGUAGE_CODE, daher Cookie/Accept-Language-
+  Verhandlung im View selbst), i18n.js (nirGettext/nirInterpolate,
+  ehrlicher msgid-Fallback), base.html laedt Katalog+Helper vor main.js;
+  alle benutzersichtbaren JS-Meldungen in files/agents/analysis/jobs/
+  spectra.js auf nirGettext umgestellt (82 msgids, Kataloge de/en
+  ergaenzt); Testmatrix 46/46 gruen, Regressionen OP3/OP25/OP15/FL4
+  gruen; node --check sauber.
+- Offen: OP48d Backend-Meldungen/Chatbot/Quarto,
   OP48e Uebersetzungscontent/ILIAS; Rest-Templates inkrementell.
 
 ### Success Criteria

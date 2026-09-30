@@ -491,7 +491,7 @@ function showAgentDetails(agentName) {
     const agent = allAgents.find(a => a.name === agentName);
     
     if (!agent) {
-        showError('Agent not found');
+        showError(nirGettext('Agent not found'));
         return;
     }
     
@@ -623,7 +623,7 @@ function executeAgent(agentName) {
     const agent = allAgents.find(a => a.name === agentName);
     
     if (!agent) {
-        showError('Agent not found');
+        showError(nirGettext('Agent not found'));
         return;
     }
     
@@ -869,7 +869,7 @@ function submitAgentExecution() {
     const analysisType = document.getElementById('jobAnalysisType').value;
     
     if (!jobName) {
-        showError('Please enter a job name');
+        showError(nirGettext('Please enter a job name'));
         return;
     }
     
@@ -881,7 +881,7 @@ function submitAgentExecution() {
     });
     
     if (selectedSpectra.length === 0) {
-        showError('Please select at least one spectrum');
+        showError(nirGettext('Please select at least one spectrum'));
         return;
     }
     
@@ -948,7 +948,7 @@ function submitAgentExecution() {
                 const result = response.data;
                 
                 if (result.success) {
-                    showSuccess('Agent execution started successfully!');
+                    showSuccess(nirGettext('Agent execution started successfully!'));
                     
                     // Close the modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('executeAgentModal'));
@@ -961,13 +961,13 @@ function submitAgentExecution() {
                         window.location.href = '/jobs/';
                     }, 1000);
                 } else {
-                    showError('Failed to start agent execution: ' + (result.error || 'Unknown error'));
+                    showError(nirGettext('Failed to start agent execution: ') + (result.error || nirGettext('Unknown error')));
                 }
             })
             .catch(function(error) {
                 console.error('Error executing agent:', error);
                 hideLoading();
-                showError('Failed to execute agent. Please try again.');
+                showError(nirGettext('Failed to execute agent. Please try again.'));
             });
     } else {
         // For non-Crew AI agents, use the regular API
@@ -977,7 +977,7 @@ function submitAgentExecution() {
                 const result = response.data;
                 
                 if (result.success) {
-                    showSuccess('Agent execution started successfully!');
+                    showSuccess(nirGettext('Agent execution started successfully!'));
                     
                     // Close the modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('executeAgentModal'));
@@ -988,13 +988,13 @@ function submitAgentExecution() {
                     // Refresh the page
                     loadAgents();
                 } else {
-                    showError('Failed to start agent execution: ' + (result.error || 'Unknown error'));
+                    showError(nirGettext('Failed to start agent execution: ') + (result.error || nirGettext('Unknown error')));
                 }
             })
             .catch(function(error) {
                 console.error('Error executing agent:', error);
                 hideLoading();
-                showError('Failed to execute agent. Please try again.');
+                showError(nirGettext('Failed to execute agent. Please try again.'));
             });
     }
 }
@@ -1003,7 +1003,7 @@ function configureAgent(agentName) {
     const agent = allAgents.find(a => a.name === agentName);
     
     if (!agent || !agent.is_crewai) {
-        showError('Only Crew AI agents can be configured');
+        showError(nirGettext('Only Crew AI agents can be configured'));
         return;
     }
     
@@ -1205,7 +1205,7 @@ function saveAgentConfig() {
             const result = response.data;
             
             if (result.success) {
-                showSuccess('Agent configuration saved successfully!');
+                showSuccess(nirGettext('Agent configuration saved successfully!'));
                 
                 // Close the modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('agentConfigModal'));
@@ -1216,13 +1216,13 @@ function saveAgentConfig() {
                 // Refresh the page
                 loadAgents();
             } else {
-                showError('Failed to save configuration: ' + (result.error || 'Unknown error'));
+                showError(nirGettext('Failed to save configuration: ') + (result.error || nirGettext('Unknown error')));
             }
         })
         .catch(function(error) {
             console.error('Error saving agent configuration:', error);
             hideLoading();
-            showError('Failed to save agent configuration. Please try again.');
+            showError(nirGettext('Failed to save agent configuration. Please try again.'));
         });
 }
 
@@ -1278,11 +1278,11 @@ function hideLoading() {
 }
 
 function showSuccess(message) {
-    showToast('Success!', message, 'success');
+    showToast(nirGettext('Success!'), message, 'success');
 }
 
 function showError(message) {
-    showToast('Error!', message, 'danger');
+    showToast(nirGettext('Error!'), message, 'danger');
 }
 
 function showToast(title, message, type) {

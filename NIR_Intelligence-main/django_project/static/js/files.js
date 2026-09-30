@@ -542,7 +542,7 @@ function uploadFiles() {
     const autoAnalyze = document.getElementById('autoAnalyze').checked;
     
     if (!fileInput || fileInput.files.length === 0) {
-        alert('Please select at least one file to upload.');
+        alert(nirGettext('Please select at least one file to upload.'));
         return;
     }
     
@@ -591,17 +591,17 @@ function uploadFiles() {
             document.getElementById('filePreview').innerHTML = '';
             
             // Show success message
-            alert('Files uploaded successfully!');
+            alert(nirGettext('Files uploaded successfully!'));
             
             // Refresh files
             refreshFiles();
         } else {
-            alert('Error uploading files: ' + (response.data.error || 'Unknown error'));
+            alert(nirGettext('Error uploading files: ') + (response.data.error || nirGettext('Unknown error')));
         }
     })
     .catch(error => {
         console.error('Upload error:', error);
-        alert('Error uploading files. Please try again.');
+        alert(nirGettext('Error uploading files. Please try again.'));
     })
     .finally(() => {
         uploadButton.innerHTML = originalText;
@@ -624,15 +624,15 @@ function analyzeFile(fileId) {
     })
     .then(response => {
         if (response.data && response.data.success) {
-            alert('Analysis started successfully!');
+            alert(nirGettext('Analysis started successfully!'));
             refreshFiles();
         } else {
-            alert('Error starting analysis: ' + (response.data.error || 'Unknown error'));
+            alert(nirGettext('Error starting analysis: ') + (response.data.error || nirGettext('Unknown error')));
         }
     })
     .catch(error => {
         console.error('Analysis error:', error);
-        alert('Error starting analysis. Please try again.');
+        alert(nirGettext('Error starting analysis. Please try again.'));
     });
 }
 
@@ -660,15 +660,15 @@ function deleteFile(fileId) {
         })
         .then(response => {
             if (response.data && response.data.success) {
-                alert('File deleted successfully!');
+                alert(nirGettext('File deleted successfully!'));
                 refreshFiles();
             } else {
-                alert('Error deleting file: ' + (response.data.error || 'Unknown error'));
+                alert(nirGettext('Error deleting file: ') + (response.data.error || nirGettext('Unknown error')));
             }
         })
         .catch(error => {
             console.error('Delete error:', error);
-            alert('Error deleting file. Please try again.');
+            alert(nirGettext('Error deleting file. Please try again.'));
         });
     }
 }
@@ -676,7 +676,7 @@ function deleteFile(fileId) {
 // Delete selected files
 function deleteSelectedFiles() {
     if (selectedFiles.length === 0) {
-        alert('Please select at least one file to delete.');
+        alert(nirGettext('Please select at least one file to delete.'));
         return;
     }
     
@@ -710,17 +710,17 @@ function confirmDelete() {
             document.getElementById('selectAllFiles').checked = false;
             
             // Show success message
-            alert(`${response.data.deleted_count || selectedFiles.length} files deleted successfully!`);
+            alert(nirInterpolate(nirGettext('{count} files deleted successfully!'), {count: response.data.deleted_count || selectedFiles.length}));
             
             // Refresh files
             refreshFiles();
         } else {
-            alert('Error deleting files: ' + (response.data.error || 'Unknown error'));
+            alert(nirGettext('Error deleting files: ') + (response.data.error || nirGettext('Unknown error')));
         }
     })
     .catch(error => {
         console.error('Delete error:', error);
-        alert('Error deleting files. Please try again.');
+        alert(nirGettext('Error deleting files. Please try again.'));
     });
 }
 
@@ -729,7 +729,7 @@ function exportFilesList() {
     const filteredFiles = filterFilesByCriteria(currentFiles);
     
     if (filteredFiles.length === 0) {
-        alert('No files to export.');
+        alert(nirGettext('No files to export.'));
         return;
     }
     
@@ -765,7 +765,7 @@ function exportFilesList() {
 // Quick analyze selected
 function quickAnalyzeSelected() {
     if (selectedFiles.length === 0) {
-        alert('Please select at least one file to analyze.');
+        alert(nirGettext('Please select at least one file to analyze.'));
         return;
     }
     
@@ -777,15 +777,15 @@ function quickAnalyzeSelected() {
     })
     .then(response => {
         if (response.data && response.data.success) {
-            alert(`${response.data.analyzed_count || selectedFiles.length} files analysis started successfully!`);
+            alert(nirInterpolate(nirGettext('{count} files analysis started successfully!'), {count: response.data.analyzed_count || selectedFiles.length}));
             refreshFiles();
         } else {
-            alert('Error starting analysis: ' + (response.data.error || 'Unknown error'));
+            alert(nirGettext('Error starting analysis: ') + (response.data.error || nirGettext('Unknown error')));
         }
     })
     .catch(error => {
         console.error('Analysis error:', error);
-        alert('Error starting analysis. Please try again.');
+        alert(nirGettext('Error starting analysis. Please try again.'));
     });
 }
 
