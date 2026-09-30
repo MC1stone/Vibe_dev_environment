@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load i18n %}
 
 {% block title %}Dashboard - NIR_Mistral Framework{% endblock %}
 
@@ -23,10 +23,10 @@
             <div class="row align-items-center">
                 <div class="col-lg-8">
                     <h1 class="c-page-header__title text-white mb-md-0 mb-3">
-                        Welcome to NIR_Mistral Framework
+                        {% trans "Welcome to NIR_Mistral Framework" %}
                     </h1>
                     <p class="c-page-header__subtitle text-white opacity-75 mb-0">
-                        Advanced NIR Spectroscopy Analysis Platform for research and industrial applications
+                        {% trans "Advanced NIR Spectroscopy Analysis Platform for research and industrial applications" %}
                     </p>
                 </div>
                 <div class="col-lg-4 text-lg-end">
@@ -57,7 +57,7 @@
                             <i class="bi bi-file-earmark-text"></i>
                         </div>
                         <div class="c-stat-card__number" id="totalSpectra">0</div>
-                        <div class="c-stat-card__label">Total Spectra</div>
+                        <div class="c-stat-card__label">{% trans "Total Spectra" %}</div>
                     </div>
                 </div>
                 
@@ -68,7 +68,7 @@
                             <i class="bi bi-check-circle"></i>
                         </div>
                         <div class="c-stat-card__number" id="validSpectra">0</div>
-                        <div class="c-stat-card__label">Valid Spectra</div>
+                        <div class="c-stat-card__label">{% trans "Valid Spectra" %}</div>
                     </div>
                 </div>
                 
@@ -79,7 +79,7 @@
                             <i class="bi bi-robot"></i>
                         </div>
                         <div class="c-stat-card__number" id="activeAgents">0</div>
-                        <div class="c-stat-card__label">Active Agents</div>
+                        <div class="c-stat-card__label">{% trans "Active Agents" %}</div>
                     </div>
                 </div>
                 
@@ -90,7 +90,7 @@
                             <i class="bi bi-hourglass-split"></i>
                         </div>
                         <div class="c-stat-card__number" id="totalJobs">0</div>
-                        <div class="c-stat-card__label">Analysis Jobs</div>
+                        <div class="c-stat-card__label">{% trans "Analysis Jobs" %}</div>
                     </div>
                 </div>
             </div>
@@ -108,9 +108,9 @@
                             <div class="mb-md">
                                 <i class="bi bi-upload text-primary" style="font-size: 3rem;"></i>
                             </div>
-                            <h3 class="h5 mb-sm">Upload Spectrum</h3>
+                            <h3 class="h5 mb-sm">{% trans "Upload Spectrum" %}</h3>
                             <p class="text-muted small mb-md">
-                                Upload new NIR spectroscopy data for analysis
+                                {% trans "Upload new NIR spectroscopy data for analysis" %}
                             </p>
                             <a href="/spectra/" class="c-button c-button--outline-primary">
                                 <i class="bi bi-upload c-button__icon"></i>
@@ -125,9 +125,9 @@
                             <div class="mb-md">
                                 <i class="bi bi-play-circle text-primary" style="font-size: 3rem;"></i>
                             </div>
-                            <h3 class="h5 mb-sm">Run Analysis</h3>
+                            <h3 class="h5 mb-sm">{% trans "Run Analysis" %}</h3>
                             <p class="text-muted small mb-md">
-                                Execute analysis using framework agents
+                                {% trans "Execute analysis using framework agents" %}
                             </p>
                             <a href="/analysis/" class="c-button c-button--outline-primary">
                                 <i class="bi bi-play-circle c-button__icon"></i>
@@ -142,9 +142,9 @@
                             <div class="mb-md">
                                 <i class="bi bi-gear text-primary" style="font-size: 3rem;"></i>
                             </div>
-                            <h3 class="h5 mb-sm">Manage Agents</h3>
+                            <h3 class="h5 mb-sm">{% trans "Manage Agents" %}</h3>
                             <p class="text-muted small mb-md">
-                                View and configure analysis agents
+                                {% trans "View and configure analysis agents" %}
                             </p>
                             <a href="/agents/" class="c-button c-button--outline-primary">
                                 <i class="bi bi-gear c-button__icon"></i>
@@ -205,12 +205,12 @@
     <!-- System Status Section -->
     <section class="o-section o-section--light">
         <div class="o-container">
-            <h2 class="c-card__title mb-xl">System Status</h2>
+            <h2 class="c-card__title mb-xl">{% trans "System Status" %}</h2>
             <div class="row g-4">
                 <div class="col-md-6">
                     <div class="c-card h-100">
                         <div class="c-card__header">
-                            <h3 class="c-card__title mb-0">Framework Health</h3>
+                            <h3 class="c-card__title mb-0">{% trans "Framework Health" %}</h3>
                         </div>
                         <div class="c-card__body">
                             <div class="row g-3">
@@ -222,8 +222,8 @@
                                             </span>
                                         </div>
                                         <div class="flex-grow-1 ms-sm">
-                                            <h6 class="mb-0">Database Connection</h6>
-                                            <small class="text-muted">Connected</small>
+                                            <h6 class="mb-0">{% trans "Database Connection" %}</h6>
+                                            <small class="text-muted">{% trans "Connected" %}</small>
                                         </div>
                                     </div>
                                 </div>
@@ -235,8 +235,8 @@
                                             </span>
                                         </div>
                                         <div class="flex-grow-1 ms-sm">
-                                            <h6 class="mb-0">Storage Available</h6>
-                                            <small class="text-muted">Available</small>
+                                            <h6 class="mb-0">{% trans "Storage Available" %}</h6>
+                                            <small class="text-muted">{% trans "Available" %}</small>
                                         </div>
                                     </div>
                                 </div>
@@ -248,8 +248,8 @@
                                             </span>
                                         </div>
                                         <div class="flex-grow-1 ms-sm">
-                                            <h6 class="mb-0">Agent Framework</h6>
-                                            <small class="text-muted">Running</small>
+                                            <h6 class="mb-0">{% trans "Agent Framework" %}</h6>
+                                            <small class="text-muted">{% trans "Running" %}</small>
                                         </div>
                                     </div>
                                 </div>
@@ -261,8 +261,8 @@
                                             </span>
                                         </div>
                                         <div class="flex-grow-1 ms-sm">
-                                            <h6 class="mb-0">API Service</h6>
-                                            <small class="text-muted">Operational</small>
+                                            <h6 class="mb-0">{% trans "API Service" %}</h6>
+                                            <small class="text-muted">{% trans "Operational" %}</small>
                                         </div>
                                     </div>
                                 </div>
@@ -273,7 +273,7 @@
                 <div class="col-md-6">
                     <div class="c-card h-100">
                         <div class="c-card__header">
-                            <h3 class="c-card__title mb-0">Framework Information</h3>
+                            <h3 class="c-card__title mb-0">{% trans "Framework Information" %}</h3>
                         </div>
                         <div class="c-card__body">
                             <dl class="row mb-0">
@@ -302,12 +302,12 @@
     <!-- Charts Section -->
     <section class="o-section">
         <div class="o-container">
-            <h2 class="c-card__title mb-xl">Analytics</h2>
+            <h2 class="c-card__title mb-xl">{% trans "Analytics" %}</h2>
             <div class="row g-4">
                 <div class="col-md-6">
                     <div class="c-card h-100">
                         <div class="c-card__header">
-                            <h3 class="c-card__title mb-0">Spectra by Type</h3>
+                            <h3 class="c-card__title mb-0">{% trans "Spectra by Type" %}</h3>
                         </div>
                         <div class="c-card__body">
                             <canvas id="spectraTypeChart" height="300"></canvas>

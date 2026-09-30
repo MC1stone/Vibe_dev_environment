@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load i18n %}
 
 {% block title %}File Management - NIR_Mistral Framework{% endblock %}
 
@@ -126,10 +126,10 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
                 <h1 class="c-page-header__title text-white mb-0">
-                    <i class="bi bi-files"></i> File Management
+                    <i class="bi bi-files"></i> {% trans "File Management" %}
                 </h1>
                 <p class="c-page-header__subtitle text-white opacity-75 mb-0">
-                    Upload, view, and analyze any file type with Crew AI
+                    {% trans "Upload, view, and analyze any file type with Crew AI" %}
                 </p>
             </div>
             <div class="d-flex gap-2">
@@ -156,7 +156,7 @@
                         <i class="bi bi-file-earmark-text"></i>
                     </div>
                     <div class="c-stat-card__number" id="totalFiles">0</div>
-                    <div class="c-stat-card__label">Total Files</div>
+                    <div class="c-stat-card__label">{% trans "Total Files" %}</div>
                 </div>
             </div>
             
@@ -166,7 +166,7 @@
                         <i class="bi bi-check-circle"></i>
                     </div>
                     <div class="c-stat-card__number" id="validFiles">0</div>
-                    <div class="c-stat-card__label">Valid Files</div>
+                    <div class="c-stat-card__label">{% trans "Valid Files" %}</div>
                 </div>
             </div>
             
@@ -176,7 +176,7 @@
                         <i class="bi bi-exclamation-triangle"></i>
                     </div>
                     <div class="c-stat-card__number" id="invalidFiles">0</div>
-                    <div class="c-stat-card__label">Invalid Files</div>
+                    <div class="c-stat-card__label">{% trans "Invalid Files" %}</div>
                 </div>
             </div>
             
@@ -185,8 +185,8 @@
                     <div class="c-stat-card__icon c-stat-card__icon--info">
                         <i class="bi bi-database"></i>
                     </div>
-                    <div class="c-stat-card__number" id="totalStorage">0 MB</div>
-                    <div class="c-stat-card__label">Total Storage</div>
+                    <div class="c-stat-card__number" id="totalStorage">{% trans "0 MB" %}</div>
+                    <div class="c-stat-card__label">{% trans "Total Storage" %}</div>
                 </div>
             </div>
         </div>
@@ -197,7 +197,7 @@
 <section class="o-section o-section--light">
     <div class="o-container">
         <h2 class="c-card__title mb-xl">
-            <i class="bi bi-lightning-charge"></i> Quick Actions
+            <i class="bi bi-lightning-charge"></i> {% trans "Quick Actions" %}
         </h2>
         
         <div class="row g-4">
@@ -207,8 +207,8 @@
                         <div class="mb-3">
                             <i class="bi bi-upload text-primary" style="font-size: 3rem;"></i>
                         </div>
-                        <h3 class="h5 mb-2">Upload Files</h3>
-                        <p class="text-muted small mb-3">Upload any file type for analysis</p>
+                        <h3 class="h5 mb-2">{% trans "Upload Files" %}</h3>
+                        <p class="text-muted small mb-3">{% trans "Upload any file type for analysis" %}</p>
                         <button class="c-button c-button--outline-primary" data-bs-toggle="modal" data-bs-target="#uploadFileModal">
                             <i class="bi bi-upload c-button__icon"></i>
                             <span class="c-button__text">Upload Now</span>
@@ -223,8 +223,8 @@
                         <div class="mb-3">
                             <i class="bi bi-play-circle text-primary" style="font-size: 3rem;"></i>
                         </div>
-                        <h3 class="h5 mb-2">Quick Analysis</h3>
-                        <p class="text-muted small mb-3">Run quick analysis on selected files</p>
+                        <h3 class="h5 mb-2">{% trans "Quick Analysis" %}</h3>
+                        <p class="text-muted small mb-3">{% trans "Run quick analysis on selected files" %}</p>
                         <button class="c-button c-button--outline-primary" onclick="quickAnalyzeSelected()">
                             <i class="bi bi-play-circle c-button__icon"></i>
                             <span class="c-button__text">Analyze Now</span>
@@ -239,8 +239,8 @@
                         <div class="mb-3">
                             <i class="bi bi-folder text-primary" style="font-size: 3rem;"></i>
                         </div>
-                        <h3 class="h5 mb-2">Browse Library</h3>
-                        <p class="text-muted small mb-3">View all uploaded files</p>
+                        <h3 class="h5 mb-2">{% trans "Browse Library" %}</h3>
+                        <p class="text-muted small mb-3">{% trans "View all uploaded files" %}</p>
                         <button class="c-button c-button--outline-primary" onclick="scrollToFiles()">
                             <i class="bi bi-list c-button__icon"></i>
                             <span class="c-button__text">Browse All</span>
@@ -257,7 +257,7 @@
     <div class="o-container">
         <div class="d-flex justify-content-between align-items-center mb-xl">
             <h2 class="c-card__title mb-0">
-                <i class="bi bi-tags"></i> File Categories
+                <i class="bi bi-tags"></i> {% trans "File Categories" %}
             </h2>
         </div>
         
@@ -267,7 +267,7 @@
                 <div class="c-card h-100 p-3">
                     <i class="bi bi-graph-up file-type-spectral" style="font-size: 2rem;"></i>
                     <div class="mt-2">
-                        <h6 class="mb-0">Spectral</h6>
+                        <h6 class="mb-0">{% trans "Spectral" %}</h6>
                         <small class="text-muted" id="spectralCount">0</small>
                     </div>
                 </div>
@@ -276,7 +276,7 @@
                 <div class="c-card h-100 p-3">
                     <i class="bi bi-table file-type-tabular" style="font-size: 2rem;"></i>
                     <div class="mt-2">
-                        <h6 class="mb-0">Tabular</h6>
+                        <h6 class="mb-0">{% trans "Tabular" %}</h6>
                         <small class="text-muted" id="tabularCount">0</small>
                     </div>
                 </div>
@@ -285,7 +285,7 @@
                 <div class="c-card h-100 p-3">
                     <i class="bi bi-file-text file-type-text" style="font-size: 2rem;"></i>
                     <div class="mt-2">
-                        <h6 class="mb-0">Text</h6>
+                        <h6 class="mb-0">{% trans "Text" %}</h6>
                         <small class="text-muted" id="textCount">0</small>
                     </div>
                 </div>
@@ -294,7 +294,7 @@
                 <div class="c-card h-100 p-3">
                     <i class="bi bi-image file-type-image" style="font-size: 2rem;"></i>
                     <div class="mt-2">
-                        <h6 class="mb-0">Image</h6>
+                        <h6 class="mb-0">{% trans "Image" %}</h6>
                         <small class="text-muted" id="imageCount">0</small>
                     </div>
                 </div>
@@ -303,7 +303,7 @@
                 <div class="c-card h-100 p-3">
                     <i class="bi bi-volume-up file-type-audio" style="font-size: 2rem;"></i>
                     <div class="mt-2">
-                        <h6 class="mb-0">Audio</h6>
+                        <h6 class="mb-0">{% trans "Audio" %}</h6>
                         <small class="text-muted" id="audioCount">0</small>
                     </div>
                 </div>
@@ -312,7 +312,7 @@
                 <div class="c-card h-100 p-3">
                     <i class="bi bi-file-earmark-zip file-type-archive" style="font-size: 2rem;"></i>
                     <div class="mt-2">
-                        <h6 class="mb-0">Archive</h6>
+                        <h6 class="mb-0">{% trans "Archive" %}</h6>
                         <small class="text-muted" id="archiveCount">0</small>
                     </div>
                 </div>
@@ -326,26 +326,26 @@
     <div class="o-container">
         <div class="d-flex justify-content-between align-items-center mb-xl">
             <h2 class="c-card__title mb-0">
-                <i class="bi bi-images"></i> Files Gallery
+                <i class="bi bi-images"></i> {% trans "Files Gallery" %}
             </h2>
             <div class="d-flex gap-2">
                 <select class="c-form-control c-form-control--sm" id="fileFilter" onchange="filterFiles()">
-                    <option value="">All Files</option>
-                    <option value="valid">Valid Only</option>
-                    <option value="invalid">Invalid Only</option>
-                    <option value="recent">Recent First</option>
+                    <option value="">{% trans "All Files" %}</option>
+                    <option value="valid">{% trans "Valid Only" %}</option>
+                    <option value="invalid">{% trans "Invalid Only" %}</option>
+                    <option value="recent">{% trans "Recent First" %}</option>
                 </select>
                 <select class="c-form-control c-form-control--sm" id="categoryFilter" onchange="filterFiles()">
-                    <option value="">All Categories</option>
-                    <option value="spectral">Spectral</option>
-                    <option value="tabular">Tabular</option>
-                    <option value="text">Text</option>
-                    <option value="image">Image</option>
-                    <option value="audio">Audio</option>
-                    <option value="video">Video</option>
-                    <option value="archive">Archive</option>
-                    <option value="document">Document</option>
-                    <option value="unknown">Unknown</option>
+                    <option value="">{% trans "All Categories" %}</option>
+                    <option value="spectral">{% trans "Spectral" %}</option>
+                    <option value="tabular">{% trans "Tabular" %}</option>
+                    <option value="text">{% trans "Text" %}</option>
+                    <option value="image">{% trans "Image" %}</option>
+                    <option value="audio">{% trans "Audio" %}</option>
+                    <option value="video">{% trans "Video" %}</option>
+                    <option value="archive">{% trans "Archive" %}</option>
+                    <option value="document">{% trans "Document" %}</option>
+                    <option value="unknown">{% trans "Unknown" %}</option>
                 </select>
             </div>
         </div>
@@ -365,14 +365,14 @@
     <div class="o-container">
         <div class="d-flex justify-content-between align-items-center mb-xl">
             <h2 class="c-card__title mb-0">
-                <i class="bi bi-table"></i> Files Data Table
+                <i class="bi bi-table"></i> {% trans "Files Data Table" %}
             </h2>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-danger btn-sm" onclick="deleteSelectedFiles()">
-                    <i class="bi bi-trash"></i> Delete Selected
+                    <i class="bi bi-trash"></i> {% trans "Delete Selected" %}
                 </button>
                 <button class="btn btn-outline-secondary btn-sm" onclick="exportFilesList()">
-                    <i class="bi bi-download"></i> Export List
+                    <i class="bi bi-download"></i> {% trans "Export List" %}
                 </button>
             </div>
         </div>
@@ -427,7 +427,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="uploadFileModalLabel">
-                    <i class="bi bi-upload"></i> Upload Files
+                    <i class="bi bi-upload"></i> {% trans "Upload Files" %}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -453,7 +453,7 @@
                         </div>
                         
                         <div class="col-md-6">
-                            <label class="c-form-label">File Category</label>
+                            <label class="c-form-label">{% trans "File Category" %}</label>
                             <select class="c-form-control" id="fileCategory">
                                 <option value="auto">Auto Detect</option>
                                 <option value="spectral">Spectral Data</option>
@@ -469,7 +469,7 @@
                         </div>
                         
                         <div class="col-12">
-                            <label class="c-form-label">Description</label>
+                            <label class="c-form-label">{% trans "Description" %}</label>
                             <textarea class="c-form-control" id="fileDescription" rows="3" placeholder="Brief description of the file..."></textarea>
                         </div>
                         
@@ -479,7 +479,7 @@
                         </div>
                         
                         <div class="col-12">
-                            <label class="c-form-label">Metadata</label>
+                            <label class="c-form-label">{% trans "Metadata" %}</label>
                             <div class="row g-2">
                                 <div class="col-md-4">
                                     <input type="text" class="c-form-control" id="metadataAuthor" placeholder="Author">
@@ -506,10 +506,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Cancel
+                    <i class="bi bi-x"></i> {% trans "Cancel" %}
                 </button>
                 <button type="button" class="btn btn-primary" onclick="uploadFiles()">
-                    <i class="bi bi-upload"></i> Upload Files
+                    <i class="bi bi-upload"></i> {% trans "Upload Files" %}
                 </button>
             </div>
         </div>
@@ -522,7 +522,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="fileDetailsModalLabel">
-                    <i class="bi bi-file-earmark-text"></i> File Details
+                    <i class="bi bi-file-earmark-text"></i> {% trans "File Details" %}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -544,7 +544,7 @@
                     <div class="col-md-6">
                         <div class="c-card h-100">
                             <div class="c-card__header">
-                                <h6 class="mb-0">File Information</h6>
+                                <h6 class="mb-0">{% trans "File Information" %}</h6>
                             </div>
                             <div class="c-card__body">
                                 <dl class="row mb-0">
@@ -579,7 +579,7 @@
                     <div class="col-12">
                         <div class="c-card">
                             <div class="c-card__header">
-                                <h6 class="mb-0">Metadata</h6>
+                                <h6 class="mb-0">{% trans "Metadata" %}</h6>
                             </div>
                             <div class="c-card__body">
                                 <dl class="row mb-0" id="detailMetadata">
@@ -592,7 +592,7 @@
                     <div class="col-12">
                         <div class="c-card">
                             <div class="c-card__header">
-                                <h6 class="mb-0">Description</h6>
+                                <h6 class="mb-0">{% trans "Description" %}</h6>
                             </div>
                             <div class="c-card__body">
                                 <p id="detailDescription" class="mb-0"></p>
@@ -614,13 +614,13 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Close
+                    <i class="bi bi-x"></i> {% trans "Close" %}
                 </button>
                 <button type="button" class="btn btn-primary" onclick="crewAnalyzeCurrentFile()">
-                    <i class="bi bi-people"></i> Run Complete Analysis
+                    <i class="bi bi-people"></i> {% trans "Run Complete Analysis" %}
                 </button>
                 <button type="button" class="btn btn-primary" onclick="downloadFile()">
-                    <i class="bi bi-download"></i> Download
+                    <i class="bi bi-download"></i> {% trans "Download" %}
                 </button>
             </div>
         </div>
@@ -633,7 +633,7 @@
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title" id="filesDeleteConfirmationModalLabel">
-                    <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+                    <i class="bi bi-exclamation-triangle"></i> {% trans "Confirm Deletion" %}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -642,10 +642,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Cancel
+                    <i class="bi bi-x"></i> {% trans "Cancel" %}
                 </button>
                 <button type="button" class="btn btn-danger" onclick="confirmDelete()">
-                    <i class="bi bi-trash"></i> Delete
+                    <i class="bi bi-trash"></i> {% trans "Delete" %}
                 </button>
             </div>
         </div>

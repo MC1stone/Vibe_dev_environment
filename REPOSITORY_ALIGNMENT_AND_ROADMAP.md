@@ -525,7 +525,7 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - Offen (Zielumgebung): End-to-End-Klick im Browser gegen laufende Container
   (Upload → Crew-Analyse → Ergebnis-Panels + Quarto-Report).
 
-### OP48 — EU-Mehrsprachigkeit (i18n) — IN ARBEIT (OP48a erledigt)
+### OP48 — EU-Mehrsprachigkeit (i18n) — ABGESCHLOSSEN
 - **Plan:** `MULTILINGUAL_I18N_IMPLEMENTATIONPLAN.md` (Freigabe erteilt);
   6 Phasen: Infrastruktur → Templates → Frontend-JS → Backend-Meldungen →
   Übersetzungscontent → Tests/CI. Alle 24 EU-Amtssprachen als Django-Kataloge,
@@ -555,9 +555,7 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - [x] OP48c JS-Strings: `/js-i18n/`-Endpunkt (verhandelter Katalog als JS-Bootstrap, `?format=json` für Tests; Bugfix: LocaleMiddleware erzwingt bei präfix-losen URLs LANGUAGE_CODE — Cookie/Accept-Language-Verhandlung daher im View selbst), `i18n.js` (nirGettext/nirInterpolate, ehrlicher msgid-Fallback), base.html lädt Katalog+Helper vor main.js; alle benutzersichtbaren JS-Meldungen in files/agents/analysis/jobs/spectra.js auf nirGettext umgestellt (82 msgids, Kataloge de/en ergänzt); Testmatrix 46/46 grün, Regressionen OP3/OP25/OP15/FL4 grün; `node --check` sauber.
 - [x] OP48d Backend-Meldungen: alle statischen API-Strings ('error'/'message') in api/*_views.py auf gettext umgestellt (106 msgids, Kataloge de/en ergänzt; 'status'-Werte als API-Vertrags-Keys bewusst unübersetzt); federated_views mit gettext_lazy (Offline-Kernfunktion); neue ApiLanguageMiddleware aktiviert Cookie/Accept-Language-Verhandlung auf unpräfigierten /api/- und /js-i18n/-Routen; Testmatrix 53/53 grün; Regressionen OP1/OP3/OP8/OP11/OP13/OP15/OP24/OP25/OP28/S6/FL4 grün.
 - [x] OP48e Übersetzungscontent: 22 zusätzliche EU-Kataloge als ehrlich leere .po-Dateien (Übersetzung durch native Speaker/Fachlehrkräfte, kein Fake — fr fällt ehrlich auf Default zurück); Chatbot-System-Prompt sprachabhängig (Antwort-Sprache = Anfrage-Sprache); Quarto-Berichtssprache pro Aufruf konfigurierbar (QuartoConfig.lang, Default de, lang-Platzhalter in allen 7 qmd-Templates); ILIAS-Sync trägt die aktive Sprache des initiierenden Nutzers im Payload. Testmatrix 62/62 grün; Regressionen S6/FL4/FL5/OP24/OP11/OP23/OP3/OP25 grün.
-- Offen: Rest-Templates (analysis, files, dashboard, agents, spectra,
-  jobs, settings, documentation u. a.) auf `{% trans %}` — inkrementell
-  je Template (OP48b-Muster).
+- [x] OP48f Rest-Templates: alle 19 verbleibenden UI-Templates (dashboard, analysis, files, agents, spectra, jobs, settings, documentation, projects, register, workflow_list, workflow_results, sensor_list, sensor_detail, spectrum_database, spectrum_detail, crew_report, project_report, dashboard_colorful) auf `{% trans %}` umgestellt; präexistente Defekte in workflow_list/workflow_results repariert (verstümmelte `{%`-Präfixe, `|format` → `floatformat:2`, `|sum(attribute=…)` → `|length`); 706 Template-msgids in die Kataloge gepflegt (de: 513 neue Übersetzungen inkl. aller Fließtexte; en: 611 identity + 33 deutsche msgids rückübersetzt); msgfmt clean, render_check ALL OK; OP48-Testmatrix 62/62 grün; Regressionen OP3 (45/45), OP25 (65/65), OP8 (77/77), OP8-Crew (38/38), OP15 (44/44) grün. OP48 damit abgeschlossen.
 
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter

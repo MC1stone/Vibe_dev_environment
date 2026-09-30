@@ -118,12 +118,6 @@ msgstr "Analysis Preferences"
 msgid "Storage Preferences"
 msgstr "Storage Preferences"
 
-#: templates/base.html:7
-msgid ""
-"NIR_Mistral DeveloperAgent Framework - Advanced NIR Spectroscopy Analysis "
-"Platform"
-msgstr ""
-
 #: templates/base.html:10
 msgid "NIR_Mistral Framework"
 msgstr "NIR_Mistral Framework"
@@ -181,12 +175,6 @@ msgstr "&copy; 2026 NIR_Mistral Framework. All rights reserved."
 msgid "Analysis Chatbot"
 msgstr "Analysis Chatbot"
 
-#: templates/chatbot.html:15
-msgid ""
-"Discuss your analysis results with the local Ollama/Mistral chatbot (S6) "
-"with Qdrant RAG context (OP1)"
-msgstr ""
-
 #: templates/chatbot.html:25
 msgid "Clear Chat"
 msgstr "Clear Chat"
@@ -239,19 +227,6 @@ msgstr "Context options"
 msgid "Attach recent analysis results"
 msgstr "Attach recent analysis results"
 
-#: templates/chatbot.html:83
-msgid ""
-"When checked, the latest analysis results are sent along with your question "
-"so the chatbot can discuss them (S6). Qdrant RAG context (OP1) is added "
-"automatically by the service when available."
-msgstr ""
-
-#: templates/federated.html:12
-msgid ""
-"Federated calibration across distributed spectrometer setups (FL1-FL3) - "
-"only model parameters leave the client, raw spectra remain local"
-msgstr ""
-
 #: templates/federated.html:17
 msgid "Refresh status"
 msgstr "Refresh status"
@@ -280,12 +255,6 @@ msgstr "Privacy status"
 msgid "ILIAS E-Learning"
 msgstr "ILIAS E-Learning"
 
-#: templates/ilias.html:15
-msgid ""
-"Synchronize NIR laboratory learning paths to the ILIAS container (S8) with "
-"OAuth2 authentication (OP2)"
-msgstr ""
-
 #: templates/ilias.html:21
 msgid "Refresh Status"
 msgstr "Refresh Status"
@@ -297,13 +266,6 @@ msgstr "Open ILIAS"
 #: templates/index.html:199
 msgid "NIR Intelligence Platform"
 msgstr "NIR Intelligence Platform"
-
-#: templates/index.html:201
-msgid ""
-"Vollständig lokale NIR-Spektroskopie-Analyse: Projekt hochladen, Metadaten "
-"pflegen, Agenten-Analyse freigeben, studentenfertiger Abschlussbericht mit "
-"Chatbot."
-msgstr ""
 
 #: templates/index.html:205
 msgid "Create new project"
@@ -1148,3 +1110,2447 @@ msgstr "title is required"
 # OP48d: JavaScript user-facing message
 msgid "Please log in to upload files."
 msgstr "Please log in to upload files."
+
+# OP48e: template UI text
+msgid "0 MB"
+msgstr "0 MB"
+
+# OP48e: template UI text
+msgid "1100 nm"
+msgstr "1100 nm"
+
+# OP48e: template UI text
+msgid "1500 nm"
+msgstr "1500 nm"
+
+# OP48e: template UI text
+msgid "1900 nm"
+msgstr "1900 nm"
+
+# OP48e: template UI text
+msgid "2500 nm"
+msgstr "2500 nm"
+
+# OP48e: template UI text
+msgid "700 nm"
+msgstr "700 nm"
+
+# OP48e: template UI text
+msgid "About Our Platform"
+msgstr "About Our Platform"
+
+# OP48e: template UI text
+msgid "Abschluss-Quarto-Bericht"
+msgstr "Final Quarto report"
+
+# OP48e: template UI text
+msgid "Accuracy"
+msgstr "Accuracy"
+
+# OP48e: template UI text
+msgid "Actions"
+msgstr "Actions"
+
+# OP48e: template UI text
+msgid "Active"
+msgstr "Active"
+
+# OP48e: template UI text
+msgid "Active Agents"
+msgstr "Active Agents"
+
+# OP48e: template UI text
+msgid "Active Jobs"
+msgstr "Active Jobs"
+
+# OP48e: template UI text
+msgid "Active Users"
+msgstr "Active Users"
+
+# OP48e: template UI text
+msgid "Adapter"
+msgstr "Adapter"
+
+# OP48e: template UI text
+msgid "Advanced NIR Spectroscopy Analysis Platform for research and industrial applications"
+msgstr "Advanced NIR Spectroscopy Analysis Platform for research and industrial applications"
+
+# OP48e: template UI text
+msgid "Advanced NIR spectroscopy analysis tools"
+msgstr "Advanced NIR spectroscopy analysis tools"
+
+# OP48e: template UI text
+msgid "Agent Configuration"
+msgstr "Agent Configuration"
+
+# OP48e: template UI text
+msgid "Agent Details"
+msgstr "Agent Details"
+
+# OP48e: template UI text
+msgid "Agent Framework"
+msgstr "Agent Framework"
+
+# OP48e: template UI text
+msgid "Agent Name"
+msgstr "Agent Name"
+
+# OP48e: template UI text
+msgid "Agents"
+msgstr "Agents"
+
+# OP48e: template UI text
+msgid "Agents:"
+msgstr "Agents:"
+
+# OP48e: template UI text
+msgid "Agents in the NIR_Mistral framework are specialized modules that perform specific analysis tasks on NIR spectroscopy data. Each agent is designed to handle a particular type of analysis or data processing."
+msgstr "Agents in the NIR_Mistral framework are specialized modules that perform specific analysis tasks on NIR spectroscopy data. Each agent is designed to handle a particular type of analysis or data processing."
+
+# OP48e: template UI text
+msgid "Agent System:"
+msgstr "Agent System:"
+
+# OP48e: template UI text
+msgid "Aggregation:"
+msgstr "Aggregation:"
+
+# OP48e: template UI text
+msgid "Ähnlichkeit"
+msgstr "Similarity"
+
+# OP48e: template UI text
+msgid "AI Agents"
+msgstr "AI Agents"
+
+# OP48e: template UI text
+msgid "All Available Agents"
+msgstr "All Available Agents"
+
+# OP48e: template UI text
+msgid "All Capabilities"
+msgstr "All Capabilities"
+
+# OP48e: template UI text
+msgid "All Categories"
+msgstr "All Categories"
+
+# OP48e: template UI text
+msgid "Alle Dateien bilden zusammen ein Projekt."
+msgstr "All files together form one project."
+
+# OP48e: template UI text
+msgid "All Files"
+msgstr "All Files"
+
+# OP48e: template UI text
+msgid "All Spectra"
+msgstr "All Spectra"
+
+# OP48e: template UI text
+msgid "All Statuses"
+msgstr "All Statuses"
+
+# OP48e: template UI text
+msgid "All Systems Operational"
+msgstr "All Systems Operational"
+
+# OP48e: template UI text
+msgid "All Types"
+msgstr "All Types"
+
+# OP48e: template UI text
+msgid "All Workflows"
+msgstr "All Workflows"
+
+# OP48e: template UI text
+msgid "Analose-Projekte"
+msgstr "Analose-Projekte"
+
+# OP48e: template UI text
+msgid "Analysis"
+msgstr "Analysis"
+
+# OP48e: template UI text
+msgid "Analysis:"
+msgstr "Analysis:"
+
+# OP48e: template UI text
+msgid "Analysis Jobs"
+msgstr "Analysis Jobs"
+
+# OP48e: template UI text
+msgid "Analysis jobs stuck in pending state"
+msgstr "Analysis jobs stuck in pending state"
+
+# OP48e: template UI text
+msgid "Analysis Modes"
+msgstr "Analysis Modes"
+
+# OP48e: template UI text
+msgid "Analysis Type"
+msgstr "Analysis Type"
+
+# OP48e: template UI text
+msgid "Analysis Types"
+msgstr "Analysis Types"
+
+# OP48e: template UI text
+msgid "Analysis Workflow"
+msgstr "Analysis Workflow"
+
+# OP48e: template UI text
+msgid "Analytics"
+msgstr "Analytics"
+
+# OP48e: template UI text
+msgid "Analyze a spectrum"
+msgstr "Analyze a spectrum"
+
+# OP48e: template UI text
+msgid "Analyze existing spectral data"
+msgstr "Analyze existing spectral data"
+
+# OP48e: template UI text
+msgid "Analyze Spectrum"
+msgstr "Analyze Spectrum"
+
+# OP48e: template UI text
+msgid "and"
+msgstr "and"
+
+# OP48e: template UI text
+msgid "Anomalies Detected:"
+msgstr "Anomalies Detected:"
+
+# OP48e: template UI text
+msgid "API Base URL"
+msgstr "API Base URL"
+
+# OP48e: template UI text
+msgid "API Documentation"
+msgstr "API Documentation"
+
+# OP48e: template UI text
+msgid "API Reference"
+msgstr "API Reference"
+
+# OP48e: template UI text
+msgid "API Service"
+msgstr "API Service"
+
+# OP48e: template UI text
+msgid "API Settings"
+msgstr "API Settings"
+
+# OP48e: template UI text
+msgid "Architecture"
+msgstr "Architecture"
+
+# OP48e: template UI text
+msgid "Archive"
+msgstr "Archive"
+
+# OP48e: template UI text
+msgid "Assesses the quality and completeness of spectrum metadata using comprehensive validation rules."
+msgstr "Assesses the quality and completeness of spectrum metadata using comprehensive validation rules."
+
+# OP48e: template UI text
+msgid "Audio"
+msgstr "Audio"
+
+# OP48e: template UI text
+msgid "Authentication"
+msgstr "Authentication"
+
+# OP48e: template UI text
+msgid "Auto-analyze after upload"
+msgstr "Auto-analyze after upload"
+
+# OP48e: template UI text
+msgid "Auto Detect"
+msgstr "Auto Detect"
+
+# OP48e: template UI text
+msgid "Auto Refresh Data"
+msgstr "Auto Refresh Data"
+
+# OP48e: template UI text
+msgid "Available"
+msgstr "Available"
+
+# OP48e: template UI text
+msgid "Available Agents"
+msgstr "Available Agents"
+
+# OP48e: template UI text
+msgid "Available Crew AI Agents"
+msgstr "Available Crew AI Agents"
+
+# OP48e: template UI text
+msgid "Balanced analysis with all core agents (Spectral, Metadata, Reporting, Calibration)."
+msgstr "Balanced analysis with all core agents (Spectral, Metadata, Reporting, Calibration)."
+
+# OP48e: template UI text
+msgid "Batch Mode"
+msgstr "Batch Mode"
+
+# OP48e: template UI text
+msgid "Bearbeiten"
+msgstr "Bearbeiten"
+
+# OP48e: template UI text
+msgid "Benefit from the collective knowledge of the entire network while maintaining data privacy."
+msgstr "Benefit from the collective knowledge of the entire network while maintaining data privacy."
+
+# OP48e: template UI text
+msgid "Benefits of Federated Learning"
+msgstr "Benefits of Federated Learning"
+
+# OP48e: template UI text
+msgid "Bereich (nm)"
+msgstr "Bereich (nm)"
+
+# OP48e: template UI text
+msgid "Bereich / Werte"
+msgstr "Bereich / Werte"
+
+# OP48e: template UI text
+msgid "Bericht"
+msgstr "Report"
+
+# OP48e: template UI text
+msgid "Beschreibung"
+msgstr "Beschreibung"
+
+# OP48e: template UI text
+msgid "Beschreibung/Probenhintergrund"
+msgstr "Beschreibung/Probenhintergrund"
+
+# OP48e: template UI text
+msgid "Bewertung"
+msgstr "Evaluation"
+
+# OP48e: template UI text
+msgid "Bewertung der Einstellungen"
+msgstr "Evaluation of settings"
+
+# OP48e: template UI text
+msgid "Bio"
+msgstr "Bio"
+
+# OP48e: template UI text
+msgid "Browse Library"
+msgstr "Browse Library"
+
+# OP48e: template UI text
+msgid "By creating an account, you'll gain access to:"
+msgstr "By creating an account, you'll gain access to:"
+
+# OP48e: template UI text
+msgid "Calibration"
+msgstr "Calibration"
+
+# OP48e: template UI text
+msgid "Calibration:"
+msgstr "Calibration:"
+
+# OP48e: template UI text
+msgid "Calibration Agent"
+msgstr "Calibration Agent"
+
+# OP48e: template UI text
+msgid "CalibrationAgent"
+msgstr "CalibrationAgent"
+
+# OP48e: template UI text
+msgid "Cancel"
+msgstr "Cancel"
+
+# OP48e: template UI text
+msgid "Cancel a job"
+msgstr "Cancel a job"
+
+# OP48e: template UI text
+msgid "Capabilities:"
+msgstr "Capabilities:"
+
+# OP48e: template UI text
+msgid "Change Password"
+msgstr "Change Password"
+
+# OP48e: template UI text
+msgid "Check connection credentials"
+msgstr "Check connection credentials"
+
+# OP48e: template UI text
+msgid "Check file size doesn't exceed maximum limit"
+msgstr "Check file size doesn't exceed maximum limit"
+
+# OP48e: template UI text
+msgid "Check out the"
+msgstr "Check out the"
+
+# OP48e: template UI text
+msgid "Check Redis server connection"
+msgstr "Check Redis server connection"
+
+# OP48e: template UI text
+msgid "Checks:"
+msgstr "Checks:"
+
+# OP48e: template UI text
+msgid "Check Updates"
+msgstr "Check Updates"
+
+# OP48e: template UI text
+msgid "Cleanup All"
+msgstr "Cleanup All"
+
+# OP48e: template UI text
+msgid "Cleanup Files"
+msgstr "Cleanup Files"
+
+# OP48e: template UI text
+msgid "Clean up old analysis resources"
+msgstr "Clean up old analysis resources"
+
+# OP48e: template UI text
+msgid "Close"
+msgstr "Close"
+
+# OP48e: template UI text
+msgid "Collaboration with researchers worldwide"
+msgstr "Collaboration with researchers worldwide"
+
+# OP48e: template UI text
+msgid "Collaborative Improvement"
+msgstr "Collaborative Improvement"
+
+# OP48e: template UI text
+msgid "Comma-separated values format. First row should contain headers (wavelength, value)."
+msgstr "Comma-separated values format. First row should contain headers (wavelength, value)."
+
+# OP48e: template UI text
+msgid "Commercial NIR"
+msgstr "Commercial NIR"
+
+# OP48e: template UI text
+msgid "Common Issues"
+msgstr "Common Issues"
+
+# OP48e: template UI text
+msgid "Comparative Analysis"
+msgstr "Comparative Analysis"
+
+# OP48e: template UI text
+msgid "Compares multiple spectra using various methods."
+msgstr "Compares multiple spectra using various methods."
+
+# OP48e: template UI text
+msgid "Comparison:"
+msgstr "Comparison:"
+
+# OP48e: template UI text
+msgid "Completed"
+msgstr "Completed"
+
+# OP48e: template UI text
+msgid "Complete history of executed analysis workflows"
+msgstr "Complete history of executed analysis workflows"
+
+# OP48e: template UI text
+msgid "Comprehensive"
+msgstr "Comprehensive"
+
+# OP48e: template UI text
+msgid "Comprehensive:"
+msgstr "Comprehensive:"
+
+# OP48e: template UI text
+msgid "Comprehensive documentation for the NIR_Mistral DeveloperAgent Framework"
+msgstr "Comprehensive documentation for the NIR_Mistral DeveloperAgent Framework"
+
+# OP48e: template UI text
+msgid "Comprehensive Mode"
+msgstr "Comprehensive Mode"
+
+# OP48e: template UI text
+msgid "Comprehensive NIR Spectral Analysis Reports"
+msgstr "Comprehensive NIR Spectral Analysis Reports"
+
+# OP48e: template UI text
+msgid "Computes statistical metrics for the spectrum."
+msgstr "Computes statistical metrics for the spectrum."
+
+# OP48e: template UI text
+msgid "Configure AI analysis agents"
+msgstr "Configure AI analysis agents"
+
+# OP48e: template UI text
+msgid "Configure framework settings and user preferences"
+msgstr "Configure framework settings and user preferences"
+
+# OP48e: template UI text
+msgid "Confirm"
+msgstr "Confirm"
+
+# OP48e: template UI text
+msgid "Confirm Action"
+msgstr "Confirm Action"
+
+# OP48e: template UI text
+msgid "Confirm Deletion"
+msgstr "Confirm Deletion"
+
+# OP48e: template UI text
+msgid "Confirm Password"
+msgstr "Confirm Password"
+
+# OP48e: template UI text
+msgid "Connected"
+msgstr "Connected"
+
+# OP48e: template UI text
+msgid "Consistency"
+msgstr "Consistency"
+
+# OP48e: template UI text
+msgid "Contribute data to federated learning"
+msgstr "Contribute data to federated learning"
+
+# OP48e: template UI text
+msgid "Contributing Data to Federated Learning"
+msgstr "Contributing Data to Federated Learning"
+
+# OP48e: template UI text
+msgid "Contributing to Federated Learning"
+msgstr "Contributing to Federated Learning"
+
+# OP48e: template UI text
+msgid "Contribution History:"
+msgstr "Contribution History:"
+
+# OP48e: template UI text
+msgid "Core Framework"
+msgstr "Core Framework"
+
+# OP48e: template UI text
+msgid "Create Account"
+msgstr "Create Account"
+
+# OP48e: template UI text
+msgid "Create a new job"
+msgstr "Create a new job"
+
+# OP48e: template UI text
+msgid "Create Job"
+msgstr "Create Job"
+
+# OP48e: template UI text
+msgid "Create New Job"
+msgstr "Create New Job"
+
+# OP48e: template UI text
+msgid "Create Your Account"
+msgstr "Create Your Account"
+
+# OP48e: template UI text
+msgid "Creating Custom Agents"
+msgstr "Creating Custom Agents"
+
+# OP48e: template UI text
+msgid "Crew AI Agents"
+msgstr "Crew AI Agents"
+
+# OP48e: template UI text
+msgid "Crew AI Analysis"
+msgstr "Crew AI Analysis"
+
+# OP48e: template UI text
+msgid "CrewAI Analysis Report"
+msgstr "CrewAI Analysis Report"
+
+# OP48e: template UI text
+msgid "Crew AI API Endpoints"
+msgstr "Crew AI API Endpoints"
+
+# OP48e: template UI text
+msgid "Crew AI Integration"
+msgstr "Crew AI Integration"
+
+# OP48e: template UI text
+msgid "CSV Files"
+msgstr "CSV Files"
+
+# OP48e: template UI text
+msgid "Dark"
+msgstr "Dark"
+
+# OP48e: template UI text
+msgid "Dashboard:"
+msgstr "Dashboard:"
+
+# OP48e: template UI text
+msgid "Database Connection"
+msgstr "Database Connection"
+
+# OP48e: template UI text
+msgid "Data can be shared with federated learning network for collaborative model improvement."
+msgstr "Data can be shared with federated learning network for collaborative model improvement."
+
+# OP48e: template UI text
+msgid "Data Flow"
+msgstr "Data Flow"
+
+# OP48e: template UI text
+msgid "Data is used for federated learning but with enhanced privacy protections."
+msgstr "Data is used for federated learning but with enhanced privacy protections."
+
+# OP48e: template UI text
+msgid "Data Privacy"
+msgstr "Data Privacy"
+
+# OP48e: template UI text
+msgid "Data Processing:"
+msgstr "Data Processing:"
+
+# OP48e: template UI text
+msgid "Data Quality"
+msgstr "Data Quality"
+
+# OP48e: template UI text
+msgid "Data remains on your local system only. No external sharing."
+msgstr "Data remains on your local system only. No external sharing."
+
+# OP48e: template UI text
+msgid "Data Sharing"
+msgstr "Data Sharing"
+
+# OP48e: template UI text
+msgid "Data Upload:"
+msgstr "Data Upload:"
+
+# OP48e: template UI text
+msgid "Datei"
+msgstr "Datei"
+
+# OP48e: template UI text
+msgid "Dateien"
+msgstr "Files"
+
+# OP48e: template UI text
+msgid "Default Data Directory"
+msgstr "Default Data Directory"
+
+# OP48e: template UI text
+msgid "Delete"
+msgstr "Delete"
+
+# OP48e: template UI text
+msgid "DELETE"
+msgstr "DELETE"
+
+# OP48e: template UI text
+msgid "Delete Account"
+msgstr "Delete Account"
+
+# OP48e: template UI text
+msgid "Delete a job"
+msgstr "Delete a job"
+
+# OP48e: template UI text
+msgid "Delete a spectrum"
+msgstr "Delete a spectrum"
+
+# OP48e: template UI text
+msgid "Delete Selected"
+msgstr "Delete Selected"
+
+# OP48e: template UI text
+msgid "Description"
+msgstr "Description"
+
+# OP48e: template UI text
+msgid "Details"
+msgstr "Details"
+
+# OP48e: template UI text
+msgid "Detected"
+msgstr "Detected"
+
+# OP48e: template UI text
+msgid "Detektor"
+msgstr "Detektor"
+
+# OP48e: template UI text
+msgid "Detektor:"
+msgstr "Detektor:"
+
+# OP48e: template UI text
+msgid "Disabled"
+msgstr "Disabled"
+
+# OP48e: template UI text
+msgid "Discuss your analysis results with the local Ollama/Mistral chatbot (S6) with Qdrant RAG context (OP1)"
+msgstr "Discuss your analysis results with the local Ollama/Mistral chatbot (S6) with Qdrant RAG context (OP1)"
+
+# OP48e: template UI text
+msgid "Distanz"
+msgstr "Distanz"
+
+# OP48e: template UI text
+msgid "Distributed Computing"
+msgstr "Distributed Computing"
+
+# OP48e: template UI text
+msgid "DIY Spectrometer"
+msgstr "DIY Spectrometer"
+
+# OP48e: template UI text
+msgid "Document"
+msgstr "Document"
+
+# OP48e: template UI text
+msgid "Documentation"
+msgstr "Documentation"
+
+# OP48e: template UI text
+msgid "Download"
+msgstr "Download"
+
+# OP48e: template UI text
+msgid "Download Docs"
+msgstr "Download Docs"
+
+# OP48e: template UI text
+msgid "Each spectrum can include metadata such as:"
+msgstr "Each spectrum can include metadata such as:"
+
+# OP48e: template UI text
+msgid "eigene"
+msgstr "eigene"
+
+# OP48e: template UI text
+msgid "Einheit"
+msgstr "Einheit"
+
+# OP48e: template UI text
+msgid "Einstelloptionen"
+msgstr "Einstelloptionen"
+
+# OP48e: template UI text
+msgid "Enable API Logging"
+msgstr "Enable API Logging"
+
+# OP48e: template UI text
+msgid "Endpoint"
+msgstr "Endpoint"
+
+# OP48e: template UI text
+msgid "Endpoints"
+msgstr "Endpoints"
+
+# OP48e: template UI text
+msgid "English"
+msgstr "English"
+
+# OP48e: template UI text
+msgid "Ensure file is in supported format (TXT, CSV, JSON)"
+msgstr "Ensure file is in supported format (TXT, CSV, JSON)"
+
+# OP48e: template UI text
+msgid "Erfasste Einstellungen"
+msgstr "Recorded settings"
+
+# OP48e: template UI text
+msgid "Erfasste Einstellungen in den Messungen"
+msgstr "Settings recorded in the measurements"
+
+# OP48e: template UI text
+msgid "Erfasste Werte"
+msgstr "Erfasste Werte"
+
+# OP48e: template UI text
+msgid "erf&uuml;llt"
+msgstr "erf&uuml;llt"
+
+# OP48e: template UI text
+msgid "Erhobene Metadaten je Datensatz"
+msgstr "Metadata collected per dataset"
+
+# OP48e: template UI text
+msgid "Error"
+msgstr "Error"
+
+# OP48e: template UI text
+msgid "Errors"
+msgstr "Errors"
+
+# OP48e: template UI text
+msgid "Erstellt"
+msgstr "Erstellt"
+
+# OP48e: template UI text
+msgid "Example Agent Structure"
+msgstr "Example Agent Structure"
+
+# OP48e: template UI text
+msgid "Example API Usage"
+msgstr "Example API Usage"
+
+# OP48e: template UI text
+msgid "Execute Agent"
+msgstr "Execute Agent"
+
+# OP48e: template UI text
+msgid "Execute an agent"
+msgstr "Execute an agent"
+
+# OP48e: template UI text
+msgid "Execute analysis using framework agents"
+msgstr "Execute analysis using framework agents"
+
+# OP48e: template UI text
+msgid "Export Data"
+msgstr "Export Data"
+
+# OP48e: template UI text
+msgid "Export List"
+msgstr "Export List"
+
+# OP48e: template UI text
+msgid "Externes Trigger-Signal:"
+msgstr "Externes Trigger-Signal:"
+
+# OP48e: template UI text
+msgid "Failed"
+msgstr "Failed"
+
+# OP48e: template UI text
+msgid "FAQ"
+msgstr "FAQ"
+
+# OP48e: template UI text
+msgid "Fast analysis with essential agents only, optimized for speed."
+msgstr "Fast analysis with essential agents only, optimized for speed."
+
+# OP48e: template UI text
+msgid "Fastest First"
+msgstr "Fastest First"
+
+# OP48e: template UI text
+msgid "Federated Learning Agent"
+msgstr "Federated Learning Agent"
+
+# OP48e: template UI text
+msgid "Federated Learning API"
+msgstr "Federated Learning API"
+
+# OP48e: template UI text
+msgid "Federated Learning with FlowerAI for collaborative model training"
+msgstr "Federated Learning with FlowerAI for collaborative model training"
+
+# OP48e: template UI text
+msgid "Fehlende Parameter"
+msgstr "Fehlende Parameter"
+
+# OP48e: template UI text
+msgid "fehlgeschlagen"
+msgstr "fehlgeschlagen"
+
+# OP48e: template UI text
+msgid "Fehlt"
+msgstr "Fehlt"
+
+# OP48e: template UI text
+msgid "Feld"
+msgstr "Feld"
+
+# OP48e: template UI text
+msgid "File Categories"
+msgstr "File Categories"
+
+# OP48e: template UI text
+msgid "File Category"
+msgstr "File Category"
+
+# OP48e: template UI text
+msgid "File Details"
+msgstr "File Details"
+
+# OP48e: template UI text
+msgid "File Information"
+msgstr "File Information"
+
+# OP48e: template UI text
+msgid "File Management"
+msgstr "File Management"
+
+# OP48e: template UI text
+msgid "Files Data Table"
+msgstr "Files Data Table"
+
+# OP48e: template UI text
+msgid "Files Gallery"
+msgstr "Files Gallery"
+
+# OP48e: template UI text
+msgid "File upload fails"
+msgstr "File upload fails"
+
+# OP48e: template UI text
+msgid "Filter by Status"
+msgstr "Filter by Status"
+
+# OP48e: template UI text
+msgid "Filter & Search Agents"
+msgstr "Filter & Search Agents"
+
+# OP48e: template UI text
+msgid "First Name"
+msgstr "First Name"
+
+# OP48e: template UI text
+msgid "FlowerAgent"
+msgstr "FlowerAgent"
+
+# OP48e: template UI text
+msgid "Flower Federated Learning Agent"
+msgstr "Flower Federated Learning Agent"
+
+# OP48e: template UI text
+msgid "for detailed instructions."
+msgstr "for detailed instructions."
+
+# OP48e: template UI text
+msgid "for details."
+msgstr "for details."
+
+# OP48e: template UI text
+msgid "for more details."
+msgstr "for more details."
+
+# OP48e: template UI text
+msgid "For production deployments, especially on Venty Stick devices, use the Ansible playbooks:"
+msgstr "For production deployments, especially on Venty Stick devices, use the Ansible playbooks:"
+
+# OP48e: template UI text
+msgid "Framework Configuration"
+msgstr "Framework Configuration"
+
+# OP48e: template UI text
+msgid "Framework Health"
+msgstr "Framework Health"
+
+# OP48e: template UI text
+msgid "Framework Information"
+msgstr "Framework Information"
+
+# OP48e: template UI text
+msgid "Framework Overview"
+msgstr "Framework Overview"
+
+# OP48e: template UI text
+msgid "Framework Version"
+msgstr "Framework Version"
+
+# OP48e: template UI text
+msgid "French"
+msgstr "French"
+
+# OP48e: template UI text
+msgid "Frequently Asked Questions"
+msgstr "Frequently Asked Questions"
+
+# OP48e: template UI text
+msgid "FTIR"
+msgstr "FTIR"
+
+# OP48e: template UI text
+msgid "Full Analysis"
+msgstr "Full Analysis"
+
+# OP48e: template UI text
+msgid "Full analysis with all agents including advanced features and detailed reporting."
+msgstr "Full analysis with all agents including advanced features and detailed reporting."
+
+# OP48e: template UI text
+msgid "Generated Report Files"
+msgstr "Generated Report Files"
+
+# OP48e: template UI text
+msgid "Generated Reports"
+msgstr "Generated Reports"
+
+# OP48e: template UI text
+msgid "Generates comprehensive reports in multiple formats (HTML, PDF, DOCX, Markdown, Quarto) with customizable templates."
+msgstr "Generates comprehensive reports in multiple formats (HTML, PDF, DOCX, Markdown, Quarto) with customizable templates."
+
+# OP48e: template UI text
+msgid "German"
+msgstr "German"
+
+# OP48e: template UI text
+msgid "GET"
+msgstr "GET"
+
+# OP48e: template UI text
+msgid "Get agent details"
+msgstr "Get agent details"
+
+# OP48e: template UI text
+msgid "Get analysis history"
+msgstr "Get analysis history"
+
+# OP48e: template UI text
+msgid "Get Crew AI system status"
+msgstr "Get Crew AI system status"
+
+# OP48e: template UI text
+msgid "Geteilt (anderer Nutzer)"
+msgstr "Geteilt (anderer Nutzer)"
+
+# OP48e: template UI text
+msgid "Get job details"
+msgstr "Get job details"
+
+# OP48e: template UI text
+msgid "Get preview of a generated report"
+msgstr "Get preview of a generated report"
+
+# OP48e: template UI text
+msgid "Get spectrum details"
+msgstr "Get spectrum details"
+
+# OP48e: template UI text
+msgid "Get status of a specific analysis"
+msgstr "Get status of a specific analysis"
+
+# OP48e: template UI text
+msgid "Getting Started"
+msgstr "Getting Started"
+
+# OP48e: template UI text
+msgid "GitHub Repository"
+msgstr "GitHub Repository"
+
+# OP48e: template UI text
+msgid "Handles spectrometer calibration, wavelength correction, and instrument validation for accurate measurements."
+msgstr "Handles spectrometer calibration, wavelength correction, and instrument validation for accurate measurements."
+
+# OP48e: template UI text
+msgid "High"
+msgstr "High"
+
+# OP48e: template UI text
+msgid "Hochladen &amp; Projekt anlegen"
+msgstr "Upload &amp; create project"
+
+# OP48e: template UI text
+msgid "How Federated Learning Works"
+msgstr "How Federated Learning Works"
+
+# OP48e: template UI text
+msgid "I accept the"
+msgstr "I accept the"
+
+# OP48e: template UI text
+msgid "Identifies and analyzes spectral peaks using various algorithms (local maxima, derivatives)."
+msgstr "Identifies and analyzes spectral peaks using various algorithms (local maxima, derivatives)."
+
+# OP48e: template UI text
+msgid "Image"
+msgstr "Image"
+
+# OP48e: template UI text
+msgid "implausibel"
+msgstr "implausibel"
+
+# OP48e: template UI text
+msgid "Implements federated learning capabilities for collaborative model training while preserving data privacy."
+msgstr "Implements federated learning capabilities for collaborative model training while preserving data privacy."
+
+# OP48e: template UI text
+msgid "Improved Model:"
+msgstr "Improved Model:"
+
+# OP48e: template UI text
+msgid "In den Messdaten wurden keine Einstellungen erfasst."
+msgstr "No settings were recorded in the measurement data."
+
+# OP48e: template UI text
+msgid "(inline-upload + Choose-file button)"
+msgstr "(inline-upload + Choose-file button)"
+
+# OP48e: template UI text
+msgid "In Nutzung"
+msgstr "In use"
+
+# OP48e: template UI text
+msgid "Installation"
+msgstr "Installation"
+
+# OP48e: template UI text
+msgid "installation guide"
+msgstr "installation guide"
+
+# OP48e: template UI text
+msgid "Institution (Optional)"
+msgstr "Institution (Optional)"
+
+# OP48e: template UI text
+msgid "Integration with ILIAS e-learning platform for educational resources"
+msgstr "Integration with ILIAS e-learning platform for educational resources"
+
+# OP48e: template UI text
+msgid "Interface"
+msgstr "Interface"
+
+# OP48e: template UI text
+msgid "Interface:"
+msgstr "Interface:"
+
+# OP48e: template UI text
+msgid "Invalid Files"
+msgstr "Invalid Files"
+
+# OP48e: template UI text
+msgid "Invalid Only"
+msgstr "Invalid Only"
+
+# OP48e: template UI text
+msgid "Invalid Spectra"
+msgstr "Invalid Spectra"
+
+# OP48e: template UI text
+msgid "In Vorbereitung"
+msgstr "In Vorbereitung"
+
+# OP48e: template UI text
+msgid "IR"
+msgstr "IR"
+
+# OP48e: template UI text
+msgid "Iterative Process:"
+msgstr "Iterative Process:"
+
+# OP48e: template UI text
+msgid "Jetzt Projekt anlegen"
+msgstr "Create project now"
+
+# OP48e: template UI text
+msgid "Job Details"
+msgstr "Job Details"
+
+# OP48e: template UI text
+msgid "Job Execution:"
+msgstr "Job Execution:"
+
+# OP48e: template UI text
+msgid "Job ID:"
+msgstr "Job ID:"
+
+# OP48e: template UI text
+msgid "Job Management:"
+msgstr "Job Management:"
+
+# OP48e: template UI text
+msgid "Job Name"
+msgstr "Job Name"
+
+# OP48e: template UI text
+msgid "Jobs"
+msgstr "Jobs"
+
+# OP48e: template UI text
+msgid "Jobs:"
+msgstr "Jobs:"
+
+# OP48e: template UI text
+msgid "Join the NIR_Mistral community"
+msgstr "Join the NIR_Mistral community"
+
+# OP48e: template UI text
+msgid "JSON Files"
+msgstr "JSON Files"
+
+# OP48e: template UI text
+msgid "JSON format with wavelength and value arrays. Supports additional metadata."
+msgstr "JSON format with wavelength and value arrays. Supports additional metadata."
+
+# OP48e: template UI text
+msgid "Keine Adapter registriert."
+msgstr "Keine Adapter registriert."
+
+# OP48e: template UI text
+msgid "Keine Einstelloptionen bekannt."
+msgstr "Keine Einstelloptionen bekannt."
+
+# OP48e: template UI text
+msgid "Keine Empfehlungen."
+msgstr "Keine Empfehlungen."
+
+# OP48e: template UI text
+msgid "Keine Vergleichsspektren auf demselben Raster in der Datenbank."
+msgstr "No comparison spectra on the same grid in the database."
+
+# OP48e: template UI text
+msgid "KI-Einsch&auml;tzung (NIR-Relevanz):"
+msgstr "KI-Einsch&auml;tzung (NIR-Relevanz):"
+
+# OP48e: template UI text
+msgid "Konflikte:"
+msgstr "Konflikte:"
+
+# OP48e: template UI text
+msgid "Labor geteilt"
+msgstr "Labor geteilt"
+
+# OP48e: template UI text
+msgid "Last Name"
+msgstr "Last Name"
+
+# OP48e: template UI text
+msgid "Leverage computing resources across multiple devices for faster model training."
+msgstr "Leverage computing resources across multiple devices for faster model training."
+
+# OP48e: template UI text
+msgid "Light"
+msgstr "Light"
+
+# OP48e: template UI text
+msgid "List all available agents"
+msgstr "List all available agents"
+
+# OP48e: template UI text
+msgid "List all generated reports"
+msgstr "List all generated reports"
+
+# OP48e: template UI text
+msgid "List all jobs"
+msgstr "List all jobs"
+
+# OP48e: template UI text
+msgid "List all spectra"
+msgstr "List all spectra"
+
+# OP48e: template UI text
+msgid "Loading..."
+msgstr "Loading..."
+
+# OP48e: template UI text
+msgid "Loading Crew AI status..."
+msgstr "Loading Crew AI status..."
+
+# OP48e: template UI text
+msgid "Local Only"
+msgstr "Local Only"
+
+# OP48e: template UI text
+msgid "Local Training:"
+msgstr "Local Training:"
+
+# OP48e: template UI text
+msgid "Low"
+msgstr "Low"
+
+# OP48e: template UI text
+msgid "Manage Agents"
+msgstr "Manage Agents"
+
+# OP48e: template UI text
+msgid "Manage and monitor intelligent analysis agents for NIR spectroscopy"
+msgstr "Manage and monitor intelligent analysis agents for NIR spectroscopy"
+
+# OP48e: template UI text
+msgid "Maximum File Size (MB)"
+msgstr "Maximum File Size (MB)"
+
+# OP48e: template UI text
+msgid "Messdaten"
+msgstr "Messdaten"
+
+# OP48e: template UI text
+msgid "Messreihe"
+msgstr "Messreihe"
+
+# OP48e: template UI text
+msgid "Metadata Quality"
+msgstr "Metadata Quality"
+
+# OP48e: template UI text
+msgid "Metadata Quality:"
+msgstr "Metadata Quality:"
+
+# OP48e: template UI text
+msgid "Metadata Quality Agent"
+msgstr "Metadata Quality Agent"
+
+# OP48e: template UI text
+msgid "MetadataQualityAgent"
+msgstr "MetadataQualityAgent"
+
+# OP48e: template UI text
+msgid "Metadaten &amp; Herkunft"
+msgstr "Metadata &amp; origin"
+
+# OP48e: template UI text
+msgid "Metadaten/Dokumentation"
+msgstr "Metadata/documentation"
+
+# OP48e: template UI text
+msgid "Metadaten online anpassen"
+msgstr "Adjust metadata online"
+
+# OP48e: template UI text
+msgid "Metadaten-Score"
+msgstr "Metadata score"
+
+# OP48e: template UI text
+msgid "Metadaten speichern"
+msgstr "Save metadata"
+
+# OP48e: template UI text
+msgid "Method"
+msgstr "Method"
+
+# OP48e: template UI text
+msgid "Method 1: Manual Installation"
+msgstr "Method 1: Manual Installation"
+
+# OP48e: template UI text
+msgid "Method 2: Docker Installation"
+msgstr "Method 2: Docker Installation"
+
+# OP48e: template UI text
+msgid "Method 3: Ansible Deployment (Recommended for Production)"
+msgstr "Method 3: Ansible Deployment (Recommended for Production)"
+
+# OP48e: template UI text
+msgid "Methods:"
+msgstr "Methods:"
+
+# OP48e: template UI text
+msgid "Metrics:"
+msgstr "Metrics:"
+
+# OP48e: template UI text
+msgid "Missing required fields"
+msgstr "Missing required fields"
+
+# OP48e: template UI text
+msgid "Modell"
+msgstr "Modell"
+
+# OP48e: template UI text
+msgid "Model Performance:"
+msgstr "Model Performance:"
+
+# OP48e: template UI text
+msgid "Model Sharing"
+msgstr "Model Sharing"
+
+# OP48e: template UI text
+msgid "Model Updates:"
+msgstr "Model Updates:"
+
+# OP48e: template UI text
+msgid "Monitor analysis job status"
+msgstr "Monitor analysis job status"
+
+# OP48e: template UI text
+msgid "Monitor and manage Crew AI analysis jobs in real-time"
+msgstr "Monitor and manage Crew AI analysis jobs in real-time"
+
+# OP48e: template UI text
+msgid "Monitoring Federated Learning"
+msgstr "Monitoring Federated Learning"
+
+# OP48e: template UI text
+msgid "Multi-agent orchestration, task delegation, result aggregation, and intelligent workflow management."
+msgstr "Multi-agent orchestration, task delegation, result aggregation, and intelligent workflow management."
+
+# OP48e: template UI text
+msgid "Needs Review"
+msgstr "Needs Review"
+
+# OP48e: template UI text
+msgid "Neues Projekt aus Dateien"
+msgstr "New project from files"
+
+# OP48e: template UI text
+msgid "Neues Projekt (Upload)"
+msgstr "New project (upload)"
+
+# OP48e: template UI text
+msgid "Neural Network"
+msgstr "Neural Network"
+
+# OP48e: template UI text
+msgid "Neural network analysis did not produce results."
+msgstr "Neural network analysis did not produce results."
+
+# OP48e: template UI text
+msgid "Neural Network Analysis (MLP / Autoencoder / CNN)"
+msgstr "Neural Network Analysis (MLP / Autoencoder / CNN)"
+
+# OP48e: template UI text
+msgid "Newest First"
+msgstr "Newest First"
+
+# OP48e: template UI text
+msgid "New Password"
+msgstr "New Password"
+
+# OP48e: template UI text
+msgid "New Workflow"
+msgstr "New Workflow"
+
+# OP48e: template UI text
+msgid "NIR"
+msgstr "NIR"
+
+# OP48e: template UI text
+msgid "No"
+msgstr "No"
+
+# OP48e: template UI text
+msgid "Noch kein Abschlussbericht generiert."
+msgstr "Noch kein Abschlussbericht generiert."
+
+# OP48e: template UI text
+msgid "Noch keine Agenten-Berichte vorhanden."
+msgstr "Noch keine Agenten-Berichte vorhanden."
+
+# OP48e: template UI text
+msgid "Noch keine Projekte"
+msgstr "Noch keine Projekte"
+
+# OP48e: template UI text
+msgid "Noch nicht in Analysen"
+msgstr "Not yet in analyses"
+
+# OP48e: template UI text
+msgid "No file selected yet."
+msgstr "No file selected yet."
+
+# OP48e: template UI text
+msgid "None"
+msgstr "None"
+
+# OP48e: template UI text
+msgid "No recommendations — the analysis found no issues."
+msgstr "No recommendations — the analysis found no issues."
+
+# OP48e: template UI text
+msgid "Normal"
+msgstr "Normal"
+
+# OP48e: template UI text
+msgid "No spectral series stored for this file."
+msgstr "No spectral series stored for this file."
+
+# OP48e: template UI text
+msgid "Note:"
+msgstr "Note:"
+
+# OP48e: template UI text
+msgid "Nutzbar"
+msgstr "Nutzbar"
+
+# OP48e: template UI text
+msgid "Nutzung aus der bestehenden Datenbank"
+msgstr "Use from the existing database"
+
+# OP48e: template UI text
+msgid "Nutzung (bestehende Datenbank)"
+msgstr "Use (existing database)"
+
+# OP48e: template UI text
+msgid "Obtain JWT token"
+msgstr "Obtain JWT token"
+
+# OP48e: template UI text
+msgid "Offene KI-Fragen zu Ihren Metadaten:"
+msgstr "Open AI questions about your metadata:"
+
+# OP48e: template UI text
+msgid "ok"
+msgstr "ok"
+
+# OP48e: template UI text
+msgid "OK"
+msgstr "OK"
+
+# OP48e: template UI text
+msgid "Oldest First"
+msgstr "Oldest First"
+
+# OP48e: template UI text
+msgid "One workflow: Upload &rarr; Data Quality &rarr; Spectral Analysis &rarr; Statistics &rarr; Complete Report"
+msgstr "One workflow: Upload &rarr; Data Quality &rarr; Spectral Analysis &rarr; Statistics &rarr; Complete Report"
+
+# OP48e: template UI text
+msgid "Open Report"
+msgstr "Open Report"
+
+# OP48e: template UI text
+msgid "Open the Files page"
+msgstr "Open the Files page"
+
+# OP48e: template UI text
+msgid "Operational"
+msgstr "Operational"
+
+# OP48e: template UI text
+msgid "Organization"
+msgstr "Organization"
+
+# OP48e: template UI text
+msgid "Overview"
+msgstr "Overview"
+
+# OP48e: template UI text
+msgid "Parameter"
+msgstr "Parameter"
+
+# OP48e: template UI text
+msgid "Parameters:"
+msgstr "Parameters:"
+
+# OP48e: template UI text
+msgid "Password must be at least 8 characters long"
+msgstr "Password must be at least 8 characters long"
+
+# OP48e: template UI text
+msgid "Peak Detection"
+msgstr "Peak Detection"
+
+# OP48e: template UI text
+msgid "Pending"
+msgstr "Pending"
+
+# OP48e: template UI text
+msgid "Perform batch analysis on multiple samples"
+msgstr "Perform batch analysis on multiple samples"
+
+# OP48e: template UI text
+msgid "Performs comprehensive spectral analysis including quality assessment, peak detection, and statistical analysis."
+msgstr "Performs comprehensive spectral analysis including quality assessment, peak detection, and statistical analysis."
+
+# OP48e: template UI text
+msgid "Phase"
+msgstr "Phase"
+
+# OP48e: template UI text
+msgid "Phase 1: Datenaufbereitung"
+msgstr "Phase 1: Datenaufbereitung"
+
+# OP48e: template UI text
+msgid "Phase 1: Vorbereitung"
+msgstr "Phase 1: Vorbereitung"
+
+# OP48e: template UI text
+msgid "Phase 2: Agenten-Analysen"
+msgstr "Phase 2: agent analyses"
+
+# OP48e: template UI text
+msgid "Phase 2: Analyse"
+msgstr "Phase 2: Analyse"
+
+# OP48e: template UI text
+msgid "Plain text files with wavelength and absorbance columns. Supports various delimiters (comma, tab, space)."
+msgstr "Plain text files with wavelength and absorbance columns. Supports various delimiters (comma, tab, space)."
+
+# OP48e: template UI text
+msgid "plausibel"
+msgstr "plausibel"
+
+# OP48e: template UI text
+msgid "Plausibel"
+msgstr "Plausibel"
+
+# OP48e: template UI text
+msgid "Portable Device"
+msgstr "Portable Device"
+
+# OP48e: template UI text
+msgid "POST"
+msgstr "POST"
+
+# OP48e: template UI text
+msgid "Prerequisites"
+msgstr "Prerequisites"
+
+# OP48e: template UI text
+msgid "Privacy Controls"
+msgstr "Privacy Controls"
+
+# OP48e: template UI text
+msgid "Privacy Level"
+msgstr "Privacy Level"
+
+# OP48e: template UI text
+msgid "Privacy Levels"
+msgstr "Privacy Levels"
+
+# OP48e: template UI text
+msgid "Privacy Settings:"
+msgstr "Privacy Settings:"
+
+# OP48e: template UI text
+msgid "Privat"
+msgstr "Privat"
+
+# OP48e: template UI text
+msgid "Private Federated"
+msgstr "Private Federated"
+
+# OP48e: template UI text
+msgid "Probe"
+msgstr "Probe"
+
+# OP48e: template UI text
+msgid "Proben"
+msgstr "Proben"
+
+# OP48e: template UI text
+msgid "Proben:"
+msgstr "Proben:"
+
+# OP48e: template UI text
+msgid "Processing Time"
+msgstr "Processing Time"
+
+# OP48e: template UI text
+msgid "Process multiple spectra simultaneously with optimized resource usage."
+msgstr "Process multiple spectra simultaneously with optimized resource usage."
+
+# OP48e: template UI text
+msgid "Projekt"
+msgstr "Project"
+
+# OP48e: template UI text
+msgid "Projekt bearbeiten:"
+msgstr "Edit project:"
+
+# OP48e: template UI text
+msgid "Projekte"
+msgstr "Projekte"
+
+# OP48e: template UI text
+msgid "Projektname (optional)"
+msgstr "Projektname (optional)"
+
+# OP48e: template UI text
+msgid "Public Federated"
+msgstr "Public Federated"
+
+# OP48e: template UI text
+msgid "Punkte"
+msgstr "Punkte"
+
+# OP48e: template UI text
+msgid "Quality Control"
+msgstr "Quality Control"
+
+# OP48e: template UI text
+msgid "Quality Control:"
+msgstr "Quality Control:"
+
+# OP48e: template UI text
+msgid "Quality Score"
+msgstr "Quality Score"
+
+# OP48e: template UI text
+msgid "Quality Score:"
+msgstr "Quality Score:"
+
+# OP48e: template UI text
+msgid "Quality Scores"
+msgstr "Quality Scores"
+
+# OP48e: template UI text
+msgid "Quelle"
+msgstr "Quelle"
+
+# OP48e: template UI text
+msgid "Quellen uneinig - Alternativen in den Sensordetails"
+msgstr "Quellen uneinig - Alternativen in den Sensordetails"
+
+# OP48e: template UI text
+msgid "Quellprojekt"
+msgstr "Quellprojekt"
+
+# OP48e: template UI text
+msgid "Quick Actions"
+msgstr "Quick Actions"
+
+# OP48e: template UI text
+msgid "Quick Analysis"
+msgstr "Quick Analysis"
+
+# OP48e: template UI text
+msgid "Quick Links"
+msgstr "Quick Links"
+
+# OP48e: template UI text
+msgid "Quick Mode"
+msgstr "Quick Mode"
+
+# OP48e: template UI text
+msgid "Quick Start"
+msgstr "Quick Start"
+
+# OP48e: template UI text
+msgid "R² Score:"
+msgstr "R² Score:"
+
+# OP48e: template UI text
+msgid "Raman"
+msgstr "Raman"
+
+# OP48e: template UI text
+msgid "Raw data never leaves your device. Only model updates are shared, ensuring complete privacy."
+msgstr "Raw data never leaves your device. Only model updates are shared, ensuring complete privacy."
+
+# OP48e: template UI text
+msgid "Recent Activity"
+msgstr "Recent Activity"
+
+# OP48e: template UI text
+msgid "Recent Analysis Results"
+msgstr "Recent Analysis Results"
+
+# OP48e: template UI text
+msgid "Recent First"
+msgstr "Recent First"
+
+# OP48e: template UI text
+msgid "Recent Jobs"
+msgstr "Recent Jobs"
+
+# OP48e: template UI text
+msgid "Recommendations"
+msgstr "Recommendations"
+
+# OP48e: template UI text
+msgid "Recommendations &amp; Warnings"
+msgstr "Recommendations &amp; Warnings"
+
+# OP48e: template UI text
+msgid "Reconstruction MSE:"
+msgstr "Reconstruction MSE:"
+
+# OP48e: template UI text
+msgid "Referenz"
+msgstr "Referenz"
+
+# OP48e: template UI text
+msgid "Refresh JWT token"
+msgstr "Refresh JWT token"
+
+# OP48e: template UI text
+msgid "Refresh List"
+msgstr "Refresh List"
+
+# OP48e: template UI text
+msgid "Registrierte Sensoren (Adapter)"
+msgstr "Registrierte Sensoren (Adapter)"
+
+# OP48e: template UI text
+msgid "Report Contents"
+msgstr "Report Contents"
+
+# OP48e: template UI text
+msgid "Reporting"
+msgstr "Reporting"
+
+# OP48e: template UI text
+msgid "Reporting Agent"
+msgstr "Reporting Agent"
+
+# OP48e: template UI text
+msgid "ReportingAgent"
+msgstr "ReportingAgent"
+
+# OP48e: template UI text
+msgid "Reports"
+msgstr "Reports"
+
+# OP48e: template UI text
+msgid "Report Types"
+msgstr "Report Types"
+
+# OP48e: template UI text
+msgid "Request ID"
+msgstr "Request ID"
+
+# OP48e: template UI text
+msgid "Restart worker processes"
+msgstr "Restart worker processes"
+
+# OP48e: template UI text
+msgid "Results Storage:"
+msgstr "Results Storage:"
+
+# OP48e: template UI text
+msgid "Retry"
+msgstr "Retry"
+
+# OP48e: template UI text
+msgid "Run Analysis"
+msgstr "Run Analysis"
+
+# OP48e: template UI text
+msgid "Run Complete Analysis"
+msgstr "Run Complete Analysis"
+
+# OP48e: template UI text
+msgid "Running"
+msgstr "Running"
+
+# OP48e: template UI text
+msgid "Running an Analysis"
+msgstr "Running an Analysis"
+
+# OP48e: template UI text
+msgid "Run quick analysis on selected files"
+msgstr "Run quick analysis on selected files"
+
+# OP48e: template UI text
+msgid "Run quick analysis on selected spectra"
+msgstr "Run quick analysis on selected spectra"
+
+# OP48e: template UI text
+msgid "Run System Check"
+msgstr "Run System Check"
+
+# OP48e: template UI text
+msgid "Sample Analysis Results"
+msgstr "Sample Analysis Results"
+
+# OP48e: template UI text
+msgid "Sample ID"
+msgstr "Sample ID"
+
+# OP48e: template UI text
+msgid "Save API Settings"
+msgstr "Save API Settings"
+
+# OP48e: template UI text
+msgid "Save Configuration"
+msgstr "Save Configuration"
+
+# OP48e: template UI text
+msgid "Save Preferences"
+msgstr "Save Preferences"
+
+# OP48e: template UI text
+msgid "Save Profile"
+msgstr "Save Profile"
+
+# OP48e: template UI text
+msgid "Scalable Learning"
+msgstr "Scalable Learning"
+
+# OP48e: template UI text
+msgid "Secure data management and sharing options"
+msgstr "Secure data management and sharing options"
+
+# OP48e: template UI text
+msgid "Security Settings"
+msgstr "Security Settings"
+
+# OP48e: template UI text
+msgid "Select agent..."
+msgstr "Select agent..."
+
+# OP48e: template UI text
+msgid "Select analysis type..."
+msgstr "Select analysis type..."
+
+# OP48e: template UI text
+msgid "Select instrument..."
+msgstr "Select instrument..."
+
+# OP48e: template UI text
+msgid "Sensor"
+msgstr "Sensor"
+
+# OP48e: template UI text
+msgid "Sensoren"
+msgstr "Sensoren"
+
+# OP48e: template UI text
+msgid "Sensor Quality"
+msgstr "Sensor Quality"
+
+# OP48e: template UI text
+msgid "Sensor quality assessment did not run for this analysis."
+msgstr "Sensor quality assessment did not run for this analysis."
+
+# OP48e: template UI text
+msgid "Settings"
+msgstr "Settings"
+
+# OP48e: template UI text
+msgid "Sichtbarkeit"
+msgstr "Sichtbarkeit"
+
+# OP48e: template UI text
+msgid "Sign in"
+msgstr "Sign in"
+
+# OP48e: template UI text
+msgid "Slowest First"
+msgstr "Slowest First"
+
+# OP48e: template UI text
+msgid "Solution:"
+msgstr "Solution:"
+
+# OP48e: template UI text
+msgid "Spanish"
+msgstr "Spanish"
+
+# OP48e: template UI text
+msgid "Spectra Assessed:"
+msgstr "Spectra Assessed:"
+
+# OP48e: template UI text
+msgid "Spectra by Type"
+msgstr "Spectra by Type"
+
+# OP48e: template UI text
+msgid "Spectra Data Table"
+msgstr "Spectra Data Table"
+
+# OP48e: template UI text
+msgid "Spectra Gallery"
+msgstr "Spectra Gallery"
+
+# OP48e: template UI text
+msgid "Spectral"
+msgstr "Spectral"
+
+# OP48e: template UI text
+msgid "Spectral Analysis"
+msgstr "Spectral Analysis"
+
+# OP48e: template UI text
+msgid "Spectral Analysis:"
+msgstr "Spectral Analysis:"
+
+# OP48e: template UI text
+msgid "Spectral Analysis Agent"
+msgstr "Spectral Analysis Agent"
+
+# OP48e: template UI text
+msgid "SpectralAnalysisAgent"
+msgstr "SpectralAnalysisAgent"
+
+# OP48e: template UI text
+msgid "Spectral Quality"
+msgstr "Spectral Quality"
+
+# OP48e: template UI text
+msgid "Spectra Management"
+msgstr "Spectra Management"
+
+# OP48e: template UI text
+msgid "Spectra Management:"
+msgstr "Spectra Management:"
+
+# OP48e: template UI text
+msgid "Spectrum"
+msgstr "Spectrum"
+
+# OP48e: template UI text
+msgid "Spectrum Details"
+msgstr "Spectrum Details"
+
+# OP48e: template UI text
+msgid "Spectrum Information"
+msgstr "Spectrum Information"
+
+# OP48e: template UI text
+msgid "Spectrum Metadata"
+msgstr "Spectrum Metadata"
+
+# OP48e: template UI text
+msgid "Spektren"
+msgstr "Spectra"
+
+# OP48e: template UI text
+msgid "Spektrendatenbank"
+msgstr "Spektrendatenbank"
+
+# OP48e: template UI text
+msgid "Spektrum-Graph"
+msgstr "Spectrum graph"
+
+# OP48e: template UI text
+msgid "Standard"
+msgstr "Standard"
+
+# OP48e: template UI text
+msgid "Standard Mode"
+msgstr "Standard Mode"
+
+# OP48e: template UI text
+msgid "Start Analysis"
+msgstr "Start Analysis"
+
+# OP48e: template UI text
+msgid "Start a new spectral analysis with Crew AI"
+msgstr "Start a new spectral analysis with Crew AI"
+
+# OP48e: template UI text
+msgid "Start Crew AI Analysis"
+msgstr "Start Crew AI Analysis"
+
+# OP48e: template UI text
+msgid "Starting a Crew AI Analysis"
+msgstr "Starting a Crew AI Analysis"
+
+# OP48e: template UI text
+msgid "Start Time:"
+msgstr "Start Time:"
+
+# OP48e: template UI text
+msgid "Statistical Analysis"
+msgstr "Statistical Analysis"
+
+# OP48e: template UI text
+msgid "Statistical Analysis (PCA / PLS / PCR / ANOVA)"
+msgstr "Statistical Analysis (PCA / PLS / PCR / ANOVA)"
+
+# OP48e: template UI text
+msgid "Statistics"
+msgstr "Statistics"
+
+# OP48e: template UI text
+msgid "Step 1: Upload Dataset"
+msgstr "Step 1: Upload Dataset"
+
+# OP48e: template UI text
+msgid "Step 5: Complete Report"
+msgstr "Step 5: Complete Report"
+
+# OP48e: template UI text
+msgid "Storage Available"
+msgstr "Storage Available"
+
+# OP48e: template UI text
+msgid "Streaming:"
+msgstr "Streaming:"
+
+# OP48e: template UI text
+msgid "Successful"
+msgstr "Successful"
+
+# OP48e: template UI text
+msgid "Supported File Formats"
+msgstr "Supported File Formats"
+
+# OP48e: template UI text
+msgid "Synchronize NIR laboratory learning paths to the ILIAS container (S8) with OAuth2 authentication (OP2)"
+msgstr "Synchronize NIR laboratory learning paths to the ILIAS container (S8) with OAuth2 authentication (OP2)"
+
+# OP48e: template UI text
+msgid "System Default"
+msgstr "System Default"
+
+# OP48e: template UI text
+msgid "System Settings"
+msgstr "System Settings"
+
+# OP48e: template UI text
+msgid "System Status"
+msgstr "System Status"
+
+# OP48e: template UI text
+msgid "Table of Contents"
+msgstr "Table of Contents"
+
+# OP48e: template UI text
+msgid "Tabular"
+msgstr "Tabular"
+
+# OP48e: template UI text
+msgid "Test connection manually using database client"
+msgstr "Test connection manually using database client"
+
+# OP48e: template UI text
+msgid "Text"
+msgstr "Text"
+
+# OP48e: template UI text
+msgid "The API uses JWT (JSON Web Token) authentication. Include the token in the Authorization header:"
+msgstr "The API uses JWT (JSON Web Token) authentication. Include the token in the Authorization header:"
+
+# OP48e: template UI text
+msgid "The following API endpoints are available for Crew AI integration:"
+msgstr "The following API endpoints are available for Crew AI integration:"
+
+# OP48e: template UI text
+msgid "The framework includes the following specialized Crew AI agents:"
+msgstr "The framework includes the following specialized Crew AI agents:"
+
+# OP48e: template UI text
+msgid "The framework provides granular privacy controls for federated learning:"
+msgstr "The framework provides granular privacy controls for federated learning:"
+
+# OP48e: template UI text
+msgid "The framework supports the following report types:"
+msgstr "The framework supports the following report types:"
+
+# OP48e: template UI text
+msgid "The framework supports TXT, CSV, and JSON file formats for NIR spectroscopy data. Each format should contain wavelength and absorbance/value columns. See the"
+msgstr "The framework supports TXT, CSV, and JSON file formats for NIR spectroscopy data. Each format should contain wavelength and absorbance/value columns. See the"
+
+# OP48e: template UI text
+msgid "The model improves as more participants join, scaling with the network size."
+msgstr "The model improves as more participants join, scaling with the network size."
+
+# OP48e: template UI text
+msgid "The NIR_Mistral DeveloperAgent Framework is a comprehensive system for NIR (Near-Infrared) spectroscopy analysis. It provides tools for data management, analysis, and visualization using specialized agents that can be customized for different analysis tasks."
+msgstr "The NIR_Mistral DeveloperAgent Framework is a comprehensive system for NIR (Near-Infrared) spectroscopy analysis. It provides tools for data management, analysis, and visualization using specialized agents that can be customized for different analysis tasks."
+
+# OP48e: template UI text
+msgid "The NIR_Mistral DeveloperAgent Framework is built on a modular architecture with the following components:"
+msgstr "The NIR_Mistral DeveloperAgent Framework is built on a modular architecture with the following components:"
+
+# OP48e: template UI text
+msgid "The NIR_Mistral framework integrates"
+msgstr "The NIR_Mistral framework integrates"
+
+# OP48e: template UI text
+msgid "The report link appears here once the workflow has finished."
+msgstr "The report link appears here once the workflow has finished."
+
+# OP48e: template UI text
+msgid "The typical data flow in the framework is:"
+msgstr "The typical data flow in the framework is:"
+
+# OP48e: template UI text
+msgid "&times;"
+msgstr "&times;"
+
+# OP48e: template UI text
+msgid "To contribute your data to federated learning:"
+msgstr "To contribute your data to federated learning:"
+
+# OP48e: template UI text
+msgid "Token Endpoints"
+msgstr "Token Endpoints"
+
+# OP48e: template UI text
+msgid "to provide intelligent, automated analysis workflows. Crew AI enables the orchestration of multiple specialized agents working together to perform comprehensive NIR spectral analysis."
+msgstr "to provide intelligent, automated analysis workflows. Crew AI enables the orchestration of multiple specialized agents working together to perform comprehensive NIR spectral analysis."
+
+# OP48e: template UI text
+msgid "Total Agents"
+msgstr "Total Agents"
+
+# OP48e: template UI text
+msgid "Total Analyses"
+msgstr "Total Analyses"
+
+# OP48e: template UI text
+msgid "Total Files"
+msgstr "Total Files"
+
+# OP48e: template UI text
+msgid "Total Jobs"
+msgstr "Total Jobs"
+
+# OP48e: template UI text
+msgid "Total Spectra"
+msgstr "Total Spectra"
+
+# OP48e: template UI text
+msgid "Total Storage"
+msgstr "Total Storage"
+
+# OP48e: template UI text
+msgid "to understand the architecture."
+msgstr "to understand the architecture."
+
+# OP48e: template UI text
+msgid "To use Crew AI for spectral analysis:"
+msgstr "To use Crew AI for spectral analysis:"
+
+# OP48e: template UI text
+msgid "Train / Test:"
+msgstr "Train / Test:"
+
+# OP48e: template UI text
+msgid "Troubleshooting"
+msgstr "Troubleshooting"
+
+# OP48e: template UI text
+msgid "Two-Factor Authentication"
+msgstr "Two-Factor Authentication"
+
+# OP48e: template UI text
+msgid "TXT Files"
+msgstr "TXT Files"
+
+# OP48e: template UI text
+msgid "Typ"
+msgstr "Typ"
+
+# OP48e: template UI text
+msgid "UI build:"
+msgstr "UI build:"
+
+# OP48e: template UI text
+msgid "Unknown"
+msgstr "Unknown"
+
+# OP48e: template UI text
+msgid "unvollst&auml;ndig"
+msgstr "unvollst&auml;ndig"
+
+# OP48e: template UI text
+msgid "Update Password"
+msgstr "Update Password"
+
+# OP48e: template UI text
+msgid "Upload"
+msgstr "Upload"
+
+# OP48e: template UI text
+msgid "Upload a dataset and run the workflow to see the agent results here."
+msgstr "Upload a dataset and run the workflow to see the agent results here."
+
+# OP48e: template UI text
+msgid "Upload a new spectrum"
+msgstr "Upload a new spectrum"
+
+# OP48e: template UI text
+msgid "Upload any file type for analysis"
+msgstr "Upload any file type for analysis"
+
+# OP48e: template UI text
+msgid "Upload Files"
+msgstr "Upload Files"
+
+# OP48e: template UI text
+msgid "Uploading Spectra"
+msgstr "Uploading Spectra"
+
+# OP48e: template UI text
+msgid "Upload new NIR spectroscopy data for analysis"
+msgstr "Upload new NIR spectroscopy data for analysis"
+
+# OP48e: template UI text
+msgid "Upload spectral files and run the CrewAI analysis"
+msgstr "Upload spectral files and run the CrewAI analysis"
+
+# OP48e: template UI text
+msgid "Upload Spectrum"
+msgstr "Upload Spectrum"
+
+# OP48e: template UI text
+msgid "Upload, view, and analyze any file type with Crew AI"
+msgstr "Upload, view, and analyze any file type with Crew AI"
+
+# OP48e: template UI text
+msgid "Upload, view, and analyze NIR spectroscopy data with Crew AI"
+msgstr "Upload, view, and analyze NIR spectroscopy data with Crew AI"
+
+# OP48e: template UI text
+msgid "Username"
+msgstr "Username"
+
+# OP48e: template UI text
+msgid "User Preferences"
+msgstr "User Preferences"
+
+# OP48e: template UI text
+msgid "User Profile"
+msgstr "User Profile"
+
+# OP48e: template UI text
+msgid "Using Crew AI in Analysis"
+msgstr "Using Crew AI in Analysis"
+
+# OP48e: template UI text
+msgid "UV-Vis"
+msgstr "UV-Vis"
+
+# OP48e: template UI text
+msgid "Validates data quality and integrity with comprehensive checks."
+msgstr "Validates data quality and integrity with comprehensive checks."
+
+# OP48e: template UI text
+msgid "Valid Files"
+msgstr "Valid Files"
+
+# OP48e: template UI text
+msgid "Valid Only"
+msgstr "Valid Only"
+
+# OP48e: template UI text
+msgid "Valid Spectra"
+msgstr "Valid Spectra"
+
+# OP48e: template UI text
+msgid "Verify Celery worker is running"
+msgstr "Verify Celery worker is running"
+
+# OP48e: template UI text
+msgid "Verify database server is running"
+msgstr "Verify database server is running"
+
+# OP48e: template UI text
+msgid "Verify file contains required columns (wavelength, value)"
+msgstr "Verify file contains required columns (wavelength, value)"
+
+# OP48e: template UI text
+msgid "Version"
+msgstr "Version"
+
+# OP48e: template UI text
+msgid "Version Info"
+msgstr "Version Info"
+
+# OP48e: template UI text
+msgid "Video"
+msgstr "Video"
+
+# OP48e: template UI text
+msgid "View"
+msgstr "View"
+
+# OP48e: template UI text
+msgid "View All"
+msgstr "View All"
+
+# OP48e: template UI text
+msgid "View all uploaded files"
+msgstr "View all uploaded files"
+
+# OP48e: template UI text
+msgid "View all uploaded spectra"
+msgstr "View all uploaded spectra"
+
+# OP48e: template UI text
+msgid "View All Workflows"
+msgstr "View All Workflows"
+
+# OP48e: template UI text
+msgid "View and configure analysis agents"
+msgstr "View and configure analysis agents"
+
+# OP48e: template UI text
+msgid "View Jobs"
+msgstr "View Jobs"
+
+# OP48e: template UI text
+msgid "View Report"
+msgstr "View Report"
+
+# OP48e: template UI text
+msgid "Vorhanden"
+msgstr "Vorhanden"
+
+# OP48e: template UI text
+msgid "Warnings"
+msgstr "Warnings"
+
+# OP48e: template UI text
+msgid "Warnings and Errors"
+msgstr "Warnings and Errors"
+
+# OP48e: template UI text
+msgid "Web Interface"
+msgstr "Web Interface"
+
+# OP48e: template UI text
+msgid "Welcome to NIR Mistral"
+msgstr "Welcome to NIR Mistral"
+
+# OP48e: template UI text
+msgid "Welcome to NIR_Mistral Framework"
+msgstr "Welcome to NIR_Mistral Framework"
+
+# OP48e: template UI text
+msgid "Welcome to the NIR_Mistral DeveloperAgent Framework! This guide will help you get started with using the framework for NIR spectroscopy analysis."
+msgstr "Welcome to the NIR_Mistral DeveloperAgent Framework! This guide will help you get started with using the framework for NIR spectroscopy analysis."
+
+# OP48e: template UI text
+msgid "Wert"
+msgstr "Wert"
+
+# OP48e: template UI text
+msgid "What are Agents?"
+msgstr "What are Agents?"
+
+# OP48e: template UI text
+msgid "Workflow History"
+msgstr "Workflow History"
+
+# OP48e: template UI text
+msgid "Workflow Information"
+msgstr "Workflow Information"
+
+# OP48e: template UI text
+msgid "Workflow Progress"
+msgstr "Workflow Progress"
+
+# OP48e: template UI text
+msgid "Workflow Statistics"
+msgstr "Workflow Statistics"
+
+# OP48e: template UI text
+msgid "Workflow Status"
+msgstr "Workflow Status"
+
+# OP48e: template UI text
+msgid "Yes"
+msgstr "Yes"
+
+# OP48e: template UI text
+msgid "You can create custom agents by following these steps:"
+msgstr "You can create custom agents by following these steps:"
+
+# OP48e: template UI text
+msgid "You can monitor your federated learning participation through:"
+msgstr "You can monitor your federated learning participation through:"
+
+# OP48e: template UI text
+msgid "You must provide explicit consent before participating in federated learning. You can withdraw consent at any time."
+msgstr "You must provide explicit consent before participating in federated learning. You can withdraw consent at any time."
+
+# OP48e: template UI text
+msgid "Your data remains on your device. Only model updates are shared, never the raw data."
+msgstr "Your data remains on your device. Only model updates are shared, never the raw data."
+
+# OP48e: template UI text
+msgid "Zu den Projekten"
+msgstr "Zu den Projekten"
+
+# OP48e: template UI text
+msgid "Zuletzt"
+msgstr "Zuletzt"
+
+# OP48e: template UI text
+msgid "zuletzt genutzt"
+msgstr "zuletzt genutzt"
+
+# OP48e: template UI text
+msgid "Zur Analyse freigeben"
+msgstr "Zur Analyse freigeben"
+
+# OP48e: template UI text
+msgid "Zur Analyse freigegeben"
+msgstr "Zur Analyse freigegeben"
+
+# OP48e: template UI text
+msgid "Zur Datenbank"
+msgstr "To the database"

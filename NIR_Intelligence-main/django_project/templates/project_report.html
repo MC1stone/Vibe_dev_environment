@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load i18n %}
 {% block title %}{{ project.name }} - Projektbericht{% endblock %}
 {% block content %}
 <div class="container mt-4">
@@ -7,11 +8,11 @@
         <h1><i class="bi bi-folder2-open me-2"></i>Projekt: {{ project.name }}</h1>
         <div>
             {% if project.phase == 'drafted' %}
-            <span class="badge bg-warning text-dark fs-6">Phase 1: Vorbereitung</span>
+            <span class="badge bg-warning text-dark fs-6">{% trans "Phase 1: Vorbereitung" %}</span>
             {% elif project.phase == 'released' %}
-            <span class="badge bg-info fs-6">Phase 2: Analyse</span>
+            <span class="badge bg-info fs-6">{% trans "Phase 2: Analyse" %}</span>
             {% else %}
-            <span class="badge bg-success fs-6">Abgeschlossen</span>
+            <span class="badge bg-success fs-6">{% trans "Abgeschlossen" %}</span>
             {% endif %}
         </div>
     </div>
@@ -23,7 +24,7 @@
     <!-- ===================== PHASE 1: PREPARATION ===================== -->
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Phase 1: Datenaufbereitung
+            <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>{% trans "Phase 1: Datenaufbereitung" %}
                 <span class="text-muted fs-6">(Dateien &rarr; verwertbare Datensätze)</span></h5>
         </div>
         <div class="card-body">
@@ -48,20 +49,20 @@
                 </div>
             </div>
 
-            <h6><i class="bi bi-clipboard-data me-1"></i>Datensätze</h6>
+            <h6><i class="bi bi-clipboard-data me-1"></i>{% trans "Datensätze" %}</h6>
             <div class="table-responsive mb-3">
                 <table class="table table-sm table-hover align-middle">
                     <thead>
-                        <tr><th>Datei</th><th>Typ</th><th>Status</th><th>Punkte</th><th>Wellenlängenbereich</th><th>Nutzbar</th></tr>
+                        <tr><th>{% trans "Datei" %}</th><th>{% trans "Typ" %}</th><th>{% trans "Status" %}</th><th>{% trans "Punkte" %}</th><th>{% trans "Wellenlängenbereich" %}</th><th>{% trans "Nutzbar" %}</th></tr>
                     </thead>
                     <tbody>
                         {% for d in datasets %}
                         <tr>
                             <td>{{ d.file_name }}</td>
                             <td>{{ d.file_category }}</td>
-                            <td>{% if d.dataset_type == 'metadata' %}<span class="badge bg-info">Metadaten/Dokumentation</span>{% elif d.usable %}<span class="badge bg-success">Messdaten</span>{% else %}<span class="badge bg-secondary">{{ d.reason|truncatechars:40 }}</span>{% endif %}</td>
+                            <td>{% if d.dataset_type == 'metadata' %}<span class="badge bg-info">{% trans "Metadaten/Dokumentation" %}</span>{% elif d.usable %}<span class="badge bg-success">{% trans "Messdaten" %}</span>{% else %}<span class="badge bg-secondary">{{ d.reason|truncatechars:40 }}</span>{% endif %}</td>
                             <td>{% if d.dataset_type == 'metadata' %}-{% else %}{{ d.num_points|default:'-' }}{% endif %}</td>
-                            <td>{% if d.dataset_type == 'metadata' %}<span class="small text-muted">Beschreibung/Probenhintergrund</span>{% elif d.usable %}{{ d.wavelength_min|floatformat:0 }} – {{ d.wavelength_max|floatformat:0 }} nm{% else %}-{% endif %}</td>
+                            <td>{% if d.dataset_type == 'metadata' %}<span class="small text-muted">{% trans "Beschreibung/Probenhintergrund" %}</span>{% elif d.usable %}{{ d.wavelength_min|floatformat:0 }} – {{ d.wavelength_max|floatformat:0 }} nm{% else %}-{% endif %}</td>
                             <td>{% if d.usable %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}</td>
                         </tr>
                         {% endfor %}
@@ -72,7 +73,7 @@
             <!-- OP31: field-level metadata rating (field / value / source / rating) -->
             {% if metadata_quality.open_questions %}
             <div class="alert alert-warning mt-3 mb-2" role="alert">
-                <strong><i class="bi bi-question-circle me-1"></i>Offene KI-Fragen zu Ihren Metadaten:</strong>
+                <strong><i class="bi bi-question-circle me-1"></i>{% trans "Offene KI-Fragen zu Ihren Metadaten:" %}</strong>
                 <ul class="mb-0 mt-1">
                     {% for q in metadata_quality.open_questions %}
                     <li>{{ q }}</li>
@@ -82,19 +83,19 @@
             </div>
             {% endif %}
 
-            <h6 class="mt-3"><i class="bi bi-tags me-1"></i>Erhobene Metadaten je Datensatz
+            <h6 class="mt-3"><i class="bi bi-tags me-1"></i>{% trans "Erhobene Metadaten je Datensatz" %}
                 <span class="text-muted fs-6">(Feld / Wert / Quelle: KI oder Datei / Bewertung)</span></h6>
             {% if metadata_quality.standards_compliance %}
             <div class="table-responsive">
                 <table class="table table-sm table-striped mb-2">
-                    <thead><tr><th>Standard</th><th>Vorhanden</th><th>Fehlt</th><th>Status</th></tr></thead>
+                    <thead><tr><th>{% trans "Standard" %}</th><th>{% trans "Vorhanden" %}</th><th>{% trans "Fehlt" %}</th><th>{% trans "Status" %}</th></tr></thead>
                     <tbody>
                         {% for sc in metadata_quality.standards_compliance %}
                         <tr>
                             <td><strong>{{ sc.standard }}</strong></td>
                             <td>{% for f in sc.present %}<code>{{ f }}</code>{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-muted">-</span>{% endfor %}</td>
                             <td>{% for f in sc.missing %}<code>{{ f }}</code>{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-muted">-</span>{% endfor %}</td>
-                            <td>{% if sc.satisfied %}<span class="badge bg-success">erf&uuml;llt</span>{% else %}<span class="badge bg-warning text-dark">unvollst&auml;ndig</span>{% endif %}</td>
+                            <td>{% if sc.satisfied %}<span class="badge bg-success">{% trans "erf&uuml;llt" %}</span>{% else %}<span class="badge bg-warning text-dark">{% trans "unvollst&auml;ndig" %}</span>{% endif %}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -103,7 +104,7 @@
             {% endif %}
             {% if metadata_quality.ki_relevance.summary %}
             <div class="alert alert-info mb-2" role="note">
-                <strong><i class="bi bi-stars me-1"></i>KI-Einsch&auml;tzung (NIR-Relevanz):</strong>
+                <strong><i class="bi bi-stars me-1"></i>{% trans "KI-Einsch&auml;tzung (NIR-Relevanz):" %}</strong>
                 {{ metadata_quality.ki_relevance.summary }}
             </div>
             {% endif %}
@@ -122,7 +123,7 @@
                          data-bs-parent="#metadataRating">
                         <div class="accordion-body">
                             <table class="table table-sm">
-                                <thead><tr><th>Feld</th><th>Wert</th><th>Quelle</th><th>Bewertung</th></tr></thead>
+                                <thead><tr><th>{% trans "Feld" %}</th><th>{% trans "Wert" %}</th><th>{% trans "Quelle" %}</th><th>{% trans "Bewertung" %}</th></tr></thead>
                                 <tbody>
                                     {% for field, r in d.metadata_rating.items %}
                                     {% if field != 'konflikte' %}
@@ -130,14 +131,14 @@
                                         <td><code>{{ field }}</code></td>
                                         <td>{{ r.value|truncatechars:60 }}</td>
                                         <td>{% if 'berechnet' in r.source %}<span class="badge bg-info text-dark">{{ r.source }}</span>{% elif 'ki' in r.source %}<span class="badge bg-primary">{{ r.source }}</span>{% else %}<span class="badge bg-light text-dark">{{ r.source }}</span>{% endif %}</td>
-                                        <td>{% if r.rating == 'konflikt' %}<span class="badge bg-danger">Konflikt – klären</span>{% else %}<span class="badge bg-success">ok</span>{% endif %}</td>
+                                        <td>{% if r.rating == 'konflikt' %}<span class="badge bg-danger">{% trans "Konflikt – klären" %}</span>{% else %}<span class="badge bg-success">{% trans "ok" %}</span>{% endif %}</td>
                                     </tr>
                                     {% endif %}
                                     {% endfor %}
                                 </tbody>
                             </table>
                             {% if d.metadata_rating.konflikte %}
-                            <div class="alert alert-danger mb-0"><strong>Konflikte:</strong>
+                            <div class="alert alert-danger mb-0"><strong>{% trans "Konflikte:" %}</strong>
                                 <ul class="mb-0">{% for k in d.metadata_rating.konflikte %}<li>{{ k }}</li>{% endfor %}</ul>
                             </div>
                             {% endif %}
@@ -148,12 +149,12 @@
                 {% endfor %}
             </div>
 
-            <h6><i class="bi bi-lightbulb me-1"></i>Verbesserungsvorschläge</h6>
+            <h6><i class="bi bi-lightbulb me-1"></i>{% trans "Verbesserungsvorschläge" %}</h6>
             <ul class="mb-2">
                 {% for rec in recommendations %}
                 <li>{{ rec }}</li>
                 {% empty %}
-                <li class="text-muted">Keine Empfehlungen.</li>
+                <li class="text-muted">{% trans "Keine Empfehlungen." %}</li>
                 {% endfor %}
             </ul>
 
@@ -165,7 +166,7 @@
 
             {% if project.phase == 'drafted' %}
             <!-- Metadata editor (OP13): edit dataset metadata online, no re-upload -->
-            <h6 class="mt-4"><i class="bi bi-pencil-square me-1"></i>Metadaten online anpassen
+            <h6 class="mt-4"><i class="bi bi-pencil-square me-1"></i>{% trans "Metadaten online anpassen" %}
                 <span class="text-muted fs-6">(wirkt sofort auf die Metadatenbewertung, kein erneuter Upload nötig)</span></h6>
             <div class="accordion mb-3" id="metadataEditor">
                 {% for d in datasets %}
@@ -184,7 +185,7 @@
                                 <div class="row g-2">
                                     {% for f in d.editor_fields %}
                                     <div class="col-md-4">
-                                        <label class="form-label small">{{ f.name }}{% if not f.recommended %} <span class="badge bg-light text-dark">eigene</span>{% endif %}</label>
+                                        <label class="form-label small">{{ f.name }}{% if not f.recommended %} <span class="badge bg-light text-dark">{% trans "eigene" %}</span>{% endif %}</label>
                                         <input type="text" class="form-control form-control-sm"
                                                name="{{ f.name }}" value="{{ f.value }}"
                                                placeholder="{{ f.name }} ergänzen">
@@ -196,12 +197,12 @@
                                         <input type="text" class="form-control meta-new-key"
                                                placeholder="Weiteres Feld (z. B. sample_id)">
                                         <button class="btn btn-outline-secondary meta-add-field" type="button">
-                                            <i class="bi bi-plus"></i> Feld hinzufügen
+                                            <i class="bi bi-plus"></i> {% trans "Feld hinzufügen" %}
                                         </button>
                                     </div>
                                 </div>
                                 <button type="submit" class="btn btn-sm btn-primary mt-3">
-                                    <i class="bi bi-save me-1"></i>Metadaten speichern
+                                    <i class="bi bi-save me-1"></i>{% trans "Metadaten speichern" %}
                                 </button>
                                 <span class="metadata-status text-muted small ms-2"></span>
                             </form>
@@ -213,7 +214,7 @@
             </div>
             <div class="d-flex gap-2 mt-3">
                 <button id="btn-reingest" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-repeat me-1"></i>Daten angepasst? Aufbereitung erneut ausführen
+                    <i class="bi bi-arrow-repeat me-1"></i>{% trans "Daten angepasst? Aufbereitung erneut ausführen" %}
                 </button>
                 <label class="d-flex align-items-center gap-2 mb-0" for="spectrum-visibility"
                        title="Persistierte Spektren bleiben standardmäßig privat (FL-Grundregel).">
@@ -222,7 +223,7 @@
                     Spektren im Labor teilen
                 </label>
                 <button id="btn-release" class="btn btn-success">
-                    <i class="bi bi-play-fill me-1"></i>Zur Analyse freigeben
+                    <i class="bi bi-play-fill me-1"></i>{% trans "Zur Analyse freigeben" %}
                 </button>
             </div>
             <div id="workflow-status" class="mt-3" style="display:none;"></div>
@@ -235,7 +236,7 @@
 
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="bi bi-people me-2"></i>Phase 2: Agenten-Analysen
+            <h5 class="mb-0"><i class="bi bi-people me-2"></i>{% trans "Phase 2: Agenten-Analysen" %}
                 <span class="text-muted fs-6">(jeder Agent berichtet über seinen Bereich)</span></h5>
         </div>
         <div class="card-body">
@@ -267,9 +268,9 @@
                 <div class="card-header d-flex justify-content-between">
                     <span><i class="bi bi-robot me-1"></i>{{ section.title }}</span>
                     {% if section.status == 'completed' %}
-                    <span class="badge bg-success">abgeschlossen</span>
+                    <span class="badge bg-success">{% trans "abgeschlossen" %}</span>
                     {% else %}
-                    <span class="badge bg-danger">fehlgeschlagen</span>
+                    <span class="badge bg-danger">{% trans "fehlgeschlagen" %}</span>
                     {% endif %}
                 </div>
                 <div class="card-body py-2">
@@ -289,7 +290,7 @@
                 </div>
             </div>
             {% empty %}
-            <p class="text-muted mb-0">Noch keine Agenten-Berichte vorhanden.</p>
+            <p class="text-muted mb-0">{% trans "Noch keine Agenten-Berichte vorhanden." %}</p>
             {% endfor %}
         </div>
     </div>
@@ -297,16 +298,16 @@
     <!-- ===================== FINAL QUARTO REPORT ===================== -->
     <div class="card shadow-sm">
         <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="bi bi-file-earmark-pdf me-2"></i>Abschluss-Quarto-Bericht</h5>
+            <h5 class="mb-0"><i class="bi bi-file-earmark-pdf me-2"></i>{% trans "Abschluss-Quarto-Bericht" %}</h5>
         </div>
         <div class="card-body">
-            <p>Der Abschlussbericht enthält Originaldaten, Code, Auswertungsbewertung und Grafiken aller Analysen.</p>
+            <p>{% trans "Der Abschlussbericht enthält Originaldaten, Code, Auswertungsbewertung und Grafiken aller Analysen." %}</p>
             {% if final_report_url %}
             <a href="{{ final_report_url }}" class="btn btn-primary" target="_blank">
-                <i class="bi bi-box-arrow-up-right me-1"></i>Quarto-Abschlussbericht öffnen
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% trans "Quarto-Abschlussbericht öffnen" %}
             </a>
             {% else %}
-            <span class="text-muted">Noch kein Abschlussbericht generiert.</span>
+            <span class="text-muted">{% trans "Noch kein Abschlussbericht generiert." %}</span>
             {% endif %}
         </div>
     </div>

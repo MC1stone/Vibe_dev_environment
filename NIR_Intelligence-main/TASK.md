@@ -54,9 +54,20 @@ Die Plattform (UI, Backend-Meldungen, Berichte, ILIAS-Sync) soll fuer alle
   (language-Feld). Testmatrix 62/62 gruen (T8: Katalog-Anwesenheit,
   msgfmt-clean, Prompt-/Quarto-/ILIAS-Verkabelung, ehrlicher
   fr-Fallback); Regressionen S6/FL4/FL5/OP24/OP11/OP23/OP3/OP25 gruen.
-- Offen: Rest-Templates (analysis, files, dashboard, agents, spectra,
-  jobs, settings, documentation u. a.) auf {% trans %} - inkrementell
-  je Template (OP48b-Muster).
+- OP48f Rest-Templates - ERLEDIGT: alle 19 verbleibenden UI-Templates
+  (dashboard, analysis, files, agents, spectra, jobs, settings,
+  documentation, projects, register, workflow_list, workflow_results,
+  sensor_list, sensor_detail, spectrum_database, spectrum_detail,
+  crew_report, project_report, dashboard_colorful) auf {% trans %}
+  umgestellt; praexistente Template-Defekte in workflow_list/results
+  repariert ({%-Praefixe, |format -> floatformat:2, |sum(attribute) ->
+  |length); 706 Template-msgids in Kataloge gepflegt (de 513 neue
+  Uebersetzungen inkl. aller Fließtexte, en 611 identity + 33 deutsche
+  msgids rueckuebersetzt); msgfmt clean, render_check ALL OK,
+  OP48-Testmatrix 62/62 gruen; Regressionen OP3 (45/45), OP25 (65/65),
+  OP8 (77/77), OP8-Crew (38/38), OP15 (44/44) gruen.
+- OP48 damit abgeschlossen: aktiv vollstaendig de/en; 22 weitere
+  EU-Kataloge ehrlich leer (Uebersetzung durch Fachlehrkraefte).
 
 ### Success Criteria
 - UI in de und en vollstaendig umschaltbar; 24 Sprachkataloge angelegt
@@ -1078,7 +1089,7 @@ findings, Fachbegriffe explained in plain language at first use):
   with a short explanation of the underlying effect
 - **Literaturhinweise**: real, accessible standard works cited in APA style
   (Pasquini 2003; Workman & Weyer 2012; Geladi & Kowalski 1986; Wold et al.
-  2001; Williams & Norris 2001; N\u00e6s et al. 2002; Burns & Ciurczak 2007)
+  2001; Williams & Norris 2001; Næs et al. 2002; Burns & Ciurczak 2007)
 
 ### Scope
 

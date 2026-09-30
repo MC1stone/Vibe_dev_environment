@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load i18n %}
 
 {% block title %}Settings - NIR_Mistral Framework{% endblock %}
 
@@ -12,8 +12,8 @@
         <div class="row">
             <div class="col-12">
                 <div class="page-header">
-                    <h1 class="page-title"><i class="bi bi-gear"></i> Settings</h1>
-                    <p class="page-subtitle">Configure framework settings and user preferences</p>
+                    <h1 class="page-title"><i class="bi bi-gear"></i> {% trans "Settings" %}</h1>
+                    <p class="page-subtitle">{% trans "Configure framework settings and user preferences" %}</p>
                 </div>
             </div>
         </div>
@@ -23,7 +23,7 @@
             <div class="col-md-6">
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="bi bi-person"></i> User Profile</h5>
+                        <h5 class="card-title mb-0"><i class="bi bi-person"></i> {% trans "User Profile" %}</h5>
                     </div>
                     <div class="card-body">
                         <form id="profileForm">
@@ -33,7 +33,7 @@
                                     <input type="text" class="form-control" id="firstName" placeholder="Enter first name">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Last Name</label>
+                                    <label class="form-label">{% trans "Last Name" %}</label>
                                     <input type="text" class="form-control" id="lastName" placeholder="Enter last name">
                                 </div>
                                 <div class="col-12">
@@ -41,7 +41,7 @@
                                     <input type="email" class="form-control" id="email" placeholder="Enter email address">
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label">Organization</label>
+                                    <label class="form-label">{% trans "Organization" %}</label>
                                     <input type="text" class="form-control" id="organization" placeholder="Enter organization">
                                 </div>
                                 <div class="col-12">
@@ -49,12 +49,12 @@
                                     <input type="text" class="form-control" id="department" placeholder="Enter department">
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label">Bio</label>
+                                    <label class="form-label">{% trans "Bio" %}</label>
                                     <textarea class="form-control" id="bio" rows="3" placeholder="Enter bio"></textarea>
                                 </div>
                                 <div class="col-12">
                                     <button type="button" class="btn btn-primary" onclick="saveProfile()">
-                                        <i class="bi bi-check"></i> Save Profile
+                                        <i class="bi bi-check"></i> {% trans "Save Profile" %}
                                     </button>
                                 </div>
                             </div>
@@ -65,7 +65,7 @@
                 <!-- User Preferences -->
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="bi bi-sliders"></i> User Preferences</h5>
+                        <h5 class="card-title mb-0"><i class="bi bi-sliders"></i> {% trans "User Preferences" %}</h5>
                     </div>
                     <div class="card-body">
                         <form id="preferencesForm">
@@ -73,18 +73,18 @@
                                 <div class="col-md-6">
                                     <label class="form-label">Theme</label>
                                     <select class="form-select" id="themePreference">
-                                        <option value="light">Light</option>
-                                        <option value="dark">Dark</option>
-                                        <option value="system">System Default</option>
+                                        <option value="light">{% trans "Light" %}</option>
+                                        <option value="dark">{% trans "Dark" %}</option>
+                                        <option value="system">{% trans "System Default" %}</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Language</label>
                                     <select class="form-select" id="languagePreference">
-                                        <option value="en">English</option>
-                                        <option value="de">German</option>
-                                        <option value="fr">French</option>
-                                        <option value="es">Spanish</option>
+                                        <option value="en">{% trans "English" %}</option>
+                                        <option value="de">{% trans "German" %}</option>
+                                        <option value="fr">{% trans "French" %}</option>
+                                        <option value="es">{% trans "Spanish" %}</option>
                                     </select>
                                 </div>
                                 <div class="col-12">
@@ -112,13 +112,13 @@
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" id="autoRefresh">
                                         <label class="form-check-label" for="autoRefresh">
-                                            Auto Refresh Data
+                                            {% trans "Auto Refresh Data" %}
                                         </label>
                                     </div>
                                 </div>
                                 <div class="col-12">
                                     <button type="button" class="btn btn-primary" onclick="savePreferences()">
-                                        <i class="bi bi-check"></i> Save Preferences
+                                        <i class="bi bi-check"></i> {% trans "Save Preferences" %}
                                     </button>
                                 </div>
                             </div>
@@ -129,23 +129,23 @@
                 <!-- Security Settings -->
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="bi bi-shield"></i> Security Settings</h5>
+                        <h5 class="card-title mb-0"><i class="bi bi-shield"></i> {% trans "Security Settings" %}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-12">
                                 <button class="btn btn-outline-primary w-100" onclick="changePassword()">
-                                    <i class="bi bi-key"></i> Change Password
+                                    <i class="bi bi-key"></i> {% trans "Change Password" %}
                                 </button>
                             </div>
                             <div class="col-12">
                                 <button class="btn btn-outline-primary w-100" onclick="manageTwoFactor()">
-                                    <i class="bi bi-shield-check"></i> Two-Factor Authentication
+                                    <i class="bi bi-shield-check"></i> {% trans "Two-Factor Authentication" %}
                                 </button>
                             </div>
                             <div class="col-12">
                                 <button class="btn btn-outline-danger w-100" onclick="deleteAccount()">
-                                    <i class="bi bi-trash"></i> Delete Account
+                                    <i class="bi bi-trash"></i> {% trans "Delete Account" %}
                                 </button>
                             </div>
                         </div>
@@ -157,18 +157,18 @@
             <div class="col-md-6">
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="bi bi-cpu"></i> System Settings</h5>
+                        <h5 class="card-title mb-0"><i class="bi bi-cpu"></i> {% trans "System Settings" %}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-12">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <div>
-                                        <h6>Framework Version</h6>
-                                        <p class="text-muted mb-0" id="frameworkVersion">Loading...</p>
+                                        <h6>{% trans "Framework Version" %}</h6>
+                                        <p class="text-muted mb-0" id="frameworkVersion">{% trans "Loading..." %}</p>
                                     </div>
                                     <button class="btn btn-sm btn-outline-secondary" onclick="checkForUpdates()">
-                                        <i class="bi bi-arrow-clockwise"></i> Check Updates
+                                        <i class="bi bi-arrow-clockwise"></i> {% trans "Check Updates" %}
                                     </button>
                                 </div>
                             </div>
@@ -179,15 +179,15 @@
                                         <tbody>
                                             <tr>
                                                 <td>Database Connection</td>
-                                                <td><span class="badge bg-success" id="dbStatus">Connected</span></td>
+                                                <td><span class="badge bg-success" id="dbStatus">{% trans "Connected" %}</span></td>
                                             </tr>
                                             <tr>
                                                 <td>Storage Available</td>
-                                                <td><span class="badge bg-success" id="storageStatus">Available</span></td>
+                                                <td><span class="badge bg-success" id="storageStatus">{% trans "Available" %}</span></td>
                                             </tr>
                                             <tr>
                                                 <td>Agent Framework</td>
-                                                <td><span class="badge bg-success" id="agentStatus">Running</span></td>
+                                                <td><span class="badge bg-success" id="agentStatus">{% trans "Running" %}</span></td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -195,7 +195,7 @@
                             </div>
                             <div class="col-12">
                                 <button class="btn btn-outline-primary w-100" onclick="runSystemCheck()">
-                                    <i class="bi bi-check-circle"></i> Run System Check
+                                    <i class="bi bi-check-circle"></i> {% trans "Run System Check" %}
                                 </button>
                             </div>
                         </div>
@@ -205,12 +205,12 @@
                 <!-- Framework Configuration -->
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="bi bi-gear-wide-connected"></i> Framework Configuration</h5>
+                        <h5 class="card-title mb-0"><i class="bi bi-gear-wide-connected"></i> {% trans "Framework Configuration" %}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-12">
-                                <label class="form-label">Default Data Directory</label>
+                                <label class="form-label">{% trans "Default Data Directory" %}</label>
                                 <input type="text" class="form-control" id="dataDirectory" placeholder="Enter data directory path">
                             </div>
                             <div class="col-12">
@@ -218,7 +218,7 @@
                                 <input type="text" class="form-control" id="outputDirectory" placeholder="Enter output directory path">
                             </div>
                             <div class="col-12">
-                                <label class="form-label">Maximum File Size (MB)</label>
+                                <label class="form-label">{% trans "Maximum File Size (MB)" %}</label>
                                 <input type="number" class="form-control" id="maxFileSize" value="100">
                             </div>
                             <div class="col-12">
@@ -227,7 +227,7 @@
                             </div>
                             <div class="col-12">
                                 <button type="button" class="btn btn-primary" onclick="saveFrameworkConfig()">
-                                    <i class="bi bi-check"></i> Save Configuration
+                                    <i class="bi bi-check"></i> {% trans "Save Configuration" %}
                                 </button>
                             </div>
                         </div>
@@ -237,12 +237,12 @@
                 <!-- API Settings -->
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="bi bi-globe"></i> API Settings</h5>
+                        <h5 class="card-title mb-0"><i class="bi bi-globe"></i> {% trans "API Settings" %}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-12">
-                                <label class="form-label">API Base URL</label>
+                                <label class="form-label">{% trans "API Base URL" %}</label>
                                 <input type="text" class="form-control" id="apiBaseUrl" placeholder="Enter API base URL">
                             </div>
                             <div class="col-12">
@@ -253,13 +253,13 @@
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="enableApiLogging">
                                     <label class="form-check-label" for="enableApiLogging">
-                                        Enable API Logging
+                                        {% trans "Enable API Logging" %}
                                     </label>
                                 </div>
                             </div>
                             <div class="col-12">
                                 <button type="button" class="btn btn-primary" onclick="saveApiSettings()">
-                                    <i class="bi bi-check"></i> Save API Settings
+                                    <i class="bi bi-check"></i> {% trans "Save API Settings" %}
                                 </button>
                             </div>
                         </div>
@@ -274,7 +274,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-key"></i> Change Password</h5>
+                    <h5 class="modal-title"><i class="bi bi-key"></i> {% trans "Change Password" %}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -284,7 +284,7 @@
                             <input type="password" class="form-control" id="currentPassword" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">New Password</label>
+                            <label class="form-label">{% trans "New Password" %}</label>
                             <input type="password" class="form-control" id="newPassword" required>
                         </div>
                         <div class="mb-3">
@@ -295,10 +295,10 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x"></i> Cancel
+                        <i class="bi bi-x"></i> {% trans "Cancel" %}
                     </button>
                     <button type="button" class="btn btn-primary" onclick="updatePassword()">
-                        <i class="bi bi-check"></i> Update Password
+                        <i class="bi bi-check"></i> {% trans "Update Password" %}
                     </button>
                 </div>
             </div>
@@ -310,7 +310,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Confirm Action</h5>
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> {% trans "Confirm Action" %}</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -318,10 +318,10 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x"></i> Cancel
+                        <i class="bi bi-x"></i> {% trans "Cancel" %}
                     </button>
                     <button type="button" class="btn btn-danger" onclick="confirmAction()">
-                        <i class="bi bi-check"></i> Confirm
+                        <i class="bi bi-check"></i> {% trans "Confirm" %}
                     </button>
                 </div>
             </div>

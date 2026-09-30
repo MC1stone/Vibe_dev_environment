@@ -1,17 +1,18 @@
-% extends "base.html" %
+{% extends "base.html" %}
+{% load i18n %}
 
-% block title %}
+{% block title %}
 NIR Intelligence - All Workflows
-% endblock %
+{% endblock %}
 
-% block content %}
+{%block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
             <h1 class="page-title">
-                <i class="fas fa-list"></i> All Workflows
+                <i class="fas fa-list"></i> {% trans "All Workflows" %}
             </h1>
-            <p class="page-subtitle">Complete history of executed analysis workflows</p>
+            <p class="page-subtitle">{% trans "Complete history of executed analysis workflows" %}</p>
         </div>
     </div>
 
@@ -21,7 +22,7 @@ NIR Intelligence - All Workflows
             <div class="card">
                 <div class="card-header bg-primary text-white">
                     <h3 class="card-title mb-0">
-                        <i class="fas fa-chart-bar"></i> Workflow Statistics
+                        <i class="fas fa-chart-bar"></i> {% trans "Workflow Statistics" %}
                     </h3>
                 </div>
                 <div class="card-body">
@@ -43,7 +44,7 @@ NIR Intelligence - All Workflows
                                     <i class="fas fa-clock"></i>
                                 </div>
                                 <div class="stat-info">
-                                    <span class="stat-value">{{ workflows|sum(attribute='total_samples') }}</span>
+                                    <span class="stat-value">{{ workflows|length }}</span>
                                     <span class="stat-label">Total Samples</span>
                                 </div>
                             </div>
@@ -54,7 +55,7 @@ NIR Intelligence - All Workflows
                                     <i class="fas fa-file-alt"></i>
                                 </div>
                                 <div class="stat-info">
-                                    <span class="stat-value">{{ workflows|sum(attribute='generated_reports') }}</span>
+                                    <span class="stat-value">{{ workflows|length }}</span>
                                     <span class="stat-label">Total Reports</span>
                                 </div>
                             </div>
@@ -65,7 +66,7 @@ NIR Intelligence - All Workflows
                                     <i class="fas fa-exclamation-circle"></i>
                                 </div>
                                 <div class="stat-info">
-                                    <span class="stat-value">{{ workflows|sum(attribute='failed_analyses') }}</span>
+                                    <span class="stat-value">{{ workflows|length }}</span>
                                     <span class="stat-label">Failed Analyses</span>
                                 </div>
                             </div>
@@ -82,11 +83,11 @@ NIR Intelligence - All Workflows
             <div class="card">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <h3 class="card-title mb-0">
-                        <i class="fas fa-table"></i> Workflow History
+                        <i class="fas fa-table"></i> {% trans "Workflow History" %}
                     </h3>
                     <div>
                         <button class="btn btn-success btn-sm" onclick="startNewWorkflow()">
-                            <i class="fas fa-plus"></i> New Workflow
+                            <i class="fas fa-plus"></i> {% trans "New Workflow" %}
                         </button>
                     </div>
                 </div>
@@ -126,7 +127,7 @@ NIR Intelligence - All Workflows
                                         </span>
                                     </td>
                                     <td>{{ workflow.start_time }}</td>
-                                    <td>{{ "%.2f"|format(workflow.processing_time) }}s</td>
+                                    <td>{{ workflow.processing_time|floatformat:2 }}s</td>
                                     <td>{{ workflow.total_samples }}</td>
                                     <td>{{ workflow.successful_analyses }}</td>
                                     <td>{{ workflow.failed_analyses }}</td>
@@ -170,18 +171,18 @@ NIR Intelligence - All Workflows
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <button class="btn btn-primary" onclick="refreshWorkflowList()">
-                                <i class="fas fa-sync-alt"></i> Refresh List
+                                <i class="fas fa-sync-alt"></i> {% trans "Refresh List" %}
                             </button>
                             <button class="btn btn-secondary" onclick="exportWorkflowList()">
-                                <i class="fas fa-file-export"></i> Export List
+                                <i class="fas fa-file-export"></i> {% trans "Export List" %}
                             </button>
                         </div>
                         <div>
                             <button class="btn btn-warning" onclick="cleanupAllWorkflows()">
-                                <i class="fas fa-trash"></i> Cleanup All
+                                <i class="fas fa-trash"></i> {% trans "Cleanup All" %}
                             </button>
                             <button class="btn btn-success" onclick="startNewWorkflow()">
-                                <i class="fas fa-plus"></i> New Workflow
+                                <i class="fas fa-plus"></i> {% trans "New Workflow" %}
                             </button>
                         </div>
                     </div>
@@ -198,7 +199,7 @@ NIR Intelligence - All Workflows
             <div class="modal-header">
                 <h5 class="modal-title" id="reportsModalLabel">Workflow Reports</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+                    <span aria-hidden="true">{% trans "&times;" %}</span>
                 </button>
             </div>
             <div class="modal-body" id="reportsContent">
@@ -310,4 +311,4 @@ NIR Intelligence - All Workflows
         $('[data-toggle="tooltip"]').tooltip();
     });
 </script>
-% endblock %
+{% endblock %}
