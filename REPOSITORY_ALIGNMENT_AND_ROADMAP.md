@@ -525,6 +525,25 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - Offen (Zielumgebung): End-to-End-Klick im Browser gegen laufende Container
   (Upload → Crew-Analyse → Ergebnis-Panels + Quarto-Report).
 
+### OP48 — EU-Mehrsprachigkeit (i18n) — IN ARBEIT (OP48a erledigt)
+- **Plan:** `MULTILINGUAL_I18N_IMPLEMENTATIONPLAN.md` (Freigabe erteilt);
+  6 Phasen: Infrastruktur → Templates → Frontend-JS → Backend-Meldungen →
+  Übersetzungscontent → Tests/CI. Alle 24 EU-Amtssprachen als Django-Kataloge,
+  aktiv vollständig: de/en; fehlende Übersetzungen ehrlich als `untranslated`.
+- [x] OP48a Infrastruktur: `settings.py` (24 EU-Sprachen als `LANGUAGES`,
+  `LOCALE_PATHS`, `LocaleMiddleware`, `LANGUAGE_CODE='de'`), `nir_web/urls.py`
+  (`i18n_patterns` nur für UI-Seiten, `prefix_default_language=False`,
+  API-Routen ohne Sprachpräfix, `/i18n/setlang/`), locale-Kataloge de/en
+  angelegt; `.gitignore`: `*.mo` als Build-Artefakt.
+- [x] Testmatrix `tests/test_op48_i18n.py`: 22/22 grün (Settings-Vertrag,
+  Katalog-Header, URL-Wiring inkl. Rückwärtskompatibilität unpräfixierter
+  Default-Routen, set_language-Cookie, compilemessages); CI um OP48-Matrix
+  + compilemessages erweitert. Regressionen OP3/OP7/OP8 grün;
+  `manage.py check` ohne Befunde.
+- Offen: OP48b (26 Templates auf `{% trans %}` + Sprachumschalter), OP48c
+  (JS-Strings), OP48d (Backend-Meldungen/Chatbot/Quarto), OP48e
+  (Übersetzungscontent, ILIAS).
+
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.

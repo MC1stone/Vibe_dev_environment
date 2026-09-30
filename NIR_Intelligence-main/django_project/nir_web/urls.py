@@ -5,6 +5,8 @@ URL configuration for NIR_Mistral Web Application
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
+from django.conf.urls.i18n import i18n_patterns
+from django.views.i18n import set_language
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from django.http import JsonResponse
@@ -26,7 +28,9 @@ from api.quarto_views import (
     serve_report, generate_report_from_analysis, render_custom_report
 )
 
+# OP48: language switch endpoint (API-agnostic, no prefix)
 urlpatterns = [
+    path('i18n/', include('django.conf.urls.i18n')),
     # Admin
     path('admin/', admin.site.urls),
     
@@ -111,6 +115,36 @@ urlpatterns = [
     
     # API root
     path('api/', TemplateView.as_view(template_name='api_docs.html'), name='api-docs'),
+]
+
+# OP48: UI pages get locale-prefixed URLs (/en/dashboard/ ...); the default
+# language (de) stays unprefixed for backward compatibility (bookmarks, JS links).
+urlpatterns += i18n_patterns(
+    path('', TemplateView.as_view(template_name='index.html'), name='home'),
+    path('dashboard/', TemplateView.as_view(template_name='dashboard_colorful.html'), name='dashboard'),
+    path('agents/', TemplateView.as_view(template_name='agents.html'), name='agents-page'),
+    path('spectra/', TemplateView.as_view(template_name='spectra.html'), name='spectra-page'),
+    path('files/', TemplateView.as_view(template_name='files.html'), name='files-page'),
+    path('analysis/', TemplateView.as_view(template_name='analysis.html'), name='analysis-page'),
+    path('chatbot/', TemplateView.as_view(template_name='chatbot.html'), name='chatbot-page'),
+    path('ilias/', TemplateView.as_view(template_name='ilias.html'), name='ilias-page'),
+    path('federated/', TemplateView.as_view(template_name='federated.html'), name='federated-page'),
+    path('jobs/', TemplateView.as_view(template_name='jobs.html'), name='jobs-page'),
+    path('settings/', TemplateView.as_view(template_name='settings.html'), name='settings-page'),
+    path('documentation/', TemplateView.as_view(template_name='documentation.html'), name='documentation-page'),
+    prefix_default_language=False,
+)
+# Remove the non-prefixed duplicates of the UI pages above (they are now
+# served by i18n_patterns, which also covers the unprefixed default language).
+_ui_duplicate_names = {
+    'home', 'dashboard', 'agents-page', 'spectra-page', 'files-page',
+    'analysis-page', 'chatbot-page', 'ilias-page', 'federated-page',
+    'jobs-page', 'settings-page', 'documentation-page',
+}
+urlpatterns = [
+    p for p in urlpatterns
+    if not (hasattr(p, 'name') and getattr(p, 'name', None) in _ui_duplicate_names
+            and 'api' not in str(getattr(p, 'pattern', '')))
 ]
 
 # Serve static and media files in development. Static files are served from

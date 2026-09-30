@@ -3,7 +3,27 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP47 - Bugfix: Rebuild wird bei identischer Version nicht neu installiert
+## Current Task: OP48 - EU-Mehrsprachigkeit (i18n)
+
+### Objective
+Die Plattform (UI, Backend-Meldungen, Berichte, ILIAS-Sync) soll fuer alle
+24 EU-Amtssprachen lokalisierbar sein; aktiv vollstaendig: de/en. Plan:
+`MULTILINGUAL_I18N_IMPLEMENTATIONPLAN.md` (Freigabe erteilt).
+
+### Status
+- OP48a Infrastruktur - ERLEDIGT: settings (24 EU-Sprachen, LOCALE_PATHS,
+  LocaleMiddleware, LANGUAGE_CODE de), i18n_patterns nur fuer UI-Routen
+  (prefix_default_language=False, API ohne Praefix), /i18n/setlang/,
+  locale-Kataloge de/en, CI + Testmatrix test_op48_i18n.py 22/22 gruen.
+- Offen: OP48b Templates ({% trans %} + Sprachumschalter), OP48c JS-Strings,
+  OP48d Backend-Meldungen/Chatbot/Quarto, OP48e Uebersetzungscontent/ILIAS.
+
+### Success Criteria
+- UI in de und en vollstaendig umschaltbar; 24 Sprachkataloge angelegt
+- API-Statuscodes und JSON-Keys identisch zu vorher
+- Vollregression S3-S9, OP1-OP47 gruen; manage.py check ohne Befunde
+
+## Completed Task: OP47 - Bugfix: Rebuild wird bei identischer Version nicht neu installiert
 
 ### Objective (Zielumgebungs-Feedback Mint, 3. Runde)
 Nach OP45/OP46 lief die Installation, aber der apt-deb-Install zeigte "ok"

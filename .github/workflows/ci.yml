@@ -83,6 +83,9 @@ jobs:
           python tests/test_op42_bootstrap_script.py
           python tests/test_op43_ventoy_stick.py
           python tests/test_op45_host_backend_stack.py
+          python tests/test_op48_i18n.py
+      - name: i18n compile message catalogs (OP48)
+        run: python django_project/manage.py compilemessages
 
       - name: Django system check
         run: python django_project/manage.py check

@@ -76,6 +76,7 @@ def get_middleware():
     middleware = [
         'django.middleware.security.SecurityMiddleware',
         'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.middleware.locale.LocaleMiddleware',
         'django.middleware.common.CommonMiddleware',
         'django.middleware.csrf.CsrfViewMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -198,10 +199,22 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'de'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
+
+# OP48: EU multilingualism - all 24 official EU languages
+LANGUAGES = [
+    ('bg', 'Bulgarian'), ('hr', 'Croatian'), ('cs', 'Czech'), ('da', 'Danish'),
+    ('nl', 'Dutch'), ('en', 'English'), ('et', 'Estonian'), ('fi', 'Finnish'),
+    ('fr', 'French'), ('de', 'German'), ('el', 'Greek'), ('hu', 'Hungarian'),
+    ('ga', 'Irish'), ('it', 'Italian'), ('lv', 'Latvian'), ('lt', 'Lithuanian'),
+    ('mt', 'Maltese'), ('pl', 'Polish'), ('pt', 'Portuguese'), ('ro', 'Romanian'),
+    ('sk', 'Slovak'), ('sl', 'Slovenian'), ('es', 'Spanish'), ('sv', 'Swedish'),
+]
+
+LOCALE_PATHS = [BASE_DIR / 'locale']
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
