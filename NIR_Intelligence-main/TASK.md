@@ -3,7 +3,30 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP48 - EU-Mehrsprachigkeit (i18n)
+## Current Task: OP49 - Sensor-Websearch (Opt-in) + DIY-Spektrometer-Übersicht
+
+### Objective
+1. Opt-in Web-Suche nach unbekannten Sensoren über das lokale Ollama
+   (NIR_SENSOR_WEBSEARCH=1, Default off, Ergebnisse extern/unverifiziert).
+2. Kuratierte DIY-Spektrometer-Übersichtsseite unter
+   /api/projects/sensors/diy/ mit funktionierenden Links.
+
+### Status
+- ERLEDIGT: services/sensor_websearch.py (Ollama-Client, Opt-in,
+  ehrliche Fehlermeldung ohne Ollama); SensorAgent collect liefert
+  websearch-Sektion (enabled/external_unverified/results);
+  DiySpectrometerView + sensor_diy.html (5 kuratierte Projekte:
+  OpenSpectrometer, DIY Spectroscope Thingiverse, Public Lab Desktop
+  Spectrometer, Smartphone-CD-Spektrometer, SpecPhone/DualSpec +
+  7 Tutorial-Links), verlinkt von der Sensor-Übersicht; Route vor
+  sensor-detail registriert; 21 neue msgids in de/en-Katalogen;
+  Testmatrix test_op49_sensor_diy.py 23/23 gruen (T1 opt-in-Vertrag,
+  T2 SensorAgent-Sektion, T3 URL-Wiring, T4 kuratierte Listen,
+  T5 Template/Redirect, T6 Querverweis, T7 Kataloge); Regressionen
+  OP29 53/53, OP48 62/62, manage.py check ohne Befunde; CI um
+  OP49-Matrix erweitert.
+
+## Completed Task: OP48 - EU-Mehrsprachigkeit (i18n)
 
 ### Objective
 Die Plattform (UI, Backend-Meldungen, Berichte, ILIAS-Sync) soll fuer alle
