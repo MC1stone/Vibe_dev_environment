@@ -385,7 +385,8 @@ qmds = sorted((Path(__file__).resolve().parent.parent / 'templates'
                / 'reports').glob('*.qmd'))
 with_lang = [q for q in qmds if 'lang: {{lang}}' in
              q.read_text(encoding='utf-8')]
-check('T8f qmd templates expose lang placeholder', len(with_lang) >= 7,
+check('T8f qmd templates expose lang placeholder',
+      len(qmds) >= 6 and len(with_lang) == len(qmds),
       f'{len(with_lang)}/{len(qmds)}')
 
 # T8g: quarto_renderer injects lang into template data
