@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load i18n %}
 
 {% block title %}NIR Mistral Dashboard - Advanced Spectral Analysis{% endblock %}
 
@@ -300,7 +300,7 @@
 <!-- Welcome Section -->
 <div class="welcome-section">
     <h1 class="welcome-section__title">
-        <span class="text-gradient">Welcome to NIR Mistral</span>
+        <span class="text-gradient">{% trans "Welcome to NIR Mistral" %}</span>
     </h1>
     <p class="welcome-section__subtitle">
         Advanced NIR Spectroscopy Analysis Platform for research and industrial applications
@@ -314,7 +314,7 @@
             <i class="bi bi-graph-up"></i>
         </div>
         <div class="stat-card__value">42</div>
-        <div class="stat-card__label">Total Analyses</div>
+        <div class="stat-card__label">{% trans "Total Analyses" %}</div>
     </div>
     
     <div class="stat-card stat-card--success">
@@ -322,7 +322,7 @@
             <i class="bi bi-check-circle"></i>
         </div>
         <div class="stat-card__value">28</div>
-        <div class="stat-card__label">Successful</div>
+        <div class="stat-card__label">{% trans "Successful" %}</div>
     </div>
     
     <div class="stat-card stat-card--warning">
@@ -330,7 +330,7 @@
             <i class="bi bi-exclamation-triangle"></i>
         </div>
         <div class="stat-card__value">8</div>
-        <div class="stat-card__label">Needs Review</div>
+        <div class="stat-card__label">{% trans "Needs Review" %}</div>
     </div>
     
     <div class="stat-card stat-card--danger">
@@ -338,7 +338,7 @@
             <i class="bi bi-x-circle"></i>
         </div>
         <div class="stat-card__value">6</div>
-        <div class="stat-card__label">Failed</div>
+        <div class="stat-card__label">{% trans "Failed" %}</div>
     </div>
     
     <div class="stat-card stat-card--info">
@@ -346,7 +346,7 @@
             <i class="bi bi-people"></i>
         </div>
         <div class="stat-card__value">12</div>
-        <div class="stat-card__label">Active Users</div>
+        <div class="stat-card__label">{% trans "Active Users" %}</div>
     </div>
     
     <div class="stat-card stat-card--secondary">
@@ -354,46 +354,46 @@
             <i class="bi bi-cpu"></i>
         </div>
         <div class="stat-card__value">4</div>
-        <div class="stat-card__label">AI Agents</div>
+        <div class="stat-card__label">{% trans "AI Agents" %}</div>
     </div>
 </div>
 
 <!-- Quick Actions -->
 <div class="quick-actions">
     <div class="section-header">
-        <h2 class="section-header__title">Quick Actions</h2>
+        <h2 class="section-header__title">{% trans "Quick Actions" %}</h2>
     </div>
     <div class="quick-actions__grid">
         <a href="/files/" class="quick-action-card quick-action-card--primary">
             <div class="quick-action-card__icon">
                 <i class="bi bi-file-earmark-plus"></i>
             </div>
-            <div class="quick-action-card__title">Upload Files</div>
-            <div class="quick-action-card__description">Upload spectral files and run the CrewAI analysis</div>
+            <div class="quick-action-card__title">{% trans "Upload Files" %}</div>
+            <div class="quick-action-card__description">{% trans "Upload spectral files and run the CrewAI analysis" %}</div>
         </a>
         
         <a href="/analysis/" class="quick-action-card quick-action-card--success">
             <div class="quick-action-card__icon">
                 <i class="bi bi-robot"></i>
             </div>
-            <div class="quick-action-card__title">Run Analysis</div>
-            <div class="quick-action-card__description">Analyze existing spectral data</div>
+            <div class="quick-action-card__title">{% trans "Run Analysis" %}</div>
+            <div class="quick-action-card__description">{% trans "Analyze existing spectral data" %}</div>
         </a>
         
         <a href="/jobs/" class="quick-action-card quick-action-card--info">
             <div class="quick-action-card__icon">
                 <i class="bi bi-list-task"></i>
             </div>
-            <div class="quick-action-card__title">View Jobs</div>
-            <div class="quick-action-card__description">Monitor analysis job status</div>
+            <div class="quick-action-card__title">{% trans "View Jobs" %}</div>
+            <div class="quick-action-card__description">{% trans "Monitor analysis job status" %}</div>
         </a>
         
         <a href="/agents/" class="quick-action-card quick-action-card--warning">
             <div class="quick-action-card__icon">
                 <i class="bi bi-people"></i>
             </div>
-            <div class="quick-action-card__title">Manage Agents</div>
-            <div class="quick-action-card__description">Configure AI analysis agents</div>
+            <div class="quick-action-card__title">{% trans "Manage Agents" %}</div>
+            <div class="quick-action-card__description">{% trans "Configure AI analysis agents" %}</div>
         </a>
     </div>
 </div>
@@ -403,8 +403,8 @@
     <!-- Recent Activity -->
     <div class="recent-activity">
         <div class="section-header">
-            <h2 class="section-header__title">Recent Activity</h2>
-            <a href="/jobs/" class="section-header__action">View All</a>
+            <h2 class="section-header__title">{% trans "Recent Activity" %}</h2>
+            <a href="/jobs/" class="section-header__action">{% trans "View All" %}</a>
         </div>
         <ul class="activity-list">
             <li class="activity-item activity-item--success">
@@ -456,7 +456,7 @@
                 <i class="bi bi-check-circle"></i>
             </div>
             <div class="stat-card__value">100%</div>
-            <div class="stat-card__label">All Systems Operational</div>
+            <div class="stat-card__label">{% trans "All Systems Operational" %}</div>
         </div>
         
         <div style="margin-top: var(--spacing-md);">
@@ -464,28 +464,28 @@
                 <span style="font-weight: 600; color: var(--color-gray-700);">Spectral Analysis Agent</span>
                 <span class="c-status c-status--success">
                     <span class="c-status__indicator"></span>
-                    Active
+                    {% trans "Active" %}
                 </span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-sm);">
-                <span style="font-weight: 600; color: var(--color-gray-700);">Metadata Quality Agent</span>
+                <span style="font-weight: 600; color: var(--color-gray-700);">{% trans "Metadata Quality Agent" %}</span>
                 <span class="c-status c-status--success">
                     <span class="c-status__indicator"></span>
-                    Active
+                    {% trans "Active" %}
                 </span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-sm);">
-                <span style="font-weight: 600; color: var(--color-gray-700);">Reporting Agent</span>
+                <span style="font-weight: 600; color: var(--color-gray-700);">{% trans "Reporting Agent" %}</span>
                 <span class="c-status c-status--success">
                     <span class="c-status__indicator"></span>
-                    Active
+                    {% trans "Active" %}
                 </span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-weight: 600; color: var(--color-gray-700);">Federated Learning Agent</span>
+                <span style="font-weight: 600; color: var(--color-gray-700);">{% trans "Federated Learning Agent" %}</span>
                 <span class="c-status c-status--success">
                     <span class="c-status__indicator"></span>
-                    Active
+                    {% trans "Active" %}
                 </span>
             </div>
         </div>
@@ -503,11 +503,11 @@
         </div>
         <div class="nir-color-scale"></div>
         <div style="display: flex; justify-content: space-between; margin-top: var(--spacing-sm); font-size: var(--font-size-xs); color: var(--color-gray-500);">
-            <span>700 nm</span>
-            <span>1100 nm</span>
-            <span>1500 nm</span>
-            <span>1900 nm</span>
-            <span>2500 nm</span>
+            <span>{% trans "700 nm" %}</span>
+            <span>{% trans "1100 nm" %}</span>
+            <span>{% trans "1500 nm" %}</span>
+            <span>{% trans "1900 nm" %}</span>
+            <span>{% trans "2500 nm" %}</span>
         </div>
     </div>
 </div>

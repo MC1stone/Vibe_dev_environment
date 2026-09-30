@@ -971,6 +971,11 @@ class EnhancedDataPreparationAgent(BaseAgent):
             value = match.group(2).strip().strip('"\"')
             if not key or not value or len(value) > 200:
                 continue
+            # OP48/l10n follow-up (honesty rule): values produced by decoding
+            # binary noise carry replacement characters - they are not real
+            # metadata and must not turn a binary file into a metadata source.
+            if "\ufffd" in value or not value.isprintable():
+                continue
             key_norm = re.sub(r"[\s/()\-]+", "_", key).strip("_").lower()
             canonical = self._canonical_metadata_key(key_norm)
             metadata[canonical if canonical else key_norm] = value

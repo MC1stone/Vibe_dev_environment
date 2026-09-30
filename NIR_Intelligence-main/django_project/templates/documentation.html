@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load i18n %}
 
 {% block title %}Documentation - NIR_Mistral Framework{% endblock %}
 
@@ -12,8 +12,8 @@
         <div class="row">
             <div class="col-12">
                 <div class="page-header">
-                    <h1 class="page-title"><i class="bi bi-book"></i> Documentation</h1>
-                    <p class="page-subtitle">Comprehensive documentation for the NIR_Mistral DeveloperAgent Framework</p>
+                    <h1 class="page-title"><i class="bi bi-book"></i> {% trans "Documentation" %}</h1>
+                    <p class="page-subtitle">{% trans "Comprehensive documentation for the NIR_Mistral DeveloperAgent Framework" %}</p>
                 </div>
             </div>
         </div>
@@ -23,42 +23,42 @@
             <div class="col-md-3">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="bi bi-list"></i> Table of Contents</h5>
+                        <h5 class="card-title mb-0"><i class="bi bi-list"></i> {% trans "Table of Contents" %}</h5>
                     </div>
                     <div class="card-body">
                         <nav class="nav flex-column doc-nav">
                             <a class="nav-link active" href="#getting-started" onclick="showSection('getting-started')">
-                                <i class="bi bi-rocket"></i> Getting Started
+                                <i class="bi bi-rocket"></i> {% trans "Getting Started" %}
                             </a>
                             <a class="nav-link" href="#installation" onclick="showSection('installation')">
-                                <i class="bi bi-download"></i> Installation
+                                <i class="bi bi-download"></i> {% trans "Installation" %}
                             </a>
                             <a class="nav-link" href="#framework-overview" onclick="showSection('framework-overview')">
-                                <i class="bi bi-diagram-3"></i> Framework Overview
+                                <i class="bi bi-diagram-3"></i> {% trans "Framework Overview" %}
                             </a>
                             <a class="nav-link" href="#agents" onclick="showSection('agents')">
-                                <i class="bi bi-robot"></i> Agents
+                                <i class="bi bi-robot"></i> {% trans "Agents" %}
                             </a>
                             <a class="nav-link" href="#spectra-management" onclick="showSection('spectra-management')">
-                                <i class="bi bi-graph-up"></i> Spectra Management
+                                <i class="bi bi-graph-up"></i> {% trans "Spectra Management" %}
                             </a>
                             <a class="nav-link" href="#analysis" onclick="showSection('analysis')">
-                                <i class="bi bi-calculator"></i> Analysis
+                                <i class="bi bi-calculator"></i> {% trans "Analysis" %}
                             </a>
                             <a class="nav-link" href="#api-reference" onclick="showSection('api-reference')">
-                                <i class="bi bi-code-slash"></i> API Reference
+                                <i class="bi bi-code-slash"></i> {% trans "API Reference" %}
                             </a>
                             <a class="nav-link" href="#troubleshooting" onclick="showSection('troubleshooting')">
-                                <i class="bi bi-question-circle"></i> Troubleshooting
+                                <i class="bi bi-question-circle"></i> {% trans "Troubleshooting" %}
                             </a>
                             <a class="nav-link" href="#faq" onclick="showSection('faq')">
-                                <i class="bi bi-chat-dots"></i> FAQ
+                                <i class="bi bi-chat-dots"></i> {% trans "FAQ" %}
                             </a>
                             <a class="nav-link" href="#crewai" onclick="showSection('crewai')">
-                                <i class="bi bi-people-fill"></i> Crew AI Integration
+                                <i class="bi bi-people-fill"></i> {% trans "Crew AI Integration" %}
                             </a>
                             <a class="nav-link" href="#federated-learning" onclick="showSection('federated-learning')">
-                                <i class="bi bi-cloud-arrow-up"></i> Federated Learning
+                                <i class="bi bi-cloud-arrow-up"></i> {% trans "Federated Learning" %}
                             </a>
                         </nav>
                     </div>
@@ -67,22 +67,22 @@
                 <!-- Quick Links -->
                 <div class="card mt-4">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="bi bi-lightning-charge"></i> Quick Links</h5>
+                        <h5 class="card-title mb-0"><i class="bi bi-lightning-charge"></i> {% trans "Quick Links" %}</h5>
                     </div>
                     <div class="card-body">
                         <div class="d-grid gap-2">
                             <a href="https://github.com/martin/Development/vsCode_Environment/NIR_Mistral" 
                                class="btn btn-outline-primary btn-sm" target="_blank">
-                                <i class="bi bi-github"></i> GitHub Repository
+                                <i class="bi bi-github"></i> {% trans "GitHub Repository" %}
                             </a>
                             <a href="/api/" class="btn btn-outline-primary btn-sm">
-                                <i class="bi bi-code-slash"></i> API Documentation
+                                <i class="bi bi-code-slash"></i> {% trans "API Documentation" %}
                             </a>
                             <a href="/admin/" class="btn btn-outline-primary btn-sm">
-                                <i class="bi bi-person-workspace"></i> Admin Panel
+                                <i class="bi bi-person-workspace"></i> {% trans "Admin Panel" %}
                             </a>
                             <button class="btn btn-outline-primary btn-sm" onclick="downloadDocs()" type="button">
-                                <i class="bi bi-download"></i> Download Docs
+                                <i class="bi bi-download"></i> {% trans "Download Docs" %}
                             </a>
                         </div>
                     </div>
@@ -91,7 +91,7 @@
                 <!-- Version Info -->
                 <div class="card mt-4">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="bi bi-info-circle"></i> Version Info</h5>
+                        <h5 class="card-title mb-0"><i class="bi bi-info-circle"></i> {% trans "Version Info" %}</h5>
                     </div>
                     <div class="card-body">
                         <dl class="row">
@@ -114,10 +114,10 @@
                     <div class="card-body">
                         <!-- Getting Started Section -->
                         <div id="getting-started" class="doc-section">
-                            <h2><i class="bi bi-rocket"></i> Getting Started</h2>
-                            <p class="lead">Welcome to the NIR_Mistral DeveloperAgent Framework! This guide will help you get started with using the framework for NIR spectroscopy analysis.</p>
+                            <h2><i class="bi bi-rocket"></i> {% trans "Getting Started" %}</h2>
+                            <p class="lead">{% trans "Welcome to the NIR_Mistral DeveloperAgent Framework! This guide will help you get started with using the framework for NIR spectroscopy analysis." %}</p>
                             
-                            <h3>Prerequisites</h3>
+                            <h3>{% trans "Prerequisites" %}</h3>
                             <ul>
                                 <li>Python 3.8+</li>
                                 <li>Django 4.2+</li>
@@ -125,9 +125,9 @@
                                 <li>Modern web browser</li>
                             </ul>
                             
-                            <h3>Quick Start</h3>
+                            <h3>{% trans "Quick Start" %}</h3>
                             <ol>
-                                <li>Install the framework using the <a href="#installation">installation guide</a></li>
+                                <li>Install the framework using the <a href="#installation">{% trans "installation guide" %}</a></li>
                                 <li>Set up your database and run migrations</li>
                                 <li>Create a superuser account</li>
                                 <li>Start the development server</li>
@@ -136,15 +136,15 @@
                             
                             <div class="alert alert-info">
                                 <i class="bi bi-info-circle"></i> 
-                                <strong>Tip:</strong> Check out the <a href="#framework-overview">Framework Overview</a> to understand the architecture.
+                                <strong>Tip:</strong> {% trans "Check out the" %} <a href="#framework-overview">Framework Overview</a> {% trans "to understand the architecture." %}
                             </div>
                         </div>
 
                         <!-- Installation Section -->
                         <div id="installation" class="doc-section" style="display: none;">
-                            <h2><i class="bi bi-download"></i> Installation</h2>
+                            <h2><i class="bi bi-download"></i> {% trans "Installation" %}</h2>
                             
-                            <h3>Method 1: Manual Installation</h3>
+                            <h3>{% trans "Method 1: Manual Installation" %}</h3>
                             <div class="card bg-light mb-3">
                                 <div class="card-body">
                                     <pre><code># Clone the repository
@@ -170,7 +170,7 @@ python manage.py runserver</code></pre>
                                 </div>
                             </div>
                             
-                            <h3>Method 2: Docker Installation</h3>
+                            <h3>{% trans "Method 2: Docker Installation" %}</h3>
                             <div class="card bg-light mb-3">
                                 <div class="card-body">
                                     <pre><code># Build and run with Docker
@@ -180,8 +180,8 @@ docker-compose up -d
                                 </div>
                             </div>
                             
-                            <h3>Method 3: Ansible Deployment (Recommended for Production)</h3>
-                            <p>For production deployments, especially on Venty Stick devices, use the Ansible playbooks:</p>
+                            <h3>{% trans "Method 3: Ansible Deployment (Recommended for Production)" %}</h3>
+                            <p>{% trans "For production deployments, especially on Venty Stick devices, use the Ansible playbooks:" %}</p>
                             <pre><code># Navigate to ansible directory
 cd ansible
 
@@ -194,23 +194,23 @@ ansible-playbook -i inventory/hosts.yml playbooks/setup_venty_stick.yml</code></
 
                         <!-- Framework Overview Section -->
                         <div id="framework-overview" class="doc-section" style="display: none;">
-                            <h2><i class="bi bi-diagram-3"></i> Framework Overview</h2>
+                            <h2><i class="bi bi-diagram-3"></i> {% trans "Framework Overview" %}</h2>
                             
-                            <h3>Architecture</h3>
-                            <p>The NIR_Mistral DeveloperAgent Framework is built on a modular architecture with the following components:</p>
+                            <h3>{% trans "Architecture" %}</h3>
+                            <p>{% trans "The NIR_Mistral DeveloperAgent Framework is built on a modular architecture with the following components:" %}</p>
                             
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="card mb-3">
                                         <div class="card-header bg-primary text-white">
-                                            <h5 class="mb-0"><i class="bi bi-cpu"></i> Core Framework</h5>
+                                            <h5 class="mb-0"><i class="bi bi-cpu"></i> {% trans "Core Framework" %}</h5>
                                         </div>
                                         <div class="card-body">
                                             <ul>
-                                                <li><strong>Agent System:</strong> Manages and executes analysis agents</li>
-                                                <li><strong>Data Processing:</strong> Handles NIR spectroscopy data</li>
-                                                <li><strong>Job Management:</strong> Tracks analysis jobs and results</li>
-                                                <li><strong>Quality Control:</strong> Validates data quality</li>
+                                                <li><strong>{% trans "Agent System:" %}</strong> Manages and executes analysis agents</li>
+                                                <li><strong>{% trans "Data Processing:" %}</strong> Handles NIR spectroscopy data</li>
+                                                <li><strong>{% trans "Job Management:" %}</strong> Tracks analysis jobs and results</li>
+                                                <li><strong>{% trans "Quality Control:" %}</strong> Validates data quality</li>
                                             </ul>
                                         </div>
                                     </div>
@@ -218,56 +218,56 @@ ansible-playbook -i inventory/hosts.yml playbooks/setup_venty_stick.yml</code></
                                 <div class="col-md-6">
                                     <div class="card mb-3">
                                         <div class="card-header bg-success text-white">
-                                            <h5 class="mb-0"><i class="bi bi-globe"></i> Web Interface</h5>
+                                            <h5 class="mb-0"><i class="bi bi-globe"></i> {% trans "Web Interface" %}</h5>
                                         </div>
                                         <div class="card-body">
                                             <ul>
-                                                <li><strong>Dashboard:</strong> Overview of system status and recent activity</li>
-                                                <li><strong>Spectra Management:</strong> Upload, view, and manage NIR spectra</li>
-                                                <li><strong>Analysis:</strong> Run analysis using framework agents</li>
-                                                <li><strong>Jobs:</strong> Monitor and manage analysis jobs</li>
-                                                <li><strong>Agents:</strong> View and manage available agents</li>
+                                                <li><strong>{% trans "Dashboard:" %}</strong> Overview of system status and recent activity</li>
+                                                <li><strong>{% trans "Spectra Management:" %}</strong> Upload, view, and manage NIR spectra</li>
+                                                <li><strong>{% trans "Analysis:" %}</strong> Run analysis using framework agents</li>
+                                                <li><strong>{% trans "Jobs:" %}</strong> Monitor and manage analysis jobs</li>
+                                                <li><strong>{% trans "Agents:" %}</strong> View and manage available agents</li>
                                             </ul>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <h3>Data Flow</h3>
-                            <p>The typical data flow in the framework is:</p>
+                            <h3>{% trans "Data Flow" %}</h3>
+                            <p>{% trans "The typical data flow in the framework is:" %}</p>
                             <ol>
-                                <li><strong>Data Upload:</strong> Users upload NIR spectroscopy data in various formats</li>
-                                <li><strong>Data Processing:</strong> Data is parsed and stored in the database</li>
-                                <li><strong>Quality Control:</strong> Data quality is validated automatically</li>
-                                <li><strong>Analysis:</strong> Users select agents and parameters for analysis</li>
-                                <li><strong>Job Execution:</strong> Analysis jobs are executed by the framework</li>
-                                <li><strong>Results Storage:</strong> Results are stored and made available for viewing</li>
+                                <li><strong>{% trans "Data Upload:" %}</strong> Users upload NIR spectroscopy data in various formats</li>
+                                <li><strong>{% trans "Data Processing:" %}</strong> Data is parsed and stored in the database</li>
+                                <li><strong>{% trans "Quality Control:" %}</strong> Data quality is validated automatically</li>
+                                <li><strong>{% trans "Analysis:" %}</strong> Users select agents and parameters for analysis</li>
+                                <li><strong>{% trans "Job Execution:" %}</strong> Analysis jobs are executed by the framework</li>
+                                <li><strong>{% trans "Results Storage:" %}</strong> Results are stored and made available for viewing</li>
                             </ol>
                         </div>
 
                         <!-- Agents Section -->
                         <div id="agents" class="doc-section" style="display: none;">
-                            <h2><i class="bi bi-robot"></i> Agents</h2>
+                            <h2><i class="bi bi-robot"></i> {% trans "Agents" %}</h2>
                             
-                            <h3>What are Agents?</h3>
-                            <p>Agents in the NIR_Mistral framework are specialized modules that perform specific analysis tasks on NIR spectroscopy data. Each agent is designed to handle a particular type of analysis or data processing.</p>
+                            <h3>{% trans "What are Agents?" %}</h3>
+                            <p>{% trans "Agents in the NIR_Mistral framework are specialized modules that perform specific analysis tasks on NIR spectroscopy data. Each agent is designed to handle a particular type of analysis or data processing." %}</p>
                             
-                            <h3>Available Agents</h3>
+                            <h3>{% trans "Available Agents" %}</h3>
                             <div class="table-responsive">
                                 <table class="table table-striped">
                                     <thead>
                                         <tr>
-                                            <th>Agent Name</th>
-                                            <th>Version</th>
-                                            <th>Description</th>
-                                            <th>Analysis Type</th>
+                                            <th>{% trans "Agent Name" %}</th>
+                                            <th>{% trans "Version" %}</th>
+                                            <th>{% trans "Description" %}</th>
+                                            <th>{% trans "Analysis Type" %}</th>
                                         </tr>
                                     </thead>
                                     <tbody id="agentsTableBody">
                                         <tr>
                                             <td colspan="4" class="text-center">
                                                 <div class="spinner-border text-primary" role="status">
-                                                    <span class="visually-hidden">Loading...</span>
+                                                    <span class="visually-hidden">{% trans "Loading..." %}</span>
                                                 </div>
                                                 <p class="mt-2">Loading agents...</p>
                                             </td>
@@ -276,8 +276,8 @@ ansible-playbook -i inventory/hosts.yml playbooks/setup_venty_stick.yml</code></
                                 </table>
                             </div>
                             
-                            <h3>Creating Custom Agents</h3>
-                            <p>You can create custom agents by following these steps:</p>
+                            <h3>{% trans "Creating Custom Agents" %}</h3>
+                            <p>{% trans "You can create custom agents by following these steps:" %}</p>
                             <ol>
                                 <li>Create a new Python file in the <code>agents/</code> directory</li>
                                 <li>Implement the <code>BaseAgent</code> interface</li>
@@ -287,7 +287,7 @@ ansible-playbook -i inventory/hosts.yml playbooks/setup_venty_stick.yml</code></
                             
                             <div class="card bg-light">
                                 <div class="card-body">
-                                    <h5>Example Agent Structure</h5>
+                                    <h5>{% trans "Example Agent Structure" %}</h5>
                                     <pre><code>from dev_framework.agents import BaseAgent
 
 class MyCustomAgent(BaseAgent):
@@ -311,48 +311,48 @@ class MyCustomAgent(BaseAgent):
 
                         <!-- Spectra Management Section -->
                         <div id="spectra-management" class="doc-section" style="display: none;">
-                            <h2><i class="bi bi-graph-up"></i> Spectra Management</h2>
+                            <h2><i class="bi bi-graph-up"></i> {% trans "Spectra Management" %}</h2>
                             
-                            <h3>Supported File Formats</h3>
+                            <h3>{% trans "Supported File Formats" %}</h3>
                             <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-filetype-txt"></i> TXT Files</h5>
-                                            <p class="card-text">Plain text files with wavelength and absorbance columns. Supports various delimiters (comma, tab, space).</p>
+                                            <h5 class="card-title"><i class="bi bi-filetype-txt"></i> {% trans "TXT Files" %}</h5>
+                                            <p class="card-text">{% trans "Plain text files with wavelength and absorbance columns. Supports various delimiters (comma, tab, space)." %}</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-filetype-csv"></i> CSV Files</h5>
-                                            <p class="card-text">Comma-separated values format. First row should contain headers (wavelength, value).</p>
+                                            <h5 class="card-title"><i class="bi bi-filetype-csv"></i> {% trans "CSV Files" %}</h5>
+                                            <p class="card-text">{% trans "Comma-separated values format. First row should contain headers (wavelength, value)." %}</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-filetype-json"></i> JSON Files</h5>
-                                            <p class="card-text">JSON format with wavelength and value arrays. Supports additional metadata.</p>
+                                            <h5 class="card-title"><i class="bi bi-filetype-json"></i> {% trans "JSON Files" %}</h5>
+                                            <p class="card-text">{% trans "JSON format with wavelength and value arrays. Supports additional metadata." %}</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <h3>Uploading Spectra</h3>
+                            <h3>{% trans "Uploading Spectra" %}</h3>
                             <ol>
-                                <li>Navigate to the <strong>Spectra</strong> page</li>
-                                <li>Click the <strong>Upload Spectrum</strong> button</li>
+                                <li>Navigate to the <strong>{% trans "Spectra" %}</strong> page</li>
+                                <li>Click the <strong>{% trans "Upload Spectrum" %}</strong> button</li>
                                 <li>Fill in the spectrum information (name, ID, type)</li>
                                 <li>Select the spectrum file from your computer</li>
                                 <li>Optionally add metadata and description</li>
-                                <li>Click <strong>Upload</strong> to save the spectrum</li>
+                                <li>Click <strong>{% trans "Upload" %}</strong> to save the spectrum</li>
                             </ol>
                             
-                            <h3>Spectrum Metadata</h3>
-                            <p>Each spectrum can include metadata such as:</p>
+                            <h3>{% trans "Spectrum Metadata" %}</h3>
+                            <p>{% trans "Each spectrum can include metadata such as:" %}</p>
                             <ul>
                                 <li>Sample information (name, ID, type)</li>
                                 <li>Instrument details</li>
@@ -363,16 +363,16 @@ class MyCustomAgent(BaseAgent):
 
                         <!-- Analysis Section -->
                         <div id="analysis" class="doc-section" style="display: none;">
-                            <h2><i class="bi bi-calculator"></i> Analysis</h2>
+                            <h2><i class="bi bi-calculator"></i> {% trans "Analysis" %}</h2>
                             
-                            <h3>Analysis Types</h3>
+                            <h3>{% trans "Analysis Types" %}</h3>
                             <div class="row">
                                 <div class="col-md-6 mb-4">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-graph-up"></i> Peak Detection</h5>
-                                            <p class="card-text">Identifies and analyzes spectral peaks using various algorithms (local maxima, derivatives).</p>
-                                            <h6>Parameters:</h6>
+                                            <h5 class="card-title"><i class="bi bi-graph-up"></i> {% trans "Peak Detection" %}</h5>
+                                            <p class="card-text">{% trans "Identifies and analyzes spectral peaks using various algorithms (local maxima, derivatives)." %}</p>
+                                            <h6>{% trans "Parameters:" %}</h6>
                                             <ul>
                                                 <li>Method: local_maxima, first_derivative, second_derivative</li>
                                                 <li>Threshold: Minimum peak height</li>
@@ -384,9 +384,9 @@ class MyCustomAgent(BaseAgent):
                                 <div class="col-md-6 mb-4">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-check-circle"></i> Quality Control</h5>
-                                            <p class="card-text">Validates data quality and integrity with comprehensive checks.</p>
-                                            <h6>Checks:</h6>
+                                            <h5 class="card-title"><i class="bi bi-check-circle"></i> {% trans "Quality Control" %}</h5>
+                                            <p class="card-text">{% trans "Validates data quality and integrity with comprehensive checks." %}</p>
+                                            <h6>{% trans "Checks:" %}</h6>
                                             <ul>
                                                 <li>Wavelength range validation</li>
                                                 <li>Resolution verification</li>
@@ -399,9 +399,9 @@ class MyCustomAgent(BaseAgent):
                                 <div class="col-md-6 mb-4">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-bar-chart"></i> Statistical Analysis</h5>
-                                            <p class="card-text">Computes statistical metrics for the spectrum.</p>
-                                            <h6>Metrics:</h6>
+                                            <h5 class="card-title"><i class="bi bi-bar-chart"></i> {% trans "Statistical Analysis" %}</h5>
+                                            <p class="card-text">{% trans "Computes statistical metrics for the spectrum." %}</p>
+                                            <h6>{% trans "Metrics:" %}</h6>
                                             <ul>
                                                 <li>Mean, median, standard deviation</li>
                                                 <li>Minimum, maximum, range</li>
@@ -414,9 +414,9 @@ class MyCustomAgent(BaseAgent):
                                 <div class="col-md-6 mb-4">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-people"></i> Comparative Analysis</h5>
-                                            <p class="card-text">Compares multiple spectra using various methods.</p>
-                                            <h6>Methods:</h6>
+                                            <h5 class="card-title"><i class="bi bi-people"></i> {% trans "Comparative Analysis" %}</h5>
+                                            <p class="card-text">{% trans "Compares multiple spectra using various methods." %}</p>
+                                            <h6>{% trans "Methods:" %}</h6>
                                             <ul>
                                                 <li>Overlay plot</li>
                                                 <li>Difference spectrum</li>
@@ -428,159 +428,159 @@ class MyCustomAgent(BaseAgent):
                                 </div>
                             </div>
                             
-                            <h3>Running an Analysis</h3>
+                            <h3>{% trans "Running an Analysis" %}</h3>
                             <ol>
-                                <li>Navigate to the <strong>Analysis</strong> page</li>
+                                <li>Navigate to the <strong>{% trans "Analysis" %}</strong> page</li>
                                 <li>Select an analysis type from the available methods</li>
                                 <li>Choose a spectrum to analyze</li>
                                 <li>Select an agent to perform the analysis</li>
                                 <li>Configure analysis-specific parameters</li>
-                                <li>Click <strong>Start Analysis</strong> to begin</li>
-                                <li>Monitor progress in the <strong>Active Jobs</strong> section</li>
+                                <li>Click <strong>{% trans "Start Analysis" %}</strong> to begin</li>
+                                <li>Monitor progress in the <strong>{% trans "Active Jobs" %}</strong> section</li>
                                 <li>View results when the analysis completes</li>
                             </ol>
                         </div>
 
                         <!-- API Reference Section -->
                         <div id="api-reference" class="doc-section" style="display: none;">
-                            <h2><i class="bi bi-code-slash"></i> API Reference</h2>
+                            <h2><i class="bi bi-code-slash"></i> {% trans "API Reference" %}</h2>
                             
-                            <h3>Authentication</h3>
-                            <p>The API uses JWT (JSON Web Token) authentication. Include the token in the Authorization header:</p>
+                            <h3>{% trans "Authentication" %}</h3>
+                            <p>{% trans "The API uses JWT (JSON Web Token) authentication. Include the token in the Authorization header:" %}</p>
                             <pre><code>Authorization: Bearer &lt;your-token&gt;</code></pre>
                             
-                            <h4>Token Endpoints</h4>
+                            <h4>{% trans "Token Endpoints" %}</h4>
                             <div class="table-responsive">
                                 <table class="table table-striped">
                                     <thead>
                                         <tr>
-                                            <th>Endpoint</th>
-                                            <th>Method</th>
-                                            <th>Description</th>
+                                            <th>{% trans "Endpoint" %}</th>
+                                            <th>{% trans "Method" %}</th>
+                                            <th>{% trans "Description" %}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
                                             <td><code>/api/token/</code></td>
-                                            <td>POST</td>
-                                            <td>Obtain JWT token</td>
+                                            <td>{% trans "POST" %}</td>
+                                            <td>{% trans "Obtain JWT token" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/token/refresh/</code></td>
-                                            <td>POST</td>
-                                            <td>Refresh JWT token</td>
+                                            <td>{% trans "POST" %}</td>
+                                            <td>{% trans "Refresh JWT token" %}</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                             
-                            <h3>Endpoints</h3>
+                            <h3>{% trans "Endpoints" %}</h3>
                             
-                            <h4>Agents</h4>
+                            <h4>{% trans "Agents" %}</h4>
                             <div class="table-responsive">
                                 <table class="table table-striped">
                                     <thead>
                                         <tr>
-                                            <th>Endpoint</th>
-                                            <th>Method</th>
-                                            <th>Description</th>
+                                            <th>{% trans "Endpoint" %}</th>
+                                            <th>{% trans "Method" %}</th>
+                                            <th>{% trans "Description" %}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
                                             <td><code>/api/agents/</code></td>
-                                            <td>GET</td>
-                                            <td>List all available agents</td>
+                                            <td>{% trans "GET" %}</td>
+                                            <td>{% trans "List all available agents" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/agents/{name}/</code></td>
-                                            <td>GET</td>
-                                            <td>Get agent details</td>
+                                            <td>{% trans "GET" %}</td>
+                                            <td>{% trans "Get agent details" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/agents/{name}/execute/</code></td>
-                                            <td>POST</td>
-                                            <td>Execute an agent</td>
+                                            <td>{% trans "POST" %}</td>
+                                            <td>{% trans "Execute an agent" %}</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                             
-                            <h4>Spectra</h4>
+                            <h4>{% trans "Spectra" %}</h4>
                             <div class="table-responsive">
                                 <table class="table table-striped">
                                     <thead>
                                         <tr>
-                                            <th>Endpoint</th>
-                                            <th>Method</th>
-                                            <th>Description</th>
+                                            <th>{% trans "Endpoint" %}</th>
+                                            <th>{% trans "Method" %}</th>
+                                            <th>{% trans "Description" %}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
                                             <td><code>/api/spectra/</code></td>
-                                            <td>GET</td>
-                                            <td>List all spectra</td>
+                                            <td>{% trans "GET" %}</td>
+                                            <td>{% trans "List all spectra" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/spectra/</code></td>
-                                            <td>POST</td>
-                                            <td>Upload a new spectrum</td>
+                                            <td>{% trans "POST" %}</td>
+                                            <td>{% trans "Upload a new spectrum" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/spectra/{id}/</code></td>
-                                            <td>GET</td>
-                                            <td>Get spectrum details</td>
+                                            <td>{% trans "GET" %}</td>
+                                            <td>{% trans "Get spectrum details" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/spectra/{id}/</code></td>
-                                            <td>DELETE</td>
-                                            <td>Delete a spectrum</td>
+                                            <td>{% trans "DELETE" %}</td>
+                                            <td>{% trans "Delete a spectrum" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/spectra/{id}/analyze/</code></td>
-                                            <td>POST</td>
-                                            <td>Analyze a spectrum</td>
+                                            <td>{% trans "POST" %}</td>
+                                            <td>{% trans "Analyze a spectrum" %}</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                             
-                            <h4>Jobs</h4>
+                            <h4>{% trans "Jobs" %}</h4>
                             <div class="table-responsive">
                                 <table class="table table-striped">
                                     <thead>
                                         <tr>
-                                            <th>Endpoint</th>
-                                            <th>Method</th>
-                                            <th>Description</th>
+                                            <th>{% trans "Endpoint" %}</th>
+                                            <th>{% trans "Method" %}</th>
+                                            <th>{% trans "Description" %}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
                                             <td><code>/api/jobs/</code></td>
-                                            <td>GET</td>
-                                            <td>List all jobs</td>
+                                            <td>{% trans "GET" %}</td>
+                                            <td>{% trans "List all jobs" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/jobs/</code></td>
-                                            <td>POST</td>
-                                            <td>Create a new job</td>
+                                            <td>{% trans "POST" %}</td>
+                                            <td>{% trans "Create a new job" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/jobs/{id}/</code></td>
-                                            <td>GET</td>
-                                            <td>Get job details</td>
+                                            <td>{% trans "GET" %}</td>
+                                            <td>{% trans "Get job details" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/jobs/{id}/cancel/</code></td>
-                                            <td>POST</td>
-                                            <td>Cancel a job</td>
+                                            <td>{% trans "POST" %}</td>
+                                            <td>{% trans "Cancel a job" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/jobs/{id}/</code></td>
-                                            <td>DELETE</td>
-                                            <td>Delete a job</td>
+                                            <td>{% trans "DELETE" %}</td>
+                                            <td>{% trans "Delete a job" %}</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -589,9 +589,9 @@ class MyCustomAgent(BaseAgent):
 
                         <!-- Troubleshooting Section -->
                         <div id="troubleshooting" class="doc-section" style="display: none;">
-                            <h2><i class="bi bi-question-circle"></i> Troubleshooting</h2>
+                            <h2><i class="bi bi-question-circle"></i> {% trans "Troubleshooting" %}</h2>
                             
-                            <h3>Common Issues</h3>
+                            <h3>{% trans "Common Issues" %}</h3>
                             
                             <div class="accordion" id="troubleshootingAccordion">
                                 <div class="accordion-item">
@@ -603,11 +603,11 @@ class MyCustomAgent(BaseAgent):
                                     </h2>
                                     <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#troubleshootingAccordion">
                                         <div class="accordion-body">
-                                            <p><strong>Solution:</strong> Check your database connection settings in <code>settings.py</code>.</p>
+                                            <p><strong>{% trans "Solution:" %}</strong> Check your database connection settings in <code>settings.py</code>.</p>
                                             <ul>
-                                                <li>Verify database server is running</li>
-                                                <li>Check connection credentials</li>
-                                                <li>Test connection manually using database client</li>
+                                                <li>{% trans "Verify database server is running" %}</li>
+                                                <li>{% trans "Check connection credentials" %}</li>
+                                                <li>{% trans "Test connection manually using database client" %}</li>
                                             </ul>
                                         </div>
                                     </div>
@@ -616,16 +616,16 @@ class MyCustomAgent(BaseAgent):
                                     <h2 class="accordion-header">
                                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
                                                 data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                                            File upload fails
+                                            {% trans "File upload fails" %}
                                         </button>
                                     </h2>
                                     <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
                                         <div class="accordion-body">
-                                            <p><strong>Solution:</strong> Check file format and size limits.</p>
+                                            <p><strong>{% trans "Solution:" %}</strong> Check file format and size limits.</p>
                                             <ul>
-                                                <li>Ensure file is in supported format (TXT, CSV, JSON)</li>
-                                                <li>Check file size doesn't exceed maximum limit</li>
-                                                <li>Verify file contains required columns (wavelength, value)</li>
+                                                <li>{% trans "Ensure file is in supported format (TXT, CSV, JSON)" %}</li>
+                                                <li>{% trans "Check file size doesn't exceed maximum limit" %}</li>
+                                                <li>{% trans "Verify file contains required columns (wavelength, value)" %}</li>
                                             </ul>
                                         </div>
                                     </div>
@@ -634,16 +634,16 @@ class MyCustomAgent(BaseAgent):
                                     <h2 class="accordion-header">
                                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
                                                 data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                                            Analysis jobs stuck in pending state
+                                            {% trans "Analysis jobs stuck in pending state" %}
                                         </button>
                                     </h2>
                                     <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
                                         <div class="accordion-body">
-                                            <p><strong>Solution:</strong> Check worker processes and queue system.</p>
+                                            <p><strong>{% trans "Solution:" %}</strong> Check worker processes and queue system.</p>
                                             <ul>
-                                                <li>Verify Celery worker is running</li>
-                                                <li>Check Redis server connection</li>
-                                                <li>Restart worker processes</li>
+                                                <li>{% trans "Verify Celery worker is running" %}</li>
+                                                <li>{% trans "Check Redis server connection" %}</li>
+                                                <li>{% trans "Restart worker processes" %}</li>
                                             </ul>
                                         </div>
                                     </div>
@@ -693,33 +693,33 @@ class MyCustomAgent(BaseAgent):
 
                         <!-- Crew AI Integration Section -->
                         <div id="crewai" class="doc-section" style="display: none;">
-                            <h2><i class="bi bi-people-fill"></i> Crew AI Integration</h2>
+                            <h2><i class="bi bi-people-fill"></i> {% trans "Crew AI Integration" %}</h2>
                             
-                            <h3>Overview</h3>
-                            <p>The NIR_Mistral framework integrates <strong>Crew AI</strong> to provide intelligent, automated analysis workflows. Crew AI enables the orchestration of multiple specialized agents working together to perform comprehensive NIR spectral analysis.</p>
+                            <h3>{% trans "Overview" %}</h3>
+                            <p>{% trans "The NIR_Mistral framework integrates" %} <strong>Crew AI</strong> {% trans "to provide intelligent, automated analysis workflows. Crew AI enables the orchestration of multiple specialized agents working together to perform comprehensive NIR spectral analysis." %}</p>
                             
                             <div class="alert alert-info">
                                 <i class="bi bi-info-circle"></i> 
-                                <strong>Crew AI Features:</strong> Multi-agent orchestration, task delegation, result aggregation, and intelligent workflow management.
+                                <strong>Crew AI Features:</strong> {% trans "Multi-agent orchestration, task delegation, result aggregation, and intelligent workflow management." %}
                             </div>
                             
                             <div id="crewaiStatus">
                                 <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Loading Crew AI status...</span>
+                                    <span class="visually-hidden">{% trans "Loading Crew AI status..." %}</span>
                                 </div>
                                 <p class="mt-2">Loading Crew AI status...</p>
                             </div>
                             
-                            <h3>Available Crew AI Agents</h3>
-                            <p>The framework includes the following specialized Crew AI agents:</p>
+                            <h3>{% trans "Available Crew AI Agents" %}</h3>
+                            <p>{% trans "The framework includes the following specialized Crew AI agents:" %}</p>
                             
                             <div class="row">
                                 <div class="col-md-6 mb-4">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-graph-up"></i> SpectralAnalysisAgent</h5>
-                                            <p class="card-text">Performs comprehensive spectral analysis including quality assessment, peak detection, and statistical analysis.</p>
-                                            <h6>Capabilities:</h6>
+                                            <h5 class="card-title"><i class="bi bi-graph-up"></i> {% trans "SpectralAnalysisAgent" %}</h5>
+                                            <p class="card-text">{% trans "Performs comprehensive spectral analysis including quality assessment, peak detection, and statistical analysis." %}</p>
+                                            <h6>{% trans "Capabilities:" %}</h6>
                                             <ul>
                                                 <li>Quality scoring and grading</li>
                                                 <li>Wavelength range validation</li>
@@ -734,9 +734,9 @@ class MyCustomAgent(BaseAgent):
                                 <div class="col-md-6 mb-4">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-check-circle"></i> MetadataQualityAgent</h5>
-                                            <p class="card-text">Assesses the quality and completeness of spectrum metadata using comprehensive validation rules.</p>
-                                            <h6>Capabilities:</h6>
+                                            <h5 class="card-title"><i class="bi bi-check-circle"></i> {% trans "MetadataQualityAgent" %}</h5>
+                                            <p class="card-text">{% trans "Assesses the quality and completeness of spectrum metadata using comprehensive validation rules." %}</p>
+                                            <h6>{% trans "Capabilities:" %}</h6>
                                             <ul>
                                                 <li>Completeness scoring</li>
                                                 <li>Accuracy validation</li>
@@ -750,9 +750,9 @@ class MyCustomAgent(BaseAgent):
                                 <div class="col-md-6 mb-4">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-file-earmark-text"></i> ReportingAgent</h5>
-                                            <p class="card-text">Generates comprehensive reports in multiple formats (HTML, PDF, DOCX, Markdown, Quarto) with customizable templates.</p>
-                                            <h6>Capabilities:</h6>
+                                            <h5 class="card-title"><i class="bi bi-file-earmark-text"></i> {% trans "ReportingAgent" %}</h5>
+                                            <p class="card-text">{% trans "Generates comprehensive reports in multiple formats (HTML, PDF, DOCX, Markdown, Quarto) with customizable templates." %}</p>
+                                            <h6>{% trans "Capabilities:" %}</h6>
                                             <ul>
                                                 <li>Multi-format report generation</li>
                                                 <li>Quarto template support</li>
@@ -766,9 +766,9 @@ class MyCustomAgent(BaseAgent):
                                 <div class="col-md-6 mb-4">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-calculator"></i> CalibrationAgent</h5>
-                                            <p class="card-text">Handles spectrometer calibration, wavelength correction, and instrument validation for accurate measurements.</p>
-                                            <h6>Capabilities:</h6>
+                                            <h5 class="card-title"><i class="bi bi-calculator"></i> {% trans "CalibrationAgent" %}</h5>
+                                            <p class="card-text">{% trans "Handles spectrometer calibration, wavelength correction, and instrument validation for accurate measurements." %}</p>
+                                            <h6>{% trans "Capabilities:" %}</h6>
                                             <ul>
                                                 <li>Wavelength calibration</li>
                                                 <li>Intensity correction</li>
@@ -782,9 +782,9 @@ class MyCustomAgent(BaseAgent):
                                 <div class="col-md-6 mb-4">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-flower"></i> FlowerAgent</h5>
-                                            <p class="card-text">Implements federated learning capabilities for collaborative model training while preserving data privacy.</p>
-                                            <h6>Capabilities:</h6>
+                                            <h5 class="card-title"><i class="bi bi-flower"></i> {% trans "FlowerAgent" %}</h5>
+                                            <p class="card-text">{% trans "Implements federated learning capabilities for collaborative model training while preserving data privacy." %}</p>
+                                            <h6>{% trans "Capabilities:" %}</h6>
                                             <ul>
                                                 <li>Federated learning workflows</li>
                                                 <li>Privacy-preserving data contribution</li>
@@ -797,160 +797,160 @@ class MyCustomAgent(BaseAgent):
                                 </div>
                             </div>
                             
-                            <h3>Crew AI API Endpoints</h3>
-                            <p>The following API endpoints are available for Crew AI integration:</p>
+                            <h3>{% trans "Crew AI API Endpoints" %}</h3>
+                            <p>{% trans "The following API endpoints are available for Crew AI integration:" %}</p>
                             
                             <div class="table-responsive">
                                 <table class="table table-striped">
                                     <thead>
                                         <tr>
-                                            <th>Endpoint</th>
-                                            <th>Method</th>
-                                            <th>Description</th>
+                                            <th>{% trans "Endpoint" %}</th>
+                                            <th>{% trans "Method" %}</th>
+                                            <th>{% trans "Description" %}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
                                             <td><code>/api/crewai/analysis/start/</code></td>
-                                            <td>POST</td>
-                                            <td>Start a new spectral analysis with Crew AI</td>
+                                            <td>{% trans "POST" %}</td>
+                                            <td>{% trans "Start a new spectral analysis with Crew AI" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/crewai/analysis/status/</code></td>
-                                            <td>GET</td>
-                                            <td>Get status of a specific analysis</td>
+                                            <td>{% trans "GET" %}</td>
+                                            <td>{% trans "Get status of a specific analysis" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/crewai/analysis/history/</code></td>
-                                            <td>GET</td>
-                                            <td>Get analysis history</td>
+                                            <td>{% trans "GET" %}</td>
+                                            <td>{% trans "Get analysis history" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/crewai/analysis/batch/</code></td>
-                                            <td>POST</td>
-                                            <td>Perform batch analysis on multiple samples</td>
+                                            <td>{% trans "POST" %}</td>
+                                            <td>{% trans "Perform batch analysis on multiple samples" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/crewai/reports/preview/</code></td>
-                                            <td>GET</td>
-                                            <td>Get preview of a generated report</td>
+                                            <td>{% trans "GET" %}</td>
+                                            <td>{% trans "Get preview of a generated report" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/crewai/reports/list/</code></td>
-                                            <td>GET</td>
-                                            <td>List all generated reports</td>
+                                            <td>{% trans "GET" %}</td>
+                                            <td>{% trans "List all generated reports" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/crewai/status/</code></td>
-                                            <td>GET</td>
-                                            <td>Get Crew AI system status</td>
+                                            <td>{% trans "GET" %}</td>
+                                            <td>{% trans "Get Crew AI system status" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/crewai/cleanup/</code></td>
-                                            <td>POST</td>
-                                            <td>Clean up old analysis resources</td>
+                                            <td>{% trans "POST" %}</td>
+                                            <td>{% trans "Clean up old analysis resources" %}</td>
                                         </tr>
                                         <tr>
                                             <td><code>/api/crewai/federated/contribute/</code></td>
-                                            <td>POST</td>
-                                            <td>Contribute data to federated learning</td>
+                                            <td>{% trans "POST" %}</td>
+                                            <td>{% trans "Contribute data to federated learning" %}</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                             
-                            <h3>Using Crew AI in Analysis</h3>
-                            <p>To use Crew AI for spectral analysis:</p>
+                            <h3>{% trans "Using Crew AI in Analysis" %}</h3>
+                            <p>{% trans "To use Crew AI for spectral analysis:" %}</p>
                             <ol>
-                                <li>Navigate to the <strong>Analysis</strong> page</li>
-                                <li>Select <strong>Crew AI Analysis</strong> as the analysis method</li>
+                                <li>Navigate to the <strong>{% trans "Analysis" %}</strong> page</li>
+                                <li>Select <strong>{% trans "Crew AI Analysis" %}</strong> as the analysis method</li>
                                 <li>Choose the analysis mode (Standard, Comprehensive, Quick, or Batch)</li>
                                 <li>Select the desired agents for your analysis</li>
                                 <li>Configure analysis parameters and privacy settings</li>
                                 <li>Upload your spectral data or select from existing spectra</li>
-                                <li>Click <strong>Start Crew AI Analysis</strong></li>
+                                <li>Click <strong>{% trans "Start Crew AI Analysis" %}</strong></li>
                                 <li>Monitor progress in real-time</li>
                                 <li>View comprehensive results and generated reports</li>
                             </ol>
                             
-                            <h3>Analysis Modes</h3>
+                            <h3>{% trans "Analysis Modes" %}</h3>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <div class="card">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-gear"></i> Standard Mode</h5>
-                                            <p class="card-text">Balanced analysis with all core agents (Spectral, Metadata, Reporting, Calibration).</p>
+                                            <h5 class="card-title"><i class="bi bi-gear"></i> {% trans "Standard Mode" %}</h5>
+                                            <p class="card-text">{% trans "Balanced analysis with all core agents (Spectral, Metadata, Reporting, Calibration)." %}</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <div class="card">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-stars"></i> Comprehensive Mode</h5>
-                                            <p class="card-text">Full analysis with all agents including advanced features and detailed reporting.</p>
+                                            <h5 class="card-title"><i class="bi bi-stars"></i> {% trans "Comprehensive Mode" %}</h5>
+                                            <p class="card-text">{% trans "Full analysis with all agents including advanced features and detailed reporting." %}</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <div class="card">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-lightning-charge"></i> Quick Mode</h5>
-                                            <p class="card-text">Fast analysis with essential agents only, optimized for speed.</p>
+                                            <h5 class="card-title"><i class="bi bi-lightning-charge"></i> {% trans "Quick Mode" %}</h5>
+                                            <p class="card-text">{% trans "Fast analysis with essential agents only, optimized for speed." %}</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <div class="card">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-collection"></i> Batch Mode</h5>
-                                            <p class="card-text">Process multiple spectra simultaneously with optimized resource usage.</p>
+                                            <h5 class="card-title"><i class="bi bi-collection"></i> {% trans "Batch Mode" %}</h5>
+                                            <p class="card-text">{% trans "Process multiple spectra simultaneously with optimized resource usage." %}</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <h3>Privacy Levels</h3>
+                            <h3>{% trans "Privacy Levels" %}</h3>
                             <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-shield-fill-check"></i> Local Only</h5>
-                                            <p class="card-text">Data remains on your local system only. No external sharing.</p>
+                                            <h5 class="card-title"><i class="bi bi-shield-fill-check"></i> {% trans "Local Only" %}</h5>
+                                            <p class="card-text">{% trans "Data remains on your local system only. No external sharing." %}</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-shield-fill-plus"></i> Public Federated</h5>
-                                            <p class="card-text">Data can be shared with federated learning network for collaborative model improvement.</p>
+                                            <h5 class="card-title"><i class="bi bi-shield-fill-plus"></i> {% trans "Public Federated" %}</h5>
+                                            <p class="card-text">{% trans "Data can be shared with federated learning network for collaborative model improvement." %}</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-shield-fill-exclamation"></i> Private Federated</h5>
-                                            <p class="card-text">Data is used for federated learning but with enhanced privacy protections.</p>
+                                            <h5 class="card-title"><i class="bi bi-shield-fill-exclamation"></i> {% trans "Private Federated" %}</h5>
+                                            <p class="card-text">{% trans "Data is used for federated learning but with enhanced privacy protections." %}</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <h3>Report Types</h3>
-                            <p>The framework supports the following report types:</p>
+                            <h3>{% trans "Report Types" %}</h3>
+                            <p>{% trans "The framework supports the following report types:" %}</p>
                             <ul>
-                                <li><strong>Spectral Analysis:</strong> Focused on spectral data analysis and quality metrics</li>
-                                <li><strong>Metadata Quality:</strong> Detailed assessment of metadata completeness and accuracy</li>
-                                <li><strong>Comprehensive:</strong> Complete analysis including spectral, metadata, and calibration results</li>
-                                <li><strong>Comparison:</strong> Comparative analysis of multiple spectra</li>
-                                <li><strong>Calibration:</strong> Calibration-specific analysis and recommendations</li>
+                                <li><strong>{% trans "Spectral Analysis:" %}</strong> Focused on spectral data analysis and quality metrics</li>
+                                <li><strong>{% trans "Metadata Quality:" %}</strong> Detailed assessment of metadata completeness and accuracy</li>
+                                <li><strong>{% trans "Comprehensive:" %}</strong> Complete analysis including spectral, metadata, and calibration results</li>
+                                <li><strong>{% trans "Comparison:" %}</strong> Comparative analysis of multiple spectra</li>
+                                <li><strong>{% trans "Calibration:" %}</strong> Calibration-specific analysis and recommendations</li>
                             </ul>
                             
-                            <h3>Example API Usage</h3>
+                            <h3>{% trans "Example API Usage" %}</h3>
                             <div class="card bg-light">
                                 <div class="card-body">
-                                    <h5>Starting a Crew AI Analysis</h5>
+                                    <h5>{% trans "Starting a Crew AI Analysis" %}</h5>
                                     <pre><code>POST /api/crewai/analysis/start/
 Content-Type: application/json
 
@@ -978,102 +978,102 @@ Content-Type: application/json
                         
                         <!-- Federated Learning Section -->
                         <div id="federated-learning" class="doc-section" style="display: none;">
-                            <h2><i class="bi bi-cloud-arrow-up"></i> Federated Learning</h2>
+                            <h2><i class="bi bi-cloud-arrow-up"></i> {% trans "Federated Learning" %}</h2>
                             
-                            <h3>Overview</h3>
-                            <p><strong>Federated Learning</strong> enables collaborative model training across multiple devices and locations without sharing raw data. This preserves privacy while allowing the development of more robust and accurate models.</p>
+                            <h3>{% trans "Overview" %}</h3>
+                            <p><strong>{% trans "Federated Learning" %}</strong> enables collaborative model training across multiple devices and locations without sharing raw data. This preserves privacy while allowing the development of more robust and accurate models.</p>
                             
                             <div class="alert alert-success">
                                 <i class="bi bi-check-circle"></i> 
-                                <strong>Privacy First:</strong> Your data remains on your device. Only model updates are shared, never the raw data.
+                                <strong>Privacy First:</strong> {% trans "Your data remains on your device. Only model updates are shared, never the raw data." %}
                             </div>
                             
-                            <h3>How Federated Learning Works</h3>
+                            <h3>{% trans "How Federated Learning Works" %}</h3>
                             <ol>
-                                <li><strong>Local Training:</strong> Each participant trains a model on their local data</li>
-                                <li><strong>Model Updates:</strong> Only model parameters (not data) are shared with the central server</li>
-                                <li><strong>Aggregation:</strong> The central server aggregates updates from multiple participants</li>
-                                <li><strong>Improved Model:</strong> An enhanced global model is created and distributed back to participants</li>
-                                <li><strong>Iterative Process:</strong> The cycle continues, improving the model with each round</li>
+                                <li><strong>{% trans "Local Training:" %}</strong> Each participant trains a model on their local data</li>
+                                <li><strong>{% trans "Model Updates:" %}</strong> Only model parameters (not data) are shared with the central server</li>
+                                <li><strong>{% trans "Aggregation:" %}</strong> The central server aggregates updates from multiple participants</li>
+                                <li><strong>{% trans "Improved Model:" %}</strong> An enhanced global model is created and distributed back to participants</li>
+                                <li><strong>{% trans "Iterative Process:" %}</strong> The cycle continues, improving the model with each round</li>
                             </ol>
                             
-                            <h3>Benefits of Federated Learning</h3>
+                            <h3>{% trans "Benefits of Federated Learning" %}</h3>
                             <div class="row">
                                 <div class="col-md-6 mb-4">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-shield-fill-check"></i> Data Privacy</h5>
-                                            <p class="card-text">Raw data never leaves your device. Only model updates are shared, ensuring complete privacy.</p>
+                                            <h5 class="card-title"><i class="bi bi-shield-fill-check"></i> {% trans "Data Privacy" %}</h5>
+                                            <p class="card-text">{% trans "Raw data never leaves your device. Only model updates are shared, ensuring complete privacy." %}</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-4">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-people-fill"></i> Collaborative Improvement</h5>
-                                            <p class="card-text">Benefit from the collective knowledge of the entire network while maintaining data privacy.</p>
+                                            <h5 class="card-title"><i class="bi bi-people-fill"></i> {% trans "Collaborative Improvement" %}</h5>
+                                            <p class="card-text">{% trans "Benefit from the collective knowledge of the entire network while maintaining data privacy." %}</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-4">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-cpu"></i> Scalable Learning</h5>
-                                            <p class="card-text">The model improves as more participants join, scaling with the network size.</p>
+                                            <h5 class="card-title"><i class="bi bi-cpu"></i> {% trans "Scalable Learning" %}</h5>
+                                            <p class="card-text">{% trans "The model improves as more participants join, scaling with the network size." %}</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-4">
                                     <div class="card h-100">
                                         <div class="card-body">
-                                            <h5 class="card-title"><i class="bi bi-globe"></i> Distributed Computing</h5>
-                                            <p class="card-text">Leverage computing resources across multiple devices for faster model training.</p>
+                                            <h5 class="card-title"><i class="bi bi-globe"></i> {% trans "Distributed Computing" %}</h5>
+                                            <p class="card-text">{% trans "Leverage computing resources across multiple devices for faster model training." %}</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <h3>Privacy Controls</h3>
-                            <p>The framework provides granular privacy controls for federated learning:</p>
+                            <h3>{% trans "Privacy Controls" %}</h3>
+                            <p>{% trans "The framework provides granular privacy controls for federated learning:" %}</p>
                             
                             <div class="table-responsive">
                                 <table class="table table-striped">
                                     <thead>
                                         <tr>
-                                            <th>Privacy Level</th>
-                                            <th>Description</th>
-                                            <th>Data Sharing</th>
-                                            <th>Model Sharing</th>
+                                            <th>{% trans "Privacy Level" %}</th>
+                                            <th>{% trans "Description" %}</th>
+                                            <th>{% trans "Data Sharing" %}</th>
+                                            <th>{% trans "Model Sharing" %}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td><strong>Local Only</strong></td>
+                                            <td><strong>{% trans "Local Only" %}</strong></td>
                                             <td>Data stays completely local</td>
-                                            <td><i class="bi bi-x-circle-fill text-danger"></i> No</td>
-                                            <td><i class="bi bi-x-circle-fill text-danger"></i> No</td>
+                                            <td><i class="bi bi-x-circle-fill text-danger"></i> {% trans "No" %}</td>
+                                            <td><i class="bi bi-x-circle-fill text-danger"></i> {% trans "No" %}</td>
                                         </tr>
                                         <tr>
-                                            <td><strong>Private Federated</strong></td>
+                                            <td><strong>{% trans "Private Federated" %}</strong></td>
                                             <td>Enhanced privacy with federated learning</td>
-                                            <td><i class="bi bi-x-circle-fill text-danger"></i> No</td>
-                                            <td><i class="bi bi-check-circle-fill text-success"></i> Yes</td>
+                                            <td><i class="bi bi-x-circle-fill text-danger"></i> {% trans "No" %}</td>
+                                            <td><i class="bi bi-check-circle-fill text-success"></i> {% trans "Yes" %}</td>
                                         </tr>
                                         <tr>
-                                            <td><strong>Public Federated</strong></td>
+                                            <td><strong>{% trans "Public Federated" %}</strong></td>
                                             <td>Standard federated learning participation</td>
-                                            <td><i class="bi bi-x-circle-fill text-danger"></i> No</td>
-                                            <td><i class="bi bi-check-circle-fill text-success"></i> Yes</td>
+                                            <td><i class="bi bi-x-circle-fill text-danger"></i> {% trans "No" %}</td>
+                                            <td><i class="bi bi-check-circle-fill text-success"></i> {% trans "Yes" %}</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                             
-                            <h3>Contributing to Federated Learning</h3>
-                            <p>To contribute your data to federated learning:</p>
+                            <h3>{% trans "Contributing to Federated Learning" %}</h3>
+                            <p>{% trans "To contribute your data to federated learning:" %}</p>
                             <ol>
-                                <li>Navigate to the <strong>Settings</strong> page</li>
-                                <li>Go to the <strong>Federated Learning</strong> section</li>
+                                <li>Navigate to the <strong>{% trans "Settings" %}</strong> page</li>
+                                <li>Go to the <strong>{% trans "Federated Learning" %}</strong> section</li>
                                 <li>Review the privacy policy and terms of service</li>
                                 <li>Select your preferred privacy level</li>
                                 <li>Enable federated learning participation</li>
@@ -1083,13 +1083,13 @@ Content-Type: application/json
                             
                             <div class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle"></i> 
-                                <strong>Important:</strong> You must provide explicit consent before participating in federated learning. You can withdraw consent at any time.
+                                <strong>Important:</strong> {% trans "You must provide explicit consent before participating in federated learning. You can withdraw consent at any time." %}
                             </div>
                             
-                            <h3>Federated Learning API</h3>
+                            <h3>{% trans "Federated Learning API" %}</h3>
                             <div class="card bg-light">
                                 <div class="card-body">
-                                    <h5>Contributing Data to Federated Learning</h5>
+                                    <h5>{% trans "Contributing Data to Federated Learning" %}</h5>
                                     <pre><code>POST /api/crewai/federated/contribute/
 Content-Type: application/json
 Authorization: Bearer &lt;your-token&gt;
@@ -1114,19 +1114,19 @@ Authorization: Bearer &lt;your-token&gt;
                                 </div>
                             </div>
                             
-                            <h3>Monitoring Federated Learning</h3>
-                            <p>You can monitor your federated learning participation through:</p>
+                            <h3>{% trans "Monitoring Federated Learning" %}</h3>
+                            <p>{% trans "You can monitor your federated learning participation through:" %}</p>
                             <ul>
-                                <li><strong>Dashboard:</strong> View overall federated learning statistics</li>
-                                <li><strong>Contribution History:</strong> Track your data contributions and their impact</li>
-                                <li><strong>Model Performance:</strong> Monitor the performance of federated models</li>
-                                <li><strong>Privacy Settings:</strong> Manage your privacy preferences and consent</li>
+                                <li><strong>{% trans "Dashboard:" %}</strong> View overall federated learning statistics</li>
+                                <li><strong>{% trans "Contribution History:" %}</strong> Track your data contributions and their impact</li>
+                                <li><strong>{% trans "Model Performance:" %}</strong> Monitor the performance of federated models</li>
+                                <li><strong>{% trans "Privacy Settings:" %}</strong> Manage your privacy preferences and consent</li>
                             </ul>
                         </div>
                         
                         <!-- FAQ Section -->
                         <div id="faq" class="doc-section" style="display: none;">
-                            <h2><i class="bi bi-chat-dots"></i> Frequently Asked Questions</h2>
+                            <h2><i class="bi bi-chat-dots"></i> {% trans "Frequently Asked Questions" %}</h2>
                             
                             <div class="accordion" id="faqAccordion">
                                 <div class="accordion-item">
@@ -1138,7 +1138,7 @@ Authorization: Bearer &lt;your-token&gt;
                                     </h2>
                                     <div id="faqOne" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
                                         <div class="accordion-body">
-                                            <p>The NIR_Mistral DeveloperAgent Framework is a comprehensive system for NIR (Near-Infrared) spectroscopy analysis. It provides tools for data management, analysis, and visualization using specialized agents that can be customized for different analysis tasks.</p>
+                                            <p>{% trans "The NIR_Mistral DeveloperAgent Framework is a comprehensive system for NIR (Near-Infrared) spectroscopy analysis. It provides tools for data management, analysis, and visualization using specialized agents that can be customized for different analysis tasks." %}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1151,7 +1151,7 @@ Authorization: Bearer &lt;your-token&gt;
                                     </h2>
                                     <div id="faqTwo" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                                         <div class="accordion-body">
-                                            <p>To create a custom agent, create a new Python file in the <code>agents/</code> directory and implement the <code>BaseAgent</code> interface. Define your analysis methods and register the agent with the framework. See the <a href="#agents">Agents section</a> for more details.</p>
+                                            <p>To create a custom agent, create a new Python file in the <code>agents/</code> directory and implement the <code>BaseAgent</code> interface. Define your analysis methods and register the agent with the framework. See the <a href="#agents">Agents section</a> {% trans "for more details." %}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1164,7 +1164,7 @@ Authorization: Bearer &lt;your-token&gt;
                                     </h2>
                                     <div id="faqThree" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                                         <div class="accordion-body">
-                                            <p>The framework supports TXT, CSV, and JSON file formats for NIR spectroscopy data. Each format should contain wavelength and absorbance/value columns. See the <a href="#spectra-management">Spectra Management section</a> for details.</p>
+                                            <p>{% trans "The framework supports TXT, CSV, and JSON file formats for NIR spectroscopy data. Each format should contain wavelength and absorbance/value columns. See the" %} <a href="#spectra-management">Spectra Management section</a> {% trans "for details." %}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1177,7 +1177,7 @@ Authorization: Bearer &lt;your-token&gt;
                                     </h2>
                                     <div id="faqFour" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                                         <div class="accordion-body">
-                                            <p>For Venty Stick deployment, use the Ansible playbooks provided in the <code>ansible/</code> directory. Run the setup playbook with the appropriate inventory file. See the <a href="#installation">Installation section</a> for detailed instructions.</p>
+                                            <p>For Venty Stick deployment, use the Ansible playbooks provided in the <code>ansible/</code> directory. Run the setup playbook with the appropriate inventory file. See the <a href="#installation">Installation section</a> {% trans "for detailed instructions." %}</p>
                                         </div>
                                     </div>
                                 </div>

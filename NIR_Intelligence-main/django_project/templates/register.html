@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load i18n %}
 
 {% block title %}Register - NIR_Mistral Framework{% endblock %}
 
@@ -228,8 +228,8 @@
                     </g>
                 </svg>
             </div>
-            <h1 class="register-title">Create Your Account</h1>
-            <p class="register-subtitle">Join the NIR_Mistral community</p>
+            <h1 class="register-title">{% trans "Create Your Account" %}</h1>
+            <p class="register-subtitle">{% trans "Join the NIR_Mistral community" %}</p>
         </div>
 
         <!-- Messages -->
@@ -250,12 +250,12 @@
             <!-- Personal Information -->
             <div class="form-row">
                 <div class="form-group">
-                    <label for="id_first_name" class="form-label">First Name</label>
+                    <label for="id_first_name" class="form-label">{% trans "First Name" %}</label>
                     {{ form.first_name }}
                     {{ form.first_name.errors }}
                 </div>
                 <div class="form-group">
-                    <label for="id_last_name" class="form-label">Last Name</label>
+                    <label for="id_last_name" class="form-label">{% trans "Last Name" %}</label>
                     {{ form.last_name }}
                     {{ form.last_name.errors }}
                 </div>
@@ -269,30 +269,30 @@
             </div>
             
             <div class="form-group">
-                <label for="id_username" class="form-label">Username</label>
+                <label for="id_username" class="form-label">{% trans "Username" %}</label>
                 {{ form.username }}
                 {{ form.username.errors }}
             </div>
             
             <div class="form-group">
-                <label for="id_password1" class="form-label">Password</label>
+                <label for="id_password1" class="form-label">{% trans "Password" %}</label>
                 {{ form.password1 }}
                 <div class="password-strength">
                     <div class="password-strength-bar" id="password-strength-bar"></div>
                 </div>
                 {{ form.password1.errors }}
-                <small class="form-text text-muted">Password must be at least 8 characters long</small>
+                <small class="form-text text-muted">{% trans "Password must be at least 8 characters long" %}</small>
             </div>
             
             <div class="form-group">
-                <label for="id_password2" class="form-label">Confirm Password</label>
+                <label for="id_password2" class="form-label">{% trans "Confirm Password" %}</label>
                 {{ form.password2 }}
                 {{ form.password2.errors }}
             </div>
             
             <!-- Institution Information -->
             <div class="form-group">
-                <label for="id_institution" class="form-label">Institution (Optional)</label>
+                <label for="id_institution" class="form-label">{% trans "Institution (Optional)" %}</label>
                 {{ form.institution }}
                 {{ form.institution.errors }}
             </div>
@@ -302,8 +302,8 @@
                 <label class="form-label">
                     {{ form.accept_terms }}
                     <span style="font-weight: normal; color: #718096;">
-                        I accept the <a href="{{ terms_and_conditions }}" target="_blank">Terms and Conditions</a> 
-                        and <a href="{{ privacy_policy }}" target="_blank">Privacy Policy</a>
+                        {% trans "I accept the" %} <a href="{{ terms_and_conditions }}" target="_blank">Terms and Conditions</a> 
+                        {% trans "and" %} <a href="{{ privacy_policy }}" target="_blank">Privacy Policy</a>
                     </span>
                 </label>
                 {{ form.accept_terms.errors }}
@@ -311,32 +311,32 @@
             
             <!-- Submit Button -->
             <button type="submit" class="btn-register">
-                <i class="bi bi-person-plus"></i> Create Account
+                <i class="bi bi-person-plus"></i> {% trans "Create Account" %}
             </button>
         </form>
 
         <!-- Integration Information -->
         {% if flowerai_enabled or ilias_enabled or federated_learning_enabled %}
         <div class="integration-info">
-            <h4><i class="bi bi-info-circle"></i> About Our Platform</h4>
-            <p>By creating an account, you'll gain access to:</p>
+            <h4><i class="bi bi-info-circle"></i> {% trans "About Our Platform" %}</h4>
+            <p>{% trans "By creating an account, you'll gain access to:" %}</p>
             <ul class="feature-list">
                 {% if federated_learning_enabled %}
-                <li>Federated Learning with FlowerAI for collaborative model training</li>
+                <li>{% trans "Federated Learning with FlowerAI for collaborative model training" %}</li>
                 {% endif %}
                 {% if ilias_enabled %}
-                <li>Integration with ILIAS e-learning platform for educational resources</li>
+                <li>{% trans "Integration with ILIAS e-learning platform for educational resources" %}</li>
                 {% endif %}
-                <li>Advanced NIR spectroscopy analysis tools</li>
-                <li>Secure data management and sharing options</li>
-                <li>Collaboration with researchers worldwide</li>
+                <li>{% trans "Advanced NIR spectroscopy analysis tools" %}</li>
+                <li>{% trans "Secure data management and sharing options" %}</li>
+                <li>{% trans "Collaboration with researchers worldwide" %}</li>
             </ul>
         </div>
         {% endif %}
 
         <!-- Footer -->
         <div class="register-footer">
-            <p>Already have an account? <a href="{% url 'login' %}">Sign in</a></p>
+            <p>Already have an account? <a href="{% url 'login' %}">{% trans "Sign in" %}</a></p>
         </div>
     </div>
 </div>

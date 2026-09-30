@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load i18n %}
 
 
 {% block title %}Spectra Management - NIR_Mistral Framework{% endblock %}
@@ -105,10 +105,10 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
                 <h1 class="c-page-header__title text-white mb-0">
-                    <i class="bi bi-graph-up"></i> Spectra Management
+                    <i class="bi bi-graph-up"></i> {% trans "Spectra Management" %}
                 </h1>
                 <p class="c-page-header__subtitle text-white opacity-75 mb-0">
-                    Upload, view, and analyze NIR spectroscopy data with Crew AI
+                    {% trans "Upload, view, and analyze NIR spectroscopy data with Crew AI" %}
                 </p>
             </div>
             <div class="d-flex gap-2">
@@ -135,7 +135,7 @@
                         <i class="bi bi-file-earmark-text"></i>
                     </div>
                     <div class="c-stat-card__number" id="totalSpectra">0</div>
-                    <div class="c-stat-card__label">Total Spectra</div>
+                    <div class="c-stat-card__label">{% trans "Total Spectra" %}</div>
                 </div>
             </div>
             
@@ -145,7 +145,7 @@
                         <i class="bi bi-check-circle"></i>
                     </div>
                     <div class="c-stat-card__number" id="validSpectra">0</div>
-                    <div class="c-stat-card__label">Valid Spectra</div>
+                    <div class="c-stat-card__label">{% trans "Valid Spectra" %}</div>
                 </div>
             </div>
             
@@ -155,7 +155,7 @@
                         <i class="bi bi-exclamation-triangle"></i>
                     </div>
                     <div class="c-stat-card__number" id="invalidSpectra">0</div>
-                    <div class="c-stat-card__label">Invalid Spectra</div>
+                    <div class="c-stat-card__label">{% trans "Invalid Spectra" %}</div>
                 </div>
             </div>
             
@@ -164,8 +164,8 @@
                     <div class="c-stat-card__icon c-stat-card__icon--info">
                         <i class="bi bi-database"></i>
                     </div>
-                    <div class="c-stat-card__number" id="totalStorage">0 MB</div>
-                    <div class="c-stat-card__label">Total Storage</div>
+                    <div class="c-stat-card__number" id="totalStorage">{% trans "0 MB" %}</div>
+                    <div class="c-stat-card__label">{% trans "Total Storage" %}</div>
                 </div>
             </div>
         </div>
@@ -176,7 +176,7 @@
 <section class="o-section o-section--light">
     <div class="o-container">
         <h2 class="c-card__title mb-xl">
-            <i class="bi bi-lightning-charge"></i> Quick Actions
+            <i class="bi bi-lightning-charge"></i> {% trans "Quick Actions" %}
         </h2>
         
         <div class="row g-4">
@@ -186,8 +186,8 @@
                         <div class="mb-3">
                             <i class="bi bi-upload text-primary" style="font-size: 3rem;"></i>
                         </div>
-                        <h3 class="h5 mb-2">Upload Spectrum</h3>
-                        <p class="text-muted small mb-3">Upload new NIR spectroscopy data for analysis</p>
+                        <h3 class="h5 mb-2">{% trans "Upload Spectrum" %}</h3>
+                        <p class="text-muted small mb-3">{% trans "Upload new NIR spectroscopy data for analysis" %}</p>
                         <button class="c-button c-button--outline-primary" data-bs-toggle="modal" data-bs-target="#uploadSpectrumModal">
                             <i class="bi bi-upload c-button__icon"></i>
                             <span class="c-button__text">Upload Now</span>
@@ -202,8 +202,8 @@
                         <div class="mb-3">
                             <i class="bi bi-play-circle text-primary" style="font-size: 3rem;"></i>
                         </div>
-                        <h3 class="h5 mb-2">Quick Analysis</h3>
-                        <p class="text-muted small mb-3">Run quick analysis on selected spectra</p>
+                        <h3 class="h5 mb-2">{% trans "Quick Analysis" %}</h3>
+                        <p class="text-muted small mb-3">{% trans "Run quick analysis on selected spectra" %}</p>
                         <button class="c-button c-button--outline-primary" onclick="quickAnalyzeSelected()">
                             <i class="bi bi-play-circle c-button__icon"></i>
                             <span class="c-button__text">Analyze Now</span>
@@ -218,8 +218,8 @@
                         <div class="mb-3">
                             <i class="bi bi-folder text-primary" style="font-size: 3rem;"></i>
                         </div>
-                        <h3 class="h5 mb-2">Browse Library</h3>
-                        <p class="text-muted small mb-3">View all uploaded spectra</p>
+                        <h3 class="h5 mb-2">{% trans "Browse Library" %}</h3>
+                        <p class="text-muted small mb-3">{% trans "View all uploaded spectra" %}</p>
                         <button class="c-button c-button--outline-primary" onclick="scrollToSpectra()">
                             <i class="bi bi-list c-button__icon"></i>
                             <span class="c-button__text">Browse All</span>
@@ -236,17 +236,17 @@
     <div class="o-container">
         <div class="d-flex justify-content-between align-items-center mb-xl">
             <h2 class="c-card__title mb-0">
-                <i class="bi bi-images"></i> Spectra Gallery
+                <i class="bi bi-images"></i> {% trans "Spectra Gallery" %}
             </h2>
             <div class="d-flex gap-2">
                 <select class="c-form-control c-form-control--sm" id="spectrumFilter" onchange="filterSpectra()">
-                    <option value="">All Spectra</option>
-                    <option value="valid">Valid Only</option>
-                    <option value="invalid">Invalid Only</option>
-                    <option value="recent">Recent First</option>
+                    <option value="">{% trans "All Spectra" %}</option>
+                    <option value="valid">{% trans "Valid Only" %}</option>
+                    <option value="invalid">{% trans "Invalid Only" %}</option>
+                    <option value="recent">{% trans "Recent First" %}</option>
                 </select>
                 <select class="c-form-control c-form-control--sm" id="typeFilter" onchange="filterSpectra()">
-                    <option value="">All Types</option>
+                    <option value="">{% trans "All Types" %}</option>
                     <!-- Will be populated dynamically -->
                 </select>
             </div>
@@ -263,14 +263,14 @@
     <div class="o-container">
         <div class="d-flex justify-content-between align-items-center mb-xl">
             <h2 class="c-card__title mb-0">
-                <i class="bi bi-table"></i> Spectra Data Table
+                <i class="bi bi-table"></i> {% trans "Spectra Data Table" %}
             </h2>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-danger btn-sm" onclick="deleteSelectedSpectra()">
-                    <i class="bi bi-trash"></i> Delete Selected
+                    <i class="bi bi-trash"></i> {% trans "Delete Selected" %}
                 </button>
                 <button class="btn btn-outline-secondary btn-sm" onclick="exportSpectraList()">
-                    <i class="bi bi-download"></i> Export List
+                    <i class="bi bi-download"></i> {% trans "Export List" %}
                 </button>
             </div>
         </div>
@@ -324,7 +324,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="uploadSpectrumModalLabel">
-                    <i class="bi bi-upload"></i> Upload Spectrum
+                    <i class="bi bi-upload"></i> {% trans "Upload Spectrum" %}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -348,29 +348,29 @@
                         </div>
                         
                         <div class="col-md-6">
-                            <label class="c-form-label required">Sample ID</label>
+                            <label class="c-form-label required">{% trans "Sample ID" %}</label>
                             <input type="text" class="c-form-control" id="sampleId" placeholder="Unique identifier" required>
                         </div>
                         
                         <div class="col-md-6">
                             <label class="c-form-label">Spectral Type</label>
                             <select class="c-form-control" id="spectralType">
-                                <option value="">Auto Detect</option>
-                                <option value="nir">NIR</option>
-                                <option value="ir">IR</option>
-                                <option value="uv-vis">UV-Vis</option>
-                                <option value="raman">Raman</option>
+                                <option value="">{% trans "Auto Detect" %}</option>
+                                <option value="nir">{% trans "NIR" %}</option>
+                                <option value="ir">{% trans "IR" %}</option>
+                                <option value="uv-vis">{% trans "UV-Vis" %}</option>
+                                <option value="raman">{% trans "Raman" %}</option>
                             </select>
                         </div>
                         
                         <div class="col-md-6">
                             <label class="c-form-label">Instrument Type</label>
                             <select class="c-form-control" id="instrumentType">
-                                <option value="">Select instrument...</option>
-                                <option value="diy_spectrometer">DIY Spectrometer</option>
-                                <option value="commercial_nir">Commercial NIR</option>
-                                <option value="ftir">FTIR</option>
-                                <option value="portable">Portable Device</option>
+                                <option value="">{% trans "Select instrument..." %}</option>
+                                <option value="diy_spectrometer">{% trans "DIY Spectrometer" %}</option>
+                                <option value="commercial_nir">{% trans "Commercial NIR" %}</option>
+                                <option value="ftir">{% trans "FTIR" %}</option>
+                                <option value="portable">{% trans "Portable Device" %}</option>
                             </select>
                         </div>
                         
@@ -398,7 +398,7 @@
                             <div class="c-form-check">
                                 <input class="c-checkbox" type="checkbox" id="autoAnalyze" checked>
                                 <label class="c-checkbox__label" for="autoAnalyze">
-                                    Auto-analyze after upload
+                                    {% trans "Auto-analyze after upload" %}
                                 </label>
                             </div>
                         </div>
@@ -407,10 +407,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Cancel
+                    <i class="bi bi-x"></i> {% trans "Cancel" %}
                 </button>
                 <button type="button" class="btn btn-primary" onclick="uploadSpectrum()">
-                    <i class="bi bi-upload"></i> Upload Spectrum
+                    <i class="bi bi-upload"></i> {% trans "Upload Spectrum" %}
                 </button>
             </div>
         </div>
@@ -423,7 +423,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="spectrumDetailsModalLabel">
-                    <i class="bi bi-file-earmark-text"></i> Spectrum Details
+                    <i class="bi bi-file-earmark-text"></i> {% trans "Spectrum Details" %}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -445,7 +445,7 @@
                     <div class="col-md-6">
                         <div class="c-card h-100">
                             <div class="c-card__header">
-                                <h6 class="mb-0">Spectrum Information</h6>
+                                <h6 class="mb-0">{% trans "Spectrum Information" %}</h6>
                             </div>
                             <div class="c-card__body">
                                 <dl class="row mb-0">
@@ -480,7 +480,7 @@
                     <div class="col-12">
                         <div class="c-card">
                             <div class="c-card__header">
-                                <h6 class="mb-0">Metadata</h6>
+                                <h6 class="mb-0">{% trans "Metadata" %}</h6>
                             </div>
                             <div class="c-card__body">
                                 <dl class="row mb-0" id="detailMetadata">
@@ -493,7 +493,7 @@
                     <div class="col-12">
                         <div class="c-card">
                             <div class="c-card__header">
-                                <h6 class="mb-0">Description</h6>
+                                <h6 class="mb-0">{% trans "Description" %}</h6>
                             </div>
                             <div class="c-card__body">
                                 <p id="detailDescription" class="mb-0"></p>
@@ -504,13 +504,13 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Close
+                    <i class="bi bi-x"></i> {% trans "Close" %}
                 </button>
                 <button type="button" class="btn btn-primary" onclick="analyzeCurrentSpectrum()">
-                    <i class="bi bi-play-circle"></i> Analyze Spectrum
+                    <i class="bi bi-play-circle"></i> {% trans "Analyze Spectrum" %}
                 </button>
                 <button type="button" class="btn btn-primary" onclick="downloadSpectrum()">
-                    <i class="bi bi-download"></i> Download
+                    <i class="bi bi-download"></i> {% trans "Download" %}
                 </button>
             </div>
         </div>
@@ -523,7 +523,7 @@
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title" id="spectraDeleteConfirmationModalLabel">
-                    <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+                    <i class="bi bi-exclamation-triangle"></i> {% trans "Confirm Deletion" %}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -532,10 +532,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Cancel
+                    <i class="bi bi-x"></i> {% trans "Cancel" %}
                 </button>
                 <button type="button" class="btn btn-danger" onclick="confirmDelete()">
-                    <i class="bi bi-trash"></i> Delete
+                    <i class="bi bi-trash"></i> {% trans "Delete" %}
                 </button>
             </div>
         </div>

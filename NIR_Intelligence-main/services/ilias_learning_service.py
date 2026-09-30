@@ -59,12 +59,14 @@ class LearningPath:
     target_group: str = "students"
     modules: List[LearningModule] = field(default_factory=list)
     ilias_ref_id: Optional[str] = None  # set after successful sync
+    language: Optional[str] = None  # OP48e: active language of the initiating user
 
     def to_dict(self) -> Dict[str, Any]:
         return {"title": self.title, "description": self.description,
                 "target_group": self.target_group,
                 "modules": [m.to_dict() for m in self.modules],
-                "ilias_ref_id": self.ilias_ref_id}
+                "ilias_ref_id": self.ilias_ref_id,
+                "language": self.language}
 
     def total_objectives(self) -> int:
         return sum(len(m.objectives) for m in self.modules)

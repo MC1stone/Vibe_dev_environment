@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load i18n %}
 {% block title %}Analysis Workflow - NIR_Mistral Framework{% endblock %}
 
 {% block extra_css %}
@@ -99,10 +99,10 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
                 <h1 class="c-page-header__title text-white mb-0">
-                    <i class="bi bi-diagram-3"></i> Analysis Workflow
+                    <i class="bi bi-diagram-3"></i> {% trans "Analysis Workflow" %}
                 </h1>
                 <p class="c-page-header__subtitle text-white opacity-75 mb-0">
-                    One workflow: Upload &rarr; Data Quality &rarr; Spectral Analysis &rarr; Statistics &rarr; Complete Report
+                    {% trans "One workflow: Upload &rarr; Data Quality &rarr; Spectral Analysis &rarr; Statistics &rarr; Complete Report" %}
                 </p>
             </div>
             <div class="d-flex gap-2">
@@ -132,7 +132,7 @@
             <div class="col-12">
                 <div class="c-card">
                     <div class="c-card__header">
-                        <h3 class="c-card__title mb-0"><i class="bi bi-cloud-arrow-up"></i> Step 1: Upload Dataset</h3>
+                        <h3 class="c-card__title mb-0"><i class="bi bi-cloud-arrow-up"></i> {% trans "Step 1: Upload Dataset" %}</h3>
                     </div>
                     <div class="c-card__body">
                         <div class="drop-zone" id="dropZone">
@@ -147,7 +147,7 @@
                         <div id="wfStatus" class="mt-2 text-muted"></div>
                         <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
                             <div id="uploadedFileInfo" class="text-muted">
-                                No file selected yet.
+                                {% trans "No file selected yet." %}
                             </div>
                             <button class="c-button c-button--primary" id="runWorkflowBtn" onclick="runCompleteWorkflow()" disabled>
                                 <i class="bi bi-play-fill c-button__icon"></i>
@@ -162,18 +162,18 @@
             <div class="col-12">
                 <div class="c-card">
                     <div class="c-card__header">
-                        <h3 class="c-card__title mb-0"><i class="bi bi-clipboard-data"></i> Workflow Progress</h3>
+                        <h3 class="c-card__title mb-0"><i class="bi bi-clipboard-data"></i> {% trans "Workflow Progress" %}</h3>
                     </div>
                     <div class="c-card__body">
                         <div id="workflowProgressNote" class="text-muted mb-3">
-                            Upload a dataset and run the workflow to see the agent results here.
+                            {% trans "Upload a dataset and run the workflow to see the agent results here." %}
                         </div>
-                        <div class="text-muted small mb-3">UI build: <strong>wf-2026-09-22.4</strong> (inline-upload + Choose-file button)</div>
+                        <div class="text-muted small mb-3">{% trans "UI build:" %} <strong>wf-2026-09-22.4</strong> {% trans "(inline-upload + Choose-file button)" %}</div>
                         <div class="row g-4 d-none" id="workflowResultsRow">
                             <div class="col-md-4">
                                 <div class="c-card h-100">
                                     <div class="c-card__header">
-                                        <h6 class="mb-0"><i class="bi bi-check-circle"></i> Data Quality</h6>
+                                        <h6 class="mb-0"><i class="bi bi-check-circle"></i> {% trans "Data Quality" %}</h6>
                                     </div>
                                     <div class="c-card__body">
                                         <div id="sensorQualityResults"></div>
@@ -183,7 +183,7 @@
                             <div class="col-md-4">
                                 <div class="c-card h-100">
                                     <div class="c-card__header">
-                                        <h6 class="mb-0"><i class="bi bi-graph-up"></i> Spectral Analysis</h6>
+                                        <h6 class="mb-0"><i class="bi bi-graph-up"></i> {% trans "Spectral Analysis" %}</h6>
                                     </div>
                                     <div class="c-card__body">
                                         <canvas id="analysisChart" height="260"></canvas>
@@ -193,7 +193,7 @@
                             <div class="col-md-4">
                                 <div class="c-card h-100">
                                     <div class="c-card__header">
-                                        <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Statistics</h6>
+                                        <h6 class="mb-0"><i class="bi bi-bar-chart"></i> {% trans "Statistics" %}</h6>
                                     </div>
                                     <div class="c-card__body">
                                         <div id="statisticalResults"></div>
@@ -203,7 +203,7 @@
                             <div class="col-md-6">
                                 <div class="c-card h-100">
                                     <div class="c-card__header">
-                                        <h6 class="mb-0"><i class="bi bi-cpu"></i> Neural Network</h6>
+                                        <h6 class="mb-0"><i class="bi bi-cpu"></i> {% trans "Neural Network" %}</h6>
                                     </div>
                                     <div class="c-card__body">
                                         <div id="neuralNetworkResults"></div>
@@ -213,7 +213,7 @@
                             <div class="col-md-6">
                                 <div class="c-card h-100">
                                     <div class="c-card__header">
-                                        <h6 class="mb-0"><i class="bi bi-star"></i> Quality Scores</h6>
+                                        <h6 class="mb-0"><i class="bi bi-star"></i> {% trans "Quality Scores" %}</h6>
                                     </div>
                                     <div class="c-card__body">
                                         <div class="row g-3" id="qualityScores"></div>
@@ -229,16 +229,16 @@
             <div class="col-12">
                 <div class="c-card">
                     <div class="c-card__header">
-                        <h3 class="c-card__title mb-0"><i class="bi bi-file-earmark-text"></i> Step 5: Complete Report</h3>
+                        <h3 class="c-card__title mb-0"><i class="bi bi-file-earmark-text"></i> {% trans "Step 5: Complete Report" %}</h3>
                     </div>
                     <div class="c-card__body">
                         <p class="text-muted">
-                            The final Quarto report contains all results in detail: quality assessment,
+                            {% trans "The final Quarto report contains all results in detail: quality assessment,
                             spectral and statistical evaluation, the measured data, charts, and the
-                            analysis source code.
+                            analysis source code." %}
                         </p>
                         <div id="reportLinkArea" class="text-muted mb-3">
-                            The report link appears here once the workflow has finished.
+                            {% trans "The report link appears here once the workflow has finished." %}
                         </div>
                         <div class="d-flex gap-2 flex-wrap">
                             <button class="c-button c-button--primary" id="openReportBtn" onclick="viewReport()" disabled>
@@ -266,7 +266,7 @@
     <div class="o-container">
         <div class="d-flex justify-content-between align-items-center mb-xl">
             <h2 class="c-card__title mb-0">
-                <i class="bi bi-clock-history"></i> Recent Analysis Results
+                <i class="bi bi-clock-history"></i> {% trans "Recent Analysis Results" %}
             </h2>
             <a href="/jobs/" class="c-button c-button--outline-secondary c-button--sm">
                 <i class="bi bi-list c-button__icon"></i>

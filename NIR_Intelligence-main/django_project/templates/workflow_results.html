@@ -1,17 +1,18 @@
-% extends "base.html" %
+{% extends "base.html" %}
+{% load i18n %}
 
-% block title %}
+{% block title %}
 NIR Intelligence - Analysis Results
-% endblock %
+{% endblock %}
 
-% block content %}
+{%block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
             <h1 class="page-title">
-                <i class="fas fa-chart-line"></i> Analysis Results
+                <i class="fas fa-chart-line"></i> {% trans "Analysis Results" %}
             </h1>
-            <p class="page-subtitle">Comprehensive NIR Spectral Analysis Reports</p>
+            <p class="page-subtitle">{% trans "Comprehensive NIR Spectral Analysis Reports" %}</p>
         </div>
     </div>
 
@@ -21,7 +22,7 @@ NIR Intelligence - Analysis Results
             <div class="card">
                 <div class="card-header bg-primary text-white">
                     <h3 class="card-title mb-0">
-                        <i class="fas fa-cogs"></i> Workflow Status
+                        <i class="fas fa-cogs"></i> {% trans "Workflow Status" %}
                     </h3>
                 </div>
                 <div class="card-body">
@@ -65,7 +66,7 @@ NIR Intelligence - Analysis Results
                                     <i class="fas fa-clock"></i>
                                 </div>
                                 <div class="stat-info">
-                                    <span class="stat-value">{{ "%.2f"|format(workflow.processing_time) }}s</span>
+                                    <span class="stat-value">{{ workflow.processing_time|floatformat:2 }}s</span>
                                     <span class="stat-label">Processing Time</span>
                                 </div>
                             </div>
@@ -82,7 +83,7 @@ NIR Intelligence - Analysis Results
             <div class="card">
                 <div class="card-header bg-secondary text-white">
                     <h3 class="card-title mb-0">
-                        <i class="fas fa-info-circle"></i> Workflow Information
+                        <i class="fas fa-info-circle"></i> {% trans "Workflow Information" %}
                     </h3>
                 </div>
                 <div class="card-body">
@@ -106,7 +107,7 @@ NIR Intelligence - Analysis Results
                                     </span>
                                 </dd>
                                 
-                                <dt class="col-sm-4">Start Time:</dt>
+                                <dt class="col-sm-4">{% trans "Start Time:" %}</dt>
                                 <dd class="col-sm-8">{{ workflow.start_time }}</dd>
                                 
                                 <dt class="col-sm-4">End Time:</dt>
@@ -140,7 +141,7 @@ NIR Intelligence - Analysis Results
             <div class="card">
                 <div class="card-header bg-dark text-white">
                     <h3 class="card-title mb-0">
-                        <i class="fas fa-table"></i> Sample Analysis Results
+                        <i class="fas fa-table"></i> {% trans "Sample Analysis Results" %}
                     </h3>
                 </div>
                 <div class="card-body">
@@ -148,17 +149,17 @@ NIR Intelligence - Analysis Results
                         <table class="table table-striped table-hover table-bordered">
                             <thead class="thead-dark">
                                 <tr>
-                                    <th>Sample ID</th>
-                                    <th>Request ID</th>
-                                    <th>Quality Score</th>
-                                    <th>Spectral Quality</th>
-                                    <th>Metadata Quality</th>
-                                    <th>Processing Time</th>
-                                    <th>Recommendations</th>
-                                    <th>Warnings</th>
-                                    <th>Errors</th>
-                                    <th>Reports</th>
-                                    <th>Actions</th>
+                                    <th>{% trans "Sample ID" %}</th>
+                                    <th>{% trans "Request ID" %}</th>
+                                    <th>{% trans "Quality Score" %}</th>
+                                    <th>{% trans "Spectral Quality" %}</th>
+                                    <th>{% trans "Metadata Quality" %}</th>
+                                    <th>{% trans "Processing Time" %}</th>
+                                    <th>{% trans "Recommendations" %}</th>
+                                    <th>{% trans "Warnings" %}</th>
+                                    <th>{% trans "Errors" %}</th>
+                                    <th>{% trans "Reports" %}</th>
+                                    <th>{% trans "Actions" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -171,7 +172,7 @@ NIR Intelligence - Analysis Results
                                     {% else %}table-active{% endif %}">
                                     <td>{{ sample.sample_id }}</td>
                                     <td>{{ sample.request_id }}</td>
-                                    <td>{{ "%.1f"|format(sample.overall_quality_score) }}</td>
+                                    <td>{{ sample.overall_quality_score|floatformat:1 }}</td>
                                     <td>
                                         <span class="badge 
                                             {% if sample.spectral_quality == 'A' %}badge-success
@@ -194,7 +195,7 @@ NIR Intelligence - Analysis Results
                                             {{ sample.metadata_quality }}
                                         </span>
                                     </td>
-                                    <td>{{ "%.2f"|format(sample.processing_time) }}s</td>
+                                    <td>{{ sample.processing_time|floatformat:2 }}s</td>
                                     <td>{{ sample.recommendations_count }}</td>
                                     <td>{{ sample.warnings_count }}</td>
                                     <td>{{ sample.errors_count }}</td>
@@ -203,12 +204,12 @@ NIR Intelligence - Analysis Results
                                         <div class="btn-group btn-group-sm" role="group">
                                             <button class="btn btn-primary btn-sm" 
                                                     onclick="viewSampleDetails('{{ sample.sample_id }}')">
-                                                <i class="fas fa-eye"></i> View
+                                                <i class="fas fa-eye"></i> {% trans "View" %}
                                             </button>
                                             {% if sample.reports_generated > 0 %}
                                             <button class="btn btn-success btn-sm" 
                                                     onclick="viewReports('{{ sample.sample_id }}')">
-                                                <i class="fas fa-file-pdf"></i> Reports
+                                                <i class="fas fa-file-pdf"></i> {% trans "Reports" %}
                                             </button>
                                             {% endif %}
                                         </div>
@@ -230,7 +231,7 @@ NIR Intelligence - Analysis Results
             <div class="card">
                 <div class="card-header bg-success text-white">
                     <h3 class="card-title mb-0">
-                        <i class="fas fa-file-alt"></i> Generated Reports
+                        <i class="fas fa-file-alt"></i> {% trans "Generated Reports" %}
                     </h3>
                 </div>
                 <div class="card-body">
@@ -246,11 +247,11 @@ NIR Intelligence - Analysis Results
                                     <a href="{{ report_url.url }}" 
                                        class="btn btn-primary btn-sm" 
                                        target="_blank">
-                                        <i class="fas fa-external-link-alt"></i> Open Report
+                                        <i class="fas fa-external-link-alt"></i> {% trans "Open Report" %}
                                     </a>
                                     <button class="btn btn-secondary btn-sm" 
                                             onclick="downloadReport('{{ report_url.url }}')">
-                                        <i class="fas fa-download"></i> Download
+                                        <i class="fas fa-download"></i> {% trans "Download" %}
                                     </button>
                                 </div>
                             </div>
@@ -270,13 +271,13 @@ NIR Intelligence - Analysis Results
             <div class="card">
                 <div class="card-header bg-warning text-dark">
                     <h3 class="card-title mb-0">
-                        <i class="fas fa-exclamation-triangle"></i> Warnings and Errors
+                        <i class="fas fa-exclamation-triangle"></i> {% trans "Warnings and Errors" %}
                     </h3>
                 </div>
                 <div class="card-body">
                     {% if workflow.warnings|length > 0 %}
                     <div class="alert alert-warning">
-                        <h4><i class="fas fa-exclamation-circle"></i> Warnings</h4>
+                        <h4><i class="fas fa-exclamation-circle"></i> {% trans "Warnings" %}</h4>
                         <ul>
                             {% for warning in workflow.warnings %}
                             <li>{{ warning }}</li>
@@ -287,7 +288,7 @@ NIR Intelligence - Analysis Results
                     
                     {% if workflow.errors|length > 0 %}
                     <div class="alert alert-danger">
-                        <h4><i class="fas fa-times-circle"></i> Errors</h4>
+                        <h4><i class="fas fa-times-circle"></i> {% trans "Errors" %}</h4>
                         <ul>
                             {% for error in workflow.errors %}
                             <li>{{ error }}</li>
@@ -309,21 +310,21 @@ NIR Intelligence - Analysis Results
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <button class="btn btn-primary" onclick="refreshWorkflowStatus()">
-                                <i class="fas fa-sync-alt"></i> Refresh Status
+                                <i class="fas fa-sync-alt"></i> {% trans "Refresh Status" %}
                             </button>
                             <button class="btn btn-info" onclick="viewAllWorkflows()">
-                                <i class="fas fa-list"></i> View All Workflows
+                                <i class="fas fa-list"></i> {% trans "View All Workflows" %}
                             </button>
                             <button class="btn btn-secondary" onclick="exportWorkflowData()">
-                                <i class="fas fa-file-export"></i> Export Data
+                                <i class="fas fa-file-export"></i> {% trans "Export Data" %}
                             </button>
                         </div>
                         <div>
                             <button class="btn btn-warning" onclick="cleanupWorkflow()">
-                                <i class="fas fa-trash"></i> Cleanup Files
+                                <i class="fas fa-trash"></i> {% trans "Cleanup Files" %}
                             </button>
                             <button class="btn btn-success" onclick="startNewWorkflow()">
-                                <i class="fas fa-plus"></i> New Workflow
+                                <i class="fas fa-plus"></i> {% trans "New Workflow" %}
                             </button>
                         </div>
                     </div>
@@ -340,7 +341,7 @@ NIR Intelligence - Analysis Results
             <div class="modal-header">
                 <h5 class="modal-title" id="sampleDetailsModalLabel">Sample Details</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+                    <span aria-hidden="true">{% trans "&times;" %}</span>
                 </button>
             </div>
             <div class="modal-body" id="sampleDetailsContent">
@@ -361,7 +362,7 @@ NIR Intelligence - Analysis Results
             <div class="modal-header">
                 <h5 class="modal-title" id="reportsModalLabel">Sample Reports</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+                    <span aria-hidden="true">{% trans "&times;" %}</span>
                 </button>
             </div>
             <div class="modal-body" id="reportsContent">
@@ -496,4 +497,4 @@ NIR Intelligence - Analysis Results
         $('[data-toggle="tooltip"]').tooltip();
     });
 </script>
-% endblock %
+{% endblock %}

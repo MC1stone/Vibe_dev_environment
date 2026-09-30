@@ -47,7 +47,7 @@ def check_template_syntax(template_name):
                 USE_TZ=True,
             )
         engine = Engine(dirs=[TEMPLATES_DIR],
-                        libraries={"static": "django.templatetags.static"})
+                        libraries={"static": "django.templatetags.static", "i18n": "django.templatetags.i18n"})
         template = engine.get_template(template_name)
         return template is not None
     except Exception as exc:

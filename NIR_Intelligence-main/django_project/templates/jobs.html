@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load i18n %}
 
 
 {% block title %}Analysis Jobs - NIR_Mistral Framework{% endblock %}
@@ -144,10 +144,10 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
                 <h1 class="c-page-header__title text-white mb-0">
-                    <i class="bi bi-hourglass-split"></i> Analysis Jobs
+                    <i class="bi bi-hourglass-split"></i> {% trans "Analysis Jobs" %}
                 </h1>
                 <p class="c-page-header__subtitle text-white opacity-75 mb-0">
-                    Monitor and manage Crew AI analysis jobs in real-time
+                    {% trans "Monitor and manage Crew AI analysis jobs in real-time" %}
                 </p>
             </div>
             <div class="d-flex gap-2">
@@ -174,7 +174,7 @@
                         <i class="bi bi-hourglass-split"></i>
                     </div>
                     <div class="c-stat-card__number" id="totalJobs">0</div>
-                    <div class="c-stat-card__label">Total Jobs</div>
+                    <div class="c-stat-card__label">{% trans "Total Jobs" %}</div>
                 </div>
             </div>
             
@@ -184,7 +184,7 @@
                         <i class="bi bi-check-circle"></i>
                     </div>
                     <div class="c-stat-card__number" id="completedJobs">0</div>
-                    <div class="c-stat-card__label">Completed</div>
+                    <div class="c-stat-card__label">{% trans "Completed" %}</div>
                 </div>
             </div>
             
@@ -194,7 +194,7 @@
                         <i class="bi bi-play-circle"></i>
                     </div>
                     <div class="c-stat-card__number" id="runningJobs">0</div>
-                    <div class="c-stat-card__label">Running</div>
+                    <div class="c-stat-card__label">{% trans "Running" %}</div>
                 </div>
             </div>
             
@@ -204,7 +204,7 @@
                         <i class="bi bi-clock"></i>
                     </div>
                     <div class="c-stat-card__number" id="pendingJobs">0</div>
-                    <div class="c-stat-card__label">Pending</div>
+                    <div class="c-stat-card__label">{% trans "Pending" %}</div>
                 </div>
             </div>
         </div>
@@ -215,7 +215,7 @@
 <section class="o-section o-section--light">
     <div class="o-container">
         <h2 class="c-card__title mb-xl">
-            <i class="bi bi-funnel"></i> Filter by Status
+            <i class="bi bi-funnel"></i> {% trans "Filter by Status" %}
         </h2>
         
         <div class="d-flex flex-wrap gap-2" id="statusFilters">
@@ -252,7 +252,7 @@
     <div class="o-container">
         <div class="d-flex justify-content-between align-items-center mb-xl">
             <h2 class="c-card__title mb-0">
-                <i class="bi bi-lightning-charge"></i> Active Jobs
+                <i class="bi bi-lightning-charge"></i> {% trans "Active Jobs" %}
             </h2>
             <span class="c-badge c-badge--primary" id="activeJobsCount">0</span>
         </div>
@@ -268,14 +268,14 @@
     <div class="o-container">
         <div class="d-flex justify-content-between align-items-center mb-xl">
             <h2 class="c-card__title mb-0">
-                <i class="bi bi-clock-history"></i> Recent Jobs
+                <i class="bi bi-clock-history"></i> {% trans "Recent Jobs" %}
             </h2>
             <div class="d-flex gap-2">
                 <select class="c-form-control c-form-control--sm" id="sortOrder" onchange="sortJobs()">
-                    <option value="newest">Newest First</option>
-                    <option value="oldest">Oldest First</option>
-                    <option value="fastest">Fastest First</option>
-                    <option value="slowest">Slowest First</option>
+                    <option value="newest">{% trans "Newest First" %}</option>
+                    <option value="oldest">{% trans "Oldest First" %}</option>
+                    <option value="fastest">{% trans "Fastest First" %}</option>
+                    <option value="slowest">{% trans "Slowest First" %}</option>
                 </select>
             </div>
         </div>
@@ -312,10 +312,10 @@
                     <span id="jobsCount">0 jobs</span>
                     <div class="d-flex gap-2">
                         <button class="btn btn-outline-danger btn-sm" onclick="deleteSelectedJobs()">
-                            <i class="bi bi-trash"></i> Delete Selected
+                            <i class="bi bi-trash"></i> {% trans "Delete Selected" %}
                         </button>
                         <button class="btn btn-outline-secondary btn-sm" onclick="exportJobsList()">
-                            <i class="bi bi-download"></i> Export List
+                            <i class="bi bi-download"></i> {% trans "Export List" %}
                         </button>
                     </div>
                 </div>
@@ -330,7 +330,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="jobDetailsModalLabel">
-                    <i class="bi bi-hourglass-split"></i> Job Details
+                    <i class="bi bi-hourglass-split"></i> {% trans "Job Details" %}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -343,7 +343,7 @@
                             </div>
                             <div class="c-card__body">
                                 <dl class="row mb-0">
-                                    <dt class="col-sm-4">Job ID:</dt>
+                                    <dt class="col-sm-4">{% trans "Job ID:" %}</dt>
                                     <dd class="col-sm-8" id="detailJobId"></dd>
                                     
                                     <dt class="col-sm-4">Name:</dt>
@@ -378,7 +378,7 @@
                         
                         <div class="c-card">
                             <div class="c-card__header">
-                                <h6 class="mb-0">Description</h6>
+                                <h6 class="mb-0">{% trans "Description" %}</h6>
                             </div>
                             <div class="c-card__body">
                                 <p id="detailJobDescription" class="mb-0"></p>
@@ -428,16 +428,16 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Close
+                    <i class="bi bi-x"></i> {% trans "Close" %}
                 </button>
                 <button type="button" class="btn btn-primary" onclick="retryJob()" id="retryJobBtn">
-                    <i class="bi bi-arrow-clockwise"></i> Retry
+                    <i class="bi bi-arrow-clockwise"></i> {% trans "Retry" %}
                 </button>
                 <button type="button" class="btn btn-danger" onclick="cancelJob()" id="cancelJobBtn">
-                    <i class="bi bi-stop"></i> Cancel
+                    <i class="bi bi-stop"></i> {% trans "Cancel" %}
                 </button>
                 <button type="button" class="btn btn-primary" onclick="viewJobReport()">
-                    <i class="bi bi-file-earmark-text"></i> View Report
+                    <i class="bi bi-file-earmark-text"></i> {% trans "View Report" %}
                 </button>
             </div>
         </div>
@@ -450,7 +450,7 @@
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title" id="createJobModalLabel">
-                    <i class="bi bi-plus"></i> Create New Job
+                    <i class="bi bi-plus"></i> {% trans "Create New Job" %}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -458,39 +458,39 @@
                 <form id="createJobForm">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="c-form-label required">Job Name</label>
+                            <label class="c-form-label required">{% trans "Job Name" %}</label>
                             <input type="text" class="c-form-control" id="jobName" placeholder="e.g., Batch Analysis 001" required>
                         </div>
                         
                         <div class="col-md-6">
                             <label class="c-form-label required">Analysis Type</label>
                             <select class="c-form-control" id="jobAnalysisType" required>
-                                <option value="">Select analysis type...</option>
-                                <option value="spectral_analysis">Spectral Analysis</option>
-                                <option value="metadata_quality">Metadata Quality</option>
-                                <option value="calibration">Calibration</option>
-                                <option value="comprehensive">Comprehensive</option>
+                                <option value="">{% trans "Select analysis type..." %}</option>
+                                <option value="spectral_analysis">{% trans "Spectral Analysis" %}</option>
+                                <option value="metadata_quality">{% trans "Metadata Quality" %}</option>
+                                <option value="calibration">{% trans "Calibration" %}</option>
+                                <option value="comprehensive">{% trans "Comprehensive" %}</option>
                             </select>
                         </div>
                         
                         <div class="col-md-6">
                             <label class="c-form-label required">Agent</label>
                             <select class="c-form-control" id="jobAgent" required>
-                                <option value="">Select agent...</option>
-                                <option value="SpectralAnalysisAgent">Spectral Analysis Agent</option>
-                                <option value="MetadataQualityAgent">Metadata Quality Agent</option>
-                                <option value="CalibrationAgent">Calibration Agent</option>
-                                <option value="ReportingAgent">Reporting Agent</option>
-                                <option value="FlowerAgent">Flower Federated Learning Agent</option>
+                                <option value="">{% trans "Select agent..." %}</option>
+                                <option value="SpectralAnalysisAgent">{% trans "Spectral Analysis Agent" %}</option>
+                                <option value="MetadataQualityAgent">{% trans "Metadata Quality Agent" %}</option>
+                                <option value="CalibrationAgent">{% trans "Calibration Agent" %}</option>
+                                <option value="ReportingAgent">{% trans "Reporting Agent" %}</option>
+                                <option value="FlowerAgent">{% trans "Flower Federated Learning Agent" %}</option>
                             </select>
                         </div>
                         
                         <div class="col-md-6">
                             <label class="c-form-label">Priority</label>
                             <select class="c-form-control" id="jobPriority">
-                                <option value="normal">Normal</option>
-                                <option value="high">High</option>
-                                <option value="low">Low</option>
+                                <option value="normal">{% trans "Normal" %}</option>
+                                <option value="high">{% trans "High" %}</option>
+                                <option value="low">{% trans "Low" %}</option>
                             </select>
                         </div>
                         
@@ -519,10 +519,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Cancel
+                    <i class="bi bi-x"></i> {% trans "Cancel" %}
                 </button>
                 <button type="button" class="btn btn-primary" onclick="createJob()">
-                    <i class="bi bi-play"></i> Create Job
+                    <i class="bi bi-play"></i> {% trans "Create Job" %}
                 </button>
             </div>
         </div>
@@ -535,7 +535,7 @@
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title" id="jobsDeleteConfirmationModalLabel">
-                    <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+                    <i class="bi bi-exclamation-triangle"></i> {% trans "Confirm Deletion" %}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -544,10 +544,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Cancel
+                    <i class="bi bi-x"></i> {% trans "Cancel" %}
                 </button>
                 <button type="button" class="btn btn-danger" onclick="confirmDelete()">
-                    <i class="bi bi-trash"></i> Delete
+                    <i class="bi bi-trash"></i> {% trans "Delete" %}
                 </button>
             </div>
         </div>

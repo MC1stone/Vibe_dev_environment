@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %}{% load i18n %}
 {% block title %}Spektrum-Details - NIR Intelligence Platform{% endblock %}
 {% block content %}
 <div class="container mt-4">
@@ -7,17 +7,17 @@
         <div>
             {% if spectrum.project_id %}
             <a href="/projects/{{ spectrum.project_id }}/" class="btn btn-outline-primary me-2">
-                <i class="bi bi-folder2-open me-1"></i>Quellprojekt
+                <i class="bi bi-folder2-open me-1"></i>{% trans "Quellprojekt" %}
             </a>
             {% endif %}
             <a href="/projects/database/" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i>Zur Datenbank
+                <i class="bi bi-arrow-left me-1"></i>{% trans "Zur Datenbank" %}
             </a>
         </div>
     </div>
     {% if chart %}
     <div class="card shadow-sm mb-4">
-        <div class="card-header"><strong>Spektrum-Graph</strong></div>
+        <div class="card-header"><strong>{% trans "Spektrum-Graph" %}</strong></div>
         <div class="card-body text-center">
             <img src="{{ chart }}" alt="Spektrum {{ spectrum.file_name }}"
                  class="img-fluid" style="max-height: 420px;">
@@ -27,12 +27,12 @@
     <div class="row g-4">
         <div class="col-lg-6">
             <div class="card shadow-sm">
-                <div class="card-header"><strong>Messreihe</strong></div>
+                <div class="card-header"><strong>{% trans "Messreihe" %}</strong></div>
                 <div class="card-body p-0">
                     <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                         <table class="table table-sm table-striped mb-0">
                             <thead>
-                                <tr><th>Wellenlänge (nm)</th><th>Intensität</th></tr>
+                                <tr><th>{% trans "Wellenlänge (nm)" %}</th><th>{% trans "Intensität" %}</th></tr>
                             </thead>
                             <tbody>
                                 {% for wl, it in series %}
@@ -49,7 +49,7 @@
         </div>
         <div class="col-lg-6">
             <div class="card shadow-sm mb-4">
-                <div class="card-header"><strong>Metadaten &amp; Herkunft</strong></div>
+                <div class="card-header"><strong>{% trans "Metadaten &amp; Herkunft" %}</strong></div>
                 <div class="card-body">
                     <dl class="row mb-0">
                         <dt class="col-sm-5">Punkte</dt><dd class="col-sm-7">{{ spectrum.num_points }}</dd>
@@ -69,11 +69,11 @@
                 </div>
             </div>
             <div class="card shadow-sm">
-                <div class="card-header"><strong>Ähnlichste Spektren (gleiche Wellenlängenraster)</strong></div>
+                <div class="card-header"><strong>{% trans "Ähnlichste Spektren (gleiche Wellenlängenraster)" %}</strong></div>
                 <div class="card-body">
                     {% if matches %}
                     <table class="table table-sm">
-                        <thead><tr><th>Referenz</th><th>Distanz</th><th>Ähnlichkeit</th></tr></thead>
+                        <thead><tr><th>{% trans "Referenz" %}</th><th>{% trans "Distanz" %}</th><th>{% trans "Ähnlichkeit" %}</th></tr></thead>
                         <tbody>
                             {% for m in matches %}
                             <tr>
@@ -85,7 +85,7 @@
                         </tbody>
                     </table>
                     {% else %}
-                    <p class="mb-0 text-muted">Keine Vergleichsspektren auf demselben Raster in der Datenbank.</p>
+                    <p class="mb-0 text-muted">{% trans "Keine Vergleichsspektren auf demselben Raster in der Datenbank." %}</p>
                     {% endif %}
                 </div>
             </div>

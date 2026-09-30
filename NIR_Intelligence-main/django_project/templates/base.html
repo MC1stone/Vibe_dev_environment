@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
+    {% load i18n %}
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="NIR_Mistral DeveloperAgent Framework - Advanced NIR Spectroscopy Analysis Platform">
+    <meta name="description" content="{% trans 'NIR_Mistral DeveloperAgent Framework - Advanced NIR Spectroscopy Analysis Platform' %}">
     <meta name="theme-color" content="#7ab929">
     {% load static %}
-    <title>{% block title %}NIR_Mistral Framework{% endblock %}</title>
+    <title>{% block title %}{% trans "NIR_Mistral Framework" %}{% endblock %}</title>
     
     <!-- CSRF Token for AJAX requests -->
     <meta name="csrf-token" content="{{ csrf_token }}">
@@ -36,7 +37,7 @@
     <!-- Skip Links (Accessibility) -->
     <div class="c-skip-link-container">
         <a class="c-button c-skip-link c-button--primary" href="#main-content">
-            <span class="c-button__text">Skip to main content</span>
+            <span class="c-button__text">{% trans "Skip to main content" %}</span>
         </a>
     </div>
 
@@ -61,27 +62,27 @@
                     <ul class="c-nav-main__list js-disclosure-nav">
                         <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/" class="c-nav-main__action {% if request.path == '/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">Workflow</span>
+                                <span class="c-nav-main__label">{% trans "Workflow" %}</span>
                             </a>
                         </li>
                         <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/projects/" class="c-nav-main__action {% if request.path == '/projects/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">Projekte</span>
+                                <span class="c-nav-main__label">{% trans "Projects" %}</span>
                             </a>
                         </li>
                         <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/projects/database/" class="c-nav-main__action {% if request.path == '/projects/database/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">Spektrendatenbank</span>
+                                <span class="c-nav-main__label">{% trans "Spectrum database" %}</span>
                             </a>
                         </li>
                         <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/projects/sensors/" class="c-nav-main__action {% if request.path == '/projects/sensors/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">Sensoren</span>
+                                <span class="c-nav-main__label">{% trans "Sensors" %}</span>
                             </a>
                         </li>
                         <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/federated/" class="c-nav-main__action {% if request.path == '/federated/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">Föderiert</span>
+                                <span class="c-nav-main__label">{% trans "Federated" %}</span>
                             </a>
                         </li>
                     </ul>
@@ -90,6 +91,25 @@
 
             <!-- Header Actions -->
             <div class="c-header__actions">
+                <!-- Language switcher (OP48) -->
+                <form action="{% url 'set_language' %}" method="post" class="js-language-form"
+                      style="display:inline-flex;align-items:center;gap:.25rem;">
+                    {% csrf_token %}
+                    <label for="language-select" class="visually-hidden">{% trans "Language" %}</label>
+                    <select name="language" id="language-select"
+                            class="c-button c-button--outline-secondary"
+                            style="padding:.25rem .5rem;"
+                            onchange="this.form.submit()">
+                        {% get_current_language as LANGUAGE_CODE %}
+                        {% get_available_languages as LANGUAGES %}
+                        {% get_language_info_list for LANGUAGES as lang_info %}
+                        {% for lang in lang_info %}
+                            <option value="{{ lang.code }}" {% if lang.code == LANGUAGE_CODE %}selected{% endif %}>
+                                {{ lang.code|upper }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </form>
                 {% if user.is_authenticated %}
                     <div class="dropdown">
                         <button class="c-button c-button--outline-secondary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -99,13 +119,13 @@
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li>
                                 <a class="dropdown-item" href="/admin/">
-                                    <i class="bi bi-person-workspace"></i> Admin Panel
+                                    <i class="bi bi-person-workspace"></i> {% trans "Admin Panel" %}
                                 </a>
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a class="dropdown-item" href="/logout/">
-                                    <i class="bi bi-box-arrow-right"></i> Logout
+                                    <i class="bi bi-box-arrow-right"></i> {% trans "Logout" %}
                                 </a>
                             </li>
                         </ul>
@@ -113,11 +133,11 @@
                 {% else %}
                     <a href="/login/" class="c-button c-button--outline-primary">
                         <i class="bi bi-box-arrow-in-right"></i>
-                        <span class="c-button__text">Login</span>
+                        <span class="c-button__text">{% trans "Login" %}</span>
                     </a>
                     <a href="/register/" class="c-button c-button--primary">
                         <i class="bi bi-person-plus"></i>
-                        <span class="c-button__text">Register</span>
+                        <span class="c-button__text">{% trans "Register" %}</span>
                     </a>
                 {% endif %}
             </div>
@@ -137,14 +157,14 @@
                     <div class="row">
                         <div class="col-md-6 text-md-start text-center">
                             <p class="c-footer__copyright">
-                                &copy; 2026 NIR_Mistral Framework. All rights reserved.
+                                {% blocktrans %}&copy; 2026 NIR_Mistral Framework. All rights reserved.{% endblocktrans %}
                             </p>
                         </div>
                         <div class="col-md-6 text-md-end text-center">
                             <p class="c-footer__legal">
-                                <a href="/projects/">Projekte</a> |
-                                <a href="/projects/database/">Spektrendatenbank</a> |
-                                <a href="/projects/sensors/">Sensoren</a>
+                                <a href="/projects/">{% trans "Projects" %}</a> |
+                                <a href="/projects/database/">{% trans "Spectrum database" %}</a> |
+                                <a href="/projects/sensors/">{% trans "Sensors" %}</a>
                             </p>
                         </div>
                     </div>
@@ -164,6 +184,10 @@
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
+    <!-- i18n: catalog bootstrap + helper, loaded before page scripts (OP48c) -->
+    <script src="{% url 'js-i18n-catalog' %}"></script>
+    <script src="{% static 'js/i18n.js' %}"></script>
+
     <!-- Main JavaScript -->
     <script src="{% static 'js/main.js' %}"></script>
     

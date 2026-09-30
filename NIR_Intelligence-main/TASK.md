@@ -3,7 +3,78 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP47 - Bugfix: Rebuild wird bei identischer Version nicht neu installiert
+## Current Task: OP48 - EU-Mehrsprachigkeit (i18n)
+
+### Objective
+Die Plattform (UI, Backend-Meldungen, Berichte, ILIAS-Sync) soll fuer alle
+24 EU-Amtssprachen lokalisierbar sein; aktiv vollstaendig: de/en. Plan:
+`MULTILINGUAL_I18N_IMPLEMENTATIONPLAN.md` (Freigabe erteilt).
+
+### Status
+- OP48a Infrastruktur - ERLEDIGT: settings (24 EU-Sprachen, LOCALE_PATHS,
+  LocaleMiddleware, LANGUAGE_CODE de), i18n_patterns nur fuer UI-Routen
+  (prefix_default_language=False, API ohne Praefix), /i18n/setlang/,
+  locale-Kataloge de/en, CI + Testmatrix test_op48_i18n.py 22/22 gruen.
+- OP48b Kern-Templates + Sprachumschalter - ERLEDIGT: base/index/login/
+  chatbot/ilias/federated lokalisiert, 24-Sprachen-Umschalter, Kataloge
+  de/en vollstaendig (94 msgids), Testmatrix 36/36 gruen, Regressionen
+  OP3/OP7/OP8/FL4 gruen.
+- OP48c JS-Strings - ERLEDIGT: /js-i18n/ Endpunkt (verhandelter Katalog
+  als JS-Bootstrap, ?format=json fuer Tests; Fix: LocaleMiddleware erzwingt
+  bei praefix-loser URL LANGUAGE_CODE, daher Cookie/Accept-Language-
+  Verhandlung im View selbst), i18n.js (nirGettext/nirInterpolate,
+  ehrlicher msgid-Fallback), base.html laedt Katalog+Helper vor main.js;
+  alle benutzersichtbaren JS-Meldungen in files/agents/analysis/jobs/
+  spectra.js auf nirGettext umgestellt (82 msgids, Kataloge de/en
+  ergaenzt); Testmatrix 46/46 gruen, Regressionen OP3/OP25/OP15/FL4
+  gruen; node --check sauber.
+- OP48d Backend-Meldungen - ERLEDIGT: alle statischen API-Strings
+  ('error'/'message'-Werte) in api/*_views.py auf gettext umgestellt
+  (106 msgids, Kataloge de/en ergaenzt; 'status'-Werte als API-Vertrags-
+  keys bewusst unuebersetzt); federated_views mit gettext_lazy
+  (Offline-Kernfunktion ohne App-Registry); neue
+  ApiLanguageMiddleware aktiviert Cookie/Accept-Language-Verhandlung auf
+  unpraefigierten /api/- und /js-i18n/-Routen (LocaleMiddleware erzwingt
+  dort sonst LANGUAGE_CODE); Testmatrix 53/53 gruen (T7: gettext-Import,
+  keine nackten error-Literale, Chatbot-Error in de/en/Cookie,
+  Middleware-Wiring, Katalog-Spotchecks); Regressionen OP1/OP3/OP8/OP11/
+  OP13/OP15/OP24/OP25/OP28/S6-Chatbot/FL4 gruen; manage.py check ohne
+  Befunde.
+- OP48e Uebersetzungscontent - ERLEDIGT: 22 zusaetzliche EU-Kataloge als
+  ehrlich leere .po-Dateien bereitgestellt (msgids kommen aus den
+  de/en-Quellen; Uebersetzung durch native Speaker/Fachlehrkraefte,
+  keine Fake-Uebersetzungen; fr-Request faellt ehrlich auf Default
+  zurueck, verifiziert); Chatbot-System-Prompt sprachabhaengig
+  (SYSTEM_PROMPTS de/en, Antwort-Sprache folgt der Anfrage-Sprache,
+  View reicht translation.get_language() durch); Quarto-Berichtssprache
+  pro Aufruf konfigurierbar (QuartoConfig.lang, Default de; lang-
+  Platzhalter in allen 7 .qmd-Templates + Default-Template-YAML;
+  quarto_renderer injiziert lang); ILIAS-Sync traegt die aktive
+  Sprache des initiierenden Nutzers im LearningPath-Payload
+  (language-Feld). Testmatrix 62/62 gruen (T8: Katalog-Anwesenheit,
+  msgfmt-clean, Prompt-/Quarto-/ILIAS-Verkabelung, ehrlicher
+  fr-Fallback); Regressionen S6/FL4/FL5/OP24/OP11/OP23/OP3/OP25 gruen.
+- OP48f Rest-Templates - ERLEDIGT: alle 19 verbleibenden UI-Templates
+  (dashboard, analysis, files, agents, spectra, jobs, settings,
+  documentation, projects, register, workflow_list, workflow_results,
+  sensor_list, sensor_detail, spectrum_database, spectrum_detail,
+  crew_report, project_report, dashboard_colorful) auf {% trans %}
+  umgestellt; praexistente Template-Defekte in workflow_list/results
+  repariert ({%-Praefixe, |format -> floatformat:2, |sum(attribute) ->
+  |length); 706 Template-msgids in Kataloge gepflegt (de 513 neue
+  Uebersetzungen inkl. aller Fließtexte, en 611 identity + 33 deutsche
+  msgids rueckuebersetzt); msgfmt clean, render_check ALL OK,
+  OP48-Testmatrix 62/62 gruen; Regressionen OP3 (45/45), OP25 (65/65),
+  OP8 (77/77), OP8-Crew (38/38), OP15 (44/44) gruen.
+- OP48 damit abgeschlossen: aktiv vollstaendig de/en; 22 weitere
+  EU-Kataloge ehrlich leer (Uebersetzung durch Fachlehrkraefte).
+
+### Success Criteria
+- UI in de und en vollstaendig umschaltbar; 24 Sprachkataloge angelegt
+- API-Statuscodes und JSON-Keys identisch zu vorher
+- Vollregression S3-S9, OP1-OP47 gruen; manage.py check ohne Befunde
+
+## Completed Task: OP47 - Bugfix: Rebuild wird bei identischer Version nicht neu installiert
 
 ### Objective (Zielumgebungs-Feedback Mint, 3. Runde)
 Nach OP45/OP46 lief die Installation, aber der apt-deb-Install zeigte "ok"
@@ -1018,7 +1089,7 @@ findings, Fachbegriffe explained in plain language at first use):
   with a short explanation of the underlying effect
 - **Literaturhinweise**: real, accessible standard works cited in APA style
   (Pasquini 2003; Workman & Weyer 2012; Geladi & Kowalski 1986; Wold et al.
-  2001; Williams & Norris 2001; N\u00e6s et al. 2002; Burns & Ciurczak 2007)
+  2001; Williams & Norris 2001; Næs et al. 2002; Burns & Ciurczak 2007)
 
 ### Scope
 

@@ -88,6 +88,7 @@ class QuartoConfig:
     number_sections: bool = True
     toc: bool = True
     toc_depth: int = 3
+    lang: str = "de"  # OP48e: report language per invocation (default de)
 
 
 class QuartoAgent(BaseAgent):
@@ -207,6 +208,7 @@ class QuartoAgent(BaseAgent):
 title: """ + "{{title}}" + """
 author: """ + "{{author}}" + """
 format: """ + "{{format}}" + """
+lang: """ + "{{lang}}" + """
 date: """ + "{{date}}" + """
 ---
 
@@ -409,6 +411,7 @@ date: """ + "{{date}}" + """
             "author": data.get("author", "NIR Intelligence Platform"),
             "date": data.get("date", datetime.now().strftime("%Y-%m-%d")),
             "format": self.config.output_format.value,
+            "lang": self.config.lang,
             "summary": data.get("summary", ""),
             "analysis_results": data.get("analysis_results", ""),
             "visualizations": data.get("visualizations", ""),

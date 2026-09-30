@@ -228,7 +228,7 @@ function startAnalysis() {
     // The single consolidated workflow: data quality + spectral analysis +
     // statistics + neural networks + one comprehensive report.
     if (!fileUploadData || !fileUploadData.fileId) {
-        showError('Please upload a data file first (any file type).');
+        showError(nirGettext('Please upload a data file first (any file type).'));
         return;
     }
 
@@ -260,10 +260,10 @@ function startAnalysis() {
         hideLoading();
         if (runBtn) runBtn.disabled = false;
         if (!result.success) {
-            showError('Analysis failed: ' + (result.error || result.message || 'Unknown error'));
+            showError(nirGettext('Analysis failed: ') + (result.error || result.message || nirGettext('Unknown error')));
             return;
         }
-        showSuccess('Complete analysis finished - the report is ready.');
+        showSuccess(nirGettext('Complete analysis finished - the report is ready.'));
         const enriched = Object.assign({
             sample_id: fileUploadData.fileName,
             processing_time: result.processing_time,
@@ -279,7 +279,7 @@ function startAnalysis() {
         console.error('Error running analysis:', error);
         hideLoading();
         if (runBtn) runBtn.disabled = false;
-        showError('Failed to run analysis: ' + error.message);
+        showError(nirGettext('Failed to run analysis: ') + error.message);
     });
 }
 
@@ -310,7 +310,7 @@ function handleFileUpload(event) {
     })
     .then(function(response) {
         if (response.status === 401 || response.status === 403) {
-            throw new Error('Please log in to upload files.');
+            throw new Error(nirGettext('Please log in to upload files.'));
         }
         return response.json().catch(function() { return {}; });
     })
@@ -324,7 +324,7 @@ function handleFileUpload(event) {
             fileName: file.name,
             fileId: fileId
         };
-        showSuccess('File uploaded: ' + file.name);
+        showSuccess(nirGettext('File uploaded: ') + file.name);
         if (info) info.textContent = file.name + ' stored on the server. Ready to run the workflow.';
         const runBtn = document.getElementById('runWorkflowBtn');
         if (runBtn) runBtn.disabled = false;
@@ -336,7 +336,7 @@ function handleFileUpload(event) {
         const runBtn = document.getElementById('runWorkflowBtn');
         if (runBtn) runBtn.disabled = true;
         if (info) info.textContent = '';
-        showError('Upload failed: ' + error.message);
+        showError(nirGettext('Upload failed: ') + error.message);
     });
 }
 
@@ -360,19 +360,19 @@ function viewAnalysisResults(requestId) {
                             displayAnalysisResults(foundResult);
                         } else {
                             hideLoading();
-                            showError('Analysis results not found.');
+                            showError(nirGettext('Analysis results not found.'));
                         }
                     })
                     .catch(function(error) {
                         hideLoading();
-                        showError('Failed to load analysis results.');
+                        showError(nirGettext('Failed to load analysis results.'));
                     });
             }
         })
         .catch(function(error) {
             console.error('Error loading analysis results:', error);
             hideLoading();
-            showError('Failed to load analysis results.');
+            showError(nirGettext('Failed to load analysis results.'));
         });
 }
 
@@ -811,7 +811,7 @@ function viewReport() {
         return;
     }
     if (!currentAnalysisRequest || !currentAnalysisRequest.request_id) {
-        showError('No analysis results available to view report.');
+        showError(nirGettext('No analysis results available to view report.'));
         return;
     }
     
@@ -827,18 +827,18 @@ function viewReport() {
                 window.open('/api/crewai/reports/preview/?report_id=' + reports[0].report_id, '_blank');
             } else {
                 hideLoading();
-                showError('No report was generated for this analysis.');
+                showError(nirGettext('No report was generated for this analysis.'));
             }
         })
         .catch(function(error) {
             hideLoading();
-            showError('Failed to load the report for this analysis.');
+            showError(nirGettext('Failed to load the report for this analysis.'));
         });
 }
 
 function exportAnalysisResults() {
     if (!currentAnalysisRequest || !currentAnalysisRequest.request_id) {
-        showError('No analysis results available to export.');
+        showError(nirGettext('No analysis results available to export.'));
         return;
     }
     
@@ -853,14 +853,14 @@ function exportAnalysisResults() {
             if (reports && reports.length > 0) {
                 const report = reports[0];
                 // In a real implementation, this would trigger a file download
-                showSuccess('Export functionality would download: ' + report.report_id);
+                showSuccess(nirGettext('Export functionality would download: ') + report.report_id);
             } else {
-                showError('No reports available for export.');
+                showError(nirGettext('No reports available for export.'));
             }
         })
         .catch(function(error) {
             hideLoading();
-            showError('Failed to export analysis results.');
+            showError(nirGettext('Failed to export analysis results.'));
         });
 }
 
@@ -1043,11 +1043,11 @@ function hideLoading() {
 }
 
 function showSuccess(message) {
-    showToast('Success!', message, 'success');
+    showToast(nirGettext('Success!'), message, 'success');
 }
 
 function showError(message) {
-    showToast('Error!', message, 'danger');
+    showToast(nirGettext('Error!'), message, 'danger');
 }
 
 function showToast(title, message, type) {

@@ -11,6 +11,7 @@ from django.conf import settings
 from core.utils.quarto_renderer import quarto_renderer
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from django.utils.translation import gettext
 
 
 @csrf_exempt
@@ -30,7 +31,7 @@ def generate_spectral_report(request):
         if not data:
             return JsonResponse({
                 'success': False,
-                'error': 'No data provided'
+                'error': gettext('No data provided')
             }, status=400)
         
         # Generate a unique filename
@@ -52,7 +53,7 @@ def generate_spectral_report(request):
                 'success': True,
                 'report_url': report_url,
                 'output_path': output_path,
-                'message': 'Report generated successfully'
+                'message': gettext('Report generated successfully')
             })
         else:
             return JsonResponse({
@@ -63,12 +64,12 @@ def generate_spectral_report(request):
     except json.JSONDecodeError as e:
         return JsonResponse({
             'success': False,
-            'error': f'Invalid JSON data: {str(e)}'
+            'error': gettext('Invalid JSON data: ') + str(e)
         }, status=400)
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': f'Error generating report: {str(e)}'
+            'error': gettext('Error generating report: ') + str(e)
         }, status=500)
 
 
@@ -84,7 +85,7 @@ def generate_metadata_report(request):
         if not data:
             return JsonResponse({
                 'success': False,
-                'error': 'No data provided'
+                'error': gettext('No data provided')
             }, status=400)
         
         # Generate a unique filename
@@ -105,7 +106,7 @@ def generate_metadata_report(request):
                 'success': True,
                 'report_url': report_url,
                 'output_path': output_path,
-                'message': 'Metadata report generated successfully'
+                'message': gettext('Metadata report generated successfully')
             })
         else:
             return JsonResponse({
@@ -116,12 +117,12 @@ def generate_metadata_report(request):
     except json.JSONDecodeError as e:
         return JsonResponse({
             'success': False,
-            'error': f'Invalid JSON data: {str(e)}'
+            'error': gettext('Invalid JSON data: ') + str(e)
         }, status=400)
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': f'Error generating metadata report: {str(e)}'
+            'error': gettext('Error generating metadata report: ') + str(e)
         }, status=500)
 
 
@@ -178,7 +179,7 @@ def serve_report(request, report_name):
         if not os.path.exists(report_path):
             return JsonResponse({
                 'success': False,
-                'error': 'Report not found'
+                'error': gettext('Report not found')
             }, status=404)
         
         # Determine content type based on file extension
@@ -215,7 +216,7 @@ def generate_report_from_analysis(request, analysis_id):
         if not data:
             return JsonResponse({
                 'success': False,
-                'error': 'No analysis data provided'
+                'error': gettext('No analysis data provided')
             }, status=400)
         
         # Generate report
@@ -236,7 +237,7 @@ def generate_report_from_analysis(request, analysis_id):
                 'report_url': report_url,
                 'analysis_id': analysis_id,
                 'output_path': output_path,
-                'message': 'Report generated from analysis'
+                'message': gettext('Report generated from analysis')
             })
         else:
             return JsonResponse({
@@ -247,12 +248,12 @@ def generate_report_from_analysis(request, analysis_id):
     except json.JSONDecodeError as e:
         return JsonResponse({
             'success': False,
-            'error': f'Invalid JSON data: {str(e)}'
+            'error': gettext('Invalid JSON data: ') + str(e)
         }, status=400)
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': f'Error generating report from analysis: {str(e)}'
+            'error': gettext('Error generating report from analysis: ') + str(e)
         }, status=500)
 
 
@@ -273,7 +274,7 @@ def render_custom_report(request):
         if not template_name:
             return JsonResponse({
                 'success': False,
-                'error': 'Template name is required'
+                'error': gettext('Template name is required')
             }, status=400)
         
         success, output_path, error = quarto_renderer.render_report(
@@ -292,7 +293,7 @@ def render_custom_report(request):
                 'output_path': output_path,
                 'template': template_name,
                 'format': output_format,
-                'message': 'Custom report rendered successfully'
+                'message': gettext('Custom report rendered successfully')
             })
         else:
             return JsonResponse({
@@ -303,10 +304,10 @@ def render_custom_report(request):
     except json.JSONDecodeError as e:
         return JsonResponse({
             'success': False,
-            'error': f'Invalid JSON data: {str(e)}'
+            'error': gettext('Invalid JSON data: ') + str(e)
         }, status=400)
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': f'Error rendering custom report: {str(e)}'
+            'error': gettext('Error rendering custom report: ') + str(e)
         }, status=500)

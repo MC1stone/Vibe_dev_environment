@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load i18n %}
 {% block title %}CrewAI Analysis Report - NIR_Mistral Framework{% endblock %}
 
 {% block extra_css %}
@@ -45,8 +45,8 @@
         <i class="bi bi-exclamation-triangle me-2"></i>
         <div>
             No CrewAI analysis has been run for this file yet.
-            <a href="/files/" class="alert-link">Open the Files page</a> and press
-            <strong>Full Analysis</strong> to generate the report.
+            <a href="/files/" class="alert-link">{% trans "Open the Files page" %}</a> and press
+            <strong>{% trans "Full Analysis" %}</strong> to generate the report.
         </div>
     </div>
     {% endif %}
@@ -55,7 +55,7 @@
     <div class="report-header">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
-                <h2><i class="bi bi-file-earmark-text"></i> CrewAI Analysis Report</h2>
+                <h2><i class="bi bi-file-earmark-text"></i> {% trans "CrewAI Analysis Report" %}</h2>
                 <p class="mb-0 opacity-75">{{ file.name }}</p>
                 <p class="mb-0 opacity-75">
                     Request: {{ crew_summary.request_id|default:"—" }} ·
@@ -73,26 +73,26 @@
 
     <!-- Report Contents -->
     <div class="card section-card">
-        <div class="card-header"><i class="bi bi-list-ul"></i> Report Contents</div>
+        <div class="card-header"><i class="bi bi-list-ul"></i> {% trans "Report Contents" %}</div>
         <div class="card-body d-flex flex-wrap gap-3">
-            <a href="#spectral" class="btn btn-outline-secondary btn-sm"><i class="bi bi-bar-chart-line me-1"></i> Spectral Analysis</a>
-            <a href="#metadata" class="btn btn-outline-secondary btn-sm"><i class="bi bi-tags me-1"></i> Metadata Quality</a>
-            <a href="#sensor" class="btn btn-outline-secondary btn-sm"><i class="bi bi-motherboard me-1"></i> Sensor Quality</a>
-            <a href="#statistical" class="btn btn-outline-secondary btn-sm"><i class="bi bi-graph-up me-1"></i> Statistical Analysis</a>
-            <a href="#neural" class="btn btn-outline-secondary btn-sm"><i class="bi bi-cpu me-1"></i> Neural Network</a>
-            <a href="#recommendations" class="btn btn-outline-secondary btn-sm"><i class="bi bi-lightbulb me-1"></i> Recommendations</a>
+            <a href="#spectral" class="btn btn-outline-secondary btn-sm"><i class="bi bi-bar-chart-line me-1"></i> {% trans "Spectral Analysis" %}</a>
+            <a href="#metadata" class="btn btn-outline-secondary btn-sm"><i class="bi bi-tags me-1"></i> {% trans "Metadata Quality" %}</a>
+            <a href="#sensor" class="btn btn-outline-secondary btn-sm"><i class="bi bi-motherboard me-1"></i> {% trans "Sensor Quality" %}</a>
+            <a href="#statistical" class="btn btn-outline-secondary btn-sm"><i class="bi bi-graph-up me-1"></i> {% trans "Statistical Analysis" %}</a>
+            <a href="#neural" class="btn btn-outline-secondary btn-sm"><i class="bi bi-cpu me-1"></i> {% trans "Neural Network" %}</a>
+            <a href="#recommendations" class="btn btn-outline-secondary btn-sm"><i class="bi bi-lightbulb me-1"></i> {% trans "Recommendations" %}</a>
         </div>
     </div>
 
     <!-- Spectral Analysis -->
     <div id="spectral" class="nav-anchor">
         <div class="card section-card">
-            <div class="card-header"><i class="bi bi-bar-chart-line"></i> Spectral Analysis</div>
+            <div class="card-header"><i class="bi bi-bar-chart-line"></i> {% trans "Spectral Analysis" %}</div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
                         <dl class="row mb-0">
-                            <dt class="col-sm-6">Quality Score:</dt>
+                            <dt class="col-sm-6">{% trans "Quality Score:" %}</dt>
                             <dd class="col-sm-6 metric-value">{{ spectral_analysis.quality_score|default:0|floatformat:1 }} ({{ spectral_analysis.quality_grade|default:"N/A" }})</dd>
                             <dt class="col-sm-6">Data Points:</dt>
                             <dd class="col-sm-6 metric-value">{{ spectral_analysis.data_points|default:0 }}</dd>
@@ -105,7 +105,7 @@
                                         <span class="badge bg-warning text-dark">{{ issue }}</span>
                                     {% endfor %}
                                 {% else %}
-                                    <span class="badge bg-success">None</span>
+                                    <span class="badge bg-success">{% trans "None" %}</span>
                                 {% endif %}
                             </dd>
                         </dl>
@@ -125,10 +125,10 @@
                 </div>
                 {% if spectral_series_json != '{"wavelengths": [], "intensities": []}' %}
                 <hr>
-                <h6><i class="bi bi-graph-up"></i> Spectrum</h6>
+                <h6><i class="bi bi-graph-up"></i> {% trans "Spectrum" %}</h6>
                 <canvas id="spectrumChart" height="120"></canvas>
                 {% else %}
-                <div class="alert alert-secondary mt-3 mb-0">No spectral series stored for this file.</div>
+                <div class="alert alert-secondary mt-3 mb-0">{% trans "No spectral series stored for this file." %}</div>
                 {% endif %}
             </div>
         </div>
@@ -137,7 +137,7 @@
     <!-- Metadata Quality -->
     <div id="metadata" class="nav-anchor">
         <div class="card section-card">
-            <div class="card-header"><i class="bi bi-tags"></i> Metadata Quality</div>
+            <div class="card-header"><i class="bi bi-tags"></i> {% trans "Metadata Quality" %}</div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-4 text-center">
@@ -154,19 +154,19 @@
                                 </div>
                             </div>
                             <div class="col-6">
-                                <p class="mb-1">Accuracy</p>
+                                <p class="mb-1">{% trans "Accuracy" %}</p>
                                 <div class="progress" style="height: 18px;">
                                     <div class="progress-bar bg-info" style="width: {{ metadata_quality.accuracy|default:0 }}%"></div>
                                 </div>
                             </div>
                             <div class="col-6 mt-3">
-                                <p class="mb-1">Consistency</p>
+                                <p class="mb-1">{% trans "Consistency" %}</p>
                                 <div class="progress" style="height: 18px;">
                                     <div class="progress-bar bg-warning" style="width: {{ metadata_quality.consistency|default:0 }}%"></div>
                                 </div>
                             </div>
                             <div class="col-6 mt-3">
-                                <p class="mb-1 d-flex justify-content-between"><span>Missing required fields</span> <span class="badge bg-danger">{{ metadata_quality.missing_required_fields|length }}</span></p>
+                                <p class="mb-1 d-flex justify-content-between"><span>{% trans "Missing required fields" %}</span> <span class="badge bg-danger">{{ metadata_quality.missing_required_fields|length }}</span></p>
                             </div>
                         </div>
                     </div>
@@ -187,7 +187,7 @@
     <!-- Sensor Quality -->
     <div id="sensor" class="nav-anchor">
         <div class="card section-card">
-            <div class="card-header"><i class="bi bi-motherboard"></i> Sensor Quality</div>
+            <div class="card-header"><i class="bi bi-motherboard"></i> {% trans "Sensor Quality" %}</div>
             <div class="card-body">
                 {% if sensor_quality %}
                 <div class="row">
@@ -199,7 +199,7 @@
                                     {{ sensor_quality.status|default:"N/A" }}
                                 </span>
                             </dd>
-                            <dt class="col-sm-7">Spectra Assessed:</dt>
+                            <dt class="col-sm-7">{% trans "Spectra Assessed:" %}</dt>
                             <dd class="col-sm-5 metric-value">{{ sensor_quality.num_spectra|default:0 }}</dd>
                             <dt class="col-sm-7">Overall Score:</dt>
                             <dd class="col-sm-5 metric-value">{{ sensor_quality.overall_quality_score|default:0|floatformat:3 }}</dd>
@@ -208,9 +208,9 @@
                     <div class="col-md-6">
                         <dl class="row mb-0">
                             <dt class="col-sm-7">Drift:</dt>
-                            <dd class="col-sm-5">{% if sensor_quality.drift_detected %}<span class="badge bg-danger">Detected</span>{% else %}<span class="badge bg-success">OK</span>{% endif %}</dd>
+                            <dd class="col-sm-5">{% if sensor_quality.drift_detected %}<span class="badge bg-danger">{% trans "Detected" %}</span>{% else %}<span class="badge bg-success">{% trans "OK" %}</span>{% endif %}</dd>
                             <dt class="col-sm-7">Offset:</dt>
-                            <dd class="col-sm-5">{% if sensor_quality.offset_detected %}<span class="badge bg-danger">Detected</span>{% else %}<span class="badge bg-success">OK</span>{% endif %}</dd>
+                            <dd class="col-sm-5">{% if sensor_quality.offset_detected %}<span class="badge bg-danger">{% trans "Detected" %}</span>{% else %}<span class="badge bg-success">{% trans "OK" %}</span>{% endif %}</dd>
                             <dt class="col-sm-7">Noise Level:</dt>
                             <dd class="col-sm-5 metric-value">{{ sensor_quality.noise_level|default:0|floatformat:4 }}</dd>
                         </dl>
@@ -224,7 +224,7 @@
                 </ul>
                 {% endif %}
                 {% else %}
-                <p class="mb-0 text-muted">Sensor quality assessment did not run for this analysis.</p>
+                <p class="mb-0 text-muted">{% trans "Sensor quality assessment did not run for this analysis." %}</p>
                 {% endif %}
             </div>
         </div>
@@ -233,7 +233,7 @@
     <!-- Statistical Analysis -->
     <div id="statistical" class="nav-anchor">
         <div class="card section-card">
-            <div class="card-header"><i class="bi bi-graph-up"></i> Statistical Analysis (PCA / PLS / PCR / ANOVA)</div>
+            <div class="card-header"><i class="bi bi-graph-up"></i> {% trans "Statistical Analysis (PCA / PLS / PCR / ANOVA)" %}</div>
             <div class="card-body">
                 {% if statistical_analysis.status == 'ok' %}
                 <div class="row">
@@ -299,35 +299,35 @@
     <!-- Neural Network -->
     <div id="neural" class="nav-anchor">
         <div class="card section-card">
-            <div class="card-header"><i class="bi bi-cpu"></i> Neural Network Analysis (MLP / Autoencoder / CNN)</div>
+            <div class="card-header"><i class="bi bi-cpu"></i> {% trans "Neural Network Analysis (MLP / Autoencoder / CNN)" %}</div>
             <div class="card-body">
                 {% if neural_network %}
                 <dl class="row mb-0">
                     <dt class="col-sm-6">Model:</dt>
                     <dd class="col-sm-6"><span class="badge bg-primary">{{ neural_network.model|default:neural_network.status }}</span></dd>
                     {% if neural_network.r2_score is not None %}
-                    <dt class="col-sm-6">R² Score:</dt>
+                    <dt class="col-sm-6">{% trans "R² Score:" %}</dt>
                     <dd class="col-sm-6 metric-value">{{ neural_network.r2_score|floatformat:3 }}</dd>
                     {% endif %}
                     {% if neural_network.reconstruction_mse is not None %}
-                    <dt class="col-sm-6">Reconstruction MSE:</dt>
+                    <dt class="col-sm-6">{% trans "Reconstruction MSE:" %}</dt>
                     <dd class="col-sm-6 metric-value">{{ neural_network.reconstruction_mse|floatformat:4 }}</dd>
                     {% endif %}
                     {% if neural_network.anomalies_detected is not None %}
-                    <dt class="col-sm-6">Anomalies Detected:</dt>
+                    <dt class="col-sm-6">{% trans "Anomalies Detected:" %}</dt>
                     <dd class="col-sm-6 metric-value">{{ neural_network.anomalies_detected }}</dd>
                     {% endif %}
                     {% if neural_network.n_train is not None %}
-                    <dt class="col-sm-6">Train / Test:</dt>
+                    <dt class="col-sm-6">{% trans "Train / Test:" %}</dt>
                     <dd class="col-sm-6 metric-value">{{ neural_network.n_train }} / {{ neural_network.n_test }}</dd>
                     {% endif %}
                     {% if neural_network.reason %}
-                    <dt class="col-sm-6">Note:</dt>
+                    <dt class="col-sm-6">{% trans "Note:" %}</dt>
                     <dd class="col-sm-6">{{ neural_network.reason }}</dd>
                     {% endif %}
                 </dl>
                 {% else %}
-                <p class="mb-0 text-muted">Neural network analysis did not produce results.</p>
+                <p class="mb-0 text-muted">{% trans "Neural network analysis did not produce results." %}</p>
                 {% endif %}
             </div>
         </div>
@@ -336,24 +336,24 @@
     <!-- Recommendations -->
     <div id="recommendations" class="nav-anchor">
         <div class="card section-card">
-            <div class="card-header"><i class="bi bi-lightbulb"></i> Recommendations &amp; Warnings</div>
+            <div class="card-header"><i class="bi bi-lightbulb"></i> {% trans "Recommendations &amp; Warnings" %}</div>
             <div class="card-body">
                 {% if recommendations %}
-                <h6>Recommendations</h6>
+                <h6>{% trans "Recommendations" %}</h6>
                 <ul>
                     {% for rec in recommendations %}<li>{{ rec }}</li>{% endfor %}
                 </ul>
                 {% else %}
-                <p class="text-success mb-2"><i class="bi bi-check-circle"></i> No recommendations — the analysis found no issues.</p>
+                <p class="text-success mb-2"><i class="bi bi-check-circle"></i> {% trans "No recommendations — the analysis found no issues." %}</p>
                 {% endif %}
                 {% if warnings %}
-                <h6>Warnings</h6>
+                <h6>{% trans "Warnings" %}</h6>
                 <ul>
                     {% for w in warnings %}<li>{{ w }}</li>{% endfor %}
                 </ul>
                 {% endif %}
                 {% if errors %}
-                <h6>Errors</h6>
+                <h6>{% trans "Errors" %}</h6>
                 <ul class="text-danger">
                     {% for e in errors %}<li>{{ e }}</li>{% endfor %}
                 </ul>
@@ -365,7 +365,7 @@
     {% if reports %}
     <!-- Generated Files -->
     <div class="card section-card">
-        <div class="card-header"><i class="bi bi-file-earmark-arrow-down"></i> Generated Report Files</div>
+        <div class="card-header"><i class="bi bi-file-earmark-arrow-down"></i> {% trans "Generated Report Files" %}</div>
         <ul class="list-group list-group-flush">
             {% for r in reports %}
             <li class="list-group-item d-flex justify-content-between align-items-center">

@@ -126,9 +126,9 @@ function loadSpectra() {
             // Only show error if showError function exists
             if (typeof showError === 'function') {
                 if (error.response && error.response.status === 403) {
-                    showError('Please log in to view spectra. Authentication is required.');
+                    showError(nirGettext('Please log in to view spectra. Authentication is required.'));
                 } else {
-                    showError('Failed to load spectra. Please try again.');
+                    showError(nirGettext('Failed to load spectra. Please try again.'));
                 }
             }
         });
@@ -515,7 +515,7 @@ function formatFileSize(bytes) {
 function uploadSpectrum() {
     const files = document.getElementById('fileInput').files;
     if (files.length === 0) {
-        showError('Please select at least one file to upload');
+        showError(nirGettext('Please select at least one file to upload'));
         return;
     }
     
@@ -530,14 +530,14 @@ function uploadSpectrum() {
     const autoAnalyze = document.getElementById('autoAnalyze').checked;
     
     if (!sampleName || !sampleId) {
-        showError('Please fill in the required fields (Sample Name and Sample ID)');
+        showError(nirGettext('Please fill in the required fields (Sample Name and Sample ID)'));
         return;
     }
     
     // Check if CSRF token is available
     const csrfToken = getCSRFToken();
     if (!csrfToken) {
-        showError('Authentication error. Please refresh the page and try again.');
+        showError(nirGettext('Authentication error. Please refresh the page and try again.'));
         return;
     }
     
@@ -545,7 +545,7 @@ function uploadSpectrum() {
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     for (let i = 0; i < files.length; i++) {
         if (files[i].size > MAX_FILE_SIZE) {
-            showError(`File "${files[i].name}" is too large. Maximum size is 10MB.`);
+            showError(nirInterpolate(nirGettext('File "{name}" is too large. Maximum size is 10MB.'), {name: files[i].name}));
             return;
         }
     }
@@ -612,7 +612,7 @@ function uploadSpectrum() {
             const failed = responses.length - successful;
             
             if (successful > 0) {
-                showSuccess(`${successful} spectrum/spectra uploaded successfully!`);
+                showSuccess(nirInterpolate(nirGettext('{count} spectrum/spectra uploaded successfully!'), {count: successful}));
                 
                 // Reset form
                 document.getElementById('uploadSpectrumForm').reset();
@@ -630,7 +630,7 @@ function uploadSpectrum() {
                 // If auto-analyze is enabled, start analysis
                 if (autoAnalyze && successful > 0) {
                     setTimeout(() => {
-                        showSuccess('Auto-analysis started for uploaded spectra');
+                        showSuccess(nirGettext('Auto-analysis started for uploaded spectra'));
                     }, 1000);
                 }
             }
@@ -670,7 +670,7 @@ function uploadSpectrum() {
                 } else if (status === 413) {
                     errorMessage = 'File too large. Maximum upload size is 10MB.';
                 } else if (status === 500) {
-                    errorMessage = 'Server error: ' + (data.error || 'Unknown error');
+                    errorMessage = 'Server error: ' + (data.error || nirGettext('Unknown error'));
                 } else if (data && data.error) {
                     errorMessage = data.error;
                 } else if (data && data.message) {
@@ -692,7 +692,7 @@ function showSpectrumDetails(spectrumId) {
     const spectrum = allSpectra.find(s => s.id === spectrumId);
     
     if (!spectrum) {
-        showError('Spectrum not found');
+        showError(nirGettext('Spectrum not found'));
         return;
     }
     
@@ -852,7 +852,7 @@ function analyzeSpectrum(spectrumId) {
     const spectrum = allSpectra.find(s => s.id === spectrumId);
     
     if (!spectrum) {
-        showError('Spectrum not found');
+        showError(nirGettext('Spectrum not found'));
         return;
     }
     
@@ -891,26 +891,26 @@ function analyzeSpectrum(spectrumId) {
             const result = response.data;
             
             if (result.success) {
-                showSuccess('Analysis started successfully!');
+                showSuccess(nirGettext('Analysis started successfully!'));
                 
                 // Redirect to analysis page or jobs page
                 setTimeout(() => {
                     window.location.href = '/analysis/';
                 }, 1000);
             } else {
-                showError('Failed to start analysis: ' + (result.error || 'Unknown error'));
+                showError(nirGettext('Failed to start analysis: ') + (result.error || nirGettext('Unknown error')));
             }
         })
         .catch(function(error) {
             console.error('Error starting analysis:', error);
             hideLoading();
-            showError('Failed to start analysis. Please try again.');
+            showError(nirGettext('Failed to start analysis. Please try again.'));
         });
 }
 
 function analyzeCurrentSpectrum() {
     if (!currentSpectrum) {
-        showError('No spectrum selected');
+        showError(nirGettext('No spectrum selected'));
         return;
     }
     
@@ -925,7 +925,7 @@ function analyzeCurrentSpectrum() {
 
 function quickAnalyzeSelected() {
     if (selectedSpectra.length === 0) {
-        showError('Please select at least one spectrum to analyze');
+        showError(nirGettext('Please select at least one spectrum to analyze'));
         return;
     }
     
@@ -986,7 +986,7 @@ function quickAnalyzeSelected() {
         .catch(error => {
             console.error('Error starting batch analysis:', error);
             hideLoading();
-            showError('Failed to start batch analysis. Please try again.');
+            showError(nirGettext('Failed to start batch analysis. Please try again.'));
         });
 }
 
@@ -1023,7 +1023,7 @@ function deleteSpectrum(spectrumId) {
     currentSpectrum = allSpectra.find(s => s.id === spectrumId);
     
     if (!currentSpectrum) {
-        showError('Spectrum not found');
+        showError(nirGettext('Spectrum not found'));
         return;
     }
     
@@ -1036,7 +1036,7 @@ function deleteSpectrum(spectrumId) {
 
 function deleteSelectedSpectra() {
     if (selectedSpectra.length === 0) {
-        showError('Please select at least one spectrum to delete');
+        showError(nirGettext('Please select at least one spectrum to delete'));
         return;
     }
     
@@ -1050,7 +1050,7 @@ function deleteSelectedSpectra() {
 
 function confirmDelete() {
     if (!currentSpectrum && selectedSpectra.length === 0) {
-        showError('No spectrum selected for deletion');
+        showError(nirGettext('No spectrum selected for deletion'));
         return;
     }
     
@@ -1107,13 +1107,13 @@ function confirmDelete() {
         .catch(error => {
             console.error('Error deleting spectra:', error);
             hideLoading();
-            showError('Failed to delete spectra. Please try again.');
+            showError(nirGettext('Failed to delete spectra. Please try again.'));
         });
 }
 
 function downloadSpectrum() {
     if (!currentSpectrum) {
-        showError('No spectrum selected');
+        showError(nirGettext('No spectrum selected'));
         return;
     }
     
@@ -1137,7 +1137,7 @@ function downloadSpectrum() {
         .catch(error => {
             console.error('Error downloading spectrum:', error);
             hideLoading();
-            showError('Failed to download spectrum. Please try again.');
+            showError(nirGettext('Failed to download spectrum. Please try again.'));
         });
 }
 
@@ -1209,11 +1209,11 @@ function hideLoading() {
 }
 
 function showSuccess(message) {
-    showToast('Success!', message, 'success');
+    showToast(nirGettext('Success!'), message, 'success');
 }
 
 function showError(message) {
-    showToast('Error!', message, 'danger');
+    showToast(nirGettext('Error!'), message, 'danger');
 }
 
 function showToast(title, message, type) {

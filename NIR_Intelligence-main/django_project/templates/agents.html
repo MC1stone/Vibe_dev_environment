@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load i18n %}
 
 {% block title %}Crew AI Agents - NIR_Mistral Framework{% endblock %}
 
@@ -136,10 +136,10 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
                 <h1 class="c-page-header__title text-white mb-0">
-                    <i class="bi bi-robot"></i> Crew AI Agents
+                    <i class="bi bi-robot"></i> {% trans "Crew AI Agents" %}
                 </h1>
                 <p class="c-page-header__subtitle text-white opacity-75 mb-0">
-                    Manage and monitor intelligent analysis agents for NIR spectroscopy
+                    {% trans "Manage and monitor intelligent analysis agents for NIR spectroscopy" %}
                 </p>
             </div>
             <div class="d-flex gap-2">
@@ -166,7 +166,7 @@
                         <i class="bi bi-robot"></i>
                     </div>
                     <div class="c-stat-card__number" id="totalAgents">0</div>
-                    <div class="c-stat-card__label">Total Agents</div>
+                    <div class="c-stat-card__label">{% trans "Total Agents" %}</div>
                 </div>
             </div>
             
@@ -176,7 +176,7 @@
                         <i class="bi bi-check-circle"></i>
                     </div>
                     <div class="c-stat-card__number" id="availableAgents">0</div>
-                    <div class="c-stat-card__label">Available</div>
+                    <div class="c-stat-card__label">{% trans "Available" %}</div>
                 </div>
             </div>
             
@@ -186,7 +186,7 @@
                         <i class="bi bi-hourglass-split"></i>
                     </div>
                     <div class="c-stat-card__number" id="runningAgents">0</div>
-                    <div class="c-stat-card__label">Running</div>
+                    <div class="c-stat-card__label">{% trans "Running" %}</div>
                 </div>
             </div>
             
@@ -196,7 +196,7 @@
                         <i class="bi bi-exclamation-triangle"></i>
                     </div>
                     <div class="c-stat-card__number" id="errorAgents">0</div>
-                    <div class="c-stat-card__label">Errors</div>
+                    <div class="c-stat-card__label">{% trans "Errors" %}</div>
                 </div>
             </div>
         </div>
@@ -208,7 +208,7 @@
     <div class="o-container">
         <div class="filter-section">
             <h3 class="c-card__title mb-3">
-                <i class="bi bi-funnel"></i> Filter & Search Agents
+                <i class="bi bi-funnel"></i> {% trans "Filter & Search Agents" %}
             </h3>
             
             <div class="row g-3">
@@ -223,28 +223,28 @@
                 
                 <div class="col-md-2">
                     <select class="c-form-control" id="statusFilter" onchange="filterAgents()">
-                        <option value="">All Statuses</option>
-                        <option value="available">Available</option>
-                        <option value="running">Running</option>
-                        <option value="disabled">Disabled</option>
-                        <option value="error">Error</option>
+                        <option value="">{% trans "All Statuses" %}</option>
+                        <option value="available">{% trans "Available" %}</option>
+                        <option value="running">{% trans "Running" %}</option>
+                        <option value="disabled">{% trans "Disabled" %}</option>
+                        <option value="error">{% trans "Error" %}</option>
                     </select>
                 </div>
                 
                 <div class="col-md-2">
                     <select class="c-form-control" id="typeFilter" onchange="filterAgents()">
-                        <option value="">All Types</option>
-                        <option value="spectral">Spectral Analysis</option>
-                        <option value="metadata">Metadata Quality</option>
-                        <option value="calibration">Calibration</option>
-                        <option value="reporting">Reporting</option>
-                        <option value="federated">Federated Learning</option>
+                        <option value="">{% trans "All Types" %}</option>
+                        <option value="spectral">{% trans "Spectral Analysis" %}</option>
+                        <option value="metadata">{% trans "Metadata Quality" %}</option>
+                        <option value="calibration">{% trans "Calibration" %}</option>
+                        <option value="reporting">{% trans "Reporting" %}</option>
+                        <option value="federated">{% trans "Federated Learning" %}</option>
                     </select>
                 </div>
                 
                 <div class="col-md-2">
                     <select class="c-form-control" id="capabilityFilter" onchange="filterAgents()">
-                        <option value="">All Capabilities</option>
+                        <option value="">{% trans "All Capabilities" %}</option>
                         <!-- Will be populated dynamically -->
                     </select>
                 </div>
@@ -265,7 +265,7 @@
     <div class="o-container">
         <div class="d-flex justify-content-between align-items-center mb-xl">
             <h2 class="c-card__title mb-0">
-                <i class="bi bi-stars"></i> Crew AI Agents
+                <i class="bi bi-stars"></i> {% trans "Crew AI Agents" %}
             </h2>
             <span class="c-badge c-badge--primary" id="crewaiAgentsCount">0</span>
         </div>
@@ -281,7 +281,7 @@
     <div class="o-container">
         <div class="d-flex justify-content-between align-items-center mb-xl">
             <h2 class="c-card__title mb-0">
-                <i class="bi bi-list"></i> All Available Agents
+                <i class="bi bi-list"></i> {% trans "All Available Agents" %}
             </h2>
             <span class="c-badge c-badge--secondary" id="allAgentsCount">0</span>
         </div>
@@ -333,7 +333,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="agentDetailsModalLabel">
-                    <i class="bi bi-robot"></i> Agent Details
+                    <i class="bi bi-robot"></i> {% trans "Agent Details" %}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -342,10 +342,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Close
+                    <i class="bi bi-x"></i> {% trans "Close" %}
                 </button>
                 <button type="button" class="btn btn-primary" id="executeAgentBtn">
-                    <i class="bi bi-play"></i> Execute Agent
+                    <i class="bi bi-play"></i> {% trans "Execute Agent" %}
                 </button>
             </div>
         </div>
@@ -358,7 +358,7 @@
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title" id="executeAgentModalLabel">
-                    <i class="bi bi-play-circle"></i> Execute Agent
+                    <i class="bi bi-play-circle"></i> {% trans "Execute Agent" %}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -372,7 +372,7 @@
                             <input type="text" class="c-form-control" id="jobName" name="name" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="c-form-label">Analysis Type</label>
+                            <label class="c-form-label">{% trans "Analysis Type" %}</label>
                             <select class="c-form-control" id="jobAnalysisType" name="analysis_type">
                                 <option value="spectral_analysis">Spectral Analysis</option>
                                 <option value="metadata_quality">Metadata Quality</option>
@@ -382,7 +382,7 @@
                         </div>
                         
                         <div class="col-12">
-                            <label class="c-form-label">Description</label>
+                            <label class="c-form-label">{% trans "Description" %}</label>
                             <textarea class="c-form-control" id="jobDescription" name="description" rows="3"></textarea>
                         </div>
                         
@@ -404,10 +404,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Cancel
+                    <i class="bi bi-x"></i> {% trans "Cancel" %}
                 </button>
                 <button type="button" class="btn btn-primary" onclick="submitAgentExecution()">
-                    <i class="bi bi-play"></i> Execute Agent
+                    <i class="bi bi-play"></i> {% trans "Execute Agent" %}
                 </button>
             </div>
         </div>
@@ -420,7 +420,7 @@
         <div class="modal-content">
             <div class="modal-header bg-info text-white">
                 <h5 class="modal-title" id="agentConfigModalLabel">
-                    <i class="bi bi-gear"></i> Agent Configuration
+                    <i class="bi bi-gear"></i> {% trans "Agent Configuration" %}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -440,10 +440,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> Cancel
+                    <i class="bi bi-x"></i> {% trans "Cancel" %}
                 </button>
                 <button type="button" class="btn btn-primary" onclick="saveAgentConfig()">
-                    <i class="bi bi-check"></i> Save Configuration
+                    <i class="bi bi-check"></i> {% trans "Save Configuration" %}
                 </button>
             </div>
         </div>

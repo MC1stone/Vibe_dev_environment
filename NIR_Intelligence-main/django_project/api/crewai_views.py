@@ -19,6 +19,7 @@ from rest_framework import status
 
 # Import path configuration
 from path_config import setup_project_paths
+from django.utils.translation import gettext
 setup_project_paths()
 
 # Import NIR Analysis Crew
@@ -95,7 +96,7 @@ def start_analysis(request):
     """
     if not CREW_AVAILABLE:
         return Response(
-            {"error": "NIR Analysis Crew not available", "available": False},
+            {"error": gettext("NIR Analysis Crew not available"), "available": False},
             status=status.HTTP_503_SERVICE_UNAVAILABLE
         )
     
@@ -106,20 +107,20 @@ def start_analysis(request):
         # Validate required fields
         if 'sample_id' not in payload:
             return Response(
-                {"error": "sample_id is required"},
+                {"error": gettext("sample_id is required")},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         if 'spectral_data' not in payload:
             return Response(
-                {"error": "spectral_data is required"},
+                {"error": gettext("spectral_data is required")},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         spectral_data = payload['spectral_data']
         if 'wavelengths' not in spectral_data or 'intensities' not in spectral_data:
             return Response(
-                {"error": "spectral_data must contain wavelengths and intensities"},
+                {"error": gettext("spectral_data must contain wavelengths and intensities")},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -214,7 +215,7 @@ def start_analysis(request):
         
     except json.JSONDecodeError:
         return Response(
-            {"error": "Invalid JSON payload"},
+            {"error": gettext("Invalid JSON payload")},
             status=status.HTTP_400_BAD_REQUEST
         )
     except Exception as e:
@@ -236,7 +237,7 @@ def get_analysis_status(request):
     """
     if not CREW_AVAILABLE:
         return Response(
-            {"error": "NIR Analysis Crew not available"},
+            {"error": gettext("NIR Analysis Crew not available")},
             status=status.HTTP_503_SERVICE_UNAVAILABLE
         )
     
@@ -244,7 +245,7 @@ def get_analysis_status(request):
         request_id = request.GET.get('request_id')
         if not request_id:
             return Response(
-                {"error": "request_id parameter is required"},
+                {"error": gettext("request_id parameter is required")},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -298,7 +299,7 @@ def get_analysis_history(request):
     """
     if not CREW_AVAILABLE:
         return Response(
-            {"error": "NIR Analysis Crew not available"},
+            {"error": gettext("NIR Analysis Crew not available")},
             status=status.HTTP_503_SERVICE_UNAVAILABLE
         )
     
@@ -316,7 +317,7 @@ def get_analysis_history(request):
         
     except ValueError:
         return Response(
-            {"error": "Invalid limit parameter"},
+            {"error": gettext("Invalid limit parameter")},
             status=status.HTTP_400_BAD_REQUEST
         )
     except Exception as e:
@@ -372,7 +373,7 @@ def get_report_preview(request):
     """
     if not CREW_AVAILABLE:
         return Response(
-            {"error": "NIR Analysis Crew not available"},
+            {"error": gettext("NIR Analysis Crew not available")},
             status=status.HTTP_503_SERVICE_UNAVAILABLE
         )
     
@@ -380,7 +381,7 @@ def get_report_preview(request):
         report_id = request.GET.get('report_id')
         if not report_id:
             return Response(
-                {"error": "report_id parameter is required"},
+                {"error": gettext("report_id parameter is required")},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -401,7 +402,7 @@ def get_report_preview(request):
                                 "preview": preview_html
                             }, status=status.HTTP_200_OK)
                     return Response(
-                        {"error": "Preview not available"},
+                        {"error": gettext("Preview not available")},
                         status=status.HTTP_404_NOT_FOUND
                     )
         
@@ -458,7 +459,7 @@ def batch_analysis(request):
     """
     if not CREW_AVAILABLE:
         return Response(
-            {"error": "NIR Analysis Crew not available"},
+            {"error": gettext("NIR Analysis Crew not available")},
             status=status.HTTP_503_SERVICE_UNAVAILABLE
         )
     
@@ -467,14 +468,14 @@ def batch_analysis(request):
         
         if 'requests' not in payload or not isinstance(payload['requests'], list):
             return Response(
-                {"error": "requests array is required"},
+                {"error": gettext("requests array is required")},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         requests_list = payload['requests']
         if len(requests_list) == 0:
             return Response(
-                {"error": "At least one request is required"},
+                {"error": gettext("At least one request is required")},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -528,7 +529,7 @@ def batch_analysis(request):
         
     except json.JSONDecodeError:
         return Response(
-            {"error": "Invalid JSON payload"},
+            {"error": gettext("Invalid JSON payload")},
             status=status.HTTP_400_BAD_REQUEST
         )
     except Exception as e:
@@ -547,7 +548,7 @@ def get_crew_status(request):
     """
     if not CREW_AVAILABLE:
         return Response(
-            {"available": False, "error": "NIR Analysis Crew not available"},
+            {"available": False, "error": gettext("NIR Analysis Crew not available")},
             status=status.HTTP_200_OK
         )
     
@@ -609,7 +610,7 @@ def cleanup_resources(request):
     """
     if not CREW_AVAILABLE:
         return Response(
-            {"error": "NIR Analysis Crew not available"},
+            {"error": gettext("NIR Analysis Crew not available")},
             status=status.HTTP_503_SERVICE_UNAVAILABLE
         )
     
@@ -627,7 +628,7 @@ def cleanup_resources(request):
         
     except json.JSONDecodeError:
         return Response(
-            {"error": "Invalid JSON payload"},
+            {"error": gettext("Invalid JSON payload")},
             status=status.HTTP_400_BAD_REQUEST
         )
     except Exception as e:
@@ -649,7 +650,7 @@ def get_report_list(request):
     """
     if not CREW_AVAILABLE:
         return Response(
-            {"error": "NIR Analysis Crew not available"},
+            {"error": gettext("NIR Analysis Crew not available")},
             status=status.HTTP_503_SERVICE_UNAVAILABLE
         )
     
@@ -681,7 +682,7 @@ def get_report_list(request):
         
     except ValueError:
         return Response(
-            {"error": "Invalid limit parameter"},
+            {"error": gettext("Invalid limit parameter")},
             status=status.HTTP_400_BAD_REQUEST
         )
     except Exception as e:
@@ -710,7 +711,7 @@ def federated_learning_contribution(request):
     """
     if not CREW_AVAILABLE:
         return Response(
-            {"error": "NIR Analysis Crew not available"},
+            {"error": gettext("NIR Analysis Crew not available")},
             status=status.HTTP_503_SERVICE_UNAVAILABLE
         )
     
@@ -720,20 +721,20 @@ def federated_learning_contribution(request):
         # Check required fields
         if 'consent_given' not in payload or not payload['consent_given']:
             return Response(
-                {"error": "User consent is required for federated learning"},
+                {"error": gettext("User consent is required for federated learning")},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         if 'privacy_level' not in payload:
             return Response(
-                {"error": "privacy_level is required"},
+                {"error": gettext("privacy_level is required")},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         privacy_level = payload['privacy_level']
         if privacy_level not in ['public_federated', 'private_federated']:
             return Response(
-                {"error": "privacy_level must be 'public_federated' or 'private_federated'"},
+                {"error": gettext("privacy_level must be 'public_federated' or 'private_federated'")},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -742,7 +743,7 @@ def federated_learning_contribution(request):
         # Check if federated learning is enabled
         if not crew.config.enable_federated_learning or not crew.flower_agent:
             return Response(
-                {"error": "Federated learning is not enabled"},
+                {"error": gettext("Federated learning is not enabled")},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
         
@@ -762,19 +763,19 @@ def federated_learning_contribution(request):
         if fl_output.status.name == 'COMPLETED':
             return Response({
                 "success": True,
-                "message": "Data successfully contributed to federated learning",
+                "message": gettext("Data successfully contributed to federated learning"),
                 "contribution_id": fl_output.data.get('contribution_id', 'unknown')
             }, status=status.HTTP_200_OK)
         else:
             return Response({
                 "success": False,
-                "error": "Federated learning contribution failed",
+                "error": gettext("Federated learning contribution failed"),
                 "details": fl_output.errors
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
     except json.JSONDecodeError:
         return Response(
-            {"error": "Invalid JSON payload"},
+            {"error": gettext("Invalid JSON payload")},
             status=status.HTTP_400_BAD_REQUEST
         )
     except Exception as e:
@@ -792,7 +793,7 @@ def crewai_analysis(request):
         return start_analysis(request)
     else:
         return Response(
-            {"error": "Method not allowed"},
+            {"error": gettext("Method not allowed")},
             status=status.HTTP_405_METHOD_NOT_ALLOWED
         )
 
@@ -804,7 +805,7 @@ def crewai_status(request):
         return get_crew_status(request)
     else:
         return Response(
-            {"error": "Method not allowed"},
+            {"error": gettext("Method not allowed")},
             status=status.HTTP_405_METHOD_NOT_ALLOWED
         )
 
@@ -816,6 +817,6 @@ def crewai_history(request):
         return get_analysis_history(request)
     else:
         return Response(
-            {"error": "Method not allowed"},
+            {"error": gettext("Method not allowed")},
             status=status.HTTP_405_METHOD_NOT_ALLOWED
         )

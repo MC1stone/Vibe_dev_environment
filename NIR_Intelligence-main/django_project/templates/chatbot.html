@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load i18n %}{% load static %}
 
 {% block title %}NIR Intelligence - Chatbot{% endblock %}
 
@@ -9,20 +9,20 @@
         <div class="c-page-header">
             <div>
                 <h1 class="c-page-header__title">
-                    <i class="bi bi-chat-dots"></i> Analysis Chatbot
+                    <i class="bi bi-chat-dots"></i> {% trans "Analysis Chatbot" %}
                 </h1>
                 <p class="c-page-header__subtitle">
-                    Discuss your analysis results with the local Ollama/Mistral chatbot (S6) with Qdrant RAG context (OP1)
+                    {% trans "Discuss your analysis results with the local Ollama/Mistral chatbot (S6) with Qdrant RAG context (OP1)" %}
                 </p>
             </div>
             <div class="d-flex gap-2">
                 <button class="c-button c-button--outline-primary" onclick="refreshChatbotStatus()">
                     <i class="bi bi-arrow-clockwise c-button__icon"></i>
-                    <span class="c-button__text">Status</span>
+                    <span class="c-button__text">{% trans "Status" %}</span>
                 </button>
                 <button class="c-button c-button--secondary" onclick="clearChat()">
                     <i class="bi bi-trash c-button__icon"></i>
-                    <span class="c-button__text">Clear Chat</span>
+                    <span class="c-button__text">{% trans "Clear Chat" %}</span>
                 </button>
             </div>
         </div>
@@ -31,26 +31,25 @@
             <div class="col-lg-8">
                 <div class="c-card h-100">
                     <div class="c-card__header">
-                        <h2 class="c-card__title mb-0"><i class="bi bi-chat-left-text"></i> Conversation</h2>
+                        <h2 class="c-card__title mb-0"><i class="bi bi-chat-left-text"></i> {% trans "Conversation" %}</h2>
                     </div>
                     <div class="c-card__body">
                         <div id="chatMessages" style="height: 480px; overflow-y: auto;" class="d-flex flex-column gap-3 mb-3">
                             <div class="text-center text-muted py-lg">
                                 <i class="bi bi-robot" style="font-size: 3rem;"></i>
-                                <p class="mt-2 mb-0">Ask a question about your analysis results,<br>
-                                    e.g. "Which analysis results are available?"</p>
+                                <p class="mt-2 mb-0">{% trans "Ask a question about your analysis results," %}<br>{% trans "e.g. 'Which analysis results are available?'" %}</p>
                             </div>
                         </div>
                         <div id="chatTyping" class="text-muted small mb-2" style="display: none;">
-                            <span class="spinner-border spinner-border-sm me-1"></span> Thinking...
+                            <span class="spinner-border spinner-border-sm me-1"></span> {% trans "Thinking..." %}
                         </div>
                         <div class="d-flex gap-2">
                             <input type="text" class="c-form-control" id="chatInput"
-                                   placeholder="Ask about your analysis results..."
+                                   placeholder="{% trans "Ask about your analysis results..." %}"
                                    onkeydown="if (event.key === 'Enter') sendChatMessage();">
                             <button class="c-button c-button--primary" onclick="sendChatMessage()">
                                 <i class="bi bi-send c-button__icon"></i>
-                                <span class="c-button__text">Send</span>
+                                <span class="c-button__text">{% trans "Send" %}</span>
                             </button>
                         </div>
                     </div>
@@ -59,33 +58,29 @@
             <div class="col-lg-4">
                 <div class="c-card h-100">
                     <div class="c-card__header">
-                        <h2 class="c-card__title mb-0"><i class="bi bi-info-circle"></i> Chatbot Status</h2>
+                        <h2 class="c-card__title mb-0"><i class="bi bi-info-circle"></i> {% trans "Chatbot Status" %}</h2>
                     </div>
                     <div class="c-card__body">
                         <div id="chatbotStatusBox">
                             <div class="text-center py-lg">
                                 <div class="c-loading-overlay__spinner" style="width: 2rem; height: 2rem; border-width: 0.2rem;"></div>
-                                <p class="mt-sm text-muted mb-0">Loading status...</p>
+                                <p class="mt-sm text-muted mb-0">{% trans "Loading status..." %}</p>
                             </div>
                         </div>
                         <hr>
-                        <h3 class="h6">RAG sources of the last answer</h3>
+                        <h3 class="h6">{% trans "RAG sources of the last answer" %}</h3>
                         <div id="lastRagSources" class="text-muted small">
-                            <p class="mb-0">No answer yet.</p>
+                            <p class="mb-0">{% trans "No answer yet." %}</p>
                         </div>
                         <hr>
-                        <h3 class="h6">Context options</h3>
+                        <h3 class="h6">{% trans "Context options" %}</h3>
                         <div class="c-form-check">
                             <input class="c-checkbox" type="checkbox" id="attachAnalysisResults" checked>
                             <label class="c-checkbox__label" for="attachAnalysisResults">
-                                Attach recent analysis results
+                                {% trans "Attach recent analysis results" %}
                             </label>
                         </div>
-                        <p class="text-muted small mb-0">
-                            When checked, the latest analysis results are sent along with your
-                            question so the chatbot can discuss them (S6). Qdrant RAG context
-                            (OP1) is added automatically by the service when available.
-                        </p>
+                        <p class="text-muted small mb-0">{% blocktrans %}When checked, the latest analysis results are sent along with your question so the chatbot can discuss them (S6). Qdrant RAG context (OP1) is added automatically by the service when available.{% endblocktrans %}</p>
                     </div>
                 </div>
             </div>
@@ -133,7 +128,7 @@ function clearChat() {
     box.innerHTML = '<div class="text-center text-muted py-lg">' +
         '<i class="bi bi-robot" style="font-size: 3rem;"></i>' +
         '<p class="mt-2 mb-0">Chat cleared. Ask a new question.</p></div>';
-    document.getElementById('lastRagSources').innerHTML = '<p class="mb-0">No answer yet.</p>';
+    document.getElementById('lastRagSources').innerHTML = '<p class="mb-0">{% trans "No answer yet." %}</p>';
 }
 
 function sendChatMessage() {

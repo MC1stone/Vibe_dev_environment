@@ -30,6 +30,7 @@ from django.utils.decorators import method_decorator
 
 from core.models import GenericFile, User
 from .serializers import GenericFileSerializer, GenericFileUploadSerializer
+from django.utils.translation import gettext
 
 # Add framework to path
 framework_path = settings.NIR_FRAMEWORK_PATH
@@ -79,7 +80,7 @@ class FileListView(APIView):
             return Response({
                 'success': False,
                 'error': str(e),
-                'message': 'Error retrieving files'
+                'message': gettext('Error retrieving files')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -95,14 +96,14 @@ class FileDetailView(APIView):
             return Response({
                 'success': True,
                 'file': serializer.data,
-                'message': 'File details retrieved'
+                'message': gettext('File details retrieved')
             })
             
         except GenericFile.DoesNotExist:
             return Response({
                 'success': False,
-                'error': 'File not found',
-                'message': 'The requested file does not exist or you do not have permission to access it'
+                'error': gettext('File not found'),
+                'message': gettext('The requested file does not exist or you do not have permission to access it')
             }, status=status.HTTP_404_NOT_FOUND)
             
         except Exception as e:
@@ -110,7 +111,7 @@ class FileDetailView(APIView):
             return Response({
                 'success': False,
                 'error': str(e),
-                'message': 'Error retrieving file details'
+                'message': gettext('Error retrieving file details')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -127,8 +128,8 @@ class FileUploadView(APIView):
             if not uploaded_files:
                 return Response({
                     'success': False,
-                    'error': 'No files provided',
-                    'message': 'Please select at least one file to upload'
+                    'error': gettext('No files provided'),
+                    'message': gettext('Please select at least one file to upload')
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             # Validate file sizes (500MB max per file)
@@ -137,8 +138,8 @@ class FileUploadView(APIView):
                 if uploaded_file.size > MAX_FILE_SIZE:
                     return Response({
                         'success': False,
-                        'error': f'File {uploaded_file.name} exceeds maximum size of 500MB',
-                        'message': 'File size limit exceeded'
+                        'error': gettext('File {} exceeds maximum size of 500MB').format(uploaded_file.name),
+                        'message': gettext('File size limit exceeded')
                     }, status=status.HTTP_400_BAD_REQUEST)
             
             # Get metadata from request
@@ -213,7 +214,7 @@ class FileUploadView(APIView):
                 return Response({
                     'success': False,
                     'errors': errors,
-                    'message': 'Failed to upload any files'
+                    'message': gettext('Failed to upload any files')
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
         except Exception as e:
@@ -221,7 +222,7 @@ class FileUploadView(APIView):
             return Response({
                 'success': False,
                 'error': str(e),
-                'message': 'Error uploading files'
+                'message': gettext('Error uploading files')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def _calculate_md5(self, file_path):
@@ -375,14 +376,14 @@ class FileDeleteView(APIView):
             
             return Response({
                 'success': True,
-                'message': 'File deleted successfully'
+                'message': gettext('File deleted successfully')
             })
             
         except GenericFile.DoesNotExist:
             return Response({
                 'success': False,
-                'error': 'File not found',
-                'message': 'The requested file does not exist or you do not have permission to access it'
+                'error': gettext('File not found'),
+                'message': gettext('The requested file does not exist or you do not have permission to access it')
             }, status=status.HTTP_404_NOT_FOUND)
             
         except Exception as e:
@@ -390,7 +391,7 @@ class FileDeleteView(APIView):
             return Response({
                 'success': False,
                 'error': str(e),
-                'message': 'Error deleting file'
+                'message': gettext('Error deleting file')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -405,8 +406,8 @@ class MultipleFileDeleteView(APIView):
             if not file_ids:
                 return Response({
                     'success': False,
-                    'error': 'No file IDs provided',
-                    'message': 'Please provide at least one file ID'
+                    'error': gettext('No file IDs provided'),
+                    'message': gettext('Please provide at least one file ID')
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             deleted_count = 0
@@ -445,7 +446,7 @@ class MultipleFileDeleteView(APIView):
             return Response({
                 'success': False,
                 'error': str(e),
-                'message': 'Error deleting files'
+                'message': gettext('Error deleting files')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -460,8 +461,8 @@ class FileDownloadView(APIView):
             if not file.file:
                 return Response({
                     'success': False,
-                    'error': 'File not found',
-                    'message': 'The file does not exist on the server'
+                    'error': gettext('File not found'),
+                    'message': gettext('The file does not exist on the server')
                 }, status=status.HTTP_404_NOT_FOUND)
             
             # Return the file
@@ -475,8 +476,8 @@ class FileDownloadView(APIView):
         except GenericFile.DoesNotExist:
             return Response({
                 'success': False,
-                'error': 'File not found',
-                'message': 'The requested file does not exist or you do not have permission to access it'
+                'error': gettext('File not found'),
+                'message': gettext('The requested file does not exist or you do not have permission to access it')
             }, status=status.HTTP_404_NOT_FOUND)
             
         except Exception as e:
@@ -484,7 +485,7 @@ class FileDownloadView(APIView):
             return Response({
                 'success': False,
                 'error': str(e),
-                'message': 'Error downloading file'
+                'message': gettext('Error downloading file')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -501,8 +502,8 @@ class FileAnalyzeView(APIView):
             if not file_path or not os.path.exists(file_path):
                 return Response({
                     'success': False,
-                    'error': 'File not found on server',
-                    'message': 'The file does not exist on the server'
+                    'error': gettext('File not found on server'),
+                    'message': gettext('The file does not exist on the server')
                 }, status=status.HTTP_404_NOT_FOUND)
             
             # Set analyzing status
@@ -528,7 +529,7 @@ class FileAnalyzeView(APIView):
                     'success': True,
                     'analysis_results': result.analysis_results,
                     'recommendations': result.recommendations,
-                    'message': 'File analysis completed'
+                    'message': gettext('File analysis completed')
                 })
             else:
                 file.processing_status = 'error'
@@ -537,14 +538,14 @@ class FileAnalyzeView(APIView):
                 return Response({
                     'success': False,
                     'errors': result.processing_errors or [],
-                    'message': 'File analysis failed'
+                    'message': gettext('File analysis failed')
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
         except GenericFile.DoesNotExist:
             return Response({
                 'success': False,
-                'error': 'File not found',
-                'message': 'The requested file does not exist or you do not have permission to access it'
+                'error': gettext('File not found'),
+                'message': gettext('The requested file does not exist or you do not have permission to access it')
             }, status=status.HTTP_404_NOT_FOUND)
             
         except Exception as e:
@@ -554,7 +555,7 @@ class FileAnalyzeView(APIView):
             return Response({
                 'success': False,
                 'error': str(e),
-                'message': 'Error analyzing file'
+                'message': gettext('Error analyzing file')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -576,8 +577,8 @@ class FileCrewAnalysisView(APIView):
             if not file_path or not os.path.exists(file_path):
                 return Response({
                     'success': False,
-                    'error': 'File not found on server',
-                    'message': 'The file does not exist on the server'
+                    'error': gettext('File not found on server'),
+                    'message': gettext('The file does not exist on the server')
                 }, status=status.HTTP_404_NOT_FOUND)
 
             from agents.data_preparation_agent import EnhancedDataPreparationAgent
@@ -590,8 +591,8 @@ class FileCrewAnalysisView(APIView):
             if not spectral or spectral.get('data') is None or len(spectral.get('data', [])) == 0:
                 return Response({
                     'success': False,
-                    'error': 'Not a parseable spectral file',
-                    'message': 'The file could not be parsed as spectral data (S3 loader)'
+                    'error': gettext('Not a parseable spectral file'),
+                    'message': gettext('The file could not be parsed as spectral data (S3 loader)')
                 }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
             df = spectral.get('data')
@@ -600,8 +601,8 @@ class FileCrewAnalysisView(APIView):
             if wavelength_column not in df.columns or intensity_column not in df.columns:
                 return Response({
                     'success': False,
-                    'error': 'Spectral columns not found',
-                    'message': 'Wavelength/intensity columns missing in parsed data'
+                    'error': gettext('Spectral columns not found'),
+                    'message': gettext('Wavelength/intensity columns missing in parsed data')
                 }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
             wavelengths_raw = df[wavelength_column].tolist()
@@ -658,7 +659,7 @@ class FileCrewAnalysisView(APIView):
                     sample_rows.append(f'{wl_raw!r} | {it_raw!r}')
                 return Response({
                     'success': False,
-                    'error': 'No finite spectral values',
+                    'error': gettext('No finite spectral values'),
                     'message': (
                         f'The file parsed but contained no usable numeric '
                         f'wavelength/intensity rows. Detected columns: '
@@ -763,21 +764,21 @@ class FileCrewAnalysisView(APIView):
                     'intensities': intensities,
                 },
                 'report_url': f"/analysis/report/{file.id}/",
-                'message': 'CrewAI analysis completed'
+                'message': gettext('CrewAI analysis completed')
             })
 
         except GenericFile.DoesNotExist:
             return Response({
                 'success': False,
-                'error': 'File not found',
-                'message': 'The requested file does not exist or you do not have permission to access it'
+                'error': gettext('File not found'),
+                'message': gettext('The requested file does not exist or you do not have permission to access it')
             }, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             logger.error(f'Error running crew analysis: {str(e)}', exc_info=True)
             return Response({
                 'success': False,
                 'error': str(e),
-                'message': 'Error running CrewAI analysis'
+                'message': gettext('Error running CrewAI analysis')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -792,8 +793,8 @@ class MultipleFileAnalyzeView(APIView):
             if not file_ids:
                 return Response({
                     'success': False,
-                    'error': 'No file IDs provided',
-                    'message': 'Please provide at least one file ID'
+                    'error': gettext('No file IDs provided'),
+                    'message': gettext('Please provide at least one file ID')
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             analyzed_count = 0
@@ -852,7 +853,7 @@ class MultipleFileAnalyzeView(APIView):
                     results.append({
                         'file_id': file_id,
                         'success': False,
-                        'error': 'File not found'
+                        'error': gettext('File not found')
                     })
                 except Exception as e:
                     errors.append(f'File {file_id}: {str(e)}')
@@ -875,7 +876,7 @@ class MultipleFileAnalyzeView(APIView):
             return Response({
                 'success': False,
                 'error': str(e),
-                'message': 'Error analyzing files'
+                'message': gettext('Error analyzing files')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -893,7 +894,7 @@ class FileCategoryView(APIView):
                 'success': True,
                 'categories': agent.get_supported_categories(),
                 'extensions': agent.get_supported_extensions(),
-                'message': 'Supported file categories and extensions'
+                'message': gettext('Supported file categories and extensions')
             })
             
         except Exception as e:
@@ -901,7 +902,7 @@ class FileCategoryView(APIView):
             return Response({
                 'success': False,
                 'error': str(e),
-                'message': 'Error getting file categories'
+                'message': gettext('Error getting file categories')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -953,7 +954,7 @@ class FileStatisticsView(APIView):
             return Response({
                 'success': True,
                 'statistics': statistics,
-                'message': 'File statistics retrieved'
+                'message': gettext('File statistics retrieved')
             })
             
         except Exception as e:
@@ -961,7 +962,7 @@ class FileStatisticsView(APIView):
             return Response({
                 'success': False,
                 'error': str(e),
-                'message': 'Error getting file statistics'
+                'message': gettext('Error getting file statistics')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class FileCrewReportView(TemplateView):

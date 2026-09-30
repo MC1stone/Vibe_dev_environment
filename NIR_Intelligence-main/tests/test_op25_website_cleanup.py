@@ -54,14 +54,16 @@ WORKFLOW_HREFS = [
     ('/register/', 'register'),
 ]
 
+# OP48 i18n: the German step titles are now {% trans %} msgids (English
+# normalized msgid, rendered German via the de catalog).
 WORKFLOW_STEPS = [
-    ('Login / Registrierung', 'login/register'),
-    ('Projekt anlegen (Upload)', 'project upload'),
-    ('Metadaten bearbeiten', 'metadata editor'),
-    ('Dateien erg&auml;nzen', 'add files (Bearbeiten)'),
-    ('Release (Agenten-Analyse)', 'crew release'),
-    ('Abschlussbericht', 'final report + chatbot'),
-    ('Spektrendatenbank', 'persistent database'),
+    ('Login / Registration', 'login/register'),
+    ('Create project (upload)', 'project upload'),
+    ('Edit metadata', 'metadata editor'),
+    ('Add files', 'add files (Bearbeiten)'),
+    ('Release (agent analysis)', 'crew release'),
+    ('Final report', 'final report + chatbot'),
+    ('Spectrum database', 'persistent database'),
 ]
 
 # ---------------------------------------------------------------------------
@@ -77,8 +79,8 @@ for href in LEGACY_HREFS:
 for href, label in WORKFLOW_HREFS:
     check(f'T1c workflow link {label} present', href in base_src,
           f'{href} missing from base.html')
-check('T1d navbar labels are the German workflow labels',
-      'Projekte' in base_src and 'Spektrendatenbank' in base_src)
+check('T1d navbar labels present as i18n msgids (OP48)',
+      '"Projects"' in base_src and '"Spectrum database"' in base_src)
 check('T1e settings link removed from the user dropdown',
       'href="/settings/"' not in base_src)
 
@@ -100,11 +102,11 @@ check('T2e hover/focus tooltip behaviour wired (CSS)',
       and '.workflow-step:focus-visible .workflow-tooltip' in index_src)
 check('T2f arrows between the steps',
       index_src.count('workflow-arrow') >= 6)
-check('T2g steps reference the real UI actions',
-      'Neues Projekt (Upload)' in index_src
-      and 'Zur Analyse freigeben' in index_src
-      and 'Bearbeiten' in index_src
-      and 'Quarto-Abschlussbericht' in index_src)
+check('T2g steps reference the real UI actions (msgids/links, OP48)',
+      '/projects/' in index_src
+      and 'Create project (upload)' in index_src
+      and 'Release (agent analysis)' in index_src
+      and 'Final report' in index_src)
 check('T2h start page links only workflow targets',
       all(href in index_src for href, _ in WORKFLOW_HREFS)
       and all(h not in index_src for h in LEGACY_HREFS))

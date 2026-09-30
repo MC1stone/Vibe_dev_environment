@@ -76,6 +76,9 @@ def get_middleware():
     middleware = [
         'django.middleware.security.SecurityMiddleware',
         'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.middleware.locale.LocaleMiddleware',
+        # OP48d: cookie/Accept-Language negotiation for unprefixed API routes
+        'nir_web.api_language_middleware.ApiLanguageMiddleware',
         'django.middleware.common.CommonMiddleware',
         'django.middleware.csrf.CsrfViewMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -116,6 +119,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'django.template.context_processors.i18n',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -198,10 +202,31 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'de'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
+
+# OP48: EU multilingualism - all 24 official EU languages
+LANGUAGES = [
+    ('bg', 'Bulgarian'), ('hr', 'Croatian'), ('cs', 'Czech'), ('da', 'Danish'),
+    ('nl', 'Dutch'), ('en', 'English'), ('et', 'Estonian'), ('fi', 'Finnish'),
+    ('fr', 'French'), ('de', 'German'), ('el', 'Greek'), ('hu', 'Hungarian'),
+    ('ga', 'Irish'), ('it', 'Italian'), ('lv', 'Latvian'), ('lt', 'Lithuanian'),
+    ('mt', 'Maltese'), ('pl', 'Polish'), ('pt', 'Portuguese'), ('ro', 'Romanian'),
+    ('sk', 'Slovak'), ('sl', 'Slovenian'), ('es', 'Spanish'), ('sv', 'Swedish'),
+]
+
+LOCALE_PATHS = [BASE_DIR / 'locale']
+
+# Maltese is an official EU language but not shipped in django.conf.locale
+from django.conf.locale import LANG_INFO as EXTRA_LANG_INFO  # noqa: E402
+EXTRA_LANG_INFO['mt'] = {
+    'bidi': False,
+    'code': 'mt',
+    'name': 'Maltese',
+    'name_local': 'Malti',
+}
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/

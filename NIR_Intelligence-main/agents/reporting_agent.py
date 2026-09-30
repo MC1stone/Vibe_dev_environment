@@ -222,6 +222,7 @@ class ReportingAgent(BaseAgent):
 title: "NIR Spectral Analysis Report"
 author: "NIR Intelligence Platform"
 format: html
+lang: {{lang}}
 date: "`r Sys.Date()`"
 ---
 
@@ -277,6 +278,7 @@ if (exists("params$wavelengths") && exists("params$intensities")) {
 title: "Metadata Quality Assessment Report"
 author: "NIR Intelligence Platform"
 format: html
+lang: {{lang}}
 date: "`r Sys.Date()`"
 ---
 
@@ -324,6 +326,7 @@ Quality Score: `r params$overall_quality_score` (Grade: `r params$overall_qualit
 title: "Comprehensive NIR Analysis Report"
 author: "NIR Intelligence Platform"
 format: html
+lang: {{lang}}
 date: "`r Sys.Date()`"
 ---
 
@@ -466,6 +469,7 @@ str(analysis_params)
 title: "NIR Spectral Comparison Report"
 author: "NIR Intelligence Platform"
 format: html
+lang: {{lang}}
 date: "`r Sys.Date()`"
 ---
 
@@ -517,6 +521,7 @@ barplot(quality_scores, main = "Spectral Quality Score Comparison",
 title: "Spectrometer Calibration Report"
 author: "NIR Intelligence Platform"
 format: html
+lang: {{lang}}
 date: "`r Sys.Date()`"
 ---
 
@@ -576,6 +581,7 @@ if (exists("params$residuals")) {
 title: "{template_name.replace("_", " ").title()} Report"
 author: "NIR Intelligence Platform"
 format: html
+lang: {{lang}}
 date: "`r Sys.Date()`"
 ---
 
