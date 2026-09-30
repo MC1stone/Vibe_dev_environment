@@ -323,45 +323,6 @@ a:hover {
     position: relative;
 }
 
-/* Sensor submenu (OP49: DIY spectrometers under Sensors) */
-.c-nav-sub {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: 1030;
-    min-width: 220px;
-    list-style: none;
-    margin: 0;
-    padding: var(--spacing-xs) 0;
-    background-color: #fff;
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--border-radius-sm);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.12);
-}
-.c-nav-main__item:hover > .c-nav-sub,
-.c-nav-main__item:focus-within > .c-nav-sub {
-    display: block;
-}
-.c-nav-sub__action {
-    display: block;
-    padding: var(--spacing-xs) var(--spacing-md);
-    color: var(--color-gray-700);
-    font-size: 0.95em;
-    text-decoration: none;
-    white-space: nowrap;
-}
-.c-nav-sub__action:hover,
-.c-nav-sub__action:focus {
-    color: var(--color-primary);
-    background-color: var(--color-gray-100);
-}
-.c-nav-sub__action--active {
-    color: var(--color-primary);
-    background-color: rgba(122, 185, 41, 0.1);
-    font-weight: var(--font-weight-semibold);
-}
-
 /* Buttons */
 .c-button {
     display: inline-flex;

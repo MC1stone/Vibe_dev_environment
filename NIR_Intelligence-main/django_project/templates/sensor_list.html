@@ -4,9 +4,14 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1><i class="bi bi-cpu me-2"></i>{% trans "Sensoren" %}</h1>
-        <a href="/projects/" class="btn btn-outline-primary">
-            <i class="bi bi-folder2-open me-1"></i>{% trans "Zu den Projekten" %}
-        </a>
+        <div class="d-flex gap-2">
+            <a href="/api/projects/sensors/diy/" class="btn btn-primary">
+                <i class="bi bi-tools me-1"></i>{% trans "DIY-Spektrometer" %}
+            </a>
+            <a href="/projects/" class="btn btn-outline-primary">
+                <i class="bi bi-folder2-open me-1"></i>{% trans "Zu den Projekten" %}
+            </a>
+        </div>
     </div>
 
     <div class="card shadow-sm mb-4">
@@ -18,9 +23,7 @@
                 versteht und in die Bewertung einbezieht. Optimierungsvorschläge
                 kommen dedupliziert aus den Analysen.
             </p>
-            <a href="/api/projects/sensors/diy/" class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-tools me-1"></i>{% trans "DIY-Spektrometer Übersicht" %}
-            </a>
+
         </div>
     </div>
 
