@@ -26,6 +26,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest numpy pandas scipy scikit-learn pyyaml django pillow requests packaging djangorestframework djangorestframework-simplejwt django-cors-headers matplotlib h5py openpyxl pyarrow
 
+      - name: Install gettext and compile i18n message catalogs (OP48)
+        run: |
+          sudo apt-get update && sudo apt-get install -y gettext
+          python django_project/manage.py compilemessages
       - name: Run offline test matrices (S3-S9, OP1-OP4, OP6-OP8)
         run: |
           python tests/test_s3_format_loaders.py
@@ -84,8 +88,6 @@ jobs:
           python tests/test_op43_ventoy_stick.py
           python tests/test_op45_host_backend_stack.py
           python tests/test_op48_i18n.py
-      - name: i18n compile message catalogs (OP48)
-        run: python django_project/manage.py compilemessages
 
       - name: Django system check
         run: python django_project/manage.py check
