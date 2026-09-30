@@ -79,6 +79,13 @@
                             <a href="/projects/sensors/" class="c-nav-main__action {% if request.path == '/projects/sensors/' %}c-nav-main__action--active{% endif %}">
                                 <span class="c-nav-main__label">{% trans "Sensors" %}</span>
                             </a>
+                            <ul class="c-nav-sub">
+                                <li>
+                                    <a href="/api/projects/sensors/diy/" class="c-nav-sub__action {% if request.path == '/api/projects/sensors/diy/' %}c-nav-sub__action--active{% endif %}">
+                                        {% trans "DIY-Spektrometer" %}
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                         <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/federated/" class="c-nav-main__action {% if request.path == '/federated/' %}c-nav-main__action--active{% endif %}">
@@ -164,7 +171,8 @@
                             <p class="c-footer__legal">
                                 <a href="/projects/">{% trans "Projects" %}</a> |
                                 <a href="/projects/database/">{% trans "Spectrum database" %}</a> |
-                                <a href="/projects/sensors/">{% trans "Sensors" %}</a>
+                                <a href="/projects/sensors/">{% trans "Sensors" %}</a> |
+                                <a href="/api/projects/sensors/diy/">{% trans "DIY-Spektrometer" %}</a>
                             </p>
                         </div>
                     </div>
