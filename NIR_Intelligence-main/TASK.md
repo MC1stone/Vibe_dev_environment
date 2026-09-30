@@ -28,8 +28,20 @@ Die Plattform (UI, Backend-Meldungen, Berichte, ILIAS-Sync) soll fuer alle
   spectra.js auf nirGettext umgestellt (82 msgids, Kataloge de/en
   ergaenzt); Testmatrix 46/46 gruen, Regressionen OP3/OP25/OP15/FL4
   gruen; node --check sauber.
-- Offen: OP48d Backend-Meldungen/Chatbot/Quarto,
-  OP48e Uebersetzungscontent/ILIAS; Rest-Templates inkrementell.
+- OP48d Backend-Meldungen - ERLEDIGT: alle statischen API-Strings
+  ('error'/'message'-Werte) in api/*_views.py auf gettext umgestellt
+  (106 msgids, Kataloge de/en ergaenzt; 'status'-Werte als API-Vertrags-
+  keys bewusst unuebersetzt); federated_views mit gettext_lazy
+  (Offline-Kernfunktion ohne App-Registry); neue
+  ApiLanguageMiddleware aktiviert Cookie/Accept-Language-Verhandlung auf
+  unpraefigierten /api/- und /js-i18n/-Routen (LocaleMiddleware erzwingt
+  dort sonst LANGUAGE_CODE); Testmatrix 53/53 gruen (T7: gettext-Import,
+  keine nackten error-Literale, Chatbot-Error in de/en/Cookie,
+  Middleware-Wiring, Katalog-Spotchecks); Regressionen OP1/OP3/OP8/OP11/
+  OP13/OP15/OP24/OP25/OP28/S6-Chatbot/FL4 gruen; manage.py check ohne
+  Befunde.
+- Offen: OP48e Uebersetzungscontent/ILIAS; Quarto-Bericht-Template-Texte
+  (generierter Content) und Rest-Templates inkrementell.
 
 ### Success Criteria
 - UI in de und en vollstaendig umschaltbar; 24 Sprachkataloge angelegt

@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from django.utils.translation import gettext
 
 logger = logging.getLogger("API.ILIASLearning")
 
@@ -33,7 +34,7 @@ def learning_path_sync(request):
     """
     payload = request.data
     if not isinstance(payload, dict) or not payload.get("title"):
-        return Response({"error": "title is required"},
+        return Response({"error": gettext("title is required")},
                         status=status.HTTP_400_BAD_REQUEST)
 
     from services.ilias_learning_service import (
@@ -63,7 +64,7 @@ def learning_path_sync(request):
     )
 
     if not modules:
-        return Response({"error": "learning path has no modules"},
+        return Response({"error": gettext("learning path has no modules")},
                         status=status.HTTP_400_BAD_REQUEST)
 
     service = _get_service()

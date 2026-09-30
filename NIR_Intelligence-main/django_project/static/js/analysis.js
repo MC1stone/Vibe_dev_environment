@@ -310,7 +310,7 @@ function handleFileUpload(event) {
     })
     .then(function(response) {
         if (response.status === 401 || response.status === 403) {
-            throw new Error('Please log in to upload files.');
+            throw new Error(nirGettext('Please log in to upload files.'));
         }
         return response.json().catch(function() { return {}; });
     })

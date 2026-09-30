@@ -27,6 +27,7 @@ except ImportError:  # offline test mode without djangorestframework
     DRF_AVAILABLE = False
 
 from core.models import AnalysisProject, GenericFile
+from django.utils.translation import gettext
 
 
 class SpectrumDatabaseView(TemplateView):
@@ -223,16 +224,16 @@ class ProjectCreateView(APIView if DRF_AVAILABLE else object):
 
     def post(self, request):
         if not request.user.is_authenticated:
-            return Response({'success': False, 'error': 'Authentication required'},
+            return Response({'success': False, 'error': gettext('Authentication required')},
                             status=status.HTTP_401_UNAUTHORIZED)
         file_ids = request.data.get('file_ids', [])
         name = (request.data.get('name') or '').strip()
         if not file_ids:
-            return Response({'success': False, 'error': 'file_ids required'},
+            return Response({'success': False, 'error': gettext('file_ids required')},
                             status=status.HTTP_400_BAD_REQUEST)
         files = GenericFile.objects.filter(id__in=file_ids, user=request.user)
         if not files.exists():
-            return Response({'success': False, 'error': 'No matching files'},
+            return Response({'success': False, 'error': gettext('No matching files')},
                             status=status.HTTP_404_NOT_FOUND)
         if not name:
             name = f"Projekt {files.first().name}"
@@ -345,7 +346,7 @@ class ProjectDeleteView(APIView if DRF_AVAILABLE else object):
 
     def post(self, request, project_id):
         if not request.user.is_authenticated:
-            return Response({'success': False, 'error': 'Authentication required'},
+            return Response({'success': False, 'error': gettext('Authentication required')},
                             status=status.HTTP_401_UNAUTHORIZED)
         project = _get_project(project_id, request.user)
         name = project.name
@@ -372,16 +373,16 @@ class ProjectFilesAddView(APIView if DRF_AVAILABLE else object):
 
     def post(self, request, project_id):
         if not request.user.is_authenticated:
-            return Response({'success': False, 'error': 'Authentication required'},
+            return Response({'success': False, 'error': gettext('Authentication required')},
                             status=status.HTTP_401_UNAUTHORIZED)
         project = _get_project(project_id, request.user)
         file_ids = request.data.get('file_ids', [])
         if not file_ids:
-            return Response({'success': False, 'error': 'file_ids required'},
+            return Response({'success': False, 'error': gettext('file_ids required')},
                             status=status.HTTP_400_BAD_REQUEST)
         files = GenericFile.objects.filter(id__in=file_ids, user=request.user)
         if not files.exists():
-            return Response({'success': False, 'error': 'No matching files'},
+            return Response({'success': False, 'error': gettext('No matching files')},
                             status=status.HTTP_404_NOT_FOUND)
         existing_ids = set(project.files.values_list('id', flat=True))
         new_files = [f for f in files if f.id not in existing_ids]
@@ -412,7 +413,7 @@ class ProjectReingestView(APIView if DRF_AVAILABLE else object):
 
     def post(self, request, project_id):
         if not request.user.is_authenticated:
-            return Response({'success': False, 'error': 'Authentication required'},
+            return Response({'success': False, 'error': gettext('Authentication required')},
                             status=status.HTTP_401_UNAUTHORIZED)
         project = _get_project(project_id, request.user)
         from services.project_ingest import build_preparation_report
@@ -445,18 +446,18 @@ class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
 
     def post(self, request, project_id):
         if not request.user.is_authenticated:
-            return Response({'success': False, 'error': 'Authentication required'},
+            return Response({'success': False, 'error': gettext('Authentication required')},
                             status=status.HTTP_401_UNAUTHORIZED)
         project = _get_project(project_id, request.user)
         if project.phase != 'drafted':
             return Response({
                 'success': False,
-                'error': 'Project already released',
-                'message': 'Metadaten können nur vor der Freigabe angepasst werden.',
+                'error': gettext('Project already released'),
+                'message': gettext('Metadaten können nur vor der Freigabe angepasst werden.'),
             }, status=status.HTTP_409_CONFLICT)
         metadata = request.data.get('metadata')
         if not isinstance(metadata, dict) or not metadata:
-            return Response({'success': False, 'error': 'metadata dict required'},
+            return Response({'success': False, 'error': gettext('metadata dict required')},
                             status=status.HTTP_400_BAD_REQUEST)
 
         known_file_ids = {str(f.id) for f in project.files.all()}
@@ -477,7 +478,7 @@ class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
             for key, value in fields.items():
                 if len(str(key)) > 64:
                     return Response({'success': False,
-                                     'error': f'Metadatenfeld zu lang: {key}'},
+                                     'error': gettext('Metadatenfeld zu lang: {}').format(key)},
                                     status=status.HTTP_400_BAD_REQUEST)
                 merged[str(key)] = '' if value is None else str(value)[:512]
             overrides[str(file_id)] = merged
@@ -501,7 +502,7 @@ class ProjectReleaseView(APIView if DRF_AVAILABLE else object):
 
     def post(self, request, project_id):
         if not request.user.is_authenticated:
-            return Response({'success': False, 'error': 'Authentication required'},
+            return Response({'success': False, 'error': gettext('Authentication required')},
                             status=status.HTTP_401_UNAUTHORIZED)
         project = _get_project(project_id, request.user)
         if project.phase == 'drafted':
@@ -509,9 +510,8 @@ class ProjectReleaseView(APIView if DRF_AVAILABLE else object):
             if not preparation.get('usable_dataset_count'):
                 return Response({
                     'success': False,
-                    'error': 'No usable datasets',
-                    'message': 'Mindestens ein verwertbarer Datensatz ist erforderlich, '
-                               ' bevor die Analyse freigegeben werden kann.',
+                    'error': gettext('No usable datasets'),
+                    'message': gettext('Mindestens ein verwertbarer Datensatz ist erforderlich, bevor die Analyse freigegeben werden kann.'),
                 }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
             project.phase = 'released'
             project.released_at = datetime.now(tz=timezone.utc)

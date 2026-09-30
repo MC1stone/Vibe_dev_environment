@@ -77,6 +77,8 @@ def get_middleware():
         'django.middleware.security.SecurityMiddleware',
         'django.contrib.sessions.middleware.SessionMiddleware',
         'django.middleware.locale.LocaleMiddleware',
+        # OP48d: cookie/Accept-Language negotiation for unprefixed API routes
+        'nir_web.api_language_middleware.ApiLanguageMiddleware',
         'django.middleware.common.CommonMiddleware',
         'django.middleware.csrf.CsrfViewMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',

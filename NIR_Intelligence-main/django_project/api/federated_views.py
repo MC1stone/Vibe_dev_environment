@@ -22,6 +22,7 @@ from services.federated_learning_service import (
     FLWR_AVAILABLE,
 )
 from services.federated_privacy import secure_aggregation_available
+from django.utils.translation import gettext_lazy as gettext
 
 _consent_given = False
 
@@ -49,7 +50,7 @@ def federated_consent(request):
     global _consent_given
     payload = request.data
     if not isinstance(payload, dict) or not isinstance(payload.get("consent"), bool):
-        return Response({"error": "consent (bool) is required"},
+        return Response({"error": gettext("consent (bool) is required")},
                         status=status.HTTP_400_BAD_REQUEST)
     _consent_given = bool(payload["consent"])
     logger.info("federated learning consent set to %s", _consent_given)
@@ -70,14 +71,12 @@ def run_federated_round(payload):
     deferral without scikit-learn (503), payload validation (400).
     """
     if not _consent_given:
-        return {"error": "federated learning requires explicit consent "
-                        "(POST /api/federated/consent/)"}, status.HTTP_403_FORBIDDEN
+        return {"error": gettext("federated learning requires explicit consent (POST /api/federated/consent/)")}, status.HTTP_403_FORBIDDEN
     if not SKLEARN_AVAILABLE:
-        return {"error": "scikit-learn is not available - federated "
-                        "calibration deferred"}, status.HTTP_503_SERVICE_UNAVAILABLE
+        return {"error": gettext("scikit-learn is not available - federated calibration deferred")}, status.HTTP_503_SERVICE_UNAVAILABLE
     shards_payload = payload.get("shards") if isinstance(payload, dict) else None
     if not shards_payload or not isinstance(shards_payload, list):
-        return {"error": "shards (list) is required"}, status.HTTP_400_BAD_REQUEST
+        return {"error": gettext("shards (list) is required")}, status.HTTP_400_BAD_REQUEST
     import numpy as np
 
     from services.federated_calibration import CalibrationShard
@@ -87,7 +86,7 @@ def run_federated_round(payload):
         x = shard_data.get("x")
         y = shard_data.get("y")
         if x is None or y is None:
-            return {"error": "each shard needs x and y"}, status.HTTP_400_BAD_REQUEST
+            return {"error": gettext("each shard needs x and y")}, status.HTTP_400_BAD_REQUEST
         shards.append(CalibrationShard(
             x=np.asarray(x, dtype=np.float64),
             y=np.asarray(y, dtype=np.float64),

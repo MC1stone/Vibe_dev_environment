@@ -728,3 +728,423 @@ msgstr "Unknown error"
 # OP48c: JavaScript user-facing message
 msgid "Upload failed: "
 msgstr "Upload failed: "
+
+# OP48d: backend API message
+msgid "Agent {} not found"
+msgstr "Agent {} not found"
+
+# OP48d: backend API message
+msgid "At least one request is required"
+msgstr "At least one request is required"
+
+# OP48d: backend API message
+msgid "Authentication required"
+msgstr "Authentication required"
+
+# OP48d: backend API message
+msgid "CrewAI analysis completed"
+msgstr "CrewAI analysis completed"
+
+# OP48d: backend API message
+msgid "Custom report rendered successfully"
+msgstr "Custom report rendered successfully"
+
+# OP48d: backend API message
+msgid "Data successfully contributed to federated learning"
+msgstr "Data successfully contributed to federated learning"
+
+# OP48d: backend API message
+msgid "Error analyzing file"
+msgstr "Error analyzing file"
+
+# OP48d: backend API message
+msgid "Error analyzing files"
+msgstr "Error analyzing files"
+
+# OP48d: backend API message
+msgid "Error cleaning up workflow: "
+msgstr "Error cleaning up workflow: "
+
+# OP48d: backend API message
+msgid "Error deleting file"
+msgstr "Error deleting file"
+
+# OP48d: backend API message
+msgid "Error deleting files"
+msgstr "Error deleting files"
+
+# OP48d: backend API message
+msgid "Error downloading file"
+msgstr "Error downloading file"
+
+# OP48d: backend API message
+msgid "Error generating metadata report: "
+msgstr "Error generating metadata report: "
+
+# OP48d: backend API message
+msgid "Error generating report from analysis: "
+msgstr "Error generating report from analysis: "
+
+# OP48d: backend API message
+msgid "Error generating report: "
+msgstr "Error generating report: "
+
+# OP48d: backend API message
+msgid "Error getting file categories"
+msgstr "Error getting file categories"
+
+# OP48d: backend API message
+msgid "Error getting file statistics"
+msgstr "Error getting file statistics"
+
+# OP48d: backend API message
+msgid "Error getting workflow status: "
+msgstr "Error getting workflow status: "
+
+# OP48d: backend API message
+msgid "Error getting workflow summary: "
+msgstr "Error getting workflow summary: "
+
+# OP48d: backend API message
+msgid "Error getting workflows: "
+msgstr "Error getting workflows: "
+
+# OP48d: backend API message
+msgid "Error listing reports: "
+msgstr "Error listing reports: "
+
+# OP48d: backend API message
+msgid "Error rendering custom report: "
+msgstr "Error rendering custom report: "
+
+# OP48d: backend API message
+msgid "Error retrieving file details"
+msgstr "Error retrieving file details"
+
+# OP48d: backend API message
+msgid "Error retrieving files"
+msgstr "Error retrieving files"
+
+# OP48d: backend API message
+msgid "Error running CrewAI analysis"
+msgstr "Error running CrewAI analysis"
+
+# OP48d: backend API message
+msgid "Error serving report: "
+msgstr "Error serving report: "
+
+# OP48d: backend API message
+msgid "Error starting workflow: "
+msgstr "Error starting workflow: "
+
+# OP48d: backend API message
+msgid "Error uploading and analyzing files: "
+msgstr "Error uploading and analyzing files: "
+
+# OP48d: backend API message
+msgid "Error uploading files"
+msgstr "Error uploading files"
+
+# OP48d: backend API message
+msgid "Failed to execute agent"
+msgstr "Failed to execute agent"
+
+# OP48d: backend API message
+msgid "Failed to upload any files"
+msgstr "Failed to upload any files"
+
+# OP48d: backend API message
+msgid "Federated learning contribution failed"
+msgstr "Federated learning contribution failed"
+
+# OP48d: backend API message
+msgid "Federated learning is not enabled"
+msgstr "Federated learning is not enabled"
+
+# OP48d: backend API message
+msgid "Federated learning preferences updated successfully"
+msgstr "Federated learning preferences updated successfully"
+
+# OP48d: backend API message
+msgid "File analysis completed"
+msgstr "File analysis completed"
+
+# OP48d: backend API message
+msgid "File analysis failed"
+msgstr "File analysis failed"
+
+# OP48d: backend API message
+msgid "File deleted successfully"
+msgstr "File deleted successfully"
+
+# OP48d: backend API message
+msgid "File details retrieved"
+msgstr "File details retrieved"
+
+# OP48d: backend API message
+msgid "File not found"
+msgstr "File not found"
+
+# OP48d: backend API message
+msgid "File not found on server"
+msgstr "File not found on server"
+
+# OP48d: backend API message
+msgid "File size limit exceeded"
+msgstr "File size limit exceeded"
+
+# OP48d: backend API message
+msgid "File statistics retrieved"
+msgstr "File statistics retrieved"
+
+# OP48d: backend API message
+msgid "File upload failed"
+msgstr "File upload failed"
+
+# OP48d: backend API message
+msgid "File uploaded successfully"
+msgstr "File uploaded successfully"
+
+# OP48d: backend API message
+msgid "File {} exceeds maximum size of 500MB"
+msgstr "File {} exceeds maximum size of 500MB"
+
+# OP48d: backend API message
+msgid "FlowerAI settings updated successfully"
+msgstr "FlowerAI settings updated successfully"
+
+# OP48d: backend API message
+msgid "ILIAS settings updated successfully"
+msgstr "ILIAS settings updated successfully"
+
+# OP48d: backend API message
+msgid "Invalid JSON data: "
+msgstr "Invalid JSON data: "
+
+# OP48d: backend API message
+msgid "Invalid JSON payload"
+msgstr "Invalid JSON payload"
+
+# OP48d: backend API message
+msgid "Invalid limit parameter"
+msgstr "Invalid limit parameter"
+
+# OP48d: backend API message
+msgid "Metadata report generated successfully"
+msgstr "Metadata report generated successfully"
+
+# OP48d: backend API message
+msgid "Metadaten können nur vor der Freigabe angepasst werden."
+msgstr "Metadaten können nur vor der Freigabe angepasst werden."
+
+# OP48d: backend API message
+msgid "Metadatenfeld zu lang: {}"
+msgstr "Metadatenfeld zu lang: {}"
+
+# OP48d: backend API message
+msgid "Method not allowed"
+msgstr "Method not allowed"
+
+# OP48d: backend API message
+msgid "Mindestens ein verwertbarer Datensatz ist erforderlich, bevor die Analyse freigegeben werden kann."
+msgstr "Mindestens ein verwertbarer Datensatz ist erforderlich, bevor die Analyse freigegeben werden kann."
+
+# OP48d: backend API message
+msgid "NIR Analysis Crew not available"
+msgstr "NIR Analysis Crew not available"
+
+# OP48d: backend API message
+msgid "No analysis data provided"
+msgstr "No analysis data provided"
+
+# OP48d: backend API message
+msgid "No data provided"
+msgstr "No data provided"
+
+# OP48d: backend API message
+msgid "No file IDs provided"
+msgstr "No file IDs provided"
+
+# OP48d: backend API message
+msgid "No file paths provided"
+msgstr "No file paths provided"
+
+# OP48d: backend API message
+msgid "No file provided"
+msgstr "No file provided"
+
+# OP48d: backend API message
+msgid "No files provided"
+msgstr "No files provided"
+
+# OP48d: backend API message
+msgid "No files uploaded"
+msgstr "No files uploaded"
+
+# OP48d: backend API message
+msgid "No finite spectral values"
+msgstr "No finite spectral values"
+
+# OP48d: backend API message
+msgid "No matching files"
+msgstr "No matching files"
+
+# OP48d: backend API message
+msgid "No usable datasets"
+msgstr "No usable datasets"
+
+# OP48d: backend API message
+msgid "Not a parseable spectral file"
+msgstr "Not a parseable spectral file"
+
+# OP48d: backend API message
+msgid "Please provide at least one file ID"
+msgstr "Please provide at least one file ID"
+
+# OP48d: backend API message
+msgid "Preview not available"
+msgstr "Preview not available"
+
+# OP48d: backend API message
+msgid "Project already released"
+msgstr "Project already released"
+
+# OP48d: backend API message
+msgid "Report file not found: {}"
+msgstr "Report file not found: {}"
+
+# OP48d: backend API message
+msgid "Report generated from analysis"
+msgstr "Report generated from analysis"
+
+# OP48d: backend API message
+msgid "Report generated successfully"
+msgstr "Report generated successfully"
+
+# OP48d: backend API message
+msgid "Report not found"
+msgstr "Report not found"
+
+# OP48d: backend API message
+msgid "Spectral columns not found"
+msgstr "Spectral columns not found"
+
+# OP48d: backend API message
+msgid "Supported file categories and extensions"
+msgstr "Supported file categories and extensions"
+
+# OP48d: backend API message
+msgid "Template name is required"
+msgstr "Template name is required"
+
+# OP48d: backend API message
+msgid "Test agent executed successfully"
+msgstr "Test agent executed successfully"
+
+# OP48d: backend API message
+msgid "The file could not be parsed as spectral data (S3 loader)"
+msgstr "The file could not be parsed as spectral data (S3 loader)"
+
+# OP48d: backend API message
+msgid "The file does not exist on the server"
+msgstr "The file does not exist on the server"
+
+# OP48d: backend API message
+msgid "The requested file does not exist or you do not have permission to access it"
+msgstr "The requested file does not exist or you do not have permission to access it"
+
+# OP48d: backend API message
+msgid "User consent is required for federated learning"
+msgstr "User consent is required for federated learning"
+
+# OP48d: backend API message
+msgid "User created successfully. Please check your email for verification."
+msgstr "User created successfully. Please check your email for verification."
+
+# OP48d: backend API message
+msgid "User preferences not found"
+msgstr "User preferences not found"
+
+# OP48d: backend API message
+msgid "Wavelength/intensity columns missing in parsed data"
+msgstr "Wavelength/intensity columns missing in parsed data"
+
+# OP48d: backend API message
+msgid "Workflow orchestrator not available"
+msgstr "Workflow orchestrator not available"
+
+# OP48d: backend API message
+msgid "Workflow {} not found"
+msgstr "Workflow {} not found"
+
+# OP48d: backend API message
+msgid "consent (bool) is required"
+msgstr "consent (bool) is required"
+
+# OP48d: backend API message
+msgid "each shard needs x and y"
+msgstr "each shard needs x and y"
+
+# OP48d: backend API message
+msgid "federated learning requires explicit consent (POST /api/federated/consent/)"
+msgstr "federated learning requires explicit consent (POST /api/federated/consent/)"
+
+# OP48d: backend API message
+msgid "file_ids required"
+msgstr "file_ids required"
+
+# OP48d: backend API message
+msgid "learning path has no modules"
+msgstr "learning path has no modules"
+
+# OP48d: backend API message
+msgid "metadata dict required"
+msgstr "metadata dict required"
+
+# OP48d: backend API message
+msgid "privacy_level is required"
+msgstr "privacy_level is required"
+
+# OP48d: backend API message
+msgid "question is required"
+msgstr "question is required"
+
+# OP48d: backend API message
+msgid "report_id parameter is required"
+msgstr "report_id parameter is required"
+
+# OP48d: backend API message
+msgid "request_id parameter is required"
+msgstr "request_id parameter is required"
+
+# OP48d: backend API message
+msgid "requests array is required"
+msgstr "requests array is required"
+
+# OP48d: backend API message
+msgid "sample_id is required"
+msgstr "sample_id is required"
+
+# OP48d: backend API message
+msgid "scikit-learn is not available - federated calibration deferred"
+msgstr "scikit-learn is not available - federated calibration deferred"
+
+# OP48d: backend API message
+msgid "shards (list) is required"
+msgstr "shards (list) is required"
+
+# OP48d: backend API message
+msgid "spectral_data is required"
+msgstr "spectral_data is required"
+
+# OP48d: backend API message
+msgid "spectral_data must contain wavelengths and intensities"
+msgstr "spectral_data must contain wavelengths and intensities"
+
+# OP48d: backend API message
+msgid "title is required"
+msgstr "title is required"
+
+# OP48d: JavaScript user-facing message
+msgid "Please log in to upload files."
+msgstr "Please log in to upload files."

@@ -222,8 +222,9 @@ check('T8r workflow uploads the file to the server (real upload, no local-only p
       and 'formData.append' in analysis_js
       and 'parseSpectrumFile(content' not in analysis_js)
 check('T8s workflow upload errors are surfaced to the user',
-      "Upload failed: ' + error.message" in analysis_js
-      and 'Please log in to upload files.' in analysis_js)
+      "nirGettext('Upload failed: ')" in analysis_js
+      and 'error.message' in analysis_js
+      and "nirGettext('Please log in to upload files.')" in analysis_js)
 check('T8t workflow report button opens the crew report page',
       'currentAnalysisRequest.report_url' in analysis_js
       and 'result.report_url' in analysis_js)

@@ -16,6 +16,7 @@ from django.core.files.base import ContentFile
 
 # Import workflow orchestrator
 import sys
+from django.utils.translation import gettext
 project_root = Path(__file__).parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
@@ -76,7 +77,7 @@ def start_workflow(request):
         if not data:
             return JsonResponse({
                 'success': False,
-                'error': 'No data provided'
+                'error': gettext('No data provided')
             }, status=400)
         
         file_paths = data.get('file_paths', [])
@@ -85,7 +86,7 @@ def start_workflow(request):
         if not file_paths:
             return JsonResponse({
                 'success': False,
-                'error': 'No file paths provided'
+                'error': gettext('No file paths provided')
             }, status=400)
         
         # Convert workflow type string to enum
@@ -108,7 +109,7 @@ def start_workflow(request):
         if not orchestrator:
             return JsonResponse({
                 'success': False,
-                'error': 'Workflow orchestrator not available'
+                'error': gettext('Workflow orchestrator not available')
             }, status=500)
         
         # Execute workflow
@@ -178,13 +179,13 @@ def start_workflow(request):
     except json.JSONDecodeError as e:
         return JsonResponse({
             'success': False,
-            'error': f'Invalid JSON data: {str(e)}'
+            'error': gettext('Invalid JSON data: ') + str(e)
         }, status=400)
     except Exception as e:
         logger.error(f"Error starting workflow: {str(e)}", exc_info=True)
         return JsonResponse({
             'success': False,
-            'error': f'Error starting workflow: {str(e)}'
+            'error': gettext('Error starting workflow: ') + str(e)
         }, status=500)
 
 
@@ -205,7 +206,7 @@ def get_workflow_status(request, workflow_id):
         if not orchestrator:
             return JsonResponse({
                 'success': False,
-                'error': 'Workflow orchestrator not available'
+                'error': gettext('Workflow orchestrator not available')
             }, status=500)
         
         workflow_result = orchestrator.get_workflow_status(workflow_id)
@@ -213,7 +214,7 @@ def get_workflow_status(request, workflow_id):
         if not workflow_result:
             return JsonResponse({
                 'success': False,
-                'error': f'Workflow {workflow_id} not found'
+                'error': gettext('Workflow {} not found').format(workflow_id)
             }, status=404)
         
         # Prepare response
@@ -241,7 +242,7 @@ def get_workflow_status(request, workflow_id):
         logger.error(f"Error getting workflow status: {str(e)}")
         return JsonResponse({
             'success': False,
-            'error': f'Error getting workflow status: {str(e)}'
+            'error': gettext('Error getting workflow status: ') + str(e)
         }, status=500)
 
 
@@ -259,7 +260,7 @@ def get_all_workflows(request):
         if not orchestrator:
             return JsonResponse({
                 'success': False,
-                'error': 'Workflow orchestrator not available'
+                'error': gettext('Workflow orchestrator not available')
             }, status=500)
         
         workflows = orchestrator.get_all_workflows()
@@ -290,7 +291,7 @@ def get_all_workflows(request):
         logger.error(f"Error getting all workflows: {str(e)}")
         return JsonResponse({
             'success': False,
-            'error': f'Error getting workflows: {str(e)}'
+            'error': gettext('Error getting workflows: ') + str(e)
         }, status=500)
 
 
@@ -308,7 +309,7 @@ def upload_and_analyze(request):
         if not request.FILES:
             return JsonResponse({
                 'success': False,
-                'error': 'No files uploaded'
+                'error': gettext('No files uploaded')
             }, status=400)
         
         # Save uploaded files temporarily
@@ -344,7 +345,7 @@ def upload_and_analyze(request):
             if not orchestrator:
                 return JsonResponse({
                     'success': False,
-                    'error': 'Workflow orchestrator not available'
+                    'error': gettext('Workflow orchestrator not available')
                 }, status=500)
             
             # Execute workflow
@@ -398,7 +399,7 @@ def upload_and_analyze(request):
         logger.error(f"Error uploading and analyzing files: {str(e)}", exc_info=True)
         return JsonResponse({
             'success': False,
-            'error': f'Error uploading and analyzing files: {str(e)}'
+            'error': gettext('Error uploading and analyzing files: ') + str(e)
         }, status=500)
 
 
@@ -434,7 +435,7 @@ def get_report(request, report_filename):
         if not report_path:
             return JsonResponse({
                 'success': False,
-                'error': f'Report file not found: {report_filename}'
+                'error': gettext('Report file not found: {}').format(report_filename)
             }, status=404)
         
         # Serve the file
@@ -447,7 +448,7 @@ def get_report(request, report_filename):
         logger.error(f"Error serving report {report_filename}: {str(e)}")
         return JsonResponse({
             'success': False,
-            'error': f'Error serving report: {str(e)}'
+            'error': gettext('Error serving report: ') + str(e)
         }, status=500)
 
 
@@ -496,7 +497,7 @@ def list_reports(request):
         logger.error(f"Error listing reports: {str(e)}")
         return JsonResponse({
             'success': False,
-            'error': f'Error listing reports: {str(e)}'
+            'error': gettext('Error listing reports: ') + str(e)
         }, status=500)
 
 
@@ -519,7 +520,7 @@ def cleanup_workflow(request, workflow_id):
         if not orchestrator:
             return JsonResponse({
                 'success': False,
-                'error': 'Workflow orchestrator not available'
+                'error': gettext('Workflow orchestrator not available')
             }, status=500)
         
         success = orchestrator.cleanup_workflow_files(workflow_id, keep_reports)
@@ -535,7 +536,7 @@ def cleanup_workflow(request, workflow_id):
         logger.error(f"Error cleaning up workflow {workflow_id}: {str(e)}")
         return JsonResponse({
             'success': False,
-            'error': f'Error cleaning up workflow: {str(e)}'
+            'error': gettext('Error cleaning up workflow: ') + str(e)
         }, status=500)
 
 
@@ -556,7 +557,7 @@ def get_workflow_summary(request, workflow_id):
         if not orchestrator:
             return JsonResponse({
                 'success': False,
-                'error': 'Workflow orchestrator not available'
+                'error': gettext('Workflow orchestrator not available')
             }, status=500)
         
         workflow_result = orchestrator.get_workflow_status(workflow_id)
@@ -564,7 +565,7 @@ def get_workflow_summary(request, workflow_id):
         if not workflow_result:
             return JsonResponse({
                 'success': False,
-                'error': f'Workflow {workflow_id} not found'
+                'error': gettext('Workflow {} not found').format(workflow_id)
             }, status=404)
         
         # Prepare comprehensive summary
@@ -611,5 +612,5 @@ def get_workflow_summary(request, workflow_id):
         logger.error(f"Error getting workflow summary: {str(e)}")
         return JsonResponse({
             'success': False,
-            'error': f'Error getting workflow summary: {str(e)}'
+            'error': gettext('Error getting workflow summary: ') + str(e)
         }, status=500)

@@ -39,6 +39,7 @@ from django.contrib import messages
 from core.models import User, NIRSpectrum, AnalysisJob, Agent, SystemLog, UserPreference
 from django.contrib.auth import get_user_model
 from .forms import CustomAuthenticationForm, CustomUserCreationForm
+from django.utils.translation import gettext
 
 # Add framework to path
 framework_path = settings.NIR_FRAMEWORK_PATH
@@ -69,7 +70,7 @@ class UserRegistrationView(generics.CreateAPIView):
         
         return Response({
             'user': UserProfileSerializer(user).data,
-            'message': 'User created successfully. Please check your email for verification.'
+            'message': gettext('User created successfully. Please check your email for verification.')
         }, status=status.HTTP_201_CREATED)
 
 
@@ -323,14 +324,14 @@ class AgentExecuteView(APIView):
         except Agent.DoesNotExist:
             return Response({
                 'success': False,
-                'error': f'Agent {agent_name} not found',
-                'message': 'Agent not found'
+                'error': gettext('Agent {} not found').format(agent_name),
+                'message': gettext('Agent not found')
             }, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({
                 'success': False,
                 'error': str(e),
-                'message': 'Failed to execute agent'
+                'message': gettext('Failed to execute agent')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def _execute_agent(self, agent_name, parameters, spectrum_ids, user):
@@ -394,7 +395,7 @@ class AgentExecuteView(APIView):
                         'status': 'completed',
                         'data': result,
                         'errors': [],
-                        'message': 'Test agent executed successfully'
+                        'message': gettext('Test agent executed successfully')
                     }
                     
                 except Exception as e:
@@ -587,14 +588,14 @@ class FlowerAIAuthView(APIView):
             
             return Response({
                 'status': 'success',
-                'message': 'FlowerAI settings updated successfully',
+                'message': gettext('FlowerAI settings updated successfully'),
                 'flowerai_enabled': preferences.flowerai_enabled,
                 'federated_learning_enabled': preferences.federated_learning_enabled,
             })
         except UserPreference.DoesNotExist:
             return Response({
                 'status': 'error',
-                'message': 'User preferences not found',
+                'message': gettext('User preferences not found'),
             }, status=status.HTTP_404_NOT_FOUND)
 
 
@@ -637,14 +638,14 @@ class ILIASAuthView(APIView):
             
             return Response({
                 'status': 'success',
-                'message': 'ILIAS settings updated successfully',
+                'message': gettext('ILIAS settings updated successfully'),
                 'ilias_enabled': preferences.ilias_enabled,
                 'ilias_sync_enabled': preferences.ilias_sync_enabled,
             })
         except UserPreference.DoesNotExist:
             return Response({
                 'status': 'error',
-                'message': 'User preferences not found',
+                'message': gettext('User preferences not found'),
             }, status=status.HTTP_404_NOT_FOUND)
 
 
@@ -680,7 +681,7 @@ class FederatedLearningView(APIView):
         except UserPreference.DoesNotExist:
             return Response({
                 'status': 'error',
-                'message': 'User preferences not found',
+                'message': gettext('User preferences not found'),
             }, status=status.HTTP_404_NOT_FOUND)
     
     def post(self, request):
@@ -706,7 +707,7 @@ class FederatedLearningView(APIView):
             
             return Response({
                 'status': 'success',
-                'message': 'Federated learning preferences updated successfully',
+                'message': gettext('Federated learning preferences updated successfully'),
                 'preferences': {
                     'federated_learning_enabled': preferences.federated_learning_enabled,
                     'share_spectra_data': preferences.share_spectra_data,
@@ -718,7 +719,7 @@ class FederatedLearningView(APIView):
         except UserPreference.DoesNotExist:
             return Response({
                 'status': 'error',
-                'message': 'User preferences not found',
+                'message': gettext('User preferences not found'),
             }, status=status.HTTP_404_NOT_FOUND)
 
 
@@ -861,7 +862,7 @@ class FileUploadView(APIView):
             if not file:
                 return Response({
                     'success': False,
-                    'error': 'No file provided'
+                    'error': gettext('No file provided')
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             # File-type agnostic upload (MO 1): every file type is
@@ -908,7 +909,7 @@ class FileUploadView(APIView):
             return Response({
                 'success': True,
                 'spectrum_id': str(spectrum.id),
-                'message': 'File uploaded successfully',
+                'message': gettext('File uploaded successfully'),
                 'metadata': metadata
             }, status=status.HTTP_201_CREATED)
             
@@ -916,7 +917,7 @@ class FileUploadView(APIView):
             return Response({
                 'success': False,
                 'error': str(e),
-                'message': 'File upload failed'
+                'message': gettext('File upload failed')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def _parse_spectrum_file(self, file_path, data_format):

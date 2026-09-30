@@ -267,6 +267,71 @@ check('T6j files.js uses nirGettext (no bare alert literals left)',
       and "alert('" not in files_js)
 
 # ---------------------------------------------------------------------------
+# T7: OP48d - backend API messages localized (gettext + language middleware)
+# ---------------------------------------------------------------------------
+api_dir = (Path(__file__).resolve().parent.parent / 'django_project' / 'api')
+
+# T7a: all api view modules use gettext for error/message strings
+import glob as _glob  # noqa: E402
+import re as _re  # noqa: E402
+api_files = sorted(_glob.glob(str(api_dir / '*.py')))
+with_gettext = [
+    f for f in api_files
+    if 'i18n_views' not in f
+    and 'from django.utils.translation import gettext' in
+    Path(f).read_text(encoding='utf-8')
+]
+check('T7a api view modules import gettext', len(with_gettext) >= 8,
+      f'{len(with_gettext)} modules')
+
+# T7b: no bare untranslated error literals left in api views
+bare = []
+for f in api_files:
+    if 'i18n_views' in f:
+        continue
+    src = Path(f).read_text(encoding='utf-8')
+    for m in _re.finditer(r"['\"]error['\"]\s*:\s*['\"]([^'\"]*)['\"]", src):
+        bare.append((Path(f).name, m.group(1)))
+check('T7b no bare error literals left in api views', not bare, str(bare[:5]))
+
+# T7c: chatbot error localized in de (fresh client, default language)
+resp = Client().post('/api/chatbot/message/', {}, HTTP_ACCEPT_LANGUAGE='de')
+err_de = resp.json().get('error') if resp.status_code == 200 or resp.status_code == 400 else None
+check('T7c chatbot 400 error localized (de)',
+      resp.status_code == 400 and err_de == 'question ist erforderlich',
+      f'{resp.status_code} {err_de}')
+
+# T7d: chatbot error localized in en (Accept-Language)
+resp = Client().post('/api/chatbot/message/', {}, HTTP_ACCEPT_LANGUAGE='en')
+err_en = resp.json().get('error') if resp.status_code == 400 else None
+check('T7d chatbot error follows Accept-Language (en)',
+      resp.status_code == 400 and err_en == 'question is required',
+      f'{resp.status_code} {err_en}')
+
+# T7e: chatbot error follows django_language cookie (en)
+c3 = Client()
+c3.cookies.load({'django_language': 'en'})
+resp = c3.post('/api/chatbot/message/', {})
+err_ck = resp.json().get('error') if resp.status_code == 400 else None
+check('T7e chatbot error follows cookie (en)',
+      resp.status_code == 400 and err_ck == 'question is required',
+      f'{resp.status_code} {err_ck}')
+
+# T7f: ApiLanguageMiddleware wired in settings
+check('T7f ApiLanguageMiddleware in MIDDLEWARE',
+      'nir_web.api_language_middleware.ApiLanguageMiddleware'
+      in settings.MIDDLEWARE)
+
+# T7g: backend msgids present in de catalog (spot checks)
+resp = Client().get('/js-i18n/?format=json')
+cat = resp.json().get('catalog', {}) if resp.status_code == 200 else {}
+spot = ['File not found', 'Report not found', 'Method not allowed',
+        'question is required', 'Workflow orchestrator not available']
+missing_be = [m for m in spot if not cat.get(m)]
+check('T7g backend msgids in compiled de catalog', not missing_be,
+      str(missing_be))
+
+# ---------------------------------------------------------------------------
 # summary
 # ---------------------------------------------------------------------------
 print(f'\nOP48 i18n infrastructure: {PASS} passed, {FAIL} failed')

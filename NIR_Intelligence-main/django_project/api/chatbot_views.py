@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from django.utils.translation import gettext
 
 logger = logging.getLogger("API.Chatbot")
 
@@ -44,7 +45,7 @@ def chatbot_message(request):
     """
     question = request.data.get("question")
     if not question or not str(question).strip():
-        return Response({"error": "question is required"},
+        return Response({"error": gettext("question is required")},
                         status=status.HTTP_400_BAD_REQUEST)
 
     service = _get_chatbot_service()
