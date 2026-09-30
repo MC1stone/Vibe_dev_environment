@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load i18n %}{% load static %}
 
 {% block title %}NIR Intelligence Platform - Workflow{% endblock %}
 
@@ -196,24 +196,21 @@
 <section class="hero-section">
     <div class="hero-content">
         <h1 class="hero-title">
-            <i class="bi bi-graph-up-arrow"></i> NIR Intelligence Platform
+            <i class="bi bi-graph-up-arrow"></i> {% trans "NIR Intelligence Platform" %}
         </h1>
-        <p class="hero-subtitle">
-            Vollständig lokale NIR-Spektroskopie-Analyse: Projekt hochladen, Metadaten pflegen,
-            Agenten-Analyse freigeben, studentenfertiger Abschlussbericht mit Chatbot.
-        </p>
+        <p class="hero-subtitle">{% blocktrans %}Vollständig lokale NIR-Spektroskopie-Analyse: Projekt hochladen, Metadaten pflegen, Agenten-Analyse freigeben, studentenfertiger Abschlussbericht mit Chatbot.{% endblocktrans %}</p>
         <div class="cta-buttons">
             <a href="/projects/" class="c-button c-button--primary c-button--lg">
                 <i class="bi bi-folder-plus"></i>
-                <span>Neues Projekt anlegen</span>
+                <span>{% trans "Create new project" %}</span>
             </a>
             <a href="/projects/" class="c-button c-button--outline-light c-button--lg">
                 <i class="bi bi-folder2-open"></i>
-                <span>Zu den Projekten</span>
+                <span>{% trans "Go to projects" %}</span>
             </a>
             <a href="/projects/database/" class="c-button c-button--outline-light c-button--lg">
                 <i class="bi bi-database"></i>
-                <span>Spektrendatenbank</span>
+                <span>{% trans "Spectrum database" %}</span>
             </a>
         </div>
     </div>
@@ -222,17 +219,17 @@
 <!-- Workflow Overview -->
 <section class="workflow-section o-container">
     <h2 class="workflow-title">
-        <i class="bi bi-diagram-3 me-2"></i>Der Analyse-Workflow
+        <i class="bi bi-diagram-3 me-2"></i>{% trans "The analysis workflow" %}
     </h2>
     <p class="workflow-hint">
-        Fahren Sie mit der Maus &uuml;ber die einzelnen Schritte, um eine Erkl&auml;rung zu erhalten.
+        {% trans "Hover over the individual steps to see an explanation." %}
     </p>
     <div class="workflow-diagram">
      <div class="workflow-row">
         <div class="workflow-step" tabindex="0">
             <span class="workflow-step__num">1</span>
             <i class="bi bi-box-arrow-in-right workflow-step__icon"></i>
-            <div class="workflow-step__title">Login / Registrierung</div>
+            <div class="workflow-step__title">{% trans "Login / Registration" %}</div>
             <div class="workflow-step__page">Startseite</div>
             <div class="workflow-tooltip">
                 Melden Sie sich &uuml;ber <strong>Login</strong> an oder legen Sie einmalig ein
@@ -244,7 +241,7 @@
         <div class="workflow-step" tabindex="0">
             <span class="workflow-step__num">2</span>
             <i class="bi bi-upload workflow-step__icon"></i>
-            <div class="workflow-step__title">Projekt anlegen (Upload)</div>
+            <div class="workflow-step__title">{% trans "Create project (upload)" %}</div>
             <div class="workflow-step__page">Projekte &rarr; "Neues Projekt (Upload)"</div>
             <div class="workflow-tooltip">
                 Auf der <strong>Projekte</strong>-Seite &uuml;ber den Button
@@ -257,7 +254,7 @@
         <div class="workflow-step" tabindex="0">
             <span class="workflow-step__num">3</span>
             <i class="bi bi-pencil-square workflow-step__icon"></i>
-            <div class="workflow-step__title">Metadaten bearbeiten</div>
+            <div class="workflow-step__title">{% trans "Edit metadata" %}</div>
             <div class="workflow-step__page">Projektseite &rarr; Metadaten-Editor</div>
             <div class="workflow-tooltip">
                 Direkt auf der Projektseite fehlende Metadaten (z.&nbsp;B. Ger&auml;t, Messdatum,
@@ -270,7 +267,7 @@
         <div class="workflow-step" tabindex="0">
             <span class="workflow-step__num">4</span>
             <i class="bi bi-folder-plus workflow-step__icon"></i>
-            <div class="workflow-step__title">Dateien erg&auml;nzen</div>
+            <div class="workflow-step__title">{% trans "Add files" %}</div>
             <div class="workflow-step__page">Projektliste &rarr; "Bearbeiten"</div>
             <div class="workflow-tooltip">
                 &Uuml;ber den <strong>Bearbeiten</strong>-Button in der Projektliste lassen sich
@@ -286,7 +283,7 @@
         <div class="workflow-step" tabindex="0">
             <span class="workflow-step__num">5</span>
             <i class="bi bi-play-fill workflow-step__icon"></i>
-            <div class="workflow-step__title">Release (Agenten-Analyse)</div>
+            <div class="workflow-step__title">{% trans "Release (agent analysis)" %}</div>
             <div class="workflow-step__page">Projektseite &rarr; "Zur Analyse freigeben"</div>
             <div class="workflow-tooltip">
                 Mit <strong>Zur Analyse freigeben</strong> startet die CrewAI-Multiagenten-Analyse:
@@ -298,7 +295,7 @@
         <div class="workflow-step" tabindex="0">
             <span class="workflow-step__num">6</span>
             <i class="bi bi-file-earmark-text workflow-step__icon"></i>
-            <div class="workflow-step__title">Abschlussbericht</div>
+            <div class="workflow-step__title">{% trans "Final report" %}</div>
             <div class="workflow-step__page">"Quarto-Abschlussbericht &ouml;ffnen"</div>
             <div class="workflow-tooltip">
                 Der Bericht enth&auml;lt alle Grafiken (Spektrum, PCA, XAI, Kalibration,
@@ -310,7 +307,7 @@
         <div class="workflow-step" tabindex="0">
             <span class="workflow-step__num">7</span>
             <i class="bi bi-database workflow-step__icon"></i>
-            <div class="workflow-step__title">Spektrendatenbank</div>
+            <div class="workflow-step__title">{% trans "Spectrum database" %}</div>
             <div class="workflow-step__page">Navigation &rarr; "Spektrendatenbank"</div>
             <div class="workflow-tooltip">
                 Freigegebene Spektren landen in der persistenten Datenbank ( gleiche
@@ -327,7 +324,7 @@
 <section class="o-container" style="margin: 1.5rem 0 3rem; text-align: center;">
     <div class="c-alert c-alert--info">
         <i class="bi bi-info-circle"></i>
-        <strong>Willkommen!</strong> Bitte
+        <strong>{% trans "Welcome!" %}</strong> {% trans "Please" %}
         <a href="/login/" class="c-alert__link">anmelden</a> oder
         <a href="/register/" class="c-alert__link">registrieren</a>, um den Workflow zu starten.
     </div>

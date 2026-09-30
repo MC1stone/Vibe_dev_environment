@@ -63,9 +63,6 @@ urlpatterns = [
     path('api/users/profile/', UserProfileView.as_view(), name='user-profile'),
     
     # Authentication Views (Traditional Django)
-    path('login/', CustomLoginView.as_view(), name='login'),
-    path('register/', CustomRegisterView.as_view(), name='register'),
-    path('logout/', CustomLogoutView.as_view(), name='logout'),
     
     # FlowerAI and ILIAS Integration API
     path('api/auth/flowerai/', FlowerAIAuthView.as_view(), name='flowerai-auth'),
@@ -132,6 +129,9 @@ urlpatterns += i18n_patterns(
     path('jobs/', TemplateView.as_view(template_name='jobs.html'), name='jobs-page'),
     path('settings/', TemplateView.as_view(template_name='settings.html'), name='settings-page'),
     path('documentation/', TemplateView.as_view(template_name='documentation.html'), name='documentation-page'),
+    path('login/', CustomLoginView.as_view(), name='login'),
+    path('register/', CustomRegisterView.as_view(), name='register'),
+    path('logout/', CustomLogoutView.as_view(), name='logout'),
     prefix_default_language=False,
 )
 # Remove the non-prefixed duplicates of the UI pages above (they are now

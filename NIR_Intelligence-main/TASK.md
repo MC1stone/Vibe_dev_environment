@@ -15,8 +15,12 @@ Die Plattform (UI, Backend-Meldungen, Berichte, ILIAS-Sync) soll fuer alle
   LocaleMiddleware, LANGUAGE_CODE de), i18n_patterns nur fuer UI-Routen
   (prefix_default_language=False, API ohne Praefix), /i18n/setlang/,
   locale-Kataloge de/en, CI + Testmatrix test_op48_i18n.py 22/22 gruen.
-- Offen: OP48b Templates ({% trans %} + Sprachumschalter), OP48c JS-Strings,
-  OP48d Backend-Meldungen/Chatbot/Quarto, OP48e Uebersetzungscontent/ILIAS.
+- OP48b Kern-Templates + Sprachumschalter - ERLEDIGT: base/index/login/
+  chatbot/ilias/federated lokalisiert, 24-Sprachen-Umschalter, Kataloge
+  de/en vollstaendig (94 msgids), Testmatrix 36/36 gruen, Regressionen
+  OP3/OP7/OP8/FL4 gruen.
+- Offen: OP48c JS-Strings, OP48d Backend-Meldungen/Chatbot/Quarto,
+  OP48e Uebersetzungscontent/ILIAS; Rest-Templates inkrementell.
 
 ### Success Criteria
 - UI in de und en vollstaendig umschaltbar; 24 Sprachkataloge angelegt

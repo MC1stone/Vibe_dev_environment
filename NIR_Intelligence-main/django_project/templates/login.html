@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load i18n %}{% load static %}
 
 {% block title %}Login - NIR_Mistral Framework{% endblock %}
 
@@ -237,8 +237,8 @@
                     </g>
                 </svg>
             </div>
-            <h1 class="login-title">Welcome to NIR_Mistral</h1>
-            <p class="login-subtitle">Advanced NIR Spectroscopy Analysis Platform</p>
+            <h1 class="login-title">{% trans "Welcome to NIR_Mistral" %}</h1>
+            <p class="login-subtitle">{% trans "Advanced NIR Spectroscopy Analysis Platform" %}</p>
         </div>
 
         <!-- Messages -->
@@ -257,13 +257,13 @@
             {{ form.non_field_errors }}
             
             <div class="form-group">
-                <label for="id_username" class="form-label">Username or Email</label>
+                <label for="id_username" class="form-label">{% trans "Username or Email" %}</label>
                 {{ form.username }}
                 {{ form.username.errors }}
             </div>
             
             <div class="form-group">
-                <label for="id_password" class="form-label">Password</label>
+                <label for="id_password" class="form-label">{% trans "Password" %}</label>
                 {{ form.password }}
                 {{ form.password.errors }}
             </div>
@@ -271,12 +271,12 @@
             <div class="form-group">
                 <label class="form-label">
                     {{ form.remember }}
-                    <span style="font-weight: normal; color: #718096;">Remember me</span>
+                    <span style="font-weight: normal; color: #718096;">{% trans "Remember me" %}</span>
                 </label>
             </div>
             
             <button type="submit" class="btn-login">
-                <i class="bi bi-box-arrow-in-right"></i> Sign In
+                <i class="bi bi-box-arrow-in-right"></i> {% trans "Sign In" %}
             </button>
         </form>
 
@@ -285,7 +285,7 @@
         <div class="integration-options">
             <div class="social-login">
                 <div class="divider">
-                    <span>Integration Options</span>
+                    <span>{% trans "Integration Options" %}</span>
                 </div>
             </div>
             
@@ -293,7 +293,7 @@
             <div class="integration-option">
                 <div class="integration-label">
                     <i class="bi bi-cpu"></i>
-                    <span>Federated Learning</span>
+                    <span>{% trans "Federated Learning" %}</span>
                 </div>
                 <label class="toggle-switch">
                     <input type="checkbox" id="federated-toggle" checked disabled>
@@ -306,7 +306,7 @@
             <div class="integration-option">
                 <div class="integration-label">
                     <i class="bi bi-flower2"></i>
-                    <span>FlowerAI Integration</span>
+                    <span>{% trans "FlowerAI Integration" %}</span>
                 </div>
                 <label class="toggle-switch">
                     <input type="checkbox" id="flowerai-toggle" checked disabled>
@@ -319,7 +319,7 @@
             <div class="integration-option">
                 <div class="integration-label">
                     <i class="bi bi-mortarboard"></i>
-                    <span>ILIAS Platform</span>
+                    <span>{% trans "ILIAS Platform" %}</span>
                 </div>
                 <label class="toggle-switch">
                     <input type="checkbox" id="ilias-toggle" checked disabled>
@@ -332,7 +332,7 @@
 
         <!-- Footer -->
         <div class="login-footer">
-            <p>Don't have an account? <a href="{% url 'register' %}">Sign up</a></p>
+            <p>{% trans "Don't have an account?" %} <a href="{% url 'register' %}">{% trans "Sign up" %}</a></p>
         </div>
     </div>
 </div>

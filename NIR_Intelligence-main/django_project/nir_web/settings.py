@@ -117,6 +117,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'django.template.context_processors.i18n',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -215,6 +216,15 @@ LANGUAGES = [
 ]
 
 LOCALE_PATHS = [BASE_DIR / 'locale']
+
+# Maltese is an official EU language but not shipped in django.conf.locale
+from django.conf.locale import LANG_INFO as EXTRA_LANG_INFO  # noqa: E402
+EXTRA_LANG_INFO['mt'] = {
+    'bidi': False,
+    'code': 'mt',
+    'name': 'Maltese',
+    'name_local': 'Malti',
+}
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load i18n %}{% load static %}
 {% block title %}NIR Intelligence - Federated Learning{% endblock %}
 {% block content %}
 <section class="o-section">
@@ -9,15 +9,12 @@
                 <h1 class="c-page-header__title">
                     <i class="bi bi-diagram-3"></i> Federated Learning
                 </h1>
-                <p class="c-page-header__subtitle">
-                    Föderierte Kalibration über verteilte Spektrometer-Setups (FL1-FL3) -
-                    nur Modellparameter verlassen den Client, Rohspektren bleiben lokal
-                </p>
+                <p class="c-page-header__subtitle">{% blocktrans %}Federated calibration across distributed spectrometer setups (FL1-FL3) - only model parameters leave the client, raw spectra remain local{% endblocktrans %}</p>
             </div>
             <div class="d-flex gap-2">
                 <button class="c-button c-button--outline-primary" onclick="refreshFederatedStatus()">
                     <i class="bi bi-arrow-clockwise c-button__icon"></i>
-                    <span class="c-button__text">Status aktualisieren</span>
+                    <span class="c-button__text">{% trans "Refresh status" %}</span>
                 </button>
             </div>
         </div>
@@ -26,7 +23,7 @@
             <div class="col-lg-5">
                 <div class="c-card h-100">
                     <div class="c-card__header">
-                        <h2 class="c-card__title mb-0"><i class="bi bi-shield-check"></i> Einwilligung (Consent)</h2>
+                        <h2 class="c-card__title mb-0"><i class="bi bi-shield-check"></i> {% trans "Consent" %}</h2>
                     </div>
                     <div class="c-card__body">
                         <div class="alert alert-warning mb-sm" id="consentAlert" style="display:none;">
@@ -39,11 +36,11 @@
                         <div class="d-flex gap-2">
                             <button class="c-button c-button--primary" onclick="setConsent(true)">
                                 <i class="bi bi-check2-circle c-button__icon"></i>
-                                <span class="c-button__text">Einwilligung erteilen</span>
+                                <span class="c-button__text">{% trans "Grant consent" %}</span>
                             </button>
                             <button class="c-button c-button--outline-primary" onclick="setConsent(false)">
                                 <i class="bi bi-x-circle c-button__icon"></i>
-                                <span class="c-button__text">Widerrufen</span>
+                                <span class="c-button__text">{% trans "Revoke" %}</span>
                             </button>
                         </div>
                     </div>
@@ -53,7 +50,7 @@
             <div class="col-lg-7">
                 <div class="c-card h-100">
                     <div class="c-card__header">
-                        <h2 class="c-card__title mb-0"><i class="bi bi-activity"></i> Session-Status</h2>
+                        <h2 class="c-card__title mb-0"><i class="bi bi-activity"></i> {% trans "Session status" %}</h2>
                     </div>
                     <div class="c-card__body">
                         <div id="federatedStatusBox">
@@ -69,7 +66,7 @@
             <div class="col-12">
                 <div class="c-card">
                     <div class="c-card__header">
-                        <h2 class="c-card__title mb-0"><i class="bi bi-shield-lock"></i> Privacy-Status</h2>
+                        <h2 class="c-card__title mb-0"><i class="bi bi-shield-lock"></i> {% trans "Privacy status" %}</h2>
                     </div>
                     <div class="c-card__body">
                         <div id="federatedPrivacyBox">

@@ -50,6 +50,7 @@ def check_template_syntax(template_name):
             dirs=[TEMPLATES_DIR],
             libraries={
                 "static": "django.templatetags.static",
+                "i18n": "django.templatetags.i18n",
             },
         )
         template = engine.get_template(template_name)
@@ -123,7 +124,7 @@ def main():
     check("T6b ilias page kept functional via its legacy route (OP25 cleanup unlinks it)",
           os.path.exists(os.path.join(TEMPLATES_DIR, "ilias.html")))
     check("T6c projects workflow linked in the navigation (OP25)",
-          "/projects/" in base_src and "Projekte" in base_src)
+          "/projects/" in base_src and "Projects" in base_src)
 
     # ---------- T7: upload view redirect ----------
     wf_path = os.path.join(os.path.dirname(__file__), "..", "django_project", "api", "workflow_display_views.py")

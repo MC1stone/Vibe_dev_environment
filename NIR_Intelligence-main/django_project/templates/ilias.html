@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load i18n %}{% load static %}
 
 {% block title %}NIR Intelligence - ILIAS E-Learning{% endblock %}
 
@@ -9,20 +9,20 @@
         <div class="c-page-header">
             <div>
                 <h1 class="c-page-header__title">
-                    <i class="bi bi-mortarboard"></i> ILIAS E-Learning
+                    <i class="bi bi-mortarboard"></i> {% trans "ILIAS E-Learning" %}
                 </h1>
                 <p class="c-page-header__subtitle">
-                    Synchronize NIR laboratory learning paths to the ILIAS container (S8) with OAuth2 authentication (OP2)
+                    {% trans "Synchronize NIR laboratory learning paths to the ILIAS container (S8) with OAuth2 authentication (OP2)" %}
                 </p>
             </div>
             <div class="d-flex gap-2">
                 <button class="c-button c-button--outline-primary" onclick="refreshIliasStatus()">
                     <i class="bi bi-arrow-clockwise c-button__icon"></i>
-                    <span class="c-button__text">Refresh Status</span>
+                    <span class="c-button__text">{% trans "Refresh Status" %}</span>
                 </button>
                 <a class="c-button c-button--secondary" href="http://localhost:8080" target="_blank">
                     <i class="bi bi-box-arrow-up-right c-button__icon"></i>
-                    <span class="c-button__text">Open ILIAS</span>
+                    <span class="c-button__text">{% trans "Open ILIAS" %}</span>
                 </a>
             </div>
         </div>

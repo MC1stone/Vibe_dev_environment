@@ -540,9 +540,21 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
   Default-Routen, set_language-Cookie, compilemessages); CI um OP48-Matrix
   + compilemessages erweitert. Regressionen OP3/OP7/OP8 grün;
   `manage.py check` ohne Befunde.
-- Offen: OP48b (26 Templates auf `{% trans %}` + Sprachumschalter), OP48c
-  (JS-Strings), OP48d (Backend-Meldungen/Chatbot/Quarto), OP48e
-  (Übersetzungscontent, ILIAS).
+- [x] OP48b Kern-Templates + Sprachumschalter: base.html (Navigation,
+  Login/Register, Footer, 24-Sprachen-Umschalter via set_language, html
+  lang-Attribut, i18n-Context-Processor), index/login/chatbot/ilias/federated
+  auf `{% trans %}`/`{% blocktrans %}` umgestellt (deutsche FL4-Strings als
+  msgids normalisiert); login/register/logout in i18n_patterns aufgenommen;
+  Maltesisch via EXTRA_LANG_INFO registriert (Django kennt mt nicht);
+  Kataloge de/en vollständig gefüllt (94 msgids, keine Lücken — auch
+  core/admin.py-Strings); Testmatrix auf 36 Checks erweitert (T4b
+  Katalog-Vollständigkeit, T5 lokalisiertes Rendering aller umgestellten
+  Seiten in de+en, T5b Umschalter, T5c/d html-lang).
+  Verifikation: 36/36 grün; Regressionen OP3 (angepasst: trans-Tag-Library +
+  msgid "Projects"), OP7, OP8, FL4 grün; manage.py check ohne Befunde.
+- Offen: OP48c (JS-Strings), OP48d (Backend-Meldungen/Chatbot/Quarto), OP48e
+  (Übersetzungscontent, ILIAS); weitere Templates (analysis, files, dashboard,
+  agents, spectra, jobs, settings, documentation u. a.) folgen inkrementell.
 
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter

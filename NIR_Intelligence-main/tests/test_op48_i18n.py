@@ -116,6 +116,53 @@ check('T3k non-EU language prefix gets redirected (no fake locale)',
       response.status_code in (302, 404))
 
 # ---------------------------------------------------------------------------
+# T4b: catalogs are complete (no empty msgstr except the header)
+# ---------------------------------------------------------------------------
+for lang in ('de', 'en'):
+    po = LOCALE_DIR / lang / 'LC_MESSAGES' / 'django.po'
+    lines = po.read_text(encoding='utf-8').split('\n')
+    empty = [lines[i] for i in range(len(lines) - 1)
+             if lines[i].startswith('msgid "') and lines[i] != 'msgid ""'
+             and lines[i + 1].strip() == 'msgstr ""']
+    check(f'T4b {lang} catalog has no untranslated entries', not empty,
+          str(empty[:3]))
+
+# ---------------------------------------------------------------------------
+# T5: OP48b localized templates render per language (de/en)
+# ---------------------------------------------------------------------------
+from django.template.loader import get_template  # noqa: E402
+
+localized_pages = {
+    '/': ('Der Analyse-Workflow', 'Neues Projekt anlegen'),
+    '/en/': ('The analysis workflow', 'Create new project'),
+    '/chatbot/': ('Analyse-Chatbot', 'Unterhaltung', 'Senden'),
+    '/en/chatbot/': ('Analysis Chatbot', 'Conversation', 'Send'),
+    '/login/': ('Anmelden', 'Passwort'),
+    '/en/login/': ('Sign In', 'Password'),
+    '/ilias/': ('ILIAS öffnen',),
+    '/federated/': ('Einwilligung erteilen',),
+    '/en/federated/': ('Grant consent',),
+}
+for url, needles in localized_pages.items():
+    response = client.get(url)
+    body = response.content.decode()
+    ok = response.status_code == 200 and all(n in body for n in needles)
+    check(f'T5 {url} renders localized', ok,
+          f'status={response.status_code} missing={[n for n in needles if n not in body]}')
+
+# language switcher present on every page (base.html)
+body = client.get('/').content.decode()
+check('T5b language switcher in base template',
+      'id="language-select"' in body and body.count('<option') == 24
+      and 'setlang' in body)
+
+# html lang attribute follows active language
+body = client.get('/en/').content.decode()
+check('T5c html lang=en on /en/', '<html lang="en">' in body)
+body = client.get('/').content.decode()
+check('T5d html lang=de on default', '<html lang="de">' in body)
+
+# ---------------------------------------------------------------------------
 # T4: compilemessages-compatible po files (no syntax errors)
 # ---------------------------------------------------------------------------
 try:

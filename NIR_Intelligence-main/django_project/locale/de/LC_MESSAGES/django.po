@@ -1,7 +1,408 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: NIR-IP OP48\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-30 13:00+0000\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+#: core/admin.py:20
+msgid "Personal info"
+msgstr "Persönliche Informationen"
+
+#: core/admin.py:21
+msgid "Preferences"
+msgstr "Einstellungen"
+
+#: core/admin.py:22
+msgid "Permissions"
+msgstr "Berechtigungen"
+
+#: core/admin.py:25
+msgid "Important dates"
+msgstr "Wichtige Termine"
+
+#: core/admin.py:26 core/admin.py:66 core/admin.py:106 core/admin.py:146
+#: templates/chatbot.html:21
+msgid "Status"
+msgstr "Status"
+
+#: core/admin.py:47 core/admin.py:91 core/admin.py:134 core/admin.py:171
+msgid "Basic Information"
+msgstr "Grundlegende Informationen"
+
+#: core/admin.py:50
+msgid "Sample Information"
+msgstr "Probeninformationen"
+
+#: core/admin.py:53
+msgid "Spectral Data"
+msgstr "Spektraldaten"
+
+#: core/admin.py:56 core/admin.py:152
+msgid "Metadata"
+msgstr "Metadaten"
+
+#: core/admin.py:59
+msgid "Collection Information"
+msgstr "Erfassungsinformationen"
+
+#: core/admin.py:62
+msgid "Analysis Results"
+msgstr "Analyseergebnisse"
+
+#: core/admin.py:69 core/admin.py:112 core/admin.py:155 core/admin.py:180
+#: core/admin.py:217
+msgid "Timestamps"
+msgstr "Zeitstempel"
+
+#: core/admin.py:94
+msgid "Spectra"
+msgstr "Spektren"
+
+#: core/admin.py:97
+msgid "Agent Information"
+msgstr "Agenteninformationen"
+
+#: core/admin.py:100
+msgid "Parameters"
+msgstr "Parameter"
+
+#: core/admin.py:103
+msgid "Results"
+msgstr "Ergebnisse"
+
+#: core/admin.py:109 core/admin.py:149
+msgid "Performance"
+msgstr "Leistung"
+
+#: core/admin.py:137
+msgid "Agent File"
+msgstr "Agentendatei"
+
+#: core/admin.py:140
+msgid "Capabilities"
+msgstr "Fähigkeiten"
+
+#: core/admin.py:143
+msgid "Dependencies"
+msgstr "Abhängigkeiten"
+
+#: core/admin.py:174
+msgid "Context"
+msgstr "Kontext"
+
+#: core/admin.py:177
+msgid "Additional Information"
+msgstr "Zusätzliche Informationen"
+
+#: core/admin.py:202
+msgid "User"
+msgstr "Benutzer"
+
+#: core/admin.py:205
+msgid "Display Preferences"
+msgstr "Anzeigeeinstellungen"
+
+#: core/admin.py:208
+msgid "Notification Preferences"
+msgstr "Benachrichtigungseinstellungen"
+
+#: core/admin.py:211
+msgid "Analysis Preferences"
+msgstr "Analyseeinstellungen"
+
+#: core/admin.py:214
+msgid "Storage Preferences"
+msgstr "Speichereinstellungen"
+
+#: templates/base.html:7
+msgid ""
+"NIR_Mistral DeveloperAgent Framework - Advanced NIR Spectroscopy Analysis "
+"Platform"
+msgstr ""
+
+#: templates/base.html:10
+msgid "NIR_Mistral Framework"
+msgstr "NIR_Mistral Framework"
+
+#: templates/base.html:40
+msgid "Skip to main content"
+msgstr "Zum Hauptinhalt springen"
+
+#: templates/base.html:65
+msgid "Workflow"
+msgstr "Workflow"
+
+#: templates/base.html:70 templates/base.html:165
+msgid "Projects"
+msgstr "Projekte"
+
+#: templates/base.html:75 templates/base.html:166 templates/index.html:213
+#: templates/index.html:310
+msgid "Spectrum database"
+msgstr "Spektrendatenbank"
+
+#: templates/base.html:80 templates/base.html:167
+msgid "Sensors"
+msgstr "Sensoren"
+
+#: templates/base.html:85
+msgid "Federated"
+msgstr "Föderiert"
+
+#: templates/base.html:98
+msgid "Language"
+msgstr "Sprache"
+
+#: templates/base.html:122
+msgid "Admin Panel"
+msgstr "Admin-Panel"
+
+#: templates/base.html:128
+msgid "Logout"
+msgstr "Abmelden"
+
+#: templates/base.html:136
+msgid "Login"
+msgstr "Anmelden"
+
+#: templates/base.html:140
+msgid "Register"
+msgstr "Registrieren"
+
+#: templates/base.html:160
+msgid "&copy; 2026 NIR_Mistral Framework. All rights reserved."
+msgstr "&copy; 2026 NIR_Mistral Framework. Alle Rechte vorbehalten."
+
+#: templates/chatbot.html:12
+msgid "Analysis Chatbot"
+msgstr "Analyse-Chatbot"
+
+#: templates/chatbot.html:15
+msgid ""
+"Discuss your analysis results with the local Ollama/Mistral chatbot (S6) "
+"with Qdrant RAG context (OP1)"
+msgstr ""
+
+#: templates/chatbot.html:25
+msgid "Clear Chat"
+msgstr "Chat leeren"
+
+#: templates/chatbot.html:34
+msgid "Conversation"
+msgstr "Unterhaltung"
+
+#: templates/chatbot.html:40
+msgid "Ask a question about your analysis results,"
+msgstr "Stellen Sie eine Frage zu Ihren Analyseergebnissen,"
+
+#: templates/chatbot.html:40
+msgid "e.g. 'Which analysis results are available?'"
+msgstr "z. B. „Welche Analyseergebnisse liegen vor?“"
+
+#: templates/chatbot.html:44
+msgid "Thinking..."
+msgstr "Denke nach..."
+
+#: templates/chatbot.html:48
+msgid "Ask about your analysis results..."
+msgstr "Frage zu Ihren Analyseergebnissen stellen..."
+
+#: templates/chatbot.html:52
+msgid "Send"
+msgstr "Senden"
+
+#: templates/chatbot.html:61
+msgid "Chatbot Status"
+msgstr "Chatbot-Status"
+
+#: templates/chatbot.html:67
+msgid "Loading status..."
+msgstr "Status wird geladen..."
+
+#: templates/chatbot.html:71
+msgid "RAG sources of the last answer"
+msgstr "RAG-Quellen der letzten Antwort"
+
+#: templates/chatbot.html:73 templates/chatbot.html:131
+msgid "No answer yet."
+msgstr "Noch keine Antwort."
+
+#: templates/chatbot.html:76
+msgid "Context options"
+msgstr "Kontextoptionen"
+
+#: templates/chatbot.html:80
+msgid "Attach recent analysis results"
+msgstr "Aktuelle Analyseergebnisse anhängen"
+
+#: templates/chatbot.html:83
+msgid ""
+"When checked, the latest analysis results are sent along with your question "
+"so the chatbot can discuss them (S6). Qdrant RAG context (OP1) is added "
+"automatically by the service when available."
+msgstr ""
+
+#: templates/federated.html:12
+msgid ""
+"Federated calibration across distributed spectrometer setups (FL1-FL3) - "
+"only model parameters leave the client, raw spectra remain local"
+msgstr ""
+
+#: templates/federated.html:17
+msgid "Refresh status"
+msgstr "Status aktualisieren"
+
+#: templates/federated.html:26
+msgid "Consent"
+msgstr "Einwilligung (Consent)"
+
+#: templates/federated.html:39
+msgid "Grant consent"
+msgstr "Einwilligung erteilen"
+
+#: templates/federated.html:43
+msgid "Revoke"
+msgstr "Widerrufen"
+
+#: templates/federated.html:53
+msgid "Session status"
+msgstr "Session-Status"
+
+#: templates/federated.html:69
+msgid "Privacy status"
+msgstr "Privacy-Status"
+
+#: templates/ilias.html:12
+msgid "ILIAS E-Learning"
+msgstr "ILIAS E-Learning"
+
+#: templates/ilias.html:15
+msgid ""
+"Synchronize NIR laboratory learning paths to the ILIAS container (S8) with "
+"OAuth2 authentication (OP2)"
+msgstr ""
+
+#: templates/ilias.html:21
+msgid "Refresh Status"
+msgstr "Status aktualisieren"
+
+#: templates/ilias.html:25
+msgid "Open ILIAS"
+msgstr "ILIAS öffnen"
+
+#: templates/index.html:199
+msgid "NIR Intelligence Platform"
+msgstr "NIR Intelligence Platform"
+
+#: templates/index.html:201
+msgid ""
+"Vollständig lokale NIR-Spektroskopie-Analyse: Projekt hochladen, Metadaten "
+"pflegen, Agenten-Analyse freigeben, studentenfertiger Abschlussbericht mit "
+"Chatbot."
+msgstr ""
+
+#: templates/index.html:205
+msgid "Create new project"
+msgstr "Neues Projekt anlegen"
+
+#: templates/index.html:209
+#, fuzzy
+#| msgid "Projects"
+msgid "Go to projects"
+msgstr "Zu den Projekten"
+
+#: templates/index.html:222
+msgid "The analysis workflow"
+msgstr "Der Analyse-Workflow"
+
+#: templates/index.html:225
+msgid "Hover over the individual steps to see an explanation."
+msgstr "Fahren Sie mit der Maus über die einzelnen Schritte, um eine Erklärung zu erhalten."
+"Fahren Sie mit der Maus über die einzelnen Schritte, um eine Erklärung zu "
+"erhalten."
+
+#: templates/index.html:232
+msgid "Login / Registration"
+msgstr "Login / Registrierung"
+
+#: templates/index.html:244
+msgid "Create project (upload)"
+msgstr "Projekt anlegen (Upload)"
+
+#: templates/index.html:257
+msgid "Edit metadata"
+msgstr "Metadaten bearbeiten"
+
+#: templates/index.html:270
+msgid "Add files"
+msgstr "Dateien ergänzen"
+
+#: templates/index.html:286
+msgid "Release (agent analysis)"
+msgstr "Release (Agenten-Analyse)"
+
+#: templates/index.html:298
+msgid "Final report"
+msgstr "Abschlussbericht"
+
+#: templates/index.html:327
+msgid "Welcome!"
+msgstr "Willkommen!"
+
+#: templates/index.html:327
+msgid "Please"
+msgstr "Bitte"
+
+#: templates/login.html:240
+msgid "Welcome to NIR_Mistral"
+msgstr "Willkommen bei NIR_Mistral"
+
+#: templates/login.html:241
+msgid "Advanced NIR Spectroscopy Analysis Platform"
+msgstr "Erweiterte NIR-Spektroskopie-Analyseplattform"
+
+#: templates/login.html:260
+msgid "Username or Email"
+msgstr "Benutzername oder E-Mail"
+
+#: templates/login.html:266
+msgid "Password"
+msgstr "Passwort"
+
+#: templates/login.html:274
+msgid "Remember me"
+msgstr "Angemeldet bleiben"
+
+#: templates/login.html:279
+msgid "Sign In"
+msgstr "Anmelden"
+
+#: templates/login.html:288
+msgid "Integration Options"
+msgstr "Integrations-Optionen"
+
+#: templates/login.html:296
+#, fuzzy
+#| msgid "Federated"
+msgid "Federated Learning"
+msgstr "Föderiertes Lernen"
+
+#: templates/login.html:309
+msgid "FlowerAI Integration"
+msgstr "FlowerAI-Integration"
+
+#: templates/login.html:322
+msgid "ILIAS Platform"
+msgstr "ILIAS-Plattform"
+
+#: templates/login.html:335
+msgid "Don't have an account?"
+msgstr "Noch kein Benutzerkonto?"
+
+#: templates/login.html:335
+msgid "Sign up"
+msgstr "Registrieren"
