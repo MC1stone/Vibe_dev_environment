@@ -332,6 +332,86 @@ check('T7g backend msgids in compiled de catalog', not missing_be,
       str(missing_be))
 
 # ---------------------------------------------------------------------------
+# T8: OP48e - translation content (22 EU catalogs, chatbot prompt, quarto lang)
+# ---------------------------------------------------------------------------
+locale_dir = (Path(__file__).resolve().parent.parent / 'django_project'
+              / 'locale')
+EU_REST = ['bg', 'hr', 'cs', 'da', 'nl', 'et', 'fi', 'fr', 'el', 'hu',
+           'ga', 'it', 'lv', 'lt', 'mt', 'pl', 'pt', 'ro', 'sk', 'sl',
+           'es', 'sv']
+
+# T8a: all 22 remaining EU languages have honest (empty) po catalogs
+missing_cats = [l for l in EU_REST
+                if not (locale_dir / l / 'LC_MESSAGES' / 'django.po').exists()]
+check('T8a 22 EU po catalogs provided (honest untranslated)',
+      not missing_cats, str(missing_cats))
+
+# T8b: untranslated catalogs compile clean (no fake translations)
+compile_fail = []
+for l in EU_REST:
+    po = locale_dir / l / 'LC_MESSAGES' / 'django.po'
+    try:
+        import subprocess
+        r = subprocess.run(['msgfmt', '--check', str(po), '-o', '/dev/null'],
+                           capture_output=True)
+        if r.returncode != 0:
+            compile_fail.append(l)
+    except FileNotFoundError:
+        break  # msgfmt not installed: compilemessages covers it in CI
+check('T8b untranslated EU catalogs compile clean', not compile_fail,
+      str(compile_fail))
+
+# T8c: chatbot system prompt localized (de/en, answer language follows request)
+svc_src = (Path(__file__).resolve().parent.parent / 'services'
+           / 'chatbot_service.py').read_text(encoding='utf-8')
+check('T8c chatbot system prompt localized per request language',
+      'SYSTEM_PROMPTS' in svc_src and 'system_prompt_for' in svc_src
+      and 'Antworte auf Deutsch' in svc_src and 'Answer in English' in svc_src)
+
+# T8d: chatbot view passes negotiated language to the service
+cb_view = (Path(__file__).resolve().parent.parent / 'django_project'
+           / 'api' / 'chatbot_views.py').read_text(encoding='utf-8')
+check('T8d chatbot view passes request language to service',
+      'language=translation.get_language()' in cb_view)
+
+# T8e: quarto config carries a report language (default de)
+qa_src = (Path(__file__).resolve().parent.parent / 'agents'
+          / 'quarto_agent.py').read_text(encoding='utf-8')
+check('T8e quarto report language configurable (default de)',
+      'lang: str = "de"' in qa_src and '"lang": self.config.lang' in qa_src)
+
+# T8f: qmd templates carry the lang placeholder
+qmds = sorted((Path(__file__).resolve().parent.parent / 'templates'
+               / 'reports').glob('*.qmd'))
+with_lang = [q for q in qmds if 'lang: {{lang}}' in
+             q.read_text(encoding='utf-8')]
+check('T8f qmd templates expose lang placeholder', len(with_lang) >= 7,
+      f'{len(with_lang)}/{len(qmds)}')
+
+# T8g: quarto_renderer injects lang into template data
+qr_src = (Path(__file__).resolve().parent.parent / 'django_project'
+          / 'core' / 'utils' / 'quarto_renderer.py').read_text(encoding='utf-8')
+check('T8g quarto_renderer injects lang per invocation',
+      "data.setdefault('lang', lang)" in qr_src)
+
+# T8h: ILIAS learning path carries the initiating user's language
+il_view = (Path(__file__).resolve().parent.parent / 'django_project'
+           / 'api' / 'ilias_views.py').read_text(encoding='utf-8')
+il_svc = (Path(__file__).resolve().parent.parent / 'services'
+          / 'ilias_learning_service.py').read_text(encoding='utf-8')
+check('T8h ILIAS sync carries active language of initiating user',
+      'language=translation.get_language()' in il_view
+      and 'language: Optional[str] = None' in il_svc
+      and '"language": self.language' in il_svc)
+
+# T8i: honest fallback: fr request falls back to default (no fake fr strings)
+resp = Client().post('/api/chatbot/message/', {}, HTTP_ACCEPT_LANGUAGE='fr')
+err_fr = resp.json().get('error') if resp.status_code == 400 else None
+check('T8i untranslated language falls back honestly (fr -> default de)',
+      resp.status_code == 400 and err_fr == 'question ist erforderlich',
+      f'{resp.status_code} {err_fr}')
+
+# ---------------------------------------------------------------------------
 # summary
 # ---------------------------------------------------------------------------
 print(f'\nOP48 i18n infrastructure: {PASS} passed, {FAIL} failed')

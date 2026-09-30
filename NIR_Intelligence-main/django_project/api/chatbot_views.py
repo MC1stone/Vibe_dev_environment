@@ -49,11 +49,14 @@ def chatbot_message(request):
                         status=status.HTTP_400_BAD_REQUEST)
 
     service = _get_chatbot_service()
+    # OP48e: the answer language follows the negotiated request language
+    from django.utils import translation
     result = service.chat(
         question=str(question),
         analysis_results=request.data.get("analysis_results"),
         documents=request.data.get("documents"),
         history=request.data.get("history"),
+        language=translation.get_language(),
     )
 
     if result.get("degraded"):

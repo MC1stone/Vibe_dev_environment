@@ -2,6 +2,7 @@
 title: "Metadata Quality Assessment Report"
 author: "NIR Intelligence Platform"
 format: html
+lang: {{lang}}
 date: "`r Sys.Date()`"
 ---
 

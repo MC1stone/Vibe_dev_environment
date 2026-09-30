@@ -56,11 +56,14 @@ def learning_path_sync(request):
             content_ref=module_data.get("content_ref"),
         ))
 
+    from django.utils import translation
     path = LearningPath(
         title=payload["title"],
         description=payload.get("description", ""),
         target_group=payload.get("target_group", "students"),
         modules=modules,
+        # OP48e: sync takes the active language of the initiating user
+        language=translation.get_language(),
     )
 
     if not modules:

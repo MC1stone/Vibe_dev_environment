@@ -1,6 +1,7 @@
 ---
 title: "Comprehensive NIR Spectral Analysis Report"
 author: "NIR Intelligence Platform"
+lang: {{lang}}
 format: 
   html:
     toc: true

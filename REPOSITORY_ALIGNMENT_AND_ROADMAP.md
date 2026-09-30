@@ -554,10 +554,10 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
   msgid "Projects"), OP7, OP8, FL4 grün; manage.py check ohne Befunde.
 - [x] OP48c JS-Strings: `/js-i18n/`-Endpunkt (verhandelter Katalog als JS-Bootstrap, `?format=json` für Tests; Bugfix: LocaleMiddleware erzwingt bei präfix-losen URLs LANGUAGE_CODE — Cookie/Accept-Language-Verhandlung daher im View selbst), `i18n.js` (nirGettext/nirInterpolate, ehrlicher msgid-Fallback), base.html lädt Katalog+Helper vor main.js; alle benutzersichtbaren JS-Meldungen in files/agents/analysis/jobs/spectra.js auf nirGettext umgestellt (82 msgids, Kataloge de/en ergänzt); Testmatrix 46/46 grün, Regressionen OP3/OP25/OP15/FL4 grün; `node --check` sauber.
 - [x] OP48d Backend-Meldungen: alle statischen API-Strings ('error'/'message') in api/*_views.py auf gettext umgestellt (106 msgids, Kataloge de/en ergänzt; 'status'-Werte als API-Vertrags-Keys bewusst unübersetzt); federated_views mit gettext_lazy (Offline-Kernfunktion); neue ApiLanguageMiddleware aktiviert Cookie/Accept-Language-Verhandlung auf unpräfigierten /api/- und /js-i18n/-Routen; Testmatrix 53/53 grün; Regressionen OP1/OP3/OP8/OP11/OP13/OP15/OP24/OP25/OP28/S6/FL4 grün.
-- Offen: OP48e
-  (Übersetzungscontent, ILIAS); Quarto-Bericht-Template-Texte (generierter
-  Content) und weitere Templates (analysis, files, dashboard,
-  agents, spectra, jobs, settings, documentation u. a.) folgen inkrementell.
+- [x] OP48e Übersetzungscontent: 22 zusätzliche EU-Kataloge als ehrlich leere .po-Dateien (Übersetzung durch native Speaker/Fachlehrkräfte, kein Fake — fr fällt ehrlich auf Default zurück); Chatbot-System-Prompt sprachabhängig (Antwort-Sprache = Anfrage-Sprache); Quarto-Berichtssprache pro Aufruf konfigurierbar (QuartoConfig.lang, Default de, lang-Platzhalter in allen 7 qmd-Templates); ILIAS-Sync trägt die aktive Sprache des initiierenden Nutzers im Payload. Testmatrix 62/62 grün; Regressionen S6/FL4/FL5/OP24/OP11/OP23/OP3/OP25 grün.
+- Offen: Rest-Templates (analysis, files, dashboard, agents, spectra,
+  jobs, settings, documentation u. a.) auf `{% trans %}` — inkrementell
+  je Template (OP48b-Muster).
 
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter

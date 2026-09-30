@@ -51,7 +51,7 @@ class QuartoRenderer:
             logger.error(f"Error checking Quarto installation: {str(e)}")
             return False, str(e)
 
-    def render_report(self, template_name, output_filename=None, data=None, format='html'):
+    def render_report(self, template_name, output_filename=None, data=None, format='html', lang='de'):
         """
         Render a Quarto report with the given data.
         
@@ -67,6 +67,10 @@ class QuartoRenderer:
         if not self.enabled:
             logger.warning("Quarto rendering is disabled in settings")
             return False, None, "Quarto rendering is disabled"
+
+        # OP48e: report language per invocation (default de)
+        data = dict(data or {})
+        data.setdefault('lang', lang)
         
         # Check Quarto installation
         installed, version = self.check_quarto_installation()

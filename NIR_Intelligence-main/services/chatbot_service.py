@@ -22,13 +22,31 @@ OLLAMA_DEFAULT_URL = "http://localhost:11434"
 DEFAULT_MODEL = "mistral:latest"
 RAG_COLLECTION = "nir_spectra"
 
-SYSTEM_PROMPT = (
-    "You are the result discussion assistant of the NIR Intelligence Platform "
-    "(NIR-IP). You answer questions about near-infrared spectroscopy analysis "
-    "results, calibrations, sensor quality and similarity findings. Use the "
-    "provided context when available; state clearly when the context does not "
-    "contain the answer. Keep answers precise and factual."
-)
+SYSTEM_PROMPTS = {
+    "en": (
+        "You are the result discussion assistant of the NIR Intelligence "
+        "Platform (NIR-IP). You answer questions about near-infrared "
+        "spectroscopy analysis results, calibrations, sensor quality and "
+        "similarity findings. Use the provided context when available; state "
+        "clearly when the context does not contain the answer. Keep answers "
+        "precise and factual. Answer in English."
+    ),
+    "de": (
+        "Du bist der Diskussionsassistent fuer Analyseergebnisse der NIR "
+        "Intelligence Platform (NIR-IP). Du beantwortest Fragen zu "
+        "NIR-Spektroskopie-Analyseergebnissen, Kalibrierungen, "
+        "Sensorqualitaet und Aehnlichkeitsuntersuchungen. Nutze den "
+        "bereitgestellten Kontext, wenn verfuegbar; sage klar, wenn der "
+        "Kontext die Antwort nicht enthaelt. Antworte praezise und sachlich. "
+        "Antworte auf Deutsch."
+    ),
+}
+SYSTEM_PROMPT = SYSTEM_PROMPTS["en"]
+
+
+def system_prompt_for(language):
+    """OP48e: answer language follows the request language (default en)."""
+    return SYSTEM_PROMPTS.get((language or "en")[:2], SYSTEM_PROMPTS["en"])
 
 
 class ChatMessage:
@@ -165,11 +183,12 @@ class ChatbotService:
     def build_messages(self, question: str,
                        analysis_results: Optional[List[Dict[str, Any]]] = None,
                        documents: Optional[List[Dict[str, str]]] = None,
-                       history: Optional[List[Dict[str, str]]] = None) -> List[Dict[str, str]]:
+                       history: Optional[List[Dict[str, str]]] = None,
+                       language: Optional[str] = None) -> List[Dict[str, str]]:
         """Compose the message list sent to Ollama (system + RAG + history + question)"""
         rag_result = self.rag.build(question, analysis_results=analysis_results,
                                     documents=documents)
-        system_content = SYSTEM_PROMPT
+        system_content = system_prompt_for(language)
         if rag_result["context"]:
             system_content += "\n\nContext:\n" + rag_result["context"]
 
@@ -183,10 +202,12 @@ class ChatbotService:
     def chat(self, question: str,
              analysis_results: Optional[List[Dict[str, Any]]] = None,
              documents: Optional[List[Dict[str, str]]] = None,
-             history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
+             history: Optional[List[Dict[str, str]]] = None,
+             language: Optional[str] = None) -> Dict[str, Any]:
         """Ask the chatbot; returns answer plus metadata about the RAG context."""
         messages, rag_result = self.build_messages(question, analysis_results,
-                                                   documents, history)
+                                                   documents, history,
+                                                   language=language)
         try:
             raw = self.client.chat(messages)
             answer = raw.get("message", {}).get("content", "")

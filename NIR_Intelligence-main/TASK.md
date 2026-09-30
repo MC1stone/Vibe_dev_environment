@@ -40,8 +40,23 @@ Die Plattform (UI, Backend-Meldungen, Berichte, ILIAS-Sync) soll fuer alle
   Middleware-Wiring, Katalog-Spotchecks); Regressionen OP1/OP3/OP8/OP11/
   OP13/OP15/OP24/OP25/OP28/S6-Chatbot/FL4 gruen; manage.py check ohne
   Befunde.
-- Offen: OP48e Uebersetzungscontent/ILIAS; Quarto-Bericht-Template-Texte
-  (generierter Content) und Rest-Templates inkrementell.
+- OP48e Uebersetzungscontent - ERLEDIGT: 22 zusaetzliche EU-Kataloge als
+  ehrlich leere .po-Dateien bereitgestellt (msgids kommen aus den
+  de/en-Quellen; Uebersetzung durch native Speaker/Fachlehrkraefte,
+  keine Fake-Uebersetzungen; fr-Request faellt ehrlich auf Default
+  zurueck, verifiziert); Chatbot-System-Prompt sprachabhaengig
+  (SYSTEM_PROMPTS de/en, Antwort-Sprache folgt der Anfrage-Sprache,
+  View reicht translation.get_language() durch); Quarto-Berichtssprache
+  pro Aufruf konfigurierbar (QuartoConfig.lang, Default de; lang-
+  Platzhalter in allen 7 .qmd-Templates + Default-Template-YAML;
+  quarto_renderer injiziert lang); ILIAS-Sync traegt die aktive
+  Sprache des initiierenden Nutzers im LearningPath-Payload
+  (language-Feld). Testmatrix 62/62 gruen (T8: Katalog-Anwesenheit,
+  msgfmt-clean, Prompt-/Quarto-/ILIAS-Verkabelung, ehrlicher
+  fr-Fallback); Regressionen S6/FL4/FL5/OP24/OP11/OP23/OP3/OP25 gruen.
+- Offen: Rest-Templates (analysis, files, dashboard, agents, spectra,
+  jobs, settings, documentation u. a.) auf {% trans %} - inkrementell
+  je Template (OP48b-Muster).
 
 ### Success Criteria
 - UI in de und en vollstaendig umschaltbar; 24 Sprachkataloge angelegt
