@@ -250,8 +250,12 @@ check("T6c database page shows the shared spectrum",
 detail_response = client.get(f'/projects/database/{record.id}/')
 check("T6d detail page renders (200)",
       detail_response.status_code == 200, str(detail_response.status_code))
+# OP48 l10n: floatformat localizes the decimal separator per active
+# language, so the check must be neutral about the separator.
+_series_rendered = any(f'16146{sep}2' in detail_response.content.decode()
+                       for sep in ('.', ','))
 check("T6e detail page shows the series",
-      b'16146.2' in detail_response.content)
+      _series_rendered)
 check("T6e2 detail page embeds the chart image",
       b'data:image/png;base64,' in detail_response.content
       and b'Spektrum-Graph' in detail_response.content)
