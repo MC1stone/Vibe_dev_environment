@@ -591,6 +591,14 @@ Django-Instanzen (8000/8001). start/stop/check sind jetzt Docker-
 Delegatoren, vier Alt-Starter entfernt, START_SERVER.md Docker-only.
 Testmatrix test_op51_start_scripts.py 20/20.
 
+### OP52 — Menue-Umbau + Kalibrierungs-Uebersicht — ERLEDIGT
+Hauptmenue neu geordnet (Projekte -> Sensoren -> Kalibrieren -> Lernen mit
+Kursen, Workflow als Startseite zuletzt), Spektren-Datenbank als Unterpunkt
+unter Projekte, ILIAS-Kurse als Unterpunkt unter Lernen. Neue Seite
+/calibration/ listet die PLS/PCR-Kalibrationen aller analysierten Projekte
+aus den Crew-Ergebnissen. i18n de/en ergaenzt. Testmatrix
+test_op52_nav_menu.py 40/40.
+
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.

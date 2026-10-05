@@ -12,6 +12,7 @@ from django.views.generic import TemplateView
 from django.http import JsonResponse
 from rest_framework_simplejwt.views import TokenRefreshView
 from api.views import CustomTokenObtainPairView
+from api.project_views import CalibrationOverviewView
 from api.views import (
     AgentListView, AgentDetailView, AgentExecuteView,
     SpectrumListCreateView, SpectrumRetrieveView,
@@ -60,6 +61,7 @@ urlpatterns = [
 
     # Analysis Projects (OP10 project workflow)
     path('projects/', include('api.project_urls')),
+    path('calibration/', CalibrationOverviewView.as_view(), name='calibration-page'),
     path('api/projects/', include('api.project_urls')),
     
     # User Management

@@ -3,7 +3,25 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP51 - Startskript-Konsolidierung (EIN Startweg: Docker)
+## Current Task: OP52 - Menue-Umbau + Kalibrierungs-Uebersicht
+
+### Objective
+Release-Feinschliff der Navigation: Workflow (Startseite /, erklaert die
+Plattform) rueckt ans Ende des Hauptmenues. Neue Reihenfolge: 1. Projekte
+(Unterpunkt Spektren-Datenbank), 2. Sensoren (Unterpunkte Sensoren +
+DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
+/calibration/), 4. Lernen mit Kursen (Unterpunkt ILIAS-Kurse).
+
+### Status
+- ERLEDIGT: base.html-Navigation umgebaut; CalibrationOverviewView
+  (django_project/api/project_views.py) + Template calibration_overview.html
+  listet pro Projekt die Kalibrations-Sektionen (PLS/PCR, bestes Modell,
+  R^2/CV-Folds, Charts) aus den Crew-Ergebnissen; Route /calibration/
+  (calibration-page) + /api/projects/calibration/overview/.
+  i18n-Kataloge de/en um OP52-msgids ergaenzt (de Identity, en uebersetzt).
+  Testmatrix test_op52_nav_menu.py 40/40 gruen, in CI aufgenommen.
+
+## Completed Task: OP51 - Startskript-Konsolidierung (EIN Startweg: Docker)
 
 ### Objective
 Feldtest zeigte zwei parallele Django-Instanzen (Auswertung auf 8001,
