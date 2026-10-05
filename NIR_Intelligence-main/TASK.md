@@ -10,7 +10,7 @@ Release-Feinschliff der Navigation: Workflow (Startseite /, erklaert die
 Plattform) rueckt ans Ende des Hauptmenues. Neue Reihenfolge: 1. Projekte
 (Unterpunkt Spektren-Datenbank), 2. Sensoren (Unterpunkte Sensoren +
 DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
-/calibration/), 4. Lernen mit Kursen (Unterpunkt ILIAS-Kurse).
+/calibration/), 4. Lernen mit Kursen (Unterpunkte ILIAS-Kurse + Federated Learning).
 
 ### Status
 - ERLEDIGT: base.html-Navigation umgebaut; CalibrationOverviewView
