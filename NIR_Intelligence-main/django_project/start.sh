@@ -1,26 +1,23 @@
 #!/bin/bash
-
-# Simple NIR_Mistral Django Server Start Script
-# Usage: ./start.sh [port]
-
-cd "$(dirname "$0")"
-
-# Kill any existing processes on the port
-PORT="${1:-8000}"
-echo "Checking for existing processes on port $PORT..."
-fuser -k $PORT/tcp 2>/dev/null || true
-ps aux | grep -E "(manage\.py|runserver)" | grep -v grep | grep -v code | awk '{print $2}' | xargs kill -9 2>/dev/null || true
-sleep 1
-
-# Use virtual environment Python
-PYTHON="$(pwd)/venv/bin/python"
-
-echo "Starting NIR_Mistral Django Server on port $PORT..."
-echo "Access the application at: http://localhost:$PORT/"
-echo "Admin panel at: http://localhost:$PORT/admin/"
-echo "Username: admin, Password: admin123"
-echo "Press Ctrl+C to stop the server"
-echo ""
-
-# Start the server
-$PYTHON manage.py runserver 0.0.0.0:$PORT
+# OP51: The single supported way to run the platform is the Docker stack.
+# This legacy host-Django starter now delegates to docker compose and
+# warns about the removed parallel-host-server mode (no second port,
+# no kill -9 of unrelated manage.py processes anymore).
+set -e
+cd "$(dirname "$0")/.."
+echo "== NIR Intelligence Platform - Start (Docker-Stack) =="
+if [ -n "$1" ]; then
+  echo "Hinweis: Port-Argument wird ignoriert - die Plattform laeuft im Docker-Stack auf Port 8000."
+fi
+if ! command -v docker >/dev/null 2>&1; then
+  echo "ERROR: Docker ist nicht installiert/verfuegbar." >&2
+  echo "  Installation: https://docs.docker.com/engine/install/" >&2
+  exit 1
+fi
+docker compose up -d
+echo
+echo "Web-UI:      http://localhost:8000/"
+echo "Admin:        http://localhost:8000/admin/"
+echo "ILIAS:        http://localhost:8080/"
+echo "Status:       docker compose ps"
+echo "Stoppen:      docker compose down"
