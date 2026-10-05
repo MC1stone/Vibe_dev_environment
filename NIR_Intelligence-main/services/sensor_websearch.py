@@ -36,8 +36,8 @@ def ollama_available(base_url: Optional[str] = None) -> bool:
         return False
     url = (base_url or os.getenv("NIR_SENSOR_WEBSEARCH_URL", OLLAMA_DEFAULT_URL)).rstrip("/")
     try:
-        response = requests.get(f"{url}/api/tags", timeout=5)
-        return response.status_code == 200
+        from services.ollama_health import ollama_reachable
+        return ollama_reachable(url)
     except Exception:
         return False
 

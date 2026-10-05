@@ -173,6 +173,8 @@ services:
     depends_on:
       postgresql:
         condition: service_healthy
+      ollama:
+        condition: service_healthy
     networks:
       - nir_network
 
@@ -190,8 +192,12 @@ services:
       - PYTHONPATH=/app:/app/agents
       - DJANGO_DB_HOST=postgresql
       - DJANGO_DB_PORT=5432
+      - OLLAMA_URL=http://ollama:11434
+      - NIR_LLM_MODEL=${NIR_LLM_MODEL:-mistral}
     depends_on:
       postgresql:
+        condition: service_healthy
+      ollama:
         condition: service_healthy
     restart: unless-stopped
     networks:
@@ -242,13 +248,15 @@ services:
     environment:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_ORIGINS=*
+      - OLLAMA_KEEP_ALIVE=24h
     networks:
       - nir_network
     healthcheck:
       test: ["CMD", "ollama", "list"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 3
+      retries: 12
+      start_period: 60s
 
   # Redis for caching and task queue
   redis:

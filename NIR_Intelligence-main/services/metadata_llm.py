@@ -91,9 +91,8 @@ class OllamaMetadataClient:
 
     def is_available(self) -> bool:
         try:
-            import requests
-            response = requests.get(f"{self.base_url}/api/tags", timeout=5)
-            return response.status_code == 200
+            from services.ollama_health import ollama_reachable
+            return ollama_reachable(self.base_url)
         except Exception:
             return False
 

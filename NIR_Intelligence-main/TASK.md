@@ -3,7 +3,35 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP49 - Sensor-Websearch (Opt-in) + DIY-Spektrometer-Übersicht
+## Current Task: OP50 - Release-Fix: Robuster Ollama-Start (LLM-first statt Fallback-first)
+
+### Objective
+Release ohne OP5. Vorab-Fix: Ollama startet im Container langsamer als
+Django/Background-Crew; alle KI-Gates (Chatbot, Embedding, Metadata-LLM,
+Sensor-Websearch, CrewAI-Gate) prueften mit EINEM GET /api/tags (5s bzw. 2s
+Timeout) und fielen direkt nach Systemstart auf False -> Analyse lief fast
+immer deterministisch (Fallback-first statt LLM-first).
+
+### Status
+- ERLEDIGT: services/ollama_health.py - zentraler robust Probe (Default
+  5 Versuche, 1s Backoff, Erfolg 60s / Misserfolg 30s gecacht, env-tunbar
+  NIR_OLLAMA_PROBE_*); alle is_available()-Konsumenten
+  (metadata_llm, chatbot_service, embedding_service, sensor_websearch)
+  und der CrewAI-Gate (project_crew, zuvor timeout=2) nutzen den Probe.
+- ERLEDIGT: docker-compose.yml - background_crew erhielt OLLAMA_URL
+  (fehlte: Crew lief gegen localhost:11434 im eigenen Container ->
+  enable_crewai immer False) + NIR_LLM_MODEL; django_app/background_crew
+  warten auf ollama service_healthy; Ollama-Healthcheck 10s/12 Retries/
+  start_period 60s + OLLAMA_KEEP_ALIVE=24h. docker-compose.prod.yml:
+  web wartet auf ollama service_healthy, gleicher Healthcheck.
+  packaging/docker-compose.host-backend.yml: Healthcheck + KEEP_ALIVE.
+- Testmatrix test_op50_ollama_startup.py 19/19 gruen (Probe-Vertrag,
+  Retry/Backoff/Cache, Konsumenten-Wiring, Compose-Wiring); CI um
+  OP50-Matrix erweitert; Regressionen OP31 25/25, OP32 19/19, OP7 33/33,
+  OP6 51/51, S6 17/17, OP1 29/29 gruen (OP48/OP49-Katalogtests
+  benoetigen msgfmt, nur in CI verfuegbar - Baseline-identisch).
+
+## Completed Task: OP49 - Sensor-Websearch (Opt-in) + DIY-Spektrometer-Übersicht
 
 ### Objective
 1. Opt-in Web-Suche nach unbekannten Sensoren über das lokale Ollama

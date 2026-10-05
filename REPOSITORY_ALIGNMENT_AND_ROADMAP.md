@@ -577,6 +577,13 @@ die Fixes PR #12 (requirements-Pins), #13/#14 (ILIAS utf8 + strict mode),
 - Offen (Zielumgebung): Ollama dort starten und `NIR_SENSOR_WEBSEARCH=1`
   setzen, dann Sensor-Suche mit einem realen unbekannten Sensor testen.
 
+### OP50 — Release-Fix: Robuster Ollama-Start (LLM-first) — ERLEDIGT
+Zentraler Probe services/ollama_health.py (Retry/Backoff/Cache), alle
+KI-Gates umgestellt; background_crew OLLAMA_URL nachgeruestet; Compose
+(dev/prod/host-backend) wartet auf ollama service_healthy, Healthcheck
+10s/12x/start_period 60s, OLLAMA_KEEP_ALIVE=24h. Testmatrix
+test_op50_ollama_startup.py 19/19 gruen, in CI aufgenommen.
+
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.
