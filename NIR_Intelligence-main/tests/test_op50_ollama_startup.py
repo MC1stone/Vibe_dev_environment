@@ -112,14 +112,18 @@ except Exception as exc:
     sys.exit(1)
 
 probe_calls = []
+model_calls = []
 with mock.patch.object(oh_mod, "ollama_reachable",
-                       side_effect=lambda url, **kw: probe_calls.append(url) or True):
+                       side_effect=lambda url, **kw: probe_calls.append(url) or True), \
+     mock.patch.object(oh_mod, "ollama_model_available",
+                       side_effect=lambda url, model=None, **kw: model_calls.append((url, model)) or True):
     ok = (OllamaMetadataClient().is_available()
           and OllamaChatClient("http://x:11434").is_available()
           and OllamaEmbeddingClient("http://x:11434").is_available()
           and ollama_available("http://x:11434"))
 check("T3b metadata/chat/embedding/websearch use robust probe",
-      ok and len(probe_calls) == 4, f"probe_calls={probe_calls}")
+      ok and len(probe_calls) == 3 and len(model_calls) == 1,
+      f"probe_calls={probe_calls} model_calls={model_calls}")
 
 # T4: project_crew LLM gate uses robust probe (not a 2s one-shot GET)
 src = (Path(__file__).resolve().parent.parent
@@ -160,6 +164,25 @@ with mock.patch.object(_requests, "post", timeout_post):
         raised = True
 check("T4d exhausted chat retries raise honestly (caller catches non-fatal)",
       raised and timeout_post.call_count == 2)
+
+# T4e: model-aware probe - reachable Ollama without the model must
+# report unavailable (an implicit multi-GB pull would time out anyway)
+from services.ollama_health import ollama_model_available, reset_cache
+
+reset_cache()
+payload_up = {"models": [{"name": "mistral:latest"}, {"name": "nomic-embed-text:latest"}]}
+with mock.patch.object(oh_mod, "_probe_once", return_value=True):
+    with mock.patch("requests.get",
+                    return_value=mock.Mock(status_code=200, json=lambda: payload_up)):
+        reset_cache()
+        check("T4e model present -> model probe True",
+              ollama_model_available("http://x:11434", "mistral"))
+        reset_cache()
+        check("T4f model missing -> model probe False (honest, no silent pull)",
+              not ollama_model_available("http://x:11434", "llama3"))
+        reset_cache()
+        check("T4g bare family name matches :latest tag",
+              ollama_model_available("http://x:11434", "mistral:latest"))
 
 # T5: compose wiring - services wait for healthy ollama
 import yaml

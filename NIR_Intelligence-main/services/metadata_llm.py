@@ -106,8 +106,8 @@ class OllamaMetadataClient:
 
     def is_available(self) -> bool:
         try:
-            from services.ollama_health import ollama_reachable
-            return ollama_reachable(self.base_url)
+            from services.ollama_health import ollama_model_available
+            return ollama_model_available(self.base_url, self.model)
         except Exception:
             return False
 

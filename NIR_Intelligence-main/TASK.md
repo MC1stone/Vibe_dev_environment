@@ -36,6 +36,17 @@ immer deterministisch (Fallback-first statt LLM-first).
   NIR_LLM_TIMEOUT konfigurierbar (Default 120s) + genau ein Retry nach
   Timeout (Modell bleibt danach via OLLAMA_KEEP_ALIVE geladen);
   OP50-Matrix um T4b-T4d erweitert (22/22 gruen).
+- NACHTRAG 2 (Feldtest, read timeout=120 trotz Retry): Wurzelursache war
+  ein Ollama OHNE geladenes Modell (Modell lag nur in einem Altvolume /
+  Altecontainer) - der erste Chat traegert einen impliziten Multi-GB-Pull,
+  den kein Timeout abdeckt. Neuer model-bewusster Probe
+  ollama_model_available() (services/ollama_health.py): verfuegbar nur,
+  wenn /api/tags das Modell listet (Familien-/Tag-Toleranz);
+  OllamaMetadataClient.is_available() nutzt ihn, _ki_metadata_pass
+  meldet im Bericht ehrlich 'Modell X fehlt - bitte laden: docker
+  compose exec ollama ollama pull X' statt eines Timeouts.
+  OP50-Matrix um T4e-T4g erweitert (25/25 gruen); Regressionen OP31/OP32/
+  S6/OP1 gruen.
 
 ## Completed Task: OP49 - Sensor-Websearch (Opt-in) + DIY-Spektrometer-Übersicht
 

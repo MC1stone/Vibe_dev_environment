@@ -19,7 +19,7 @@
 import logging
 import os
 import time
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger("Service.OllamaHealth")
 
@@ -80,6 +80,67 @@ def ollama_reachable(base_url: Optional[str] = None,
     if not ok:
         logger.warning("Ollama nicht erreichbar unter %s (%d Versuche)",
                         url, max(1, n_attempts))
+    return ok
+
+
+def _model_matches(model: str, tags_payload: Any) -> bool:
+    """True when the requested model is present in /api/tags. Ollama lists
+    models with their full tag (mistral:latest); the probe accepts an
+    exact match, a prefix-family match (mistral -> mistral:latest) and a
+    bare tag match (mistral:latest -> mistral)."""
+    try:
+        names = [str(m.get("name", "")) for m in tags_payload.get("models", [])]
+    except Exception:
+        return False
+    wanted = model.strip()
+    if not names:
+        return False
+    def _norm(n: str) -> str:
+        n = n.split(":")[0]
+        return n
+    if wanted in names:
+        return True
+    fam_w, tag_w = (wanted.split(":", 1) + [""])[:2]
+    for name in names:
+        fam_n, tag_n = (name.split(":", 1) + [""])[:2]
+        if fam_n == fam_w and (not tag_w or not tag_n or tag_w == tag_n):
+            return True
+        if _norm(name) == _norm(wanted):
+            return True
+    return False
+
+
+def ollama_model_available(base_url: Optional[str] = None,
+                           model: Optional[str] = None) -> bool:
+    """Robust check that Ollama is up AND the configured model is present.
+
+    A reachable Ollama without the model makes every chat call trigger an
+    implicit multi-GB model download that no read timeout can cover -
+    the release therefore requires the model to be present. Returns True
+    only when /api/tags lists the model; never raises.
+    """
+    url = (base_url or default_base_url()).rstrip("/")
+    wanted = (model or os.environ.get("NIR_LLM_MODEL") or "mistral").strip()
+    cache_key = f"{url}::model::{wanted}"
+    now = time.monotonic()
+    cached = _cache.get(cache_key)
+    if cached:
+        ok, expires = cached
+        if now < expires:
+            return ok
+    ok = False
+    try:
+        import requests
+        response = requests.get(f"{url}/api/tags", timeout=_TIMEOUT)
+        if response.status_code == 200:
+            ok = _model_matches(wanted, response.json())
+        if response.status_code == 200 and not ok:
+            logger.warning(
+                "Ollama erreicht, aber Modell '%s' fehlt - bitte laden: "
+                "docker compose exec ollama ollama pull %s", wanted, wanted)
+    except Exception:
+        ok = False
+    _cache[cache_key] = (ok, now + (_SUCCESS_TTL if ok else _FAILURE_TTL))
     return ok
 
 
