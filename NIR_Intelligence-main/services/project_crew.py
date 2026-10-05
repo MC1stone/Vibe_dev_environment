@@ -453,11 +453,9 @@ def run_project_crew(project) -> Dict[str, Any]:
 
     try:
         import crewai  # noqa: F401
-        import requests as _requests
-        _llm_up = _requests.get(
-            f"{os.environ.get('OLLAMA_URL', 'http://localhost:11434').rstrip('/')}/api/tags",
-            timeout=2,
-        ).ok
+        from services.ollama_health import ollama_reachable
+        _llm_up = ollama_reachable(
+            os.environ.get('OLLAMA_URL', 'http://localhost:11434').rstrip('/'))
     except Exception:
         _llm_up = False
 

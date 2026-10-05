@@ -43,7 +43,7 @@ services:
       qdrant:
         condition: service_started
       ollama:
-        condition: service_started
+        condition: service_healthy
     networks:
       - nir_network
     healthcheck:
@@ -181,9 +181,10 @@ services:
       - nir_network
     healthcheck:
       test: ["CMD", "ollama", "list"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 3
+      retries: 12
+      start_period: 60s
 
   # Redis for Caching and Task Queue
   redis:
