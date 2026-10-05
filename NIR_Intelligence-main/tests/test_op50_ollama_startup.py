@@ -127,6 +127,40 @@ src = (Path(__file__).resolve().parent.parent
 check("T4a project_crew gate uses ollama_reachable",
       "ollama_reachable" in src and "timeout=2" not in src)
 
+# T4b/T4c: chat call survives the model cold start (retry on timeout,
+# configurable timeout instead of the previous fixed 60s read timeout)
+import requests as _requests
+from services.metadata_llm import OllamaMetadataClient
+
+check("T4b metadata client timeout configurable (NIR_LLM_TIMEOUT, default 120)",
+      OllamaMetadataClient(timeout=None).timeout == 120
+      if "NIR_LLM_TIMEOUT" not in os.environ
+      else OllamaMetadataClient(timeout=None).timeout == int(os.environ["NIR_LLM_TIMEOUT"]))
+
+call_count = {"n": 0}
+
+def flaky_post(url, json=None, timeout=None):
+    call_count["n"] += 1
+    if call_count["n"] == 1:
+        raise _requests.exceptions.Timeout("read timed out (cold start)")
+    return mock.Mock(status_code=200, json=lambda: {"message": {"content": "{}"}})
+
+with mock.patch.object(_requests, "post", side_effect=flaky_post):
+    client = OllamaMetadataClient(timeout=120)
+    content = client.chat("prompt")
+check("T4c chat retries once after cold-start read timeout", content == "{}" and call_count["n"] == 2)
+
+call_count["n"] = 0
+timeout_post = mock.Mock(side_effect=_requests.exceptions.Timeout("down"))
+with mock.patch.object(_requests, "post", timeout_post):
+    try:
+        OllamaMetadataClient(timeout=120).chat("prompt")
+        raised = False
+    except _requests.exceptions.Timeout:
+        raised = True
+check("T4d exhausted chat retries raise honestly (caller catches non-fatal)",
+      raised and timeout_post.call_count == 2)
+
 # T5: compose wiring - services wait for healthy ollama
 import yaml
 compose = yaml.safe_load(

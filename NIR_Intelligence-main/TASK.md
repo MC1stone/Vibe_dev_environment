@@ -30,6 +30,12 @@ immer deterministisch (Fallback-first statt LLM-first).
   OP50-Matrix erweitert; Regressionen OP31 25/25, OP32 19/19, OP7 33/33,
   OP6 51/51, S6 17/17, OP1 29/29 gruen (OP48/OP49-Katalogtests
   benoetigen msgfmt, nur in CI verfuegbar - Baseline-identisch).
+- NACHTRAG (Feldtest OP1, Upload T4-T5_ALLE_mit_Brix_2): erster LLM-Chat
+  nach Ollama-Kaltstart lief in den fixen 60s-Read-Timeout (Modellladen
+  von Platte > 60s). OllamaMetadataClient: Timeout jetzt via
+  NIR_LLM_TIMEOUT konfigurierbar (Default 120s) + genau ein Retry nach
+  Timeout (Modell bleibt danach via OLLAMA_KEEP_ALIVE geladen);
+  OP50-Matrix um T4b-T4d erweitert (22/22 gruen).
 
 ## Completed Task: OP49 - Sensor-Websearch (Opt-in) + DIY-Spektrometer-Übersicht
 
