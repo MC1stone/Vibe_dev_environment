@@ -121,8 +121,8 @@ with mock.patch.object(oh_mod, "ollama_reachable",
           and OllamaChatClient("http://x:11434").is_available()
           and OllamaEmbeddingClient("http://x:11434").is_available()
           and ollama_available("http://x:11434"))
-check("T3b metadata/chat/embedding/websearch use robust probe",
-      ok and len(probe_calls) == 3 and len(model_calls) == 1,
+check("T3b metadata/chat(embedding model-aware)/embedding/websearch use robust probe",
+      ok and len(probe_calls) == 2 and len(model_calls) == 2,
       f"probe_calls={probe_calls} model_calls={model_calls}")
 
 # T4: project_crew LLM gate uses robust probe (not a 2s one-shot GET)

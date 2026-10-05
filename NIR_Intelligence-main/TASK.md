@@ -56,6 +56,17 @@ immer deterministisch (Fallback-first statt LLM-first).
   idempotent - vorhandene Modelle werden uebersprungen), damit kein
   Chat-Call je einen impliziten Multi-GB-Pull triggert. Matrix um
   T5h-T5l erweitert (30/30); Regressionen FL6 35/35, OP45 51/51 gruen.
+- NACHTRAG 4 (Chatbot offline im Report): ChatbotService las OLLAMA_URL/
+  NIR_LLM_MODEL nie aus der Umgebung (hart localhost:11434) und der
+  ChatClient pruefte nur API-Erreichbarkeit - jetzt env-respektierend
+  (settings-Config gewinnt weiterhin) + model-bewusster Probe +
+  NIR_LLM_TIMEOUT. Report-Chat-Widget: bei file://-Berichten (Doppelklick
+  auf die HTML-Datei) lief der relative fetch('/api/chatbot/message/')
+  immer ins Leere -> Offline-Fallback. Das Widget ruft jetzt bei
+  file:// die lokale Plattform http://localhost:8000 auf (ueberschreib-
+  bar per window.NIR_REPORT_API_BASE); nur ohne laufenden Server kommt
+  die ehrlich gelabelte Offline-Wissensbasis. OP24-Matrix T2d
+  praezisiert (29/29), OP50-Matrix 30/30, S6 17/17, OP31 25/25 gruen.
 
 ## Completed Task: OP49 - Sensor-Websearch (Opt-in) + DIY-Spektrometer-Übersicht
 
