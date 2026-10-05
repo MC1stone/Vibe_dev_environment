@@ -167,7 +167,7 @@ services:
   # Ollama with Mistral Model
   ollama:
     image: ollama/ollama:latest
-    container_name: nir_mistral_ollama
+    container_name: nir_ollama
     restart: unless-stopped
     ports:
       - "11434:11434"
@@ -187,6 +187,38 @@ services:
       start_period: 60s
 
   # Redis for Caching and Task Queue
+  # One-shot model loader (OP50b): pulls missing configured models once
+  # ollama is healthy (idempotent).
+  ollama_init:
+    image: ollama/ollama:latest
+    container_name: nir_ollama_init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      NIR_LLM_MODEL: ${NIR_LLM_MODEL:-mistral}
+      NIR_EMBEDDING_MODEL: ${NIR_EMBEDDING_MODEL:-nomic-embed-text}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        echo "ollama_init: sicherstelle Modelle ..."
+        for m in "$${NIR_LLM_MODEL}" "$${NIR_EMBEDDING_MODEL}"; do
+          fam=$${m%%:*}
+          if ollama list 2>/dev/null | awk 'NR>1 {print $$1}' | cut -d: -f1 | grep -qx "$${fam}"; then
+            echo "ollama_init: $${m} bereits vorhanden"
+          else
+            echo "ollama_init: lade $${m} (einmalig, mehrere GB moeglich)"
+            ollama pull "$${m}"
+          fi
+        done
+        echo "ollama_init: Modelle bereit"
+        ollama list
+    restart: "no"
+    networks:
+      - nir_network
+
   redis:
     image: redis:7-alpine
     container_name: nir_mistral_redis
@@ -229,7 +261,8 @@ services:
       - ilias_data:/var/www/html
       - ilias_extradata:/var/iliasdata
     depends_on:
-      - ilias_db
+      ilias_db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost/ || exit 1"]
       interval: 30s

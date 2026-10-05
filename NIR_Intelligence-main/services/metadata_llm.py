@@ -66,14 +66,19 @@ Text aus der Datei "{file_name}":
 
 class OllamaMetadataClient:
     """Thin HTTP client for the Ollama chat API (same style as the
-    ChatbotService/EmbeddingService clients)."""
+    ChatbotService/EmbeddingService clients). The first call after an
+    Ollama (re)start loads the model from disk (cold start), which can
+    exceed a fixed 60s read timeout on slower disks; the timeout is
+    therefore configurable and a timed-out first attempt is retried
+    once (the model stays loaded afterwards via OLLAMA_KEEP_ALIVE)."""
 
     def __init__(self, base_url: Optional[str] = None, model: Optional[str] = None,
-                 timeout: int = 60):
+                 timeout: Optional[int] = None):
         self.base_url = (base_url or os.environ.get("OLLAMA_URL")
                          or OLLAMA_DEFAULT_URL).rstrip("/")
         self.model = model or os.environ.get("NIR_LLM_MODEL") or DEFAULT_LLM_MODEL
-        self.timeout = timeout
+        self.timeout = (timeout if timeout is not None
+                        else int(os.environ.get("NIR_LLM_TIMEOUT", "120")))
 
     def chat(self, prompt: str) -> Optional[str]:
         import requests
@@ -83,16 +88,26 @@ class OllamaMetadataClient:
             "stream": False,
             "format": "json",
         }
-        response = requests.post(f"{self.base_url}/api/chat", json=payload,
-                                 timeout=self.timeout)
-        response.raise_for_status()
-        data = response.json()
-        return (data.get("message") or {}).get("content")
+        attempts = 2 if self.timeout >= 60 else 1
+        last_error: Optional[Exception] = None
+        for attempt in range(attempts):
+            try:
+                response = requests.post(f"{self.base_url}/api/chat", json=payload,
+                                         timeout=self.timeout)
+                response.raise_for_status()
+                data = response.json()
+                return (data.get("message") or {}).get("content")
+            except requests.exceptions.Timeout as exc:
+                last_error = exc
+                continue
+        if last_error is not None:
+            raise last_error
+        return None
 
     def is_available(self) -> bool:
         try:
-            from services.ollama_health import ollama_reachable
-            return ollama_reachable(self.base_url)
+            from services.ollama_health import ollama_model_available
+            return ollama_model_available(self.base_url, self.model)
         except Exception:
             return False
 

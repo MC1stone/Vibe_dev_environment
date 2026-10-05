@@ -112,20 +112,77 @@ except Exception as exc:
     sys.exit(1)
 
 probe_calls = []
+model_calls = []
 with mock.patch.object(oh_mod, "ollama_reachable",
-                       side_effect=lambda url, **kw: probe_calls.append(url) or True):
+                       side_effect=lambda url, **kw: probe_calls.append(url) or True), \
+     mock.patch.object(oh_mod, "ollama_model_available",
+                       side_effect=lambda url, model=None, **kw: model_calls.append((url, model)) or True):
     ok = (OllamaMetadataClient().is_available()
           and OllamaChatClient("http://x:11434").is_available()
           and OllamaEmbeddingClient("http://x:11434").is_available()
           and ollama_available("http://x:11434"))
-check("T3b metadata/chat/embedding/websearch use robust probe",
-      ok and len(probe_calls) == 4, f"probe_calls={probe_calls}")
+check("T3b metadata/chat(embedding model-aware)/embedding/websearch use robust probe",
+      ok and len(probe_calls) == 2 and len(model_calls) == 2,
+      f"probe_calls={probe_calls} model_calls={model_calls}")
 
 # T4: project_crew LLM gate uses robust probe (not a 2s one-shot GET)
 src = (Path(__file__).resolve().parent.parent
        / "services" / "project_crew.py").read_text(encoding="utf-8")
 check("T4a project_crew gate uses ollama_reachable",
       "ollama_reachable" in src and "timeout=2" not in src)
+
+# T4b/T4c: chat call survives the model cold start (retry on timeout,
+# configurable timeout instead of the previous fixed 60s read timeout)
+import requests as _requests
+from services.metadata_llm import OllamaMetadataClient
+
+check("T4b metadata client timeout configurable (NIR_LLM_TIMEOUT, default 120)",
+      OllamaMetadataClient(timeout=None).timeout == 120
+      if "NIR_LLM_TIMEOUT" not in os.environ
+      else OllamaMetadataClient(timeout=None).timeout == int(os.environ["NIR_LLM_TIMEOUT"]))
+
+call_count = {"n": 0}
+
+def flaky_post(url, json=None, timeout=None):
+    call_count["n"] += 1
+    if call_count["n"] == 1:
+        raise _requests.exceptions.Timeout("read timed out (cold start)")
+    return mock.Mock(status_code=200, json=lambda: {"message": {"content": "{}"}})
+
+with mock.patch.object(_requests, "post", side_effect=flaky_post):
+    client = OllamaMetadataClient(timeout=120)
+    content = client.chat("prompt")
+check("T4c chat retries once after cold-start read timeout", content == "{}" and call_count["n"] == 2)
+
+call_count["n"] = 0
+timeout_post = mock.Mock(side_effect=_requests.exceptions.Timeout("down"))
+with mock.patch.object(_requests, "post", timeout_post):
+    try:
+        OllamaMetadataClient(timeout=120).chat("prompt")
+        raised = False
+    except _requests.exceptions.Timeout:
+        raised = True
+check("T4d exhausted chat retries raise honestly (caller catches non-fatal)",
+      raised and timeout_post.call_count == 2)
+
+# T4e: model-aware probe - reachable Ollama without the model must
+# report unavailable (an implicit multi-GB pull would time out anyway)
+from services.ollama_health import ollama_model_available, reset_cache
+
+reset_cache()
+payload_up = {"models": [{"name": "mistral:latest"}, {"name": "nomic-embed-text:latest"}]}
+with mock.patch.object(oh_mod, "_probe_once", return_value=True):
+    with mock.patch("requests.get",
+                    return_value=mock.Mock(status_code=200, json=lambda: payload_up)):
+        reset_cache()
+        check("T4e model present -> model probe True",
+              ollama_model_available("http://x:11434", "mistral"))
+        reset_cache()
+        check("T4f model missing -> model probe False (honest, no silent pull)",
+              not ollama_model_available("http://x:11434", "llama3"))
+        reset_cache()
+        check("T4g bare family name matches :latest tag",
+              ollama_model_available("http://x:11434", "mistral:latest"))
 
 # T5: compose wiring - services wait for healthy ollama
 import yaml
@@ -158,6 +215,36 @@ host_backend = yaml.safe_load(
 check("T5g host-backend ollama healthcheck + keep-alive",
       host_backend["services"]["ollama"].get("healthcheck") is not None
       and "OLLAMA_KEEP_ALIVE=24h" in host_backend["services"]["ollama"]["environment"])
+
+# T5h: consistent container name + automatic model loader (ollama_init)
+check("T5h dev ollama container_name nir_ollama (replaces the legacy 6-week container)",
+      compose["services"]["ollama"].get("container_name") == "nir_ollama")
+init = compose["services"].get("ollama_init")
+check("T5i dev ollama_init one-shot model loader present",
+      init is not None and init.get("restart") == "no"
+      and init["depends_on"]["ollama"] == {"condition": "service_healthy"})
+check("T5j dev ollama_init pulls NIR_LLM_MODEL + NIR_EMBEDDING_MODEL idempotently",
+      init is not None and "ollama pull" in init["command"][0]
+      and "NIR_LLM_MODEL" in init["command"][0]
+      and "NIR_EMBEDDING_MODEL" in init["command"][0]
+      and "bereits vorhanden" in init["command"][0])
+check("T5k prod ollama container_name nir_ollama (stringency)",
+      prod["services"]["ollama"].get("container_name") == "nir_ollama"
+      and "ollama pull" in prod["services"]["ollama_init"]["command"][0])
+check("T5l host-backend ollama_init present",
+      "ollama pull" in host_backend["services"]["ollama_init"]["command"][0])
+
+# T5m: ILIAS waits for a healthy MariaDB (no more DB race -> crash loop)
+check("T5m dev ilias depends on healthy ilias_db (no startup DB race)",
+      compose["services"]["ilias"]["depends_on"]["ilias_db"]
+      == {"condition": "service_healthy"})
+hc_db = compose["services"]["ilias_db"].get("healthcheck") or {}
+check("T5n dev ilias_db has a healthcheck tolerant to slow first init",
+      "mysqladmin" in (hc_db.get("test") or [""])[-1]
+      and int(hc_db.get("retries", 0)) >= 20)
+check("T5o prod ilias depends on healthy ilias_db",
+      prod["services"]["ilias"]["depends_on"]["ilias_db"]
+      == {"condition": "service_healthy"})
 
 print(f"\nOP50 ollama robust startup matrix: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)

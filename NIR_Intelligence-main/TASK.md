@@ -30,6 +30,51 @@ immer deterministisch (Fallback-first statt LLM-first).
   OP50-Matrix erweitert; Regressionen OP31 25/25, OP32 19/19, OP7 33/33,
   OP6 51/51, S6 17/17, OP1 29/29 gruen (OP48/OP49-Katalogtests
   benoetigen msgfmt, nur in CI verfuegbar - Baseline-identisch).
+- NACHTRAG (Feldtest OP1, Upload T4-T5_ALLE_mit_Brix_2): erster LLM-Chat
+  nach Ollama-Kaltstart lief in den fixen 60s-Read-Timeout (Modellladen
+  von Platte > 60s). OllamaMetadataClient: Timeout jetzt via
+  NIR_LLM_TIMEOUT konfigurierbar (Default 120s) + genau ein Retry nach
+  Timeout (Modell bleibt danach via OLLAMA_KEEP_ALIVE geladen);
+  OP50-Matrix um T4b-T4d erweitert (22/22 gruen).
+- NACHTRAG 2 (Feldtest, read timeout=120 trotz Retry): Wurzelursache war
+  ein Ollama OHNE geladenes Modell (Modell lag nur in einem Altvolume /
+  Altecontainer) - der erste Chat traegert einen impliziten Multi-GB-Pull,
+  den kein Timeout abdeckt. Neuer model-bewusster Probe
+  ollama_model_available() (services/ollama_health.py): verfuegbar nur,
+  wenn /api/tags das Modell listet (Familien-/Tag-Toleranz);
+  OllamaMetadataClient.is_available() nutzt ihn, _ki_metadata_pass
+  meldet im Bericht ehrlich 'Modell X fehlt - bitte laden: docker
+  compose exec ollama ollama pull X' statt eines Timeouts.
+  OP50-Matrix um T4e-T4g erweitert (25/25 gruen); Regressionen OP31/OP32/
+  S6/OP1 gruen.
+- NACHTRAG 3 (Container-Stringenz): Ollama heisst jetzt ueberall nir_ollama
+  (dev/prod/host-backend; ersetzt nir_mistral_ollama) - der 6 Wochen alte
+  Altecontainer nir_ollama (Port 11435) wird sauber durch den Compose-
+  Container ersetzt. Neuer One-Shot-Service ollama_init (dev/prod/
+  host-backend): wartet auf ollama service_healthy und zieht fehlende
+  Modelle (NIR_LLM_MODEL=mistral, NIR_EMBEDDING_MODEL=nomic-embed-text,
+  idempotent - vorhandene Modelle werden uebersprungen), damit kein
+  Chat-Call je einen impliziten Multi-GB-Pull triggert. Matrix um
+  T5h-T5l erweitert (30/30); Regressionen FL6 35/35, OP45 51/51 gruen.
+- NACHTRAG 4 (Chatbot offline im Report): ChatbotService las OLLAMA_URL/
+  NIR_LLM_MODEL nie aus der Umgebung (hart localhost:11434) und der
+  ChatClient pruefte nur API-Erreichbarkeit - jetzt env-respektierend
+  (settings-Config gewinnt weiterhin) + model-bewusster Probe +
+  NIR_LLM_TIMEOUT. Report-Chat-Widget: bei file://-Berichten (Doppelklick
+  auf die HTML-Datei) lief der relative fetch('/api/chatbot/message/')
+  immer ins Leere -> Offline-Fallback. Das Widget ruft jetzt bei
+  file:// die lokale Plattform http://localhost:8000 auf (ueberschreib-
+  bar per window.NIR_REPORT_API_BASE); nur ohne laufenden Server kommt
+  die ehrlich gelabelte Offline-Wissensbasis. OP24-Matrix T2d
+  praezisiert (29/29), OP50-Matrix 30/30, S6 17/17, OP31 25/25 gruen.
+- NACHTRAG 5 (ILIAS-Crashloop behoben): ilias startete sofort nach
+  ilias_db (service_started, dev ohne Healthcheck) und verfehlte die
+  noch initierende MariaDB -> Exit 1 -> Restart-Schleife. Jetzt:
+  ilias_db-Healthcheck (mysqladmin ping, 20 Retries, start_period 60s)
+  und ilias wartet auf service_healthy (dev + prod). FL6-C2e-Test
+  deterministisch gemacht (State-Datei vor Runner-Smoke loeschen).
+  OP50-Matrix um T5m-T5o erweitert (33/33); Regressionen FL6 35/35,
+  FL5 16/16, S8 26/26, OP45 51/51 gruen.
 
 ## Completed Task: OP49 - Sensor-Websearch (Opt-in) + DIY-Spektrometer-Übersicht
 

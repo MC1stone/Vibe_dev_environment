@@ -67,7 +67,8 @@ services:
       - ilias_data:/var/www/html
       - ilias_extradata:/var/iliasdata
     depends_on:
-      - ilias_db
+      ilias_db:
+        condition: service_healthy
     networks:
       - nir_network
 
@@ -83,6 +84,12 @@ services:
     volumes:
       - ilias_db_data:/var/lib/mysql
     command: --character-set-server=utf8 --collation-server=utf8_general_ci --innodb_strict_mode=0
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root --password=$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
     networks:
       - nir_network
 
@@ -240,6 +247,7 @@ services:
   # Ollama for Local AI (Mistral Model)
   ollama:
     image: ollama/ollama:latest
+    container_name: nir_ollama
     restart: unless-stopped
     ports:
       - "11434:11434"
@@ -257,6 +265,40 @@ services:
       timeout: 10s
       retries: 12
       start_period: 60s
+
+  # One-shot model loader (OP50b): guarantees the configured models are
+  # present in the ollama volume, so no chat call ever triggers an implicit
+  # multi-GB pull (which no read timeout can cover). Runs after ollama is
+  # healthy; pulls only what is missing (idempotent, safe to re-run).
+  ollama_init:
+    image: ollama/ollama:latest
+    container_name: nir_ollama_init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      NIR_LLM_MODEL: ${NIR_LLM_MODEL:-mistral}
+      NIR_EMBEDDING_MODEL: ${NIR_EMBEDDING_MODEL:-nomic-embed-text}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        echo "ollama_init: sicherstelle Modelle ..."
+        for m in "$${NIR_LLM_MODEL}" "$${NIR_EMBEDDING_MODEL}"; do
+          fam=$${m%%:*}
+          if ollama list 2>/dev/null | awk 'NR>1 {print $$1}' | cut -d: -f1 | grep -qx "$${fam}"; then
+            echo "ollama_init: $${m} bereits vorhanden"
+          else
+            echo "ollama_init: lade $${m} (einmalig, mehrere GB moeglich)"
+            ollama pull "$${m}"
+          fi
+        done
+        echo "ollama_init: Modelle bereit"
+        ollama list
+    restart: "no"
+    networks:
+      - nir_network
 
   # Redis for caching and task queue
   redis:

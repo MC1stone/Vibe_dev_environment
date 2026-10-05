@@ -458,7 +458,14 @@ def _ki_metadata_pass(entry: Dict[str, Any], file_path: str, loader) -> None:
         service = MetadataLLMService()
         if not service.client.is_available():
             entry["metadata_sources"] = entry.get("metadata_sources") or {}
-            entry["metadata_sources"]["llm"] = "nicht erreichbar (deterministisch)"
+            from services.ollama_health import ollama_reachable
+            if ollama_reachable(service.client.base_url):
+                entry["metadata_sources"]["llm"] = (
+                    f"Ollama erreichbar, Modell {service.client.model} fehlt - "
+                    "bitte laden: docker compose exec ollama ollama pull "
+                    f"{service.client.model} (deterministisch bis dahin)")
+            else:
+                entry["metadata_sources"]["llm"] = "nicht erreichbar (deterministisch)"
             return
         result = service.extract(text, file_name=str(entry.get("file_name")))
         if result is None:

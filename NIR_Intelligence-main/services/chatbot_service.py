@@ -18,6 +18,8 @@ except ImportError:
     requests = None
     REQUESTS_AVAILABLE = False
 
+import os
+
 OLLAMA_DEFAULT_URL = "http://localhost:11434"
 DEFAULT_MODEL = "mistral:latest"
 RAG_COLLECTION = "nir_spectra"
@@ -64,7 +66,9 @@ class OllamaChatClient:
     """Thin HTTP client for the Ollama chat API (/api/chat)"""
 
     def __init__(self, base_url: str = OLLAMA_DEFAULT_URL, model: str = DEFAULT_MODEL,
-                 timeout: int = 120):
+                 timeout: Optional[int] = None):
+        self.timeout = (timeout if timeout is not None
+                        else int(os.environ.get("NIR_LLM_TIMEOUT", "120")))
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
@@ -91,8 +95,8 @@ class OllamaChatClient:
         if not REQUESTS_AVAILABLE:
             return False
         try:
-            from services.ollama_health import ollama_reachable
-            return ollama_reachable(self.base_url)
+            from services.ollama_health import ollama_model_available
+            return ollama_model_available(self.base_url, self.model)
         except Exception:
             return False
 
@@ -173,8 +177,15 @@ class ChatbotService:
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
-        self.ollama_url = self.config.get("ollama_url", OLLAMA_DEFAULT_URL)
-        self.model = self.config.get("model", DEFAULT_MODEL)
+        # Env-respecting defaults (OP50): inside the Django container
+        # OLLAMA_URL=http://ollama:11434 - the old hard-coded localhost
+        # kept the chatbot permanently offline there.
+        self.ollama_url = (self.config.get("ollama_url")
+                           or os.environ.get("OLLAMA_URL")
+                           or OLLAMA_DEFAULT_URL)
+        self.model = (self.config.get("model")
+                      or os.environ.get("NIR_LLM_MODEL")
+                      or DEFAULT_MODEL)
         self.qdrant_host = self.config.get("qdrant_host", "localhost")
         self.qdrant_port = int(self.config.get("qdrant_port", 6333))
         self.client = OllamaChatClient(base_url=self.ollama_url, model=self.model)
