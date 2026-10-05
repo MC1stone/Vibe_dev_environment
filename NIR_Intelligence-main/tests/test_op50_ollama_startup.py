@@ -216,5 +216,23 @@ check("T5g host-backend ollama healthcheck + keep-alive",
       host_backend["services"]["ollama"].get("healthcheck") is not None
       and "OLLAMA_KEEP_ALIVE=24h" in host_backend["services"]["ollama"]["environment"])
 
+# T5h: consistent container name + automatic model loader (ollama_init)
+check("T5h dev ollama container_name nir_ollama (replaces the legacy 6-week container)",
+      compose["services"]["ollama"].get("container_name") == "nir_ollama")
+init = compose["services"].get("ollama_init")
+check("T5i dev ollama_init one-shot model loader present",
+      init is not None and init.get("restart") == "no"
+      and init["depends_on"]["ollama"] == {"condition": "service_healthy"})
+check("T5j dev ollama_init pulls NIR_LLM_MODEL + NIR_EMBEDDING_MODEL idempotently",
+      init is not None and "ollama pull" in init["command"][0]
+      and "NIR_LLM_MODEL" in init["command"][0]
+      and "NIR_EMBEDDING_MODEL" in init["command"][0]
+      and "bereits vorhanden" in init["command"][0])
+check("T5k prod ollama container_name nir_ollama (stringency)",
+      prod["services"]["ollama"].get("container_name") == "nir_ollama"
+      and "ollama pull" in prod["services"]["ollama_init"]["command"][0])
+check("T5l host-backend ollama_init present",
+      "ollama pull" in host_backend["services"]["ollama_init"]["command"][0])
+
 print(f"\nOP50 ollama robust startup matrix: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)

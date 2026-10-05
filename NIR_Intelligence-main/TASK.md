@@ -47,6 +47,15 @@ immer deterministisch (Fallback-first statt LLM-first).
   compose exec ollama ollama pull X' statt eines Timeouts.
   OP50-Matrix um T4e-T4g erweitert (25/25 gruen); Regressionen OP31/OP32/
   S6/OP1 gruen.
+- NACHTRAG 3 (Container-Stringenz): Ollama heisst jetzt ueberall nir_ollama
+  (dev/prod/host-backend; ersetzt nir_mistral_ollama) - der 6 Wochen alte
+  Altecontainer nir_ollama (Port 11435) wird sauber durch den Compose-
+  Container ersetzt. Neuer One-Shot-Service ollama_init (dev/prod/
+  host-backend): wartet auf ollama service_healthy und zieht fehlende
+  Modelle (NIR_LLM_MODEL=mistral, NIR_EMBEDDING_MODEL=nomic-embed-text,
+  idempotent - vorhandene Modelle werden uebersprungen), damit kein
+  Chat-Call je einen impliziten Multi-GB-Pull triggert. Matrix um
+  T5h-T5l erweitert (30/30); Regressionen FL6 35/35, OP45 51/51 gruen.
 
 ## Completed Task: OP49 - Sensor-Websearch (Opt-in) + DIY-Spektrometer-Übersicht
 
