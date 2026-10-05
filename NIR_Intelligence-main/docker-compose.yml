@@ -67,7 +67,8 @@ services:
       - ilias_data:/var/www/html
       - ilias_extradata:/var/iliasdata
     depends_on:
-      - ilias_db
+      ilias_db:
+        condition: service_healthy
     networks:
       - nir_network
 
@@ -83,6 +84,12 @@ services:
     volumes:
       - ilias_db_data:/var/lib/mysql
     command: --character-set-server=utf8 --collation-server=utf8_general_ci --innodb_strict_mode=0
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root --password=$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
     networks:
       - nir_network
 

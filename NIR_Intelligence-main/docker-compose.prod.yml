@@ -261,7 +261,8 @@ services:
       - ilias_data:/var/www/html
       - ilias_extradata:/var/iliasdata
     depends_on:
-      - ilias_db
+      ilias_db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost/ || exit 1"]
       interval: 30s

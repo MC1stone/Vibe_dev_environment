@@ -67,6 +67,14 @@ immer deterministisch (Fallback-first statt LLM-first).
   bar per window.NIR_REPORT_API_BASE); nur ohne laufenden Server kommt
   die ehrlich gelabelte Offline-Wissensbasis. OP24-Matrix T2d
   praezisiert (29/29), OP50-Matrix 30/30, S6 17/17, OP31 25/25 gruen.
+- NACHTRAG 5 (ILIAS-Crashloop behoben): ilias startete sofort nach
+  ilias_db (service_started, dev ohne Healthcheck) und verfehlte die
+  noch initierende MariaDB -> Exit 1 -> Restart-Schleife. Jetzt:
+  ilias_db-Healthcheck (mysqladmin ping, 20 Retries, start_period 60s)
+  und ilias wartet auf service_healthy (dev + prod). FL6-C2e-Test
+  deterministisch gemacht (State-Datei vor Runner-Smoke loeschen).
+  OP50-Matrix um T5m-T5o erweitert (33/33); Regressionen FL6 35/35,
+  FL5 16/16, S8 26/26, OP45 51/51 gruen.
 
 ## Completed Task: OP49 - Sensor-Websearch (Opt-in) + DIY-Spektrometer-Übersicht
 

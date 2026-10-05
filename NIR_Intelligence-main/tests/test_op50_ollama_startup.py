@@ -234,5 +234,17 @@ check("T5k prod ollama container_name nir_ollama (stringency)",
 check("T5l host-backend ollama_init present",
       "ollama pull" in host_backend["services"]["ollama_init"]["command"][0])
 
+# T5m: ILIAS waits for a healthy MariaDB (no more DB race -> crash loop)
+check("T5m dev ilias depends on healthy ilias_db (no startup DB race)",
+      compose["services"]["ilias"]["depends_on"]["ilias_db"]
+      == {"condition": "service_healthy"})
+hc_db = compose["services"]["ilias_db"].get("healthcheck") or {}
+check("T5n dev ilias_db has a healthcheck tolerant to slow first init",
+      "mysqladmin" in (hc_db.get("test") or [""])[-1]
+      and int(hc_db.get("retries", 0)) >= 20)
+check("T5o prod ilias depends on healthy ilias_db",
+      prod["services"]["ilias"]["depends_on"]["ilias_db"]
+      == {"condition": "service_healthy"})
+
 print(f"\nOP50 ollama robust startup matrix: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)

@@ -243,6 +243,8 @@ check("C2c runner imports the IliasCourseAgent",
 # runner smoke: one round with unreachable ILIAS must complete degraded
 import subprocess
 
+if os.path.exists("/tmp/fl6_state.json"):
+    os.remove("/tmp/fl6_state.json")
 r = subprocess.run([sys.executable,
                     os.path.join(PROJECT, "scripts", "ilias_course_agent_runner.py"),
                     "--once", "--ilias-url", "http://ilias:80",
