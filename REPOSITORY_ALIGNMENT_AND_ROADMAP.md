@@ -584,6 +584,13 @@ KI-Gates umgestellt; background_crew OLLAMA_URL nachgeruestet; Compose
 10s/12x/start_period 60s, OLLAMA_KEEP_ALIVE=24h. Testmatrix
 test_op50_ollama_startup.py 19/19 gruen, in CI aufgenommen.
 
+### OP51 — Startskript-Konsolidierung: EIN Startweg (Docker) — ERLEDIGT
+Legacy-Host-Starter im django_project/ (start.sh mit kill -9 + beliebiger
+Port, dev_server.sh mit Privatpfad u. a.) erzeugten parallele
+Django-Instanzen (8000/8001). start/stop/check sind jetzt Docker-
+Delegatoren, vier Alt-Starter entfernt, START_SERVER.md Docker-only.
+Testmatrix test_op51_start_scripts.py 20/20.
+
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.

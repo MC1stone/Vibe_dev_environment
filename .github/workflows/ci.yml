@@ -90,6 +90,7 @@ jobs:
           python tests/test_op48_i18n.py
           python tests/test_op49_sensor_diy.py
           python tests/test_op50_ollama_startup.py
+          python tests/test_op51_start_scripts.py
 
       - name: Django system check
         run: python django_project/manage.py check

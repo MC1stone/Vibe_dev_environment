@@ -3,7 +3,26 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP50 - Release-Fix: Robuster Ollama-Start (LLM-first statt Fallback-first)
+## Current Task: OP51 - Startskript-Konsolidierung (EIN Startweg: Docker)
+
+### Objective
+Feldtest zeigte zwei parallele Django-Instanzen (Auswertung auf 8001,
+Datenladen auf 8000) - verursacht durch Legacy-Host-Starter im
+django_project/ (start.sh tötete mit kill -9 alle manage.py-Prozesse und
+startete Django direkt auf dem Host, beliebiger Port; dev_server.sh
+enthielt einen hartkodierten Privatpfad). Release-Ziel: genau ein
+Startweg, der Docker-Stack.
+
+### Status
+- ERLEDIGT: start.sh/stop_server.sh/check_server.sh sind jetzt reine
+  Docker-Delegatoren (docker compose up -d/down/ps), kein kill -9, kein
+  runserver, Port-Argument wird ignoriert (Plattform laeuft auf 8000).
+  Entfernt: start_server.sh, start_clean.sh, dev_server.sh,
+  start_server_venv.sh. START_SERVER.md neu geschrieben (Docker-only,
+  Port-Tabelle inkl. ILIAS 8080/Ollama 11434, Erststart-Hinweis
+  ollama_init). Testmatrix test_op51_start_scripts.py 20/20 gruen.
+
+## Completed Task: OP50 - Release-Fix: Robuster Ollama-Start (LLM-first statt Fallback-first)
 
 ### Objective
 Release ohne OP5. Vorab-Fix: Ollama startet im Container langsamer als
