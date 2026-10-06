@@ -336,8 +336,9 @@ FEDERATED_LEARNING_ENABLED = os.getenv('FEDERATED_LEARNING_ENABLED', 'True').low
 
 # ILIAS Integration Settings
 ILIAS_ENABLED = os.getenv('ILIAS_ENABLED', 'True').lower() == 'true'
-ILIAS_API_URL = os.getenv('ILIAS_API_URL', 'https://ilias.hswt.de')
-ILIAS_CLIENT_ID = os.getenv('ILIAS_CLIENT_ID', 'nir_mistral_client')
+ILIAS_API_URL = os.getenv('ILIAS_API_URL', 'http://ilias:80')
+ILIAS_URL = os.getenv('ILIAS_URL', 'http://ilias:80')
+ILIAS_CLIENT_ID = os.getenv('ILIAS_CLIENT_ID', 'nir_ip')
 ILIAS_CLIENT_SECRET = os.getenv('ILIAS_CLIENT_SECRET', '')
 
 # Terms and Conditions URLs

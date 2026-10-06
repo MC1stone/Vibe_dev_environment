@@ -20,6 +20,19 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   (calibration-page) + /api/projects/calibration/overview/.
   i18n-Kataloge de/en um OP52-msgids ergaenzt (de Identity, en uebersetzt).
   Testmatrix test_op52_nav_menu.py 40/40 gruen, in CI aufgenommen.
+- NACHTRAG (Release-Feedback): Spektren-Datenbank zusaetzlich als Unterpunkt
+  unter 'Kalibrieren' erreichbar (Kalibration baut auf den Spektren auf).
+  OP52-Matrix um T3c/T3d erweitert (42/42 gruen).
+- NACHTRAG 2 (Release-Feedback): Workflow-Nav-Reiter entfernt (Startseite
+  bleibt ueber das Logo erreichbar); ILIAS-Verkabelung gefixt, damit
+  'Lernen mit Kursen -> ILIAS -> Open ILIAS' funktioniert: settings.py
+  hatte keine ILIAS_URL und ILIAS_API_URL zeigte auf den alten HSWT-Host;
+  django_app bekommt jetzt ILIAS_URL/ILIAS_API_URL/Client-Credentials,
+  ilias-Service erhaelt einen Healthcheck (curl, start_period 120s wegen
+  ILIAS-Auto-Setup) und django_app wartet auf ilias service_healthy.
+  OP52-Matrix um T1c2/T1c3/T9a-T9f erweitert (48/48 gruen); Regressionen
+  FL4 20/20, FL6 35/35, OP25 64/64, OP45 51/51, OP50 33/33, OP51 20/20,
+  S8 26/26 gruen.
 
 ## Completed Task: OP51 - Startskript-Konsolidierung (EIN Startweg: Docker)
 
