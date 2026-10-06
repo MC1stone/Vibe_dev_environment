@@ -301,6 +301,15 @@ live_pid = r.json().get('project_id')
 check('T9c project created', bool(live_pid), f'r={r.content[:200]}')
 
 # The metadata editor lists the inner datasets; pick the description.
+# OP55: preparation runs in a background thread - poll until the report
+# is ready before asserting on the rendered editor forms.
+import time as _time
+r = c.get(f'/api/projects/create/{live_pid}/status/')
+for _ in range(60):
+    if r.status_code == 200 and r.json().get('ready'):
+        break
+    _time.sleep(1)
+    r = c.get(f'/api/projects/create/{live_pid}/status/')
 r = c.get(f'/projects/{live_pid}/')
 page = r.content.decode('utf-8', errors='replace')
 inner_form_ids = [seg.split('"')[0] for seg in page.split('data-file-id="')[1:]]

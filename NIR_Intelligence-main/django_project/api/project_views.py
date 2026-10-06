@@ -608,13 +608,58 @@ class ProjectCreateView(APIView if DRF_AVAILABLE else object):
         project = AnalysisProject.objects.create(user=request.user, name=name,
                                                  description=request.data.get('description', ''))
         project.files.set(files)
+
+        from threading import Thread
         from services.project_ingest import build_preparation_report
-        build_preparation_report(project)
+
+        def _prepare(pid):
+            try:
+                from core.models import AnalysisProject as AP
+                proj = AP.objects.get(id=pid)
+                build_preparation_report(proj)
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).warning(
+                    'Background preparation failed for project %s: %s', pid, exc)
+                try:
+                    proj = AP.objects.get(id=pid)
+                    report = proj.preparation_report or {}
+                    report['preparation_error'] = str(exc)
+                    proj.preparation_report = report
+                    proj.save(update_fields=['preparation_report', 'updated_at'])
+                except Exception:
+                    pass
+
+        thread = Thread(target=_prepare, args=(project.id,), daemon=True)
+        thread.start()
         return Response({
             'success': True,
             'project_id': str(project.id),
             'summary': project.get_summary(),
             'report_url': f'/projects/{project.id}/',
+            'preparing': True,
+        })
+
+
+class ProjectPrepareStatusView(APIView if DRF_AVAILABLE else object):
+    """Polling endpoint for the asynchronous preparation (OP55): the
+    project is created immediately and the preparation report is built
+    in the background; the detail page polls this endpoint until the
+    report is ready."""
+
+    def get(self, request, project_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False,
+                             'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        project = _get_project(project_id, request.user)
+        report = project.preparation_report or {}
+        ready = bool(report.get('datasets'))
+        return Response({
+            'success': True,
+            'ready': ready,
+            'error': report.get('preparation_error'),
+            'dataset_count': len(report.get('datasets') or []),
         })
 
 

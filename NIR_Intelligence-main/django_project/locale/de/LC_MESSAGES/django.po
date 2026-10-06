@@ -3753,3 +3753,9 @@ msgstr "Hinweis: Uberwiegend VIS-Spektrometer (400-1100 nm). Fuer echte NIR-Spek
 
 msgid "Noch keine Dokumente fuer dieses DIY-Projekt. Laden Sie beliebige Informationen (Bauanleitung, Foto, Kalibrierung, Software, Messergebnisse) hoch - das erweitert die Sensor-Datenbank."
 msgstr "Noch keine Dokumente fuer dieses DIY-Projekt. Laden Sie beliebige Informationen (Bauanleitung, Foto, Kalibrierung, Software, Messergebnisse) hoch - das erweitert die Sensor-Datenbank."
+
+msgid "Datenaufbereitung laeuft..."
+msgstr "Datenaufbereitung laeuft..."
+
+msgid "Die Dateien werden gerade ausgewertet (inkl. KI-Metadaten-Extraktion). Diese Seite aktualisiert sich automatisch, sobald der Bericht fertig ist - das kann bei grossen Dateien einige Minuten dauern."
+msgstr "Die Dateien werden gerade ausgewertet (inkl. KI-Metadaten-Extraktion). Diese Seite aktualisiert sich automatisch, sobald der Bericht fertig ist - das kann bei grossen Dateien einige Minuten dauern."

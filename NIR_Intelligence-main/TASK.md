@@ -44,6 +44,33 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## Current Task: OP55 - Projekt-Anlegen: Aufbereitung asynchron mit sichtbarem Fortschritt
+
+### Problem (Feldtest)
+- "Loading a new project goes forever" - ProjectCreateView lief
+  build_preparation_report SYNCHRON im Request: pro Datei ein KI-Pass mit
+  bis zu 120s Timeout x 2 Versuchen; bei mehreren Dateien hing der Request
+  minutenlang ohne jedes Feedback, ob es je erfolgreich sein wird.
+
+### Fixes
+- ProjectCreateView: Projekt wird sofort angelegt, Aufbereitung laeuft in
+  einem Background-Thread (daemon); Fehler werden als preparation_error
+  im Bericht festgehalten (nie still).
+- Neuer ProjectPrepareStatusView: GET /api/projects/create/<id>/status/
+  liefert {ready, error, dataset_count}.
+- project_report.html: Fortschritts-Banner (Spinner + erklaerender Text)
+  solange phase=drafted und keine datasets; Polling alle 3s, bei ready
+  automatischer Reload, bei Fehler rote Box.
+- projects.html: Meldung beim Anlegen kommuniziert die Weiterleitung zur
+  Projektseite mit sichtbarer Hintergrund-Aufbereitung.
+
+### Tests
+- OP55-Matrix tests/test_op55_async_prep.py (14 Checks): Create antwortet
+  sofort mit preparing:true, Background-Thread schliesst die Aufbereitung
+  ab, Status-Endpoint meldet ready, Banner/Polling in Templates.
+- 14/14; OP10 56/56 (T3n wieder gruen); OP53 46/46, OP54 23/23,
+  OP29 53/53, OP52 55/55; i18n um 2 msgids ergaenzt; CI registriert.
+
 ## Current Task: OP54 - DIY-Spektrometer: Detailseiten wie bei den Sensoren
 
 ### Objective

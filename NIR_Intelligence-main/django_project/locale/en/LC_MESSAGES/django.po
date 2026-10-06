@@ -3655,3 +3655,9 @@ msgstr "Note: predominantly VIS spectrometers (400-1100 nm). Only of limited use
 
 msgid "Noch keine Dokumente fuer dieses DIY-Projekt. Laden Sie beliebige Informationen (Bauanleitung, Foto, Kalibrierung, Software, Messergebnisse) hoch - das erweitert die Sensor-Datenbank."
 msgstr "No documents for this DIY project yet. Upload any information (build guide, photo, calibration, software, measurement results) - this extends the sensor database."
+
+msgid "Datenaufbereitung laeuft..."
+msgstr "Data preparation is running..."
+
+msgid "Die Dateien werden gerade ausgewertet (inkl. KI-Metadaten-Extraktion). Diese Seite aktualisiert sich automatisch, sobald der Bericht fertig ist - das kann bei grossen Dateien einige Minuten dauern."
+msgstr "The files are being analyzed (including AI metadata extraction). This page refreshes automatically once the report is ready - with large files this can take a few minutes."

@@ -119,6 +119,16 @@ check('T2d project create endpoint works (modal contract)',
 pid = body.get('project_id')
 if pid:
     project = AnalysisProject.objects.get(id=pid)
+    # OP55: the preparation report is built asynchronously; poll the status
+    # endpoint until the background thread is done (offline: deterministic
+    # fallback finishes quickly).
+    import time as _time
+    _deadline = _time.time() + 60
+    while _time.time() < _deadline:
+        project.refresh_from_db()
+        if project.preparation_report and project.preparation_report.get('datasets'):
+            break
+        _time.sleep(1)
     check('T2e project in drafted phase with preparation report',
           project.phase == 'drafted' and bool(project.preparation_report))
     r = c.get(f'/projects/{pid}/')

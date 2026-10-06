@@ -221,7 +221,7 @@
                 show('Upload erfolgreich, aber keine Datei-IDs erhalten.', false);
                 return;
             }
-            show('Projekt wird angelegt (Aufbereitung läuft)…', true);
+            show('Projekt wird angelegt - Sie werden zur Projektseite weitergeleitet, die Aufbereitung läuft dort sichtbar im Hintergrund…', true);
             var name = (document.getElementById('projectName').value || '').trim();
             return fetch('/api/projects/create/', {
                 method: 'POST',
