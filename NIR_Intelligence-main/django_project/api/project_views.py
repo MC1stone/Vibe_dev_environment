@@ -14,6 +14,8 @@ from pathlib import Path
 from django.conf import settings
 from django.http import HttpResponse, Http404
 from django.shortcuts import redirect, render
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
 logger = logging.getLogger("API.ProjectViews")
@@ -156,6 +158,10 @@ class SensorDetailView(TemplateView):
     unavailable)."""
     template_name = 'sensor_detail.html'
 
+    @method_decorator(ensure_csrf_cookie)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
     def get(self, request, sensor_key):
         if not request.user.is_authenticated:
             return redirect('/login/?next=' + request.get_full_path())
@@ -256,6 +262,7 @@ class SensorDocumentUploadView(APIView if DRF_AVAILABLE else object):
     sensor database. Any information type is allowed (datasheet, manual,
     calibration, photo, software, publication, other)."""
 
+    @method_decorator(ensure_csrf_cookie)
     def post(self, request, sensor_key):
         if not request.user.is_authenticated:
             return Response({'success': False, 'error': gettext('Authentication required')},
