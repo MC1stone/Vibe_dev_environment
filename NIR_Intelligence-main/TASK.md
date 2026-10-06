@@ -44,6 +44,24 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## NACHTRAG OP53c: Upload-403 durch fehlendes CSRF-Cookie behoben
+
+### Problem (Feldtest)
+- Dokument-Upload auf der Sensor-Detailseite scheiterte mit 403 Forbidden:
+  Das Template enthaelt kein {% csrf_token %} und der View setzte das
+  csrftoken-Cookie nicht, daher lief getCookie('csrftoken') im JS leer
+  und Djangos CSRF-Middleware wies den POST ab.
+
+### Fixes
+- `SensorDetailView.dispatch` und `SensorDocumentUploadView.post` mit
+  `ensure_csrf_cookie` dekoriert: Der Seitenaufruf setzt das Cookie,
+  der JS-Upload sendet es als X-CSRFToken-Header.
+
+### Tests
+- OP53-Matrix um T3f1/T3f2 erweitert: Client mit enforce_csrf_checks=True,
+  GET muss csrftoken-Cookie setzen, Upload mit X-CSRFToken muss 200 liefern.
+- 43/43 gruen; Regressionen OP29 53/53, OP52 55/55, manage.py check clean.
+
 ## NACHTRAG OP53b: Sensor-Detailseite - Crash-Fix + asynchroner KI-Ueberblick
 
 ### Problem (Feldtest-Feedback)

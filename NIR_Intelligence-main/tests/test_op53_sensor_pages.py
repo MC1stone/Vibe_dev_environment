@@ -124,6 +124,27 @@ try:
     resp = anon.post(upload_url, {"files": SimpleUploadedFile("x.txt", b"x")})
     check("T3e anonymous upload rejected (401/redirect/CSRF-403)",
           resp.status_code in (401, 301, 302, 403), f"got {resp.status_code}")
+
+    # T3f (OP53c): CSRF cookie set on sensor page + upload works with token
+    csrf_client = Client(enforce_csrf_checks=True)
+    csrf_client.login(username="op53user", password="pw12345!")
+    resp = csrf_client.get("/projects/sensors/TestSensor/")
+    check("T3f1 sensor page GET sets csrftoken cookie (OP53c)",
+          "csrftoken" in csrf_client.cookies, "no csrftoken cookie")
+    token = csrf_client.cookies.get("csrftoken")
+    if token:
+        resp = csrf_client.post(upload_url,
+                               {"files": SimpleUploadedFile("op53c.pdf",
+                                                            b"%PDF-1.4 test",
+                                                            content_type="application/pdf"),
+                                "doc_type": "datasheet"},
+                               HTTP_X_CSRFTOKEN=token.value)
+        check("T3f2 upload accepted with X-CSRFToken under enforced CSRF (OP53c)",
+              resp.status_code == 200 and resp.json().get("success"),
+              f"got {resp.status_code}: {resp.content.decode()[:200]}")
+    else:
+        check("T3f2 upload accepted with X-CSRFToken under enforced CSRF (OP53c)",
+              False, "no token to test with")
 finally:
     runner.teardown_databases(old_config)
 
