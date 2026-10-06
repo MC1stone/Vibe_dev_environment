@@ -158,6 +158,27 @@
                 {% endfor %}
             </ul>
 
+            {% if sensor_reference.checked or sensor_reference.unknown %}
+            <h6 class="mt-3"><i class="bi bi-cpu me-1"></i>{% trans "Sensor-Datenbank-Referenz" %}</h6>
+            <ul class="mb-2">
+                {% for ref in sensor_reference.checked %}
+                <li>
+                    <span class="badge bg-success">{% trans "bekannt" %}</span>
+                    <strong>{{ ref.sensor }}</strong>
+                    &ndash; {{ ref.document_count }} {% trans "Dokument(e) in der Sensor-Datenbank" %}
+                    <a href="{{ ref.sensor_url }}">{% trans "Zur Sensorseite" %}</a>
+                </li>
+                {% endfor %}
+                {% for ref in sensor_reference.unknown %}
+                <li>
+                    <span class="badge bg-warning text-dark">{% trans "nicht in der Datenbank" %}</span>
+                    <strong>{{ ref.sensor }}</strong>
+                    &ndash; {% trans "Keine Dokumente hinterlegt. Dokumente (Datenblatt, Handbuch, Kalibrierung) hochladen:" %}
+                    <a href="{{ ref.sensor_url }}#documents">{% trans "Sensorseite / Dokumente" %}</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
             {% if metadata_quality.missing_recommended_fields %}
             <p class="small text-muted">Fehlende Metadatenfelder:
                 {% for f in metadata_quality.missing_recommended_fields %}<code>{{ f }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}

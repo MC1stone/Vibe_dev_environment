@@ -1019,6 +1019,27 @@ def build_preparation_report(project) -> Dict[str, Any]:
         "usable_dataset_count": usable_count,
         "total_dataset_count": len(datasets),
     }
+    # OP53: sensor database reference check - does the sensor used in
+    # this new project have a reference entry (documents) in the sensor
+    # database? Honest result with links, appended to the report.
+    try:
+        from services.sensor_documents import (check_sensor_reference,
+                                                instrument_types_from_report)
+        instrument_types = []
+        for dataset in datasets:
+            metadata = dataset.get("metadata") or {}
+            value = metadata.get("instrument_type") or metadata.get("instrument")
+            if value:
+                instrument_types.append(str(value))
+        if not instrument_types:
+            instrument_types = instrument_types_from_report(project)
+        user = getattr(project, "user", None)
+        report["sensor_reference"] = check_sensor_reference(
+            instrument_types, user)
+    except Exception as exc:
+        logger.warning("Sensor reference check failed (degraded): %s", exc)
+        report["sensor_reference"] = {"checked": [], "unknown": [],
+                                      "error": str(exc)}
     project.preparation_report = report
     if usable_count:
         project.save(update_fields=["preparation_report", "updated_at"])

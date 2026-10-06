@@ -599,6 +599,16 @@ unter Projekte, ILIAS-Kurse als Unterpunkt unter Lernen. Neue Seite
 aus den Crew-Ergebnissen. i18n de/en ergaenzt. Testmatrix
 test_op52_nav_menu.py 40/40.
 
+### OP53 — Sensor-Seiten (KI), Dokumenten-Datenbank, Referenz-Check — ERLEDIGT
+Eine Plattform-Seite pro Sensor sammelt alle Informationen (Adapter,
+Nutzung, Einstellungen, Vorschlaege, hochgeladene Dokumente) plus
+KI-Ueberblick (lokal, live, ehrlicher Fallback). Dokumenten-Upload pro
+Sensor (Datenblatt, Handbuch, Kalibrierung, Foto, Software,
+Publikation, Sonstiges) erweitert die Sensor-Datenbank; beim
+Projekt-Anlegen wird automatisch geprueft, ob der genutzte Sensor
+referenziert ist (inkl. Link zur Sensorseite). Testmatrix
+test_op53_sensor_pages.py 37/37.
+
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.

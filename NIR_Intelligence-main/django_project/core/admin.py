@@ -5,7 +5,7 @@ Admin configuration for Core app
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
-from .models import User, NIRSpectrum, AnalysisJob, Agent, SystemLog, UserPreference
+from .models import User, NIRSpectrum, AnalysisJob, Agent, SystemLog, UserPreference, SensorDocument
 
 
 class UserAdmin(BaseUserAdmin):
@@ -235,3 +235,10 @@ admin.site.register(AnalysisJob, AnalysisJobAdmin)
 admin.site.register(Agent, AgentAdmin)
 admin.site.register(SystemLog, SystemLogAdmin)
 admin.site.register(UserPreference, UserPreferenceAdmin)
+
+@admin.register(SensorDocument)
+class SensorDocumentAdmin(admin.ModelAdmin):
+    list_display = ('original_name', 'sensor_key', 'doc_type',
+                    'visibility', 'user', 'created_at')
+    list_filter = ('doc_type', 'visibility', 'sensor_key')
+    search_fields = ('original_name', 'sensor_key', 'notes')
