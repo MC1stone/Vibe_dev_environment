@@ -53,6 +53,42 @@ def sensors_with_documents() -> List[str]:
                 .values_list("sensor_key", flat=True).distinct())
 
 
+def _suggested_settings(name: str) -> Optional[Dict[str, Any]]:
+    """OP56: one-click suggestions for missing metadata fields of a sensor.
+
+    Recorded settings from the database (values actually measured with
+    this sensor on the platform) win over generic catalogue defaults.
+    None when nothing is known - the report then shows no suggestion
+    buttons. Never raises.
+    """
+    try:
+        from services.sensor_catalog import (get_setting_options,
+                                              match_model_id)
+        model_id = match_model_id(name)
+        if not model_id:
+            return None
+        suggested: Dict[str, Any] = {}
+        for opt in get_setting_options():
+            value = opt.get("default_value")
+            if value is not None:
+                suggested[opt["name"]] = value
+        try:
+            from services.sensor_catalog import _usage_from_database
+            for bucket in _usage_from_database():
+                if bucket.get("model_id") != model_id:
+                    continue
+                for key, values in (bucket.get("recorded_settings")
+                                    or {}).items():
+                    if values:
+                        suggested[key] = values[0]
+                break
+        except Exception:
+            pass
+        return suggested or None
+    except Exception:
+        return None
+
+
 def check_sensor_reference(instrument_types: List[str],
                            user: Optional[Any] = None) -> Dict[str, Any]:
     """Reference check at project creation (OP53).
@@ -75,6 +111,12 @@ def check_sensor_reference(instrument_types: List[str],
             "document_count": len(docs),
             "sensor_url": f"/projects/sensors/{name}/",
         }
+        # OP56: known settings for this sensor are offered as one-click
+        # suggestions for missing metadata fields (e.g. SparkFun Triad).
+        # Recorded values from the database win over generic defaults -
+        # they are the values actually measured with this sensor on the
+        # platform. Never raises; without a match no suggestions appear.
+        entry["suggested_settings"] = _suggested_settings(name)
         if docs:
             entry["documents"] = [d.get_summary() for d in docs[:10]]
             result["checked"].append(entry)

@@ -44,6 +44,43 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## Current Task: OP56 - Release-Fixes: Bericht-Chatbot, Metadaten-Speichern, Sensor-Vorschlaege, Fortschritt
+
+### Problem (Feldtest)
+- Abschlussbericht-Chatbot zeigte "[Offline]" obwohl Ollama verfuegbar war:
+  das Widget-POST ging ohne X-CSRFToken hin - DRF SessionAuthentication
+  antwortete 403, der JS-catch-Zweig fiel in die Offline-Wissensbasis.
+- Metadaten-Aenderungen wurden nicht gespeichert: der Editor nutzte den
+  Token aus dem csrftoken-Cookie, aber die Detail-View setzte das Cookie
+  nie (ensure_csrf_cookie fehlte) und das Formular trug kein Hidden-Token.
+- Beim Anlegen eines Projekts wurden die bekannten Einstellungen des
+  genutzten Sensors (z. B. SparkFun Triad) aus der Datenbank nicht zum
+  Auffuellen fehlender Metadaten-Felder angeboten.
+- "Loading a new project goes forever": das Aufbereitungs-Banner zeigte
+  keinerlei Fortschritt oder verstrichene Zeit.
+
+### Fixes
+- services/report_chatbot.py: Widget sendet jetzt X-CSRFToken (aus dem
+  csrftoken-Cookie) und credentials: 'same-origin' -> der Berichts-Chatbot
+  nutzt wieder die echte KI statt des Offline-Fallbacks.
+- api/project_views.py: ProjectDetailView mit @ensure_csrf_cookie; das
+  Metadaten-Formular traegt {% csrf_token %}; der Editor-JS liest den
+  Token bevorzugt aus dem versteckten csrfmiddlewaretoken-Input.
+- services/sensor_documents.py: _suggested_settings(name) - Katalog-Defaults
+  plus tatsaechlich in der Datenbank aufgezeichnete Sensor-Einstellungen
+  (recorded_settings gewinnen); check_sensor_reference haengt sie an jeden
+  geprueften Sensor; project_report.html rendert Ein-Klick-Buttons, die
+  nur leere Metadaten-Felder fuellen.
+- project_report.html: Aufbereitungs-Banner zeigt verstrichene Zeit und
+  bereits erkannte Datensatz-Anzahl (Polling liefert dataset_count).
+
+### Tests
+- OP56-Matrix tests/test_op56_report_fixes.py (18 Checks): Widget-Token,
+  CSRF-Cookie der Detail-View, Hidden-Token im Editor, Vorschlags-Service
+  (unbekannter Sensor -> None, bekannter -> nie werfend), Buttons fuellen
+  nur leere Felder, Fortschritts-Elemente, Live-Checks mit Test-Client.
+- CI registriert (Matrix +1 Zeile).
+
 ## Current Task: OP55 - Projekt-Anlegen: Aufbereitung asynchron mit sichtbarem Fortschritt
 
 ### Problem (Feldtest)

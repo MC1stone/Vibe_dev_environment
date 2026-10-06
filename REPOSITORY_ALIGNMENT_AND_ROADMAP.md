@@ -609,6 +609,18 @@ Projekt-Anlegen wird automatisch geprueft, ob der genutzte Sensor
 referenziert ist (inkl. Link zur Sensorseite). Testmatrix
 test_op53_sensor_pages.py 37/37.
 
+### OP56 — Release-Fixes: Bericht-Chatbot, Metadaten-Speichern, Sensor-Vorschlaege — ERLEDIGT
+- Abschlussbericht-Chatbot: POST ohne X-CSRFToken lief auf DRF-403 und fiel
+  still auf die Offline-Wissensbasis ("Ollama offline" obwohl verfuegbar);
+  Widget sendet jetzt Token + Session-Credentials.
+- Metadaten-Editor: Detail-View setzt jetzt ensure_csrf_cookie, Formular
+  traegt Hidden-Token - Speichern funktioniert zuverlaessig.
+- Sensor-Einstellungen (z. B. SparkFun Triad) aus Katalog + Datenbank werden
+  beim Projekt-Anlegen als Ein-Klick-Vorschlaege fuer leere Metadaten-Felder
+  angeboten.
+- Aufbereitungs-Banner zeigt verstrichene Zeit + Datensatz-Anzahl.
+- Testmatrix tests/test_op56_report_fixes.py 18/18; CI registriert.
+
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.

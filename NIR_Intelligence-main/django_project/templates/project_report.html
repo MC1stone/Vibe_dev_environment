@@ -30,6 +30,10 @@
                 <p class="text-muted mb-0">
                     {% trans "Die Dateien werden gerade ausgewertet (inkl. KI-Metadaten-Extraktion). Diese Seite aktualisiert sich automatisch, sobald der Bericht fertig ist - das kann bei grossen Dateien einige Minuten dauern." %}
                 </p>
+                <p class="text-muted small mb-0">
+                    {% trans "Verstrichene Zeit" %}: <span id="prepare-elapsed">0:00</span>
+                    &middot; {% trans "Datens&auml;tze bisher" %}: <span id="prepare-count">0</span>
+                </p>
             </div>
         </div>
     </div>
@@ -198,6 +202,40 @@
                 {% for f in metadata_quality.missing_recommended_fields %}<code>{{ f }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}
             </p>
             {% endif %}
+            {% for ref in sensor_reference.checked %}
+                {% if ref.suggested_settings %}
+                <div class="card border-info mb-2">
+                    <div class="card-body py-2">
+                        <strong><i class="bi bi-lightbulb me-1"></i>{% trans "Sensor-Einstellungen aus der Datenbank" %} ({{ ref.sensor }}):</strong>
+                        <p class="small text-muted mb-2">{% trans "Bekannte Einstellungen dieses Sensors - klicken zum Uebernehmen in den Metadaten-Editor (nur leere Felder)." %}</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for key, value in ref.suggested_settings.items %}
+                            <button type="button" class="btn btn-sm btn-outline-info js-suggest-setting" data-key="{{ key }}" data-value="{{ value }}">
+                                <code>{{ key }}</code> = {{ value }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+            {% for ref in sensor_reference.unknown %}
+                {% if ref.suggested_settings %}
+                <div class="card border-info mb-2">
+                    <div class="card-body py-2">
+                        <strong><i class="bi bi-lightbulb me-1"></i>{% trans "Sensor-Einstellungen aus der Datenbank" %} ({{ ref.sensor }}):</strong>
+                        <p class="small text-muted mb-2">{% trans "Bekannte Einstellungen dieses Sensors - klicken zum Uebernehmen in den Metadaten-Editor (nur leere Felder)." %}</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for key, value in ref.suggested_settings.items %}
+                            <button type="button" class="btn btn-sm btn-outline-info js-suggest-setting" data-key="{{ key }}" data-value="{{ value }}">
+                                <code>{{ key }}</code> = {{ value }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
 
             {% if project.phase == 'drafted' %}
             <!-- Metadata editor (OP13): edit dataset metadata online, no re-upload -->
@@ -217,6 +255,7 @@
                          data-bs-parent="#metadataEditor">
                         <div class="accordion-body">
                             <form class="metadata-form" data-file-id="{{ d.file_id }}">
+                                {% csrf_token %}
                                 <div class="row g-2">
                                     {% for f in d.editor_fields %}
                                     <div class="col-md-4">
@@ -356,10 +395,24 @@
     const card = document.getElementById('preparingCard');
     if (!card) { return; }
     const statusUrl = '{% url "project-prepare-status" project.id %}';
+    const startedAt = Date.now();
+    function tickClock() {
+        var elapsed = Math.floor((Date.now() - startedAt) / 1000);
+        var el = document.getElementById('prepare-elapsed');
+        if (el) {
+            el.textContent = Math.floor(elapsed / 60) + ':' +
+                ('0' + (elapsed % 60)).slice(-2);
+        }
+    }
+    setInterval(tickClock, 1000);
     function poll() {
         fetch(statusUrl, { credentials: 'same-origin' })
             .then(function (r) { return r.json(); })
             .then(function (data) {
+                var countEl = document.getElementById('prepare-count');
+                if (countEl && typeof data.dataset_count !== 'undefined') {
+                    countEl.textContent = data.dataset_count;
+                }
                 if (data.ready) {
                     window.location.reload();
                 } else if (data.error) {
@@ -378,6 +431,8 @@
 (function () {
     var statusBox = document.getElementById('workflow-status');
     function getCsrfToken() {
+        const hidden = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (hidden && hidden.value) { return hidden.value; }
         var cookies = document.cookie.split(';');
         for (var i = 0; i < cookies.length; i++) {
             var cookie = cookies[i].trim();
@@ -391,6 +446,18 @@
         statusBox.style.display = 'block';
         statusBox.innerHTML = '<div class="alert alert-' + (ok ? 'success' : 'danger') + ' mb-0">' + msg + '</div>';
     }
+    document.querySelectorAll('.js-suggest-setting').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var key = btn.dataset.key, value = btn.dataset.value;
+            var filled = false;
+            document.querySelectorAll('.metadata-form').forEach(function (form) {
+                var input = form.querySelector('input[name="' + key + '"]');
+                if (input && !input.value) { input.value = value; filled = true; }
+            });
+            btn.classList.remove('btn-outline-info');
+            btn.classList.add(filled ? 'btn-success' : 'btn-secondary');
+        });
+    });
     document.querySelectorAll('.metadata-form').forEach(function (form) {
         var fileId = form.getAttribute('data-file-id');
         var status = form.querySelector('.metadata-status');

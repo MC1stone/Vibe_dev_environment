@@ -723,6 +723,10 @@ class ProjectDetailView(TemplateView):
 
     template_name = 'project_report.html'
 
+    @method_decorator(ensure_csrf_cookie)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
     def get(self, request, project_id):
         if not request.user.is_authenticated:
             return redirect('/login/?next=' + request.get_full_path())
