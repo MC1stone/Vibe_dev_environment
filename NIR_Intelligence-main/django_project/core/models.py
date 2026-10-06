@@ -1096,8 +1096,18 @@ class SensorDocument(models.Model):
     original_name = models.CharField(
         max_length=512, verbose_name='Original File Name'
     )
+    DOC_TYPES = [
+        ('datasheet', 'Datenblatt'),
+        ('manual', 'Handbuch / Anleitung'),
+        ('calibration', 'Kalibrierung / Zertifikat'),
+        ('photo', 'Foto'),
+        ('software', 'Software / Treiber / Skript'),
+        ('publication', 'Publikation / Referenz'),
+        ('other', 'Sonstiges'),
+    ]
     doc_type = models.CharField(
-        max_length=40, default='document', verbose_name='Document Type'
+        max_length=40, choices=DOC_TYPES, default='other',
+        verbose_name='Document Type'
     )
     notes = models.TextField(blank=True, verbose_name='Notes')
     visibility = models.CharField(

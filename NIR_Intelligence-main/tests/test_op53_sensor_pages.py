@@ -175,13 +175,41 @@ try:
 except Exception as exc:
     check("T5b delete route registered", False, str(exc))
 
+# T5c (OP53b): async summary route registered
+try:
+    from django.urls import reverse as _reverse
+    url = _reverse("sensor-summary", kwargs={"sensor_key": "SEN0001"})
+    check("T5c summary route registered (OP53b async)",
+          url == "/api/projects/sensors/SEN0001/summary/", url)
+except Exception as exc:
+    check("T5c summary route registered (OP53b async)", False, str(exc))
+
+# T1c (OP53b): doc_type has choices (get_doc_type_display crash fix)
+try:
+    from core import models as core_models
+    field = core_models.SensorDocument._meta.get_field("doc_type")
+    check("T1c doc_type has choices (display crash fix)",
+          bool(field.choices) and field.choices[0][0] == "datasheet")
+    mig8 = (Path(__file__).resolve().parent.parent
+            / "django_project/core/migrations"
+            / "0008_alter_sensordocument_doc_type.py")
+    check("T1c1 migration 0008 for doc_type choices exists", mig8.exists())
+except Exception as exc:
+    check("T1c doc_type has choices (display crash fix)", False, str(exc))
+    check("T1c1 migration 0008 for doc_type choices exists", False, str(exc))
+
 # T6: templates render the new sections
 tpl_dir = Path(__file__).resolve().parent.parent / "django_project/templates"
 detail = (tpl_dir / "sensor_detail.html").read_text(encoding="utf-8")
 check("T6a sensor page shows KI-Ueberblick block",
-      "KI-Ueberblick" in detail and "ki_summary_available" in detail)
+      "KI-Ueberblick" in detail and "kiSummaryBox" in detail)
 check("T6b sensor page honest fallback text present",
       "nicht erreichbar" in detail)
+check("T6b1 sensor page fetches summary asynchronously",
+      'url "sensor-summary"' in detail
+      and "NIR_SENSOR_SUMMARY_URL" in detail
+      and "ki_summary_available" not in detail
+      and "{{ ki_summary }}" not in detail)
 check("T6c sensor page shows documents section",
       "Sensor-Datenbank: Dokumente" in detail and "docUploadResult" in detail)
 check("T6d sensor page wires upload URL via {% url %}",
