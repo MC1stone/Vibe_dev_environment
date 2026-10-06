@@ -44,6 +44,26 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## NACHTRAG OP53d: Upload-403 bei kaputtem/fremdem csrftoken-Cookie behoben
+
+### Problem (Feldtest)
+- Upload scheiterte weiterhin mit 403: "CSRF token from the 'X-Csrftoken'
+  HTTP header has incorrect length." Der Browser hatte ein altes/fremdes
+  csrftoken-Cookie fuer localhost (Cookies gelten portuebergreifend; auf dem
+  Host laufen mehrere Web-Apps). Das JS las den falschen Token aus dem Cookie.
+
+### Fixes
+- `sensor_detail.html`: Upload-Formular enthaelt jetzt {% csrf_token %}; neue
+  JS-Helfer-Funktion getCsrfToken() zieht den Token bevorzugt aus dem
+  server-gerenderten Hidden-Input (csrfmiddlewaretoken) statt aus dem Cookie
+  - damit ist der Upload unabhaengig von potenziell kaputten Cookies.
+- Upload und Delete verwenden beide den robusten Helfer.
+
+### Tests
+- OP53-Matrix um T3f3a-c erweitert: kaputtes Cookie simuliert, Hidden-Input
+  muss gerendert werden, Upload muss mit Form-Token 200 liefern.
+- 46/46 gruen; Regressionen OP29 53/53, OP52 55/55.
+
 ## NACHTRAG OP53c: Upload-403 durch fehlendes CSRF-Cookie behoben
 
 ### Problem (Feldtest)

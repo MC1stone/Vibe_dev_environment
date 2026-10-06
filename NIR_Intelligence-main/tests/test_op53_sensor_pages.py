@@ -145,6 +145,33 @@ try:
     else:
         check("T3f2 upload accepted with X-CSRFToken under enforced CSRF (OP53c)",
               False, "no token to test with")
+
+    # T3f3 (OP53d): upload works even with a stale/foreign csrftoken cookie,
+    # because the template renders {% csrf_token %} and the JS prefers the
+    # hidden form input over the cookie.
+    import re as _re
+    csrf_client.cookies["csrftoken"] = "short"   # broken cookie like in the field
+    resp = csrf_client.get("/projects/sensors/TestSensor/")
+    html = resp.content.decode()
+    m = _re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', html)
+    check("T3f3a upload form renders csrfmiddlewaretoken hidden input (OP53d)",
+          bool(m), "no csrfmiddlewaretoken input rendered")
+    from pathlib import Path as _Path
+    _tpl_dir = _Path(__file__).resolve().parent.parent / "django_project/templates"
+    detail_tpl = (_tpl_dir / "sensor_detail.html").read_text(encoding="utf-8")
+    check("T3f3b template JS prefers form token over cookie (OP53d)",
+          "getCsrfToken" in detail_tpl and 'name="csrfmiddlewaretoken"' in detail_tpl)
+    if m:
+        resp = csrf_client.post(upload_url,
+                               {"files": SimpleUploadedFile("op53d.pdf",
+                                                            b"%PDF-1.4",
+                                                            content_type="application/pdf"),
+                                "doc_type": "datasheet",
+                                "csrfmiddlewaretoken": m.group(1)},
+                               HTTP_X_CSRFTOKEN=m.group(1))
+        check("T3f3c upload succeeds with broken cookie + form token (OP53d)",
+              resp.status_code == 200 and resp.json().get("success"),
+              f"got {resp.status_code}")
 finally:
     runner.teardown_databases(old_config)
 

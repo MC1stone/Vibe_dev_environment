@@ -197,6 +197,7 @@
 
             <h6 class="mt-4"><i class="bi bi-upload me-1"></i>{% trans "Dokument hochladen" %}</h6>
             <form id="sensorDocUpload" enctype="multipart/form-data">
+                {% csrf_token %}
                 <div class="row g-2">
                     <div class="col-md-5">
                         <input type="file" class="form-control" name="files" id="docFiles" multiple required>
@@ -231,6 +232,11 @@
 window.NIR_SENSOR_SUMMARY_URL = '{% url "sensor-summary" sensor_name %}';
 window.NIR_SENSOR_DOC_UPLOAD_URL = '{% url "sensor-document-upload" sensor_name %}';
 window.NIR_SENSOR_DOC_DELETE_URL = '{% url "sensor-document-delete" "00000000-0000-0000-0000-000000000000" %}';
+function getCsrfToken() {
+    const hidden = document.querySelector('#sensorDocUpload input[name="csrfmiddlewaretoken"]');
+    if (hidden && hidden.value) { return hidden.value; }
+    return getCookie('csrftoken');
+}
 function getCookie(name) {
     const cookies = document.cookie.split(';');
     for (let i = 0; i < cookies.length; i++) {
@@ -275,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function () {
             fetch(window.NIR_SENSOR_DOC_UPLOAD_URL, {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                headers: { 'X-CSRFToken': getCsrfToken() },
                 body: data
             })
             .then(function (response) { return response.json(); })
@@ -301,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function () {
             fetch(window.NIR_SENSOR_DOC_DELETE_URL.replace('00000000-0000-0000-0000-000000000000', btn.dataset.docId), {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                headers: { 'X-CSRFToken': getCsrfToken() }
             })
             .then(function (response) { return response.json(); })
             .then(function (data) { if (data.success) { window.location.reload(); } })
