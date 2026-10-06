@@ -44,6 +44,7 @@ class SensorSummaryService:
         payload = {
             "sensor": sensor_name,
             "adapter_profil": facts.get("sensor") or None,
+            "beschreibung": facts.get("description") or None,
             "verwendung_aus_datenbank": facts.get("usage") or None,
             "dokumente": [d.get_summary() if hasattr(d, "get_summary") else d
                           for d in (facts.get("documents") or [])],

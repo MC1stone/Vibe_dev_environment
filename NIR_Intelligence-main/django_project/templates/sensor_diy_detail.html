@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}DIY: {{ project.name }} - NIR Intelligence Platform{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-tools me-2"></i>{{ project.name }}</h1>
+        <a href="/projects/sensors/diy/" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left me-1"></i>{% trans "Zur DIY-Uebersicht" %}
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4 border-primary">
+        <div class="card-header bg-primary-subtle"><h5 class="mb-0"><i class="bi bi-stars me-2"></i>{% trans "KI-Ueberblick" %} ({{ project.name }})</h5></div>
+        <div class="card-body">
+            <div id="kiSummaryBox">
+                <p class="mb-0"><i class="bi bi-hourglass-split me-1"></i>{% trans "KI-Ueberblick wird generiert..." %}</p>
+            </div>
+            <p class="text-muted small mb-0 mt-2"><i class="bi bi-cpu me-2"></i>{% trans "Live generiert vom lokalen Sprachmodell aus den Plattformdaten." %}</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{% trans "Beschreibung (aus den Projektseiten aufbereitet)" %}</h5>
+            <span class="badge bg-success">{{ project.status }}</span>
+        </div>
+        <div class="card-body">
+            <p class="mb-3">{{ project.description }}</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>{% trans "Eigenschaften" %}</h6>
+                    <ul class="mb-0">
+                        {% for feature in project.features %}
+                        <li>{{ feature }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>{% trans "Geeignet fuer" %}</h6>
+                    <ul class="mb-0">
+                        {% for use in project.suited_for %}
+                        <li>{{ use }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header"><h5 class="mb-0">{% trans "Projektseiten" %}</h5></div>
+        <div class="card-body">
+            <ul class="mb-0">
+                {% for label, url in project.urls %}
+                <li><a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ label }} <i class="bi bi-box-arrow-up-right small"></i></a></li>
+                {% endfor %}
+            </ul>
+            <p class="text-muted small mt-3 mb-0">{% trans "Hinweis: Uberwiegend VIS-Spektrometer (400-1100 nm). Fuer echte NIR-Spektroskopie (900-2500 nm) nur bedingt geeignet." %}</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm" id="documents">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{% trans "Sensor-Datenbank: Dokumente" %}
+                <span class="badge bg-secondary ms-2">{{ document_stats.count }}</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if documents %}
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>{% trans "Datei" %}</th>
+                        <th>{% trans "Typ" %}</th>
+                        <th>{% trans "Notizen" %}</th>
+                        <th>{% trans "Sichtbarkeit" %}</th>
+                        <th>{% trans "Hochgeladen" %}</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents %}
+                    <tr>
+                        <td><a href="{{ doc.file.url }}" target="_blank" rel="noopener">{{ doc.original_name }}</a></td>
+                        <td>{{ doc.get_doc_type_display }}</td>
+                        <td>{{ doc.notes|default:'-' }}</td>
+                        <td>{{ doc.get_visibility_display }}</td>
+                        <td>{{ doc.created_at|slice:":16" }}</td>
+                        <td>
+                            {% if doc.user_id == request.user.id %}
+                            <button class="btn btn-sm btn-outline-danger js-delete-doc" data-doc-id="{{ doc.id }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted">{% trans "Noch keine Dokumente fuer dieses DIY-Projekt. Laden Sie beliebige Informationen (Bauanleitung, Foto, Kalibrierung, Software, Messergebnisse) hoch - das erweitert die Sensor-Datenbank." %}</p>
+            {% endif %}
+
+            <h6 class="mt-4"><i class="bi bi-upload me-1"></i>{% trans "Dokument hochladen" %}</h6>
+            <form id="sensorDocUpload" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row g-2">
+                    <div class="col-md-5">
+                        <input type="file" class="form-control" name="files" id="docFiles" multiple required>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="doc_type" id="docType">
+                            {% for value, label in doc_types %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="visibility" id="docVisibility">
+                            <option value="lab_shared">{% trans "Laborweit geteilt" %}</option>
+                            <option value="private">{% trans "Nur fuer mich" %}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <button type="submit" class="btn btn-primary w-100">{% trans "Hochladen" %}</button>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <input type="text" class="form-control" name="notes" id="docNotes" placeholder="{% trans "Notizen (optional)" %}">
+                </div>
+            </form>
+            <div id="docUploadResult" class="mt-2"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+window.NIR_SENSOR_SUMMARY_URL = '{% url "sensor-summary" sensor_key %}';
+window.NIR_SENSOR_DOC_UPLOAD_URL = '{% url "sensor-document-upload" sensor_key %}';
+window.NIR_SENSOR_DOC_DELETE_URL = '{% url "sensor-document-delete" "00000000-0000-0000-0000-000000000000" %}';
+function getCsrfToken() {
+    const hidden = document.querySelector('#sensorDocUpload input[name="csrfmiddlewaretoken"]');
+    if (hidden && hidden.value) { return hidden.value; }
+    return getCookie('csrftoken');
+}
+function getCookie(name) {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.startsWith(name + '=')) {
+            return decodeURIComponent(cookie.substring(name.length));
+        }
+    }
+    return '';
+}
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+document.addEventListener('DOMContentLoaded', function () {
+    const summaryBox = document.getElementById('kiSummaryBox');
+    if (summaryBox && window.NIR_SENSOR_SUMMARY_URL) {
+        fetch(window.NIR_SENSOR_SUMMARY_URL, { credentials: 'same-origin' })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (data.available && data.summary) {
+                    summaryBox.innerHTML = '<p class="mb-0">' + escapeHtml(data.summary) + '</p>';
+                } else {
+                    summaryBox.innerHTML = '<p class="mb-0">{% trans "KI-Ueberblick derzeit nicht verfuegbar (lokales Sprachmodell nicht erreichbar). Alle strukturierten Informationen zum Sensor stehen unten." %}</p>';
+                }
+            })
+            .catch(function () {
+                summaryBox.innerHTML = '<p class="mb-0">{% trans "KI-Ueberblick derzeit nicht verfuegbar (lokales Sprachmodell nicht erreichbar). Alle strukturierten Informationen zum Sensor stehen unten." %}</p>';
+            });
+    }
+    const form = document.getElementById('sensorDocUpload');
+    if (form) {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            const resultBox = document.getElementById('docUploadResult');
+            const data = new FormData(form);
+            data.append('doc_type', document.getElementById('docType').value);
+            data.append('visibility', document.getElementById('docVisibility').value);
+            data.append('notes', document.getElementById('docNotes').value);
+            resultBox.innerHTML = '<div class="alert alert-info">{% trans "Wird hochgeladen..." %}</div>';
+            fetch(window.NIR_SENSOR_DOC_UPLOAD_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'X-CSRFToken': getCsrfToken() },
+                body: data
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    resultBox.innerHTML = '<div class="alert alert-success">' +
+                        data.uploaded + ' {% trans "Dokument(e) gespeichert. Seite wird neu geladen..." %}</div>';
+                    setTimeout(function () { window.location.reload(); }, 900);
+                } else {
+                    resultBox.innerHTML = '<div class="alert alert-danger">' +
+                        escapeHtml(data.error || 'Upload fehlgeschlagen') + '</div>';
+                }
+            })
+            .catch(function (error) {
+                resultBox.innerHTML = '<div class="alert alert-danger">Upload fehlgeschlagen: ' +
+                    escapeHtml(error.message) + '</div>';
+            });
+        });
+    }
+    document.querySelectorAll('.js-delete-doc').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (!confirm('{% trans "Dokument wirklich loeschen?" %}')) { return; }
+            fetch(window.NIR_SENSOR_DOC_DELETE_URL.replace('00000000-0000-0000-0000-000000000000', btn.dataset.docId), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'X-CSRFToken': getCsrfToken() }
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) { if (data.success) { window.location.reload(); } })
+            .catch(function () {});
+        });
+    });
+});
+</script>
+{% endblock %}
