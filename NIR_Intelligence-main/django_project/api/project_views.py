@@ -718,3 +718,51 @@ class ProjectFinalReportMarkdownView(TemplateView):
             response['Content-Disposition'] = (
                 f'attachment; filename="final_report_{project.id}.md"')
             return response
+
+
+class CalibrationOverviewView(TemplateView):
+    """OP52 calibration overview (/calibration/): lists the calibration
+    results (PLS/PCR and friends) of the user's completed/released
+    projects, extracted from the stored per-agent crew results."""
+
+    template_name = 'calibration_overview.html'
+
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=' + request.get_full_path())
+        from django.utils.translation import gettext as _
+        entries = []
+        for project in (AnalysisProject.objects
+                        .filter(user=request.user)
+                        .exclude(crew_results=None)
+                        .order_by('-updated_at')):
+            sections = ((project.crew_results or {})
+                        .get('per_agent_reports') or [])
+            cal_sections = [s for s in sections
+                            if s.get('agent') == 'calibration']
+            for section in cal_sections:
+                data = section.get('data') or {}
+                models = []
+                for name, res in (data.get('models') or {}).items():
+                    if not isinstance(res, dict):
+                        continue
+                    models.append({
+                        'name': name,
+                        'status': res.get('status', ''),
+                        'mean_r2': res.get('mean_r2'),
+                        'cv_folds': res.get('cv_folds'),
+                    })
+                entries.append({
+                    'project_id': str(project.id),
+                    'project_name': project.name,
+                    'phase': project.phase,
+                    'status': section.get('status', ''),
+                    'best_model': data.get('best_model'),
+                    'target_name': data.get('target_name'),
+                    'models': models,
+                    'charts': section.get('charts') or {},
+                    'notes': data.get('notes') or [],
+                })
+        context = {'entries': entries,
+                   'has_entries': bool(entries)}
+        return render(request, self.template_name, context)

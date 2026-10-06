@@ -61,25 +61,27 @@
                 <nav class="c-nav-main">
                     <ul class="c-nav-main__list js-disclosure-nav">
                         <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/" class="c-nav-main__action {% if request.path == '/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">{% trans "Workflow" %}</span>
-                            </a>
-                        </li>
-                        <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/projects/" class="c-nav-main__action {% if request.path == '/projects/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">{% trans "Projects" %}</span>
+                                <span class="c-nav-main__label">{% trans "Projekte" %}</span>
                             </a>
-                        </li>
-                        <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/projects/database/" class="c-nav-main__action {% if request.path == '/projects/database/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">{% trans "Spectrum database" %}</span>
-                            </a>
+                            <ul class="c-nav-sub">
+                                <li>
+                                    <a href="/projects/database/" class="c-nav-sub__action {% if request.path == '/projects/database/' %}c-nav-sub__action--active{% endif %}">
+                                        {% trans "Spektren-Datenbank" %}
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                         <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/projects/sensors/" class="c-nav-main__action {% if request.path == '/projects/sensors/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">{% trans "Sensors" %}</span>
+                                <span class="c-nav-main__label">{% trans "Sensoren" %}</span>
                             </a>
                             <ul class="c-nav-sub">
+                                <li>
+                                    <a href="/projects/sensors/" class="c-nav-sub__action {% if request.path == '/projects/sensors/' %}c-nav-sub__action--active{% endif %}">
+                                        {% trans "Sensoren" %}
+                                    </a>
+                                </li>
                                 <li>
                                     <a href="/api/projects/sensors/diy/" class="c-nav-sub__action {% if request.path == '/api/projects/sensors/diy/' %}c-nav-sub__action--active{% endif %}">
                                         {% trans "DIY-Spektrometer" %}
@@ -88,8 +90,30 @@
                             </ul>
                         </li>
                         <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/federated/" class="c-nav-main__action {% if request.path == '/federated/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">{% trans "Federated" %}</span>
+                            <a href="/calibration/" class="c-nav-main__action {% if request.path == '/calibration/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">{% trans "Kalibrieren" %}</span>
+                            </a>
+                        </li>
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="/ilias/" class="c-nav-main__action {% if request.path == '/ilias/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">{% trans "Lernen mit Kursen" %}</span>
+                            </a>
+                            <ul class="c-nav-sub">
+                                <li>
+                                    <a href="/ilias/" class="c-nav-sub__action {% if request.path == '/ilias/' %}c-nav-sub__action--active{% endif %}">
+                                        {% trans "ILIAS-Kurse" %}
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="/federated/" class="c-nav-sub__action {% if request.path == '/federated/' %}c-nav-sub__action--active{% endif %}">
+                                        {% trans "Federated" %}
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="/" class="c-nav-main__action {% if request.path == '/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">{% trans "Workflow" %}</span>
                             </a>
                         </li>
                     </ul>

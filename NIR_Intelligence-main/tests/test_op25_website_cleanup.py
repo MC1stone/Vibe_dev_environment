@@ -44,7 +44,8 @@ LEGACY_HREFS = [
     'href="/settings/"',
     'href="/documentation/"',
     'href="/chatbot/"',
-    'href="/ilias/"',
+    # /ilias/ removed from the legacy list: OP52 reintroduces it
+    # intentionally as sub-item under 'Lernen mit Kursen'.
 ]
 
 WORKFLOW_HREFS = [
