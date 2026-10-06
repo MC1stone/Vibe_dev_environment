@@ -26,7 +26,7 @@ try:
 except ImportError:  # offline test mode without djangorestframework
     DRF_AVAILABLE = False
 
-from core.models import AnalysisProject, GenericFile
+from core.models import AnalysisProject, GenericFile, SensorDocument
 from django.utils.translation import gettext
 
 
@@ -147,11 +147,13 @@ class SensorListView(TemplateView):
 
 
 class SensorDetailView(TemplateView):
-    """One sensor (OP29): adapter profile, recorded usage from the existing
-    database, the sensor's setting values found in the user's measurements
-    with a completeness/plausibility assessment, and the deduplicated
-    optimization suggestions from the analyses."""
-
+    """One sensor (OP29 + OP53): the single KI-supported information page
+    for a sensor. Everything the platform knows about it on one page:
+    adapter profile, recorded usage from the existing database, setting
+    values with completeness/plausibility assessment, optimization
+    suggestions, the uploaded sensor documents (database extension) and
+    a live KI-generated summary (local Ollama; honest fallback when
+    unavailable)."""
     template_name = 'sensor_detail.html'
 
     def get(self, request, sensor_key):
@@ -161,6 +163,8 @@ class SensorDetailView(TemplateView):
 
         from agents.sensor_agent import SensorAgent
         from services.sensor_catalog import assess_settings, match_model_id
+        from services.sensor_documents import (DOC_TYPES, document_stats,
+                                               sensor_documents)
         output = SensorAgent().execute({
             'operation': 'collect',
             'user_id': request.user.id,
@@ -173,16 +177,22 @@ class SensorDetailView(TemplateView):
         usage = next((u for u in data.get('usage', [])
                       if u['instrument_type'] == name
                       or (model_id and u['model_id'] == model_id)), None)
-        if sensor is None and usage is None:
+        documents = list(sensor_documents(name, request.user))
+        if sensor is None and usage is None and not documents:
             raise Http404('Sensor not found')
-
         recorded = (usage or {}).get('recorded_settings') or {}
         assessment = assess_settings(
             {key: (values[-1] if isinstance(values, list) and values else values)
              for key, values in recorded.items()},
             setting_options=data.get('setting_options', []))
-
         suggestions = data.get('optimization_suggestions', [])
+        from services.sensor_summary import SensorSummaryService
+        summary = SensorSummaryService().summarize(name, {
+            'sensor': sensor,
+            'usage': usage,
+            'documents': [d.get_summary() for d in documents],
+            'suggestions': suggestions,
+        })
         context = {
             'page_title': f'Sensor {name}',
             'sensor': sensor,
@@ -192,10 +202,78 @@ class SensorDetailView(TemplateView):
             'assessment': assessment,
             'setting_options': data.get('setting_options', []),
             'suggestions': suggestions,
+            'documents': documents,
+            'document_stats': document_stats(documents),
+            'doc_types': DOC_TYPES,
+            'ki_summary': summary,
+            'ki_summary_available': summary is not None,
         }
         return render(request, self.template_name, context)
 
 
+class SensorDocumentUploadView(APIView if DRF_AVAILABLE else object):
+    """Upload one or more documents for a sensor (OP53): extends the
+    sensor database. Any information type is allowed (datasheet, manual,
+    calibration, photo, software, publication, other)."""
+
+    def post(self, request, sensor_key):
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        from urllib.parse import unquote
+
+        name = unquote(sensor_key)
+        files = request.FILES.getlist('files') or request.FILES.getlist('file')
+        if not files:
+            return Response({'success': False, 'error': gettext('No file provided')},
+                            status=status.HTTP_400_BAD_REQUEST)
+        doc_type = str(request.data.get('doc_type') or 'other')
+        notes = str(request.data.get('notes') or '').strip()
+        visibility = str(request.data.get('visibility') or 'lab_shared')
+        if visibility not in ('private', 'lab_shared'):
+            visibility = 'lab_shared'
+        created = []
+        for upload in files:
+            doc = SensorDocument.objects.create(
+                user=request.user,
+                sensor_key=name,
+                file=upload,
+                original_name=upload.name,
+                doc_type=doc_type,
+                notes=notes,
+                visibility=visibility,
+            )
+            created.append(doc.get_summary())
+        return Response({
+            'success': True,
+            'sensor': name,
+            'uploaded': len(created),
+            'documents': created,
+            'sensor_url': f'/projects/sensors/{name}/',
+        })
+
+
+class SensorDocumentDeleteView(APIView if DRF_AVAILABLE else object):
+    """Delete one of the user's own sensor documents (OP53)."""
+
+    def post(self, request, document_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            doc = SensorDocument.objects.get(id=document_id, user=request.user)
+        except SensorDocument.DoesNotExist:
+            return Response({'success': False, 'error': gettext('Document not found')},
+                            status=status.HTTP_404_NOT_FOUND)
+        sensor_name = doc.sensor_key
+        if doc.file:
+            doc.file.delete(save=False)
+        doc.delete()
+        return Response({
+            'success': True,
+            'sensor': sensor_name,
+            'sensor_url': f'/projects/sensors/{sensor_name}/',
+        })
 
 
 class DiySpectrometerView(TemplateView):
@@ -472,6 +550,7 @@ class ProjectDetailView(TemplateView):
             'datasets': datasets,
             'metadata_quality': preparation.get('metadata_quality', {}),
             'recommendations': preparation.get('recommendations', []),
+            'sensor_reference': preparation.get('sensor_reference', {}),
             'crew_results': crew_results,
             'per_agent_reports': crew_results.get('per_agent_reports', []),
             'crew_analysis': crew_results.get('crew_analysis', {}),

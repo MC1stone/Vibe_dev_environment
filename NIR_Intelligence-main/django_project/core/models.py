@@ -1064,3 +1064,67 @@ class SpectrumRecord(models.Model):
             'project_id': str(self.project_id) if self.project_id else None,
             'created_at': self.created_at.isoformat(),
         }
+
+
+class SensorDocument(models.Model):
+    """One uploaded document for a spectrometer (OP53).
+
+    Extends the sensor database: any kind of information about a sensor
+    (datasheet, manual, calibration certificate, photos, scripts, ...)
+    can be uploaded per sensor key. A document is either visible lab-wide
+    (the sensor database is a shared platform resource) or private to
+    the uploader.
+    """
+    VISIBILITY = [
+        ('private', 'Private (owner only)'),
+        ('lab_shared', 'Shared within the lab'),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sensor_documents',
+        verbose_name='Uploader'
+    )
+    sensor_key = models.CharField(
+        max_length=255, db_index=True, verbose_name='Sensor Key',
+        help_text='Canonical sensor name/model the document belongs to'
+    )
+    file = models.FileField(
+        upload_to='sensor_docs/%Y/%m/%d/', verbose_name='Document File'
+    )
+    original_name = models.CharField(
+        max_length=512, verbose_name='Original File Name'
+    )
+    doc_type = models.CharField(
+        max_length=40, default='document', verbose_name='Document Type'
+    )
+    notes = models.TextField(blank=True, verbose_name='Notes')
+    visibility = models.CharField(
+        max_length=20, choices=VISIBILITY, default='lab_shared',
+        verbose_name='Visibility'
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')
+
+    class Meta:
+        verbose_name = 'Sensor Document'
+        verbose_name_plural = 'Sensor Documents'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['sensor_key', 'visibility']),
+        ]
+
+    def __str__(self):
+        return f"{self.original_name} ({self.sensor_key})"
+
+    def get_summary(self):
+        return {
+            'id': str(self.id),
+            'sensor_key': self.sensor_key,
+            'file_name': self.original_name,
+            'doc_type': self.doc_type,
+            'notes': self.notes,
+            'visibility': self.visibility,
+            'url': self.file.url if self.file else None,
+            'created_at': self.created_at.isoformat(),
+        }

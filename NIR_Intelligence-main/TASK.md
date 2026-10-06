@@ -3,7 +3,7 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP52 - Menue-Umbau + Kalibrierungs-Uebersicht
+## Completed Task: OP52 - Menue-Umbau + Kalibrierungs-Uebersicht
 
 ### Objective
 Release-Feinschliff der Navigation: Workflow (Startseite /, erklaert die
@@ -43,6 +43,37 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   dynamisch auf external_url gesetzt (id=openIliasBtn, kein Hardcode
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
+
+## Current Task: OP53 - Sensor-Seiten, Dokumenten-Datenbank, Referenz-Check
+
+### Objective
+Umbau der Sensor-Sektion (ILIAS-Sync und OP5 zurueckgestellt):
+1. Eine Seite pro Sensor, die alle Plattform-Infos zu dem Sensor
+   sammelt und darstellt, inkl. KI-generiertem Ueberblick (lokal,
+   live, ehrlicher Fallback).
+2. Unterseite/Dokumentenbereich pro Sensor: beliebige Informationen
+   (Datenblatt, Handbuch, Kalibrierung, Foto, Software, Publikation)
+   als Datei hochladen - erweitert die Sensor-Datenbank.
+3. Beim Anlegen eines neuen Projekts wird automatisch geprueft, ob der
+   genutzte Sensor (instrument_type) eine Referenz in der
+   Sensor-Datenbank hat - inkl. Link zur Sensorseite und Hinweis,
+   Dokumente hochzuladen.
+
+### Status
+- ERLEDIGT: SensorDocument-Modell (core/migrations/0007) mit
+  sensor_key, doc_type (7 Typen), notes, visibility (lab_shared/
+  private), Datei-Upload unter media/sensor_docs/. Services:
+  sensor_documents.py (Sichtbarkeits-Filter, Stats,
+  check_sensor_reference, instrument_types aus dem Report) und
+  sensor_summary.py (KI-Ueberblick via lokalem Ollama, injizierbarer
+  Client, nie raisend). SensorDetailView: alles auf einer Seite
+  (KI-Block, Adapter-Profil, Nutzung, Einstellungs-Bewertung,
+  Optimierungsvorschlaege, Dokumente + Upload-Formular + Delete).
+  Upload/Delete-API /api/projects/sensors/<key>/documents/upload bzw.
+  .../documents/<id>/delete. build_preparation_report haengt den
+  Referenz-Check an (degraded-safe); project_report.html zeigt
+  bekannt/nicht-bekannt mit Links zur Sensorseite (#documents).
+  Testmatrix test_op53_sensor_pages.py 37/37 gruen, in CI aufgenommen.
 
 ## Completed Task: OP51 - Startskript-Konsolidierung (EIN Startweg: Docker)
 
