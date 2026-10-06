@@ -946,20 +946,68 @@ class ProjectReleaseView(APIView if DRF_AVAILABLE else object):
             persist_project_spectra(project, visibility=visibility)
         except Exception:
             logger.exception('Spectral database persist failed (non-fatal)')
-        try:
-            from services.project_crew import run_project_crew
-            crew_results = run_project_crew(project)
-        except Exception as e:
-            logger.error(f'Error running project crew: {e}', exc_info=True)
-            return Response({'success': False, 'error': str(e)},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # OP57: the full crew run (15 agents, LLM calls with up to 120s
+        # timeout each) blocked the request for many minutes without any
+        # feedback - exactly like the OP55 preparation problem. The crew
+        # now runs in a background thread; the page polls the new status
+        # endpoint (progress: elapsed time, per-agent sections so far)
+        # until the phase flips to completed or an error is recorded.
+        from threading import Thread
+
+        def _run_crew(pid):
+            try:
+                from core.models import AnalysisProject as AP
+                proj = AP.objects.get(id=pid)
+                from services.project_crew import run_project_crew
+                run_project_crew(proj)
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).error(
+                    'Background crew run failed for project %s: %s',
+                    pid, exc, exc_info=True)
+                try:
+                    proj = AP.objects.get(id=pid)
+                    proj.phase = 'drafted'
+                    results = proj.crew_results or {}
+                    results['crew_error'] = str(exc)
+                    proj.crew_results = results
+                    proj.save(update_fields=['crew_results', 'phase',
+                                             'updated_at'])
+                except Exception:
+                    pass
+
+        thread = Thread(target=_run_crew, args=(project.id,), daemon=True)
+        thread.start()
         return Response({
             'success': True,
             'project_id': str(project.id),
-            'overall_quality_score': crew_results.get('overall_quality_score'),
-            'per_agent_reports': crew_results.get('per_agent_reports', []),
-            'final_report_url': f'/projects/{project.id}/final-report/' if project.final_report_path else None,
+            'analyzing': True,
             'report_url': f'/projects/{project.id}/',
+        })
+
+
+class ProjectCrewStatusView(APIView if DRF_AVAILABLE else object):
+    """Polling endpoint for the asynchronous crew analysis (OP57): the
+    release starts the full 15-agent crew in a background thread; the
+    project page polls this endpoint until the analysis completes. The
+    response carries honest progress: elapsed seconds and how many
+    per-agent sections already exist."""
+
+    def get(self, request, project_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False,
+                             'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        project = _get_project(project_id, request.user)
+        results = project.crew_results or {}
+        error = results.get('crew_error')
+        completed = project.phase == 'completed'
+        return Response({
+            'success': True,
+            'completed': completed,
+            'error': error,
+            'agent_sections': len(results.get('per_agent_reports') or []),
+            'has_final_report': bool(project.final_report_path),
         })
 
 

@@ -3673,3 +3673,12 @@ msgstr "Verstrichene Zeit"
 
 msgid "Datens&auml;tze bisher"
 msgstr "Datens&auml;tze bisher"
+
+msgid "Agenten-Analyse laeuft..."
+msgstr "Agenten-Analyse laeuft..."
+
+msgid "Alle 15 Agenten werden ausgefuehrt (inkl. KI-Auswertung). Diese Seite aktualisiert sich automatisch, sobald die Analyse fertig ist - das kann je nach Datenmenge mehrere Minuten dauern."
+msgstr "Alle 15 Agenten werden ausgefuehrt (inkl. KI-Auswertung). Diese Seite aktualisiert sich automatisch, sobald die Analyse fertig ist - das kann je nach Datenmenge mehrere Minuten dauern."
+
+msgid "Agenten-Berichte bisher"
+msgstr "Agenten-Berichte bisher"
