@@ -14,6 +14,7 @@ from .project_views import (
     SensorListView,
     SensorDetailView,
     DiySpectrometerView,
+    DiyDetailView,
     SensorDocumentUploadView,
     SensorSummaryView,
     SensorDocumentDeleteView,
@@ -44,5 +45,6 @@ urlpatterns = [
     path('sensors/documents/<uuid:document_id>/delete/',
          SensorDocumentDeleteView.as_view(), name='sensor-document-delete'),
     path('sensors/diy/', DiySpectrometerView.as_view(), name='sensor-diy'),
+    path('sensors/diy/<str:slug>/', DiyDetailView.as_view(), name='sensor-diy-detail'),
     path('sensors/<str:sensor_key>/', SensorDetailView.as_view(), name='sensor-detail'),
 ]

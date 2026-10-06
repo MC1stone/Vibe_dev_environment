@@ -3741,3 +3741,15 @@ msgid "R² (Cross-Validation)"
 msgstr "R² (Cross-Validation)"
 msgid "CV-Folds"
 msgstr "CV-Folds"
+
+msgid "Zur DIY-Uebersicht"
+msgstr "Zur DIY-Uebersicht"
+
+msgid "Beschreibung (aus den Projektseiten aufbereitet)"
+msgstr "Beschreibung (aus den Projektseiten aufbereitet)"
+
+msgid "Hinweis: Uberwiegend VIS-Spektrometer (400-1100 nm). Fuer echte NIR-Spektroskopie (900-2500 nm) nur bedingt geeignet."
+msgstr "Hinweis: Uberwiegend VIS-Spektrometer (400-1100 nm). Fuer echte NIR-Spektroskopie (900-2500 nm) nur bedingt geeignet."
+
+msgid "Noch keine Dokumente fuer dieses DIY-Projekt. Laden Sie beliebige Informationen (Bauanleitung, Foto, Kalibrierung, Software, Messergebnisse) hoch - das erweitert die Sensor-Datenbank."
+msgstr "Noch keine Dokumente fuer dieses DIY-Projekt. Laden Sie beliebige Informationen (Bauanleitung, Foto, Kalibrierung, Software, Messergebnisse) hoch - das erweitert die Sensor-Datenbank."

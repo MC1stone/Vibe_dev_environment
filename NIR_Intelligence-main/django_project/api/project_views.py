@@ -237,10 +237,15 @@ class SensorSummaryView(APIView if DRF_AVAILABLE else object):
                       or (model_id and u['model_id'] == model_id)), None)
         documents = [d.get_summary()
                      for d in sensor_documents(name, request.user)]
+        description = None
+        if name.startswith('diy_'):
+            project = DiyDetailView.get_project(name[len('diy_'):])
+            description = project['description'] if project else None
         from services.sensor_summary import SensorSummaryService
         summary = SensorSummaryService().summarize(name, {
             'sensor': sensor,
             'usage': usage,
+            'description': description,
             'documents': documents,
             'suggestions': data.get('optimization_suggestions', []),
         })
@@ -332,7 +337,18 @@ class DiySpectrometerView(TemplateView):
     DIY_PROJECTS = [
         {
             'name': 'OpenSpectrometer',
+            'slug': 'open-spectrometer',
             'status': gettext('Aktiv, STL-Dateien verfügbar'),
+            'description': gettext(
+                'Open-Source-Spektrometer (DIY-Free-Spectrometer, GPL-3.0): '
+                'vollstaendig 3D-druckbares Gehaeuse, druckbar ohne '
+                'Stuetzstrukturen. Beugungsgitter aus einer geoeffneten DVD '
+                '(kein Blu-ray); Spalt durch eine aufgeklebte '
+                'Objekttraeger-Glasplatte abgedeckt. Beleuchtung: weisse LED '
+                'ca. 3 W, Umlenkung ueber einen Spiegelscherbe. Weitere Teile: '
+                'USB-Kamera, 2x 3Mx10mm-Schrauben, Heisskleber. Auswertung mit '
+                'der Desktop-Software Theremino Spectrometer; STL-Dateien auf '
+                'Printables.'),
             'urls': [
                 ('Printables', 'https://www.printables.com/model/848877-openspectrometer-v1'),
                 ('GitHub', 'https://github.com/mlinmg/DIY-Free-Spectrometer'),
@@ -351,7 +367,15 @@ class DiySpectrometerView(TemplateView):
         },
         {
             'name': 'DIY Spectroscope (Thingiverse)',
+            'slug': 'thingiverse-spectroscope',
             'status': gettext('Verfügbar, Dokumentation vorhanden'),
+            'description': gettext(
+                '3D-gedrucktes Spektroskop (Thingiverse-Modell 4729351): '
+                '1000 Linien/mm Beugungsgitter, ~0,1 mm Spalt, Aufloesung '
+                'unter 2 nm, kalibrierte Genauigkeit ca. 0,35 nm '
+                'Standardabweichung. Als Sensor dient eine Webcam, DSLR oder '
+                'Astro-Kamera. STL-Dateien auf Thingiverse (automatischer '
+                'Zugriff wird dort blockiert, Details siehe Projektseite).'),
             'urls': [
                 ('Thingiverse', 'https://www.thingiverse.com/thing:4729351'),
             ],
@@ -368,7 +392,20 @@ class DiySpectrometerView(TemplateView):
         },
         {
             'name': 'Public Lab Desktop Spectrometer',
+            'slug': 'public-lab-desktop',
             'status': gettext('Aktiv gepflegte Plattform'),
+            'description': gettext(
+                'Desktop Spectrometry Starter Kit 3.0 (DSSK) der Public Lab '
+                'Community: Referenz-Design aus Pappe/Kartenmaterial, '
+                'urspruenglich zur Oelrueckstands-Erkennung nach der '
+                'BP-Oelkatastrophe entwickelt. Faehigkeiten: Spektren mit '
+                'ca. 3 nm Aufloesung, Messbereich 400-700 nm (roughly VIS, '
+                'erweiterbar). Bekannte Grenze: Webcams lassen sich meist '
+                'nicht abschalten (Exposure-/Gain-Kompensation), daher sind '
+                'Geraeteuebergreifende Vergleiche nur bedingt moeglich. '
+                'Auswertung browserbasiert ueber SpectralWorkbench.org '
+                '(Chrome/Firefox/Opera); Konstruktionsdateien auf GitHub. '
+                'Materialkosten typisch ca. 45 USD.'),
             'urls': [
                 ('Projektbeschreibung', 'https://publiclab.org/wiki/raw/21568'),
                 ('GitHub', 'https://github.com/publiclab/spectrometer3'),
@@ -388,7 +425,16 @@ class DiySpectrometerView(TemplateView):
         },
         {
             'name': 'Smartphone-CD-Spektrometer',
+            'slug': 'smartphone-cd',
             'status': gettext('Aktuelles, druckbares Modell'),
+            'description': gettext(
+                'Komplett 3D-druckbares Smartphone-Spektrometer (MakerWorld-'
+                'Modell 1459435): Smartphone-Kamera als Sensor, CD als '
+                'Beugungsgitter, einstellbare Spaltbreite 0,1-0,2 mm. '
+                'Geeignet fuer Smartphone-Kameras bis 16 mm Objektiv-'
+                'durchmesser; Materialkosten oft unter 10 EUR inklusive '
+                'Druckmaterial. Modellseite auf MakerWorld (automatischer '
+                'Zugriff blockiert, Details siehe Link).'),
             'urls': [
                 ('MakerWorld', 'https://makerworld.com/en/models/1459435-mobile-spectrometer'),
             ],
@@ -407,7 +453,20 @@ class DiySpectrometerView(TemplateView):
         },
         {
             'name': 'SpecPhone / DualSpec',
+            'slug': 'specphone-dualspec',
             'status': gettext('Wissenschaftlich publiziertes Projekt'),
+            'description': gettext(
+                '3D-druckbare Smart-Phone-Spektralphotometer fuer die '
+                'Absorptionsmessung im sichtbaren Bereich (Smith Lab, Texas '
+                'Tech). DualSpec ist die aktuelle Version: Dual-Beam-Design '
+                'mit Referenzstrahl (deutlich besseres Signal-Rausch-'
+                'Verhaeltnis), wechselbare Spaltmodule 0,1-5 mm zur '
+                'Veranschaulichung des Aufloesungsprinzips, Standard-'
+                '10-mm-Kuvetten. Teile: 1000 Linien/mm-Gitterfolie, '
+                '1-Inch-Alu-Spiegel, LED- oder Tischlampenquelle, 3D-Druck-'
+                'Gehaeuse (STL auf Thingiverse). Wissenschaftlich begleitete '
+                'Publikation: J Chem Educ 2019, 96(7), 1527-1531 '
+                '(DOI 10.1021/acs.jchemed.8b00870) und 2016, 93(1), 146-151.'),
             'urls': [
                 ('Smith Lab', 'https://www.adamsmithlab.org/specphone'),
                 ('Thingiverse (STL)', 'https://www.thingiverse.com/thing:3404762'),
@@ -461,6 +520,47 @@ class DiySpectrometerView(TemplateView):
             'ollama_available': ollama_available(),
             'websearch_query': websearch_query,
             'websearch_result': websearch_result,
+        }
+        return render(request, self.template_name, context)
+
+
+class DiyDetailView(TemplateView):
+    """One DIY project page (OP54): same pattern as the sensor detail page.
+    Curated info from the project pages, the uploaded documents and an
+    asynchronous KI overview (local Ollama; honest fallback)."""
+    template_name = 'sensor_diy_detail.html'
+
+    @method_decorator(ensure_csrf_cookie)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    @staticmethod
+    def _sensor_key(slug):
+        return f'diy_{slug}'
+
+    @classmethod
+    def get_project(cls, slug):
+        return next((p for p in DiySpectrometerView.DIY_PROJECTS
+                     if p.get('slug') == slug), None)
+
+    def get(self, request, slug):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=' + request.get_full_path())
+        project = self.get_project(slug)
+        if project is None:
+            raise Http404('DIY project not found')
+        from services.sensor_documents import (DOC_TYPES, document_stats,
+                                               sensor_documents)
+        sensor_key = self._sensor_key(slug)
+        documents = sensor_documents(sensor_key, request.user)
+        context = {
+            'page_title': f"DIY: {project['name']}",
+            'project': project,
+            'diy_slug': slug,
+            'sensor_key': sensor_key,
+            'documents': documents,
+            'document_stats': document_stats(documents),
+            'doc_types': DOC_TYPES,
         }
         return render(request, self.template_name, context)
 

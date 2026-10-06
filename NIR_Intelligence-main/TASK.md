@@ -44,6 +44,31 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## Current Task: OP54 - DIY-Spektrometer: Detailseiten wie bei den Sensoren
+
+### Objective
+Das gleiche Muster wie bei den Sensor-Seiten (OP53) fuer die DIY-Spektrometer:
+1. Eine Seite pro DIY-Projekt mit allen kuratierten Informationen.
+2. Die Infos der Projekt-Links wurden aufbereitet und als Beschreibung in
+   die Detailseiten eingebettet (statisch kuratiert; Thingiverse/MakerWorld
+   blockieren automatischen Zugriff - dort bleiben die kuratierten Infos).
+3. Dokumenten-Upload pro DIY-Projekt (sensor_key 'diy_<slug>'), Wiederverwendung
+   der OP53-Endpoints (upload/delete/summary, inkl. CSRF-Fix aus OP53c/d).
+4. Asynchroner KI-Ueberblick (SensorSummaryView erkennt diy_-Keys und reicht
+   die Beschreibung als 'beschreibung' in den LLM-Prompt).
+
+### Status
+- ERLEDIGT: DIY_PROJECTS um slug + description erweitert (OpenSpectrometer,
+  Thingiverse-Spektroskop, Public Lab DSSK 3.0, Smartphone-CD, SpecPhone/
+  DualSpec - Beschreibungen aus GitHub/Projektseiten aufbereitet).
+- ERLEDIGT: DiyDetailView + Route /projects/sensors/diy/<slug>/ + Template
+  sensor_diy_detail.html (KI-Block async, Beschreibung, Eigenschaften,
+  Projektseiten-Links, Dokumente + Upload mit getCsrfToken).
+- ERLEDIGT: sensor_diy.html verlinkt jede Projekt-Karte auf die Detailseite.
+- ERLEDIGT: SensorSummaryView reicht die DIY-Beschreibung an den LLM-Prompt.
+- ERLEDIGT: OP54-Matrix tests/test_op54_diy_pages.py (23/23), CI registriert,
+  i18n-Kataloge um 6 neue msgids ergaenzt (de/en).
+
 ## NACHTRAG OP53d: Upload-403 bei kaputtem/fremdem csrftoken-Cookie behoben
 
 ### Problem (Feldtest)
