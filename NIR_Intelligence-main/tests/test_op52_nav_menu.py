@@ -44,15 +44,24 @@ except ValueError as exc:
 
 positions = []
 for label in ("Projekte", "Sensoren", "Kalibrieren",
-              "Lernen mit Kursen", "Workflow"):
+              "Lernen mit Kursen"):
     pos = nav.find('trans "%s"' % label)
     positions.append((label, pos))
     check(f"T1b nav contains '{label}'", pos != -1)
 
 order_ok = (all(p != -1 for _, p in positions)
             and [p for _, p in positions] == sorted(p for _, p in positions))
-check("T1c nav order: Projekte < Sensoren < Kalibrieren < Lernen < Workflow",
+check("T1c nav order: Projekte < Sensoren < Kalibrieren < Lernen",
       order_ok, f"positions: {positions}")
+
+# OP52b: 'Workflow' nav tab removed (release feedback); the start page
+# stays reachable via the logo link.
+check("T1c2 'Workflow' nav tab removed",
+      'trans "Workflow"' not in nav)
+logo_pos = tpl_src.find('c-header__logo')
+check("T1c3 logo links to start page /",
+      -1 < logo_pos < tpl_src.find('href="/"', logo_pos),
+      "logo block does not link to /")
 
 check("T1d 'Projekte' links to /projects/",
       'href="/projects/"' in nav)
@@ -60,8 +69,6 @@ check("T1e 'Kalibrieren' links to /calibration/",
       'href="/calibration/"' in nav)
 check("T1f 'Lernen mit Kursen' links to /ilias/",
       'href="/ilias/"' in nav)
-check("T1g 'Workflow' links to / (start page)",
-      'href="/"' in nav)
 
 # T2: Sensoren sub-items (Sensoren + DIY-Spektrometer)
 sens_pos = nav.find('trans "Sensoren"')
@@ -178,6 +185,32 @@ try:
           url == "/api/projects/calibration/overview/", url)
 except Exception as exc:
     check("T8a calibration-overview route registered", False, str(exc))
+
+# T9: ILIAS wiring (OP52b: 'Open ILIAS' must work via Lernen mit Kursen)
+settings_src = (Path(__file__).resolve().parent.parent
+                / "django_project" / "nir_web" / "settings.py").read_text(encoding="utf-8")
+check("T9a settings define ILIAS_URL (default http://ilias:80)",
+      "ILIAS_URL = os.getenv('ILIAS_URL', 'http://ilias:80')" in settings_src)
+check("T9b ILIAS_API_URL default points to the container (not hswt.de)",
+      "https://ilias.hswt.de" not in settings_src)
+
+compose_src = (Path(__file__).resolve().parent.parent
+                / "docker-compose.yml").read_text(encoding="utf-8")
+django_block = compose_src[compose_src.index('  django_app:'):]
+django_block = django_block[:django_block.index('background_crew')]
+check("T9c django_app env passes ILIAS_URL=http://ilias:80",
+      'ILIAS_URL=http://ilias:80' in django_block)
+check("T9d django_app env passes ILIAS_API_URL=http://ilias:80",
+      'ILIAS_API_URL=http://ilias:80' in django_block)
+
+ilias_block = compose_src[compose_src.index('  ilias:'):]
+ilias_block = ilias_block[:ilias_block.index('\n  ilias_db:')]
+check("T9e ilias service has a healthcheck",
+      'healthcheck:' in ilias_block)
+check("T9f django_app waits for ilias service_healthy",
+      django_block.count('ilias:') >= 1
+      and 'condition: service_healthy' in django_block,
+      "django_app does not depend on ilias healthy")
 
 print(f"\nOP52 nav menu + calibration matrix: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)

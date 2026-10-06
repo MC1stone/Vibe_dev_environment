@@ -69,6 +69,12 @@ services:
     depends_on:
       ilias_db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
     networks:
       - nir_network
 
@@ -176,11 +182,17 @@ services:
       - NIR_FRAMEWORK_PATH=/app
       - OLLAMA_URL=http://ollama:11434
       - NIR_LLM_MODEL=${NIR_LLM_MODEL:-mistral}
+      - ILIAS_URL=http://ilias:80
+      - ILIAS_API_URL=http://ilias:80
+      - ILIAS_API_CLIENT_ID=${ILIAS_API_CLIENT_ID:-}
+      - ILIAS_API_CLIENT_SECRET=${ILIAS_API_CLIENT_SECRET:-}
       - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,::1,*
     depends_on:
       postgresql:
         condition: service_healthy
       ollama:
+        condition: service_healthy
+      ilias:
         condition: service_healthy
     networks:
       - nir_network
