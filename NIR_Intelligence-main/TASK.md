@@ -44,6 +44,29 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## NACHTRAG OP53b: Sensor-Detailseite - Crash-Fix + asynchroner KI-Ueberblick
+
+### Problem (Feldtest-Feedback)
+- Die Sensor-Detailseite lud nach dem ersten Dokument-Upload nicht mehr:
+  `doc.get_doc_type_display` im Template crashte, weil das `doc_type`-CharField
+  keine choices hatte (Methode existiert nur mit choices).
+- Der KI-Ueberblick wurde synchron im SensorDetailView generiert; bei langsamem
+  Ollama-Kaltstart blockierte der 120s-Timeout die gesamte Seite.
+
+### Fixes
+- `core/models.py`: DOC_TYPES-choices am doc_type-Feld + Migration
+  `0008_alter_sensordocument_doc_type.py` (nur Metadaten).
+- `SensorDetailView` ruft den LLM-Call nicht mehr auf; neuer
+  `SensorSummaryView` (GET, JSON: success/available/summary) + Route
+  `sensors/<key>/summary/` (name='sensor-summary').
+- `sensor_detail.html`: KI-Block laedt per fetch() asynchron (Ladeindikator,
+  ehrlicher Fallback-Text bei available:false oder Fehler).
+
+### Tests
+- OP53-Matrix erweitert: T1c/T1c1 (choices + Migration 0008), T5c
+  (summary-Route), T6a/T6b umgestellt auf async, neu T6b1 - 41/41 gruen.
+- Regressionen: OP29 53/53, OP52 55/55, manage.py check clean.
+
 ## Current Task: OP53 - Sensor-Seiten, Dokumenten-Datenbank, Referenz-Check
 
 ### Objective

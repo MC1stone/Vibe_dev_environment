@@ -12,12 +12,9 @@
     <div class="card shadow-sm mb-4 border-primary">
         <div class="card-header bg-primary-subtle"><h5 class="mb-0"><i class="bi bi-stars me-1"></i>{% trans "KI-Ueberblick" %} ({{ sensor_name }})</h5></div>
         <div class="card-body">
-            {% if ki_summary_available %}
-            <p class="mb-0">{{ ki_summary }}</p>
-            <p class="text-muted small mb-0 mt-2"><i class="bi bi-cpu me-1"></i>{% trans "Live generiert vom lokalen Sprachmodell aus den Plattformdaten." %}</p>
-            {% else %}
-            <p class="mb-0">{% trans "KI-Ueberblick derzeit nicht verfuegbar (lokales Sprachmodell nicht erreichbar). Alle strukturierten Informationen zum Sensor stehen unten." %}</p>
-            {% endif %}
+            <div id="kiSummaryBox">
+                <p class="mb-0"><i class="bi bi-hourglass-split me-1"></i>{% trans "KI-Ueberblick wird generiert..." %}</p>
+            </div>
         </div>
     </div>
 
@@ -231,6 +228,7 @@
 </div>
 
 <script>
+window.NIR_SENSOR_SUMMARY_URL = '{% url "sensor-summary" sensor_name %}';
 window.NIR_SENSOR_DOC_UPLOAD_URL = '{% url "sensor-document-upload" sensor_name %}';
 window.NIR_SENSOR_DOC_DELETE_URL = '{% url "sensor-document-delete" "00000000-0000-0000-0000-000000000000" %}';
 function getCookie(name) {
@@ -249,6 +247,21 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 document.addEventListener('DOMContentLoaded', function () {
+    const summaryBox = document.getElementById('kiSummaryBox');
+    if (summaryBox && window.NIR_SENSOR_SUMMARY_URL) {
+        fetch(window.NIR_SENSOR_SUMMARY_URL, { credentials: 'same-origin' })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (data.available && data.summary) {
+                    summaryBox.innerHTML = '<p class="mb-0">' + escapeHtml(data.summary) + '</p>';
+                } else {
+                    summaryBox.innerHTML = '<p class="mb-0">{% trans "KI-Ueberblick derzeit nicht verfuegbar (lokales Sprachmodell nicht erreichbar). Alle strukturierten Informationen zum Sensor stehen unten." %}</p>';
+                }
+            })
+            .catch(function () {
+                summaryBox.innerHTML = '<p class="mb-0">{% trans "KI-Ueberblick derzeit nicht verfuegbar (lokales Sprachmodell nicht erreichbar). Alle strukturierten Informationen zum Sensor stehen unten." %}</p>';
+            });
+    }
     const form = document.getElementById('sensorDocUpload');
     if (form) {
         form.addEventListener('submit', function (event) {

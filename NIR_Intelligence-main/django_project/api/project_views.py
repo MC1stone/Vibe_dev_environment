@@ -186,13 +186,6 @@ class SensorDetailView(TemplateView):
              for key, values in recorded.items()},
             setting_options=data.get('setting_options', []))
         suggestions = data.get('optimization_suggestions', [])
-        from services.sensor_summary import SensorSummaryService
-        summary = SensorSummaryService().summarize(name, {
-            'sensor': sensor,
-            'usage': usage,
-            'documents': [d.get_summary() for d in documents],
-            'suggestions': suggestions,
-        })
         context = {
             'page_title': f'Sensor {name}',
             'sensor': sensor,
@@ -205,10 +198,57 @@ class SensorDetailView(TemplateView):
             'documents': documents,
             'document_stats': document_stats(documents),
             'doc_types': DOC_TYPES,
-            'ki_summary': summary,
-            'ki_summary_available': summary is not None,
         }
         return render(request, self.template_name, context)
+
+
+class SensorSummaryView(APIView if DRF_AVAILABLE else object):
+    """KI overview for one sensor (OP53b): generated live on request so
+    the sensor page itself renders instantly even while Ollama is slow
+    (model cold start); the page fetches this endpoint asynchronously."""
+
+    def get(self, request, sensor_key):
+        if not request.user.is_authenticated:
+            return Response({'success': False,
+                             'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        from urllib.parse import unquote
+
+        from agents.sensor_agent import SensorAgent
+        from services.sensor_catalog import match_model_id
+        from services.sensor_documents import sensor_documents
+        name = unquote(sensor_key)
+        output = SensorAgent().execute({
+            'operation': 'collect',
+            'user_id': request.user.id,
+        })
+        data = output.data or {}
+        model_id = match_model_id(name)
+        sensor = next((s for s in data.get('registered_sensors', [])
+                       if s['model_id'] == (model_id or name)), None)
+        usage = next((u for u in data.get('usage', [])
+                      if u['instrument_type'] == name
+                      or (model_id and u['model_id'] == model_id)), None)
+        documents = [d.get_summary()
+                     for d in sensor_documents(name, request.user)]
+        from services.sensor_summary import SensorSummaryService
+        summary = SensorSummaryService().summarize(name, {
+            'sensor': sensor,
+            'usage': usage,
+            'documents': documents,
+            'suggestions': data.get('optimization_suggestions', []),
+        })
+        if summary is None:
+            return Response({
+                'success': True,
+                'available': False,
+                'summary': None,
+            })
+        return Response({
+            'success': True,
+            'available': True,
+            'summary': summary,
+        })
 
 
 class SensorDocumentUploadView(APIView if DRF_AVAILABLE else object):
