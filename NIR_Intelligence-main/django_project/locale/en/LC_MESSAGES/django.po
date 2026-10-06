@@ -3661,3 +3661,15 @@ msgstr "Data preparation is running..."
 
 msgid "Die Dateien werden gerade ausgewertet (inkl. KI-Metadaten-Extraktion). Diese Seite aktualisiert sich automatisch, sobald der Bericht fertig ist - das kann bei grossen Dateien einige Minuten dauern."
 msgstr "The files are being analyzed (including AI metadata extraction). This page refreshes automatically once the report is ready - with large files this can take a few minutes."
+
+msgid "Sensor-Einstellungen aus der Datenbank"
+msgstr "Sensor-Einstellungen aus der Datenbank"
+
+msgid "Bekannte Einstellungen dieses Sensors - klicken zum Uebernehmen in den Metadaten-Editor (nur leere Felder)."
+msgstr "Bekannte Einstellungen dieses Sensors - klicken zum Uebernehmen in den Metadaten-Editor (nur leere Felder)."
+
+msgid "Verstrichene Zeit"
+msgstr "Verstrichene Zeit"
+
+msgid "Datens&auml;tze bisher"
+msgstr "Datens&auml;tze bisher"
