@@ -58,6 +58,12 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   - Intro-Kachel: wie funktioniert federatedes Lernen hier ueberhaupt
     (3-Schritt-Flow: lokal trainieren -> nur Parameter uebermitteln ->
     gemeinsames Modell zurueckerhalten; Rohdaten bleiben lokal).
+  - Nachtrag (User-Feedback "ein Link zur Anleitung reicht"): die lange
+    Setup-Karte (Container-Rollen, Startbefehle, Runden-Ablauf,
+    .npz-Einbindung, Zusatz-Clients) wurde durch eine kompakte Karte
+    ersetzt: Rollen in einem Satz + ein Link zur bestehenden
+    Schritt-fuer-Schritt-Anleitung (docs/NUTZERHANDBUCH_FEDERATED_ILIAS.md,
+    erreichbar ueber /documentation/#federated-learning).
   - Lernmodus-Karte: standalone (Default, kein Datenaustausch),
     client (nur Parameter verlassen den Rechner), server (sieht alle
     Teilnehmer-Parameter - vertrauenswuerdige Position).
@@ -74,11 +80,11 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
     Folge (was wird geteilt / was bleibt lokal).
 
 ### Tests
-- OP58-Matrix tests/test_op58_federated_options.py (20 Checks): Intro,
-  je Option Wirkung + trade-off, kein JSON-Dump mehr, lesbare Status-
-  Zeilen, Consent-Folgen, Django-Engine-Kompilierung.
-- 20/20; Regressionen FL4 20/20, FL3 25/25, FL1 12/12; manage.py check OK;
-  CI registriert.
+- OP58-Matrix tests/test_op58_federated_options.py (25 Checks): Intro,
+  je Option Wirkung + trade-off, keine JSON-Dumps mehr, lesbare Status-
+  Zeilen, Consent-Folgen, kompakte Setup-Karte mit Anleitungs-Link,
+  Django-Engine-Kompilierung.
+- 25/25; Regressionen FL4 20/20; manage.py check OK; CI registriert.
 
 ## Current Task: OP57 - Analyse asynchron: Crew-Lauf im Hintergrund mit Fortschritt
 

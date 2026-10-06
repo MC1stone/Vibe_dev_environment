@@ -83,7 +83,21 @@ check("T6a revoke wording states data stays local",
 check("T6b granted wording states what is transmitted",
       "Modellparameter werden an die Aggregations-Instanz" in src)
 
-# T7: template still compiles with real Django engine
+# T7: compact setup card - one link to the handbook instead of a long guide
+check("T7a setup card names both containers and their roles",
+      "flower_server" in src and "flower_client" in src
+      and "Superlink" in src and "Supernode" in src)
+check("T7b setup states the web page is not a participant",
+      "kein Federation-Teilnehmer" in src)
+check("T7c setup links the handbook (documentation page anchor)",
+      "/documentation/#federated-learning" in src)
+check("T7d handbook file referenced",
+      "NUTZERHANDBUCH_FEDERATED_ILIAS" in src)
+check("T7e no duplicated long setup instructions on the page",
+      src.count("Ablauf einer foederierten Runde") == 0
+      and src.count("docker compose up -d flower_") <= 2)
+
+# T8: template still compiles with real Django engine
 try:
     import django
     django.setup()

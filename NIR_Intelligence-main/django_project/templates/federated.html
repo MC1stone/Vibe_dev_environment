@@ -36,6 +36,23 @@
             </div>
         </div>
 
+        <div class="c-card mb-4">
+            <div class="c-card__header">
+                <h2 class="c-card__title mb-0"><i class="bi bi-hdd-network"></i> {% trans "Setup &amp; Betrieb" %}</h2>
+            </div>
+            <div class="c-card__body">
+                <p class="mb-2">
+                    {% blocktrans %}Die Federation besteht aus den Containern <code>flower_server</code> (Superlink, aggregiert) und <code>flower_client</code> (Supernode, ein Teilnehmer pro Messgruppe; nur Parameter verlassen den Client). Diese Webseite ist kein Federation-Teilnehmer - sie steuert Consent und zeigt den Status.{% endblocktrans %}
+                </p>
+                <p class="mb-0">
+                    <a class="btn btn-sm btn-outline-primary" href="/documentation/#federated-learning">
+                        <i class="bi bi-book me-1"></i>{% trans "Zur Schritt-fuer-Schritt-Anleitung (Nutzerhandbuch)" %}
+                    </a>
+                    <span class="text-muted small ms-2">docs/NUTZERHANDBUCH_FEDERATED_ILIAS.md - Start, Daten-Einbindung (.npz), weitere Supernodes, Livetest</span>
+                </p>
+                        </div>
+        </div>
+
         <div class="row g-4">
             <div class="col-lg-5">
                 <div class="c-card h-100">
@@ -90,15 +107,15 @@
                             <tbody>
                                 <tr>
                                     <td><span class="badge bg-secondary">standalone</span></td>
-                                    <td class="small">{% blocktrans %}<strong>Default.</strong> Alles laeuft nur auf diesem Rechner - keine Verbindung zu anderen Teilnehmern. Sicherste Option, kein Datenaustausch jeglicher Art.{% endblocktrans %}</td>
+                                    <td class="small">{% blocktrans %}<strong>Default.</strong> Alles laeuft nur auf diesem Rechner - keine Verbindung zu anderen Teilnehmern. Sicherste Option, kein Datenaustausch jeglicher Art.{% endblocktrans %}<div class="text-muted mt-1"><em>{% trans "Setup:" %}</em> {% trans "nichts - nur dieser Docker-Stack, keine weiteren Container." %}</div></td>
                                 </tr>
                                 <tr>
                                     <td><span class="badge bg-info">client</span></td>
-                                    <td class="small">{% blocktrans %}Dieser Rechner traegt seine Modellparameter zu einer externen Runde bei. Es verlassen nur Parameter diesen Rechner - aber eben doch Datenfragmente (die Parameter).{% endblocktrans %}</td>
+                                    <td class="small">{% blocktrans %}Dieser Rechner traegt seine Modellparameter zu einer externen Runde bei. Es verlassen nur Parameter diesen Rechner - aber eben doch Datenfragmente (die Parameter).{% endblocktrans %}<div class="text-muted mt-1"><em>{% trans "Setup:" %}</em> <code>docker compose up -d flower_client</code> {% trans "+ eigene Daten als .npz (FLOWER_CLIENT_DATA)" %}</div></td>
                                 </tr>
                                 <tr>
                                     <td><span class="badge bg-info">server</span></td>
-                                    <td class="small">{% blocktrans %}Dieser Rechner sammelt die Parameter aller Clients und verschmilst sie zum gemeinsamen Modell. Sie sehen die Parameter aller Teilnehmer - vertrauenswuerdige Position im Labor verbietet sich.{% endblocktrans %}</td>
+                                    <td class="small">{% blocktrans %}Dieser Rechner sammelt die Parameter aller Clients und verschmilst sie zum gemeinsamen Modell. Sie sehen die Parameter aller Teilnehmer - vertrauenswuerdige Position im Labor verbietet sich.{% endblocktrans %}<div class="text-muted mt-1"><em>{% trans "Setup:" %}</em> <code>docker compose up -d flower_server</code> {% trans "+ pro Teilnehmergruppe ein flower_client-Klon" %}</div></td>
                                 </tr>
                             </tbody>
                         </table>
