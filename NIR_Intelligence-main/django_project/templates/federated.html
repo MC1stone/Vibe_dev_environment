@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% load i18n %}{% load static %}
+{% load i18n %}
+{% load static %}
 {% block title %}NIR Intelligence - Federated Learning{% endblock %}
 {% block content %}
 <section class="o-section">
@@ -9,13 +10,29 @@
                 <h1 class="c-page-header__title">
                     <i class="bi bi-diagram-3"></i> Federated Learning
                 </h1>
-                <p class="c-page-header__subtitle">{% blocktrans %}Federated calibration across distributed spectrometer setups (FL1-FL3) - only model parameters leave the client, raw spectra remain local{% endblocktrans %}</p>
+                <p class="c-page-header__subtitle">{% blocktrans %}Kalibrierung ueber verteilte Spectrometer-Setups (FL1-FL3) - nur Modellparameter verlassen den Client, rohe Spektren bleiben lokal{% endblocktrans %}</p>
             </div>
             <div class="d-flex gap-2">
                 <button class="c-button c-button--outline-primary" onclick="refreshFederatedStatus()">
                     <i class="bi bi-arrow-clockwise c-button__icon"></i>
                     <span class="c-button__text">{% trans "Refresh status" %}</span>
                 </button>
+            </div>
+        </div>
+
+        <div class="c-card mb-4">
+            <div class="c-card__header">
+                <h2 class="c-card__title mb-0"><i class="bi bi-question-circle"></i> {% trans "Wie funktioniert federatedes Lernen hier?" %}</h2>
+            </div>
+            <div class="c-card__body">
+                <p class="mb-2">
+                    {% blocktrans %}Ihre Messdaten verlassen niemals Ihren Rechner. Stattdessen wird ein Kalibriermodell auf Ihren Daten trainiert und <strong>nur die Modellparameter</strong> (nicht die Spektren!) an die aggregierende Instanz uebermittelt. Dort werden die Parameter aller Teilnehmer zu einem gemeinsamen Modell verschmolzen. Das gemeinsame Modell profitiert von der Vielfalt aller Teilnehmer, ohne dass irgendjemand fremde Rohdaten sieht.{% endblocktrans %}
+                </p>
+                <div class="row g-3 small text-muted">
+                    <div class="col-md-4"><i class="bi bi-1-circle me-1"></i>{% trans "Lokal: Modell auf Ihren Spektren trainieren" %}</div>
+                    <div class="col-md-4"><i class="bi bi-2-circle me-1"></i>{% trans "Nur Parameter uebermitteln (nie Rohdaten)" %}</div>
+                    <div class="col-md-4"><i class="bi bi-3-circle me-1"></i>{% trans "Gemeinsames Modell zurueckerhalten" %}</div>
+                </div>
             </div>
         </div>
 
@@ -27,11 +44,10 @@
                     </div>
                     <div class="c-card__body">
                         <div class="alert alert-warning mb-sm" id="consentAlert" style="display:none;">
-                            Federated Learning ist deaktiviert (local_only ist der Default).
-                            Übermittle explizite Einwilligung, um föderierte Runden zu starten.
+                            {% blocktrans %}Federated Learning ist <strong>deaktiviert</strong> - <code>local_only</code> ist der Default. Ihre Daten bleiben komplett auf diesem Rechner. Uebermittle explizite Einwilligung, um foederierte Runden zu starten.{% endblocktrans %}
                         </div>
                         <div class="alert alert-success mb-sm" id="consentGivenBox" style="display:none;">
-                            Einwilligung erteilt - föderierte Runden sind freigegeben.
+                            {% blocktrans %}Einwilligung erteilt - foederierte Runden sind freigegeben. Modellparameter werden an die Aggregations-Instanz uebermittelt; Rohdaten bleiben lokal.{% endblocktrans %}
                         </div>
                         <div class="d-flex gap-2">
                             <button class="c-button c-button--primary" onclick="setConsent(true)">
@@ -46,7 +62,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="col-lg-7">
                 <div class="c-card h-100">
                     <div class="c-card__header">
@@ -62,11 +77,132 @@
                     </div>
                 </div>
             </div>
+        </div>
 
+        <div class="row g-4 mt-0">
+            <div class="col-lg-6">
+                <div class="c-card h-100">
+                    <div class="c-card__header">
+                        <h2 class="c-card__title mb-0"><i class="bi bi-sliders"></i> {% trans "Lernmodus" %}</h2>
+                    </div>
+                    <div class="c-card__body">
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                <tr>
+                                    <td><span class="badge bg-secondary">standalone</span></td>
+                                    <td class="small">{% blocktrans %}<strong>Default.</strong> Alles laeuft nur auf diesem Rechner - keine Verbindung zu anderen Teilnehmern. Sicherste Option, kein Datenaustausch jeglicher Art.{% endblocktrans %}</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-info">client</span></td>
+                                    <td class="small">{% blocktrans %}Dieser Rechner traegt seine Modellparameter zu einer externen Runde bei. Es verlassen nur Parameter diesen Rechner - aber eben doch Datenfragmente (die Parameter).{% endblocktrans %}</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-info">server</span></td>
+                                    <td class="small">{% blocktrans %}Dieser Rechner sammelt die Parameter aller Clients und verschmilst sie zum gemeinsamen Modell. Sie sehen die Parameter aller Teilnehmer - vertrauenswuerdige Position im Labor verbietet sich.{% endblocktrans %}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="c-card h-100">
+                    <div class="c-card__header">
+                        <h2 class="c-card__title mb-0"><i class="bi bi-people"></i> {% trans "Aggregationsstrategie" %}</h2>
+                    </div>
+                    <div class="c-card__body">
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                <tr>
+                                    <td><span class="badge bg-secondary">FedAvg</span></td>
+                                    <td class="small">{% blocktrans %}<strong>Default.</strong> Durchschnitt aller Client-Modelle. Einfach, robust, gut als Ausgangspunkt - bei sehr unterschiedlichen Sensoren kann ein einzelner Teilnehmer das gemeinsame Modell verzerren.{% endblocktrans %}</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-info">FedProx</span></td>
+                                    <td class="small">{% blocktrans %}FedAvg mit Stabilitaetsfaktor: Teilnehmer mit wenigen Messungen driften nicht ab. Sinnvoll, wenn die Teilnehmer unterschiedliche Datenmengen beisteuern.{% endblocktrans %}</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-info">FedAdam / FedYogi</span></td>
+                                    <td class="small">{% blocktrans %}Adaptive Optimierung: schnellere Konvergenz bei vielen Runden, aber mehr Hyperparameter, die korrekt gewaehlt werden muessen - eher fuers Labor-Feintuning.{% endblocktrans %}</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-info">FedSGD</span></td>
+                                    <td class="small">{% blocktrans %}Gradienten-Mittelung pro Runde statt fertiger Modelle - exakt, aber kommunikationsintensiver.{% endblocktrans %}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-0">
             <div class="col-12">
                 <div class="c-card">
                     <div class="c-card__header">
-                        <h2 class="c-card__title mb-0"><i class="bi bi-shield-lock"></i> {% trans "Privacy status" %}</h2>
+                        <h2 class="c-card__title mb-0"><i class="bi bi-shield-lock"></i> {% trans "Privacy-Stufen" %}</h2>
+                    </div>
+                    <div class="c-card__body">
+                        <div class="accordion" id="privacyAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#privacyLocal">
+                                        <span class="badge bg-success me-2">local_only</span> {% trans "Nur lokal (Default)" %} - <span class="text-muted">{% trans "keine Uebertragung" %}</span>
+                                    </button>
+                                </h2>
+                                <div id="privacyLocal" class="accordion-collapse collapse show" data-bs-parent="#privacyAccordion">
+                                    <div class="accordion-body small">
+                                        {% blocktrans %}<strong>Auswirkung:</strong> Keine Daten (auch keine Parameter) verlassen diesen Rechner. Die Federated-Logik laeuft lokal im Simulator. Diese Stufe ist der Default und die einzige Stufe ohne Einwilligungsbedarf.{% endblocktrans %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#privacyDp">
+                                        <span class="badge bg-info me-2">differential_privacy</span> Differential Privacy - <span class="text-muted">{% trans "veraeschtes Rauschen auf Parametern" %}</span>
+                                    </button>
+                                </h2>
+                                <div id="privacyDp" class="accordion-collapse collapse" data-bs-parent="#privacyAccordion">
+                                    <div class="accordion-body small">
+                                        {% blocktrans %}<strong>Auswirkung:</strong> Parameter werden vor der Uebertragung mit Rauschen versehen, damit sich aus ihnen keine einzelnen Messungen rekonstruieren lassen. Datenschutzbudget (epsilon, delta) wird ueber Runden gefuehrt und begrenzt. Preis: das gemeinsame Modell wird etwas ungenauer - je kleiner epsilon, desto staerker das Rauschen und desto groesser der Genauigkeitsverlust.{% endblocktrans %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#privacySecagg">
+                                        <span class="badge bg-warning text-dark me-2">secure_aggregation</span> Secure Aggregation - <span class="text-muted">{% trans "Server sieht nur die Summe" %}</span>
+                                    </button>
+                                </h2>
+                                <div id="privacySecagg" class="accordion-collapse collapse" data-bs-parent="#privacyAccordion">
+                                    <div class="accordion-body small">
+                                        {% blocktrans %}<strong>Auswirkung:</strong> Die Parameter aller Clients werden verschluesselt aggregiert: der Server kann nur die Summe aller Updates sehen, nie die eines einzelnen Teilnehmers. Vertraulichkeit steigt, Berechnungsaufwand ebenfalls; verfuegbar nur mit dem flwr-Runtime (Status unten zeigt ehrlich an, ob aktiv).{% endblocktrans %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#privacyHe">
+                                        <span class="badge bg-danger me-2">homomorphic_encryption</span> Homomorphe Verschluesselung - <span class="text-muted">{% trans "Rechnen auf Verschluesseltem" %}</span>
+                                    </button>
+                                </h2>
+                                <div id="privacyHe" class="accordion-collapse collapse" data-bs-parent="#privacyAccordion">
+                                    <div class="accordion-body small">
+                                        {% blocktrans %}<strong>Auswirkung:</strong> Hoechste Vertraulichkeit: die Aggregation rechnet direkt auf verschluesselten Parametern, der Server sieht nie Klartext. Preis: deutlich mehr Rechenzeit und Speicher pro Runde - nur fuer hochsensible Messungen.{% endblocktrans %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-0">
+            <div class="col-12">
+                <div class="c-card">
+                    <div class="c-card__header">
+                        <h2 class="c-card__title mb-0"><i class="bi bi-clipboard-data"></i> {% trans "Privacy status (technisch)" %}</h2>
                     </div>
                     <div class="c-card__body">
                         <div id="federatedPrivacyBox">
@@ -88,21 +224,36 @@ function getCookie(name) {
     const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
     return m ? decodeURIComponent(m.pop()) : '';
 }
-
 async function fetchFederated(endpoint, options = {}) {
     const headers = Object.assign({'Content-Type': 'application/json'}, options.headers || {});
     headers['X-CSRFToken'] = getCookie('csrftoken');
     const resp = await fetch('/api/federated/' + endpoint + '/', Object.assign({}, options, {headers}));
     return resp;
 }
-
+function renderStatusRow(label, value, hint) {
+    const cls = value ? 'text-success' : 'text-muted';
+    return '<dt class="col-sm-5 ' + cls + '">' + label + '</dt>' +
+           '<dd class="col-sm-7 small">' + (value === true ? '<i class="bi bi-check-circle-fill text-success"></i> ' + (hint || 'verf&uuml;gbar')
+               : value === false ? '<i class="bi bi-dash-circle text-muted"></i> ' + (hint || 'nicht verf&uuml;gbar')
+               : '<i class="bi bi-info-circle text-info"></i> ' + value) + '</dd>';
+}
 async function refreshFederatedStatus() {
     const box = document.getElementById('federatedStatusBox');
     try {
         const resp = await fetchFederated('status');
         const data = await resp.json();
-        box.innerHTML = '<pre class="mb-0" style="white-space: pre-wrap;">' +
-            JSON.stringify(data, null, 2).replace(/</g, '&lt;') + '</pre>';
+        let html = '<dl class="row mb-0">';
+        html += renderStatusRow('Einwilligung erteilt', data.consent_given,
+            data.consent_given ? 'Modellparameter werden geteilt' : 'alles bleibt lokal');
+        html += renderStatusRow('Privacy-Stufe', data.privacy_level,
+            data.privacy_level === 'local_only' ? 'Default - keine Uebertragung' : 'Parameter-Uebertragung aktiv');
+        html += renderStatusRow('Flower-Runtime (flwr)', data.flwr_available);
+        html += renderStatusRow('scikit-learn', data.sklearn_available,
+            data.sklearn_available ? 'Kalibrierung verf&uuml;gbar' : 'Runden werden ehrlich abgelehnt (503)');
+        html += renderStatusRow('Secure Aggregation', (data.secure_aggregation || {}).available,
+            ((data.secure_aggregation || {}).reason) || '');
+        html += '</dl>';
+        box.innerHTML = html;
         const consent = data.consent_given;
         document.getElementById('consentAlert').style.display = consent ? 'none' : '';
         document.getElementById('consentGivenBox').style.display = consent ? '' : 'none';
@@ -110,28 +261,32 @@ async function refreshFederatedStatus() {
         box.innerHTML = '<div class="alert alert-danger mb-0">Status nicht erreichbar: ' + err + '</div>';
     }
 }
-
 async function setConsent(value) {
     try {
         await fetchFederated('consent', {method: 'POST', body: JSON.stringify({consent: value})});
         await refreshFederatedStatus();
     } catch (err) {
-        alert('Consent-Übertragung fehlgeschlagen: ' + err);
+        alert('Consent-&Uuml;bertragung fehlgeschlagen: ' + err);
     }
 }
-
 async function refreshFederatedPrivacy() {
     const box = document.getElementById('federatedPrivacyBox');
     try {
         const resp = await fetch('/api/federated/privacy/');
         const data = await resp.json();
-        box.innerHTML = '<pre class="mb-0" style="white-space: pre-wrap;">' +
-            JSON.stringify(data, null, 2).replace(/</g, '&lt;') + '</pre>';
+        const dp = data.differential_privacy || {};
+        let html = '<dl class="row mb-2">';
+        html += '<dt class="col-sm-5">DP-Mechanismus</dt><dd class="col-sm-7 small">' + (dp.mechanism || '-') + '</dd>';
+        html += '<dt class="col-sm-5">Privacy-Budget (epsilon)</dt><dd class="col-sm-7 small">' + (dp.total_epsilon ?? '-') + '</dd>';
+        html += '<dt class="col-sm-5">Runden aufgezeichnet</dt><dd class="col-sm-7 small">' + (dp.rounds_recorded ?? 0) + '</dd>';
+        html += '<dt class="col-sm-5">Secure Aggregation</dt><dd class="col-sm-7 small">' + (data.secure_aggregation === true || (data.secure_aggregation || {}).available === true ? 'verf&uuml;gbar' : 'nicht verf&uuml;gbar') + '</dd>';
+        html += '</dl>';
+        html += '<div class="alert alert-info small mb-0"><i class="bi bi-lock me-1"></i>' + (data.privacy_contract || '') + '</div>';
+        box.innerHTML = html;
     } catch (err) {
         box.innerHTML = '<div class="alert alert-danger mb-0">Privacy-Status nicht erreichbar: ' + err + '</div>';
     }
 }
-
 document.addEventListener('DOMContentLoaded', () => {
     refreshFederatedStatus();
     refreshFederatedPrivacy();

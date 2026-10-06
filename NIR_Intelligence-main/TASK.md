@@ -44,6 +44,42 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## Current Task: OP58 - Federated-Setup: Optionen verstaendlich und nachvollziehbar
+
+### Problem (Feldtest)
+- "Die verschiedenen Optionen muessen verstaendlich und nachvollziehbar
+  sein und der User muss verstehen, welche Option welche Auswirkungen hat"
+  - die Federated-Seite zeigte Status/Privacy als rohe JSON-Dumps und
+  erklaerte keine einzige Option (Lernmodi, Aggregationsstrategien,
+  Privacy-Stufen).
+
+### Fixes
+- federated.html komplett ueberarbeitet:
+  - Intro-Kachel: wie funktioniert federatedes Lernen hier ueberhaupt
+    (3-Schritt-Flow: lokal trainieren -> nur Parameter uebermitteln ->
+    gemeinsames Modell zurueckerhalten; Rohdaten bleiben lokal).
+  - Lernmodus-Karte: standalone (Default, kein Datenaustausch),
+    client (nur Parameter verlassen den Rechner), server (sieht alle
+    Teilnehmer-Parameter - vertrauenswuerdige Position).
+  - Aggregationsstrategie-Karte: FedAvg (Default, einfach/robust),
+    FedProx (Stabilitaet bei ungleichen Datenmengen), FedAdam/FedYogi
+    (adaptiv, mehr Hyperparameter), FedSGD (exakt, kommunikationsintensiv).
+  - Privacy-Stufen als Accordion je mit Wirkung UND Preis:
+    local_only (keine Uebertragung, Default), differential_privacy
+    (Rauschen + epsilon/delta-Budget vs. Genauigkeit),
+    secure_aggregation (Server sieht nur die Summe),
+    homomorphic_encryption (Rechnen auf Verschluesseltem, mehr Rechenzeit).
+  - Status/Privacy als formatierte Definition-Liste mit menschlichen
+    Labels statt JSON.stringify-Dump; Consent-Texte nennen die konkrete
+    Folge (was wird geteilt / was bleibt lokal).
+
+### Tests
+- OP58-Matrix tests/test_op58_federated_options.py (20 Checks): Intro,
+  je Option Wirkung + trade-off, kein JSON-Dump mehr, lesbare Status-
+  Zeilen, Consent-Folgen, Django-Engine-Kompilierung.
+- 20/20; Regressionen FL4 20/20, FL3 25/25, FL1 12/12; manage.py check OK;
+  CI registriert.
+
 ## Current Task: OP57 - Analyse asynchron: Crew-Lauf im Hintergrund mit Fortschritt
 
 ### Problem (Feldtest)

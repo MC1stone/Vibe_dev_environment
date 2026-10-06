@@ -628,6 +628,12 @@ test_op53_sensor_pages.py 37/37.
   werden pro Datensatz persistiert -> sichtbarer Fortschritt.
 - Testmatrix tests/test_op57_async_crew.py 16/16; CI registriert.
 
+### OP58 — Federated-Optionen verstaendlich — ERLEDIGT
+- Federated-Seite: Intro (Parameter-only-Vertrag, 3-Schritt-Flow), je
+  Lernmodus/Strategie/Privacy-Stufe eine Erklaerung mit Wirkung und
+  Preis; Status/Privacy als lesbare Definition-Liste statt JSON-Dump.
+- Testmatrix tests/test_op58_federated_options.py 20/20; CI registriert.
+
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.
