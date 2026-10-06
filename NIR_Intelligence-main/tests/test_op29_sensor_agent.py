@@ -287,11 +287,18 @@ check('T8h adapter profile links its database usage',
 check('T8i unmatched usage separated',
       all(u['model_id'] for u in full['usage']) or True)
 
-# no new migration: OP29 must not add a table
+# OP53 lifts the historical 'no new migration' rule: the sensor
+# document database (0007_sensordocument) is the intended extension.
 migrations = sorted((PROJECT / 'django_project' / 'core' / 'migrations')
                     .glob('0*.py'))
-check('T8j no new migration (existing tables only)', len(migrations) == 6,
-      f'{len(migrations)} migrations: {[m.name for m in migrations]}')
+check('T8j core migrations unchanged up to 0006 (+ OP53 sensor docs)',
+      [m.name for m in migrations][:6] == [
+          '0001_initial.py', '0002_add_integration_fields.py',
+          '0003_genericfile.py', '0004_analysisproject.py',
+          '0005_analysisproject_metadata_overrides.py',
+          '0006_spectrumrecord.py']
+      and any(m.name == '0007_sensordocument.py' for m in migrations),
+      f'{[m.name for m in migrations]}')
 
 # ---------------------------------------------------------------------------
 # T9: SensorAgent with the real database
