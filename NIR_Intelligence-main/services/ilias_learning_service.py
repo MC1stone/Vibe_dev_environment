@@ -126,6 +126,7 @@ class ILIASLearningService:
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
         self.ilias_url = self.config.get("ilias_url", ILIAS_DEFAULT_URL)
+        self.external_url = self.config.get("external_url", "http://localhost:8080")
         self.client_id = self.config.get("client_id", "nir_ip")
         self.api_token: Optional[str] = None
         self.session = requests.Session() if REQUESTS_AVAILABLE else None
@@ -199,6 +200,7 @@ class ILIASLearningService:
         return {
             "service": "ilias_learning",
             "ilias_url": self.ilias_url,
+            "external_url": self.external_url,
             "client_id": self.client_id,
             "available": self.is_available(),
         }

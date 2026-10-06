@@ -212,5 +212,30 @@ check("T9f django_app waits for ilias service_healthy",
       and 'condition: service_healthy' in django_block,
       "django_app does not depend on ilias healthy")
 
+# T10: ILIAS external URL (browser-reachable link, OP52b field test)
+check("T10a settings define ILIAS_EXTERNAL_URL (default localhost:8080)",
+      "ILIAS_EXTERNAL_URL = os.getenv('ILIAS_EXTERNAL_URL', 'http://localhost:8080')"
+      in settings_src)
+check("T10b django_app env passes ILIAS_EXTERNAL_URL",
+      'ILIAS_EXTERNAL_URL' in django_block)
+
+ilias_tpl = (Path(__file__).resolve().parent.parent
+             / "django_project" / "templates" / "ilias.html").read_text(encoding="utf-8")
+check("T10c ilias.html status box shows clickable external_url link",
+      "data.external_url" in ilias_tpl and 'target="_blank"' in ilias_tpl)
+check("T10d 'Open ILIAS' button is wired to external_url",
+      'id="openIliasBtn"' in ilias_tpl)
+check("T10e no hardcoded ilias:80 link left in the template",
+      'href="http://ilias:' not in ilias_tpl)
+
+views_src = (Path(__file__).resolve().parent.parent
+             / "django_project" / "api" / "ilias_views.py").read_text(encoding="utf-8")
+check("T10f ilias_status view passes external_url to the service",
+      "ILIAS_EXTERNAL_URL" in views_src)
+service_src = (Path(__file__).resolve().parent.parent
+                / "services" / "ilias_learning_service.py").read_text(encoding="utf-8")
+check("T10g service status() reports external_url",
+      '"external_url": self.external_url' in service_src)
+
 print(f"\nOP52 nav menu + calibration matrix: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)
