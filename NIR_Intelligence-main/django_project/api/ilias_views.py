@@ -20,6 +20,8 @@ def _get_service():
 
     return create_ilias_learning_service(config={
         "ilias_url": getattr(settings, "ILIAS_URL", "http://ilias:80"),
+        "external_url": getattr(settings, "ILIAS_EXTERNAL_URL",
+                                "http://localhost:8080"),
         "client_id": getattr(settings, "ILIAS_CLIENT_ID", "nir_ip"),
     })
 

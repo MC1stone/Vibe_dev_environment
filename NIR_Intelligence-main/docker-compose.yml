@@ -184,6 +184,7 @@ services:
       - NIR_LLM_MODEL=${NIR_LLM_MODEL:-mistral}
       - ILIAS_URL=http://ilias:80
       - ILIAS_API_URL=http://ilias:80
+      - ILIAS_EXTERNAL_URL=${ILIAS_EXTERNAL_URL:-http://localhost:8080}
       - ILIAS_API_CLIENT_ID=${ILIAS_API_CLIENT_ID:-}
       - ILIAS_API_CLIENT_SECRET=${ILIAS_API_CLIENT_SECRET:-}
       - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,::1,*
