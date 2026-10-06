@@ -30,6 +30,8 @@ services:
       - DATABASE_URL=postgres://nir_user:${POSTGRES_PASSWORD}@postgres:5432/nir_mistral
       - QDRANT_URL=http://qdrant:6333
       - OLLAMA_URL=http://ollama:11434
+      - ILIAS_URL=http://ilias:80
+      - ILIAS_EXTERNAL_URL=${ILIAS_EXTERNAL_URL:-http://localhost:8080}
       - REDIS_URL=redis://redis:6379/0
       - QUARTO_ENABLED=True
       - QUARTO_PATH=/usr/bin/quarto
@@ -70,6 +72,8 @@ services:
       - DATABASE_URL=postgres://nir_user:${POSTGRES_PASSWORD}@postgres:5432/nir_mistral
       - QDRANT_URL=http://qdrant:6333
       - OLLAMA_URL=http://ollama:11434
+      - ILIAS_URL=http://ilias:80
+      - ILIAS_EXTERNAL_URL=${ILIAS_EXTERNAL_URL:-http://localhost:8080}
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/1

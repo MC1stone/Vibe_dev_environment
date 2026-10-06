@@ -338,6 +338,7 @@ FEDERATED_LEARNING_ENABLED = os.getenv('FEDERATED_LEARNING_ENABLED', 'True').low
 ILIAS_ENABLED = os.getenv('ILIAS_ENABLED', 'True').lower() == 'true'
 ILIAS_API_URL = os.getenv('ILIAS_API_URL', 'http://ilias:80')
 ILIAS_URL = os.getenv('ILIAS_URL', 'http://ilias:80')
+ILIAS_EXTERNAL_URL = os.getenv('ILIAS_EXTERNAL_URL', 'http://localhost:8080')
 ILIAS_CLIENT_ID = os.getenv('ILIAS_CLIENT_ID', 'nir_ip')
 ILIAS_CLIENT_SECRET = os.getenv('ILIAS_CLIENT_SECRET', '')
 

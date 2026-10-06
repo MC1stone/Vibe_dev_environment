@@ -20,7 +20,7 @@
                     <i class="bi bi-arrow-clockwise c-button__icon"></i>
                     <span class="c-button__text">{% trans "Refresh Status" %}</span>
                 </button>
-                <a class="c-button c-button--secondary" href="http://localhost:8080" target="_blank">
+                <a id="openIliasBtn" class="c-button c-button--secondary" href="http://localhost:8080" target="_blank" rel="noopener">
                     <i class="bi bi-box-arrow-up-right c-button__icon"></i>
                     <span class="c-button__text">{% trans "Open ILIAS" %}</span>
                 </a>
@@ -120,11 +120,16 @@ function refreshIliasStatus() {
     .then(response => response.json().catch(() => ({})))
     .then(data => {
         const available = data.available === true;
+        const externalUrl = data.external_url || 'http://localhost:8080';
+        const openBtn = document.getElementById('openIliasBtn');
+        if (openBtn) { openBtn.href = externalUrl; }
         box.innerHTML =
             '<p class="mb-1"><span class="badge ' + (available ? 'bg-success' : 'bg-warning') + '">' +
             (available ? 'ILIAS reachable' : 'ILIAS not reachable') + '</span></p>' +
-            '<p class="text-muted small mb-1">URL: ' + escapeHtml(data.ilias_url || '-') + '</p>' +
-            '<p class="text-muted small mb-0">Client: ' + escapeHtml(data.client_id || '-') + '</p>';
+            '<p class="small mb-1">Web: <a href="' + escapeHtml(externalUrl) + '" target="_blank" rel="noopener">' +
+            escapeHtml(externalUrl) + '</a></p>' +
+            '<p class="text-muted small mb-0">Internal API: ' + escapeHtml(data.ilias_url || '-') +
+            ' &middot; Client: ' + escapeHtml(data.client_id || '-') + '</p>';
     })
     .catch(error => {
         box.innerHTML = '<div class="alert alert-danger mb-0">Status unavailable: ' +

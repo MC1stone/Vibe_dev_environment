@@ -33,6 +33,16 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   OP52-Matrix um T1c2/T1c3/T9a-T9f erweitert (48/48 gruen); Regressionen
   FL4 20/20, FL6 35/35, OP25 64/64, OP45 51/51, OP50 33/33, OP51 20/20,
   S8 26/26 gruen.
+- NACHTRAG 3 (Feldtest: 'kein Link funktioniert'): Die ILIAS-Statusbox
+  zeigte die interne Docker-URL http://ilias:80 (im Browser unbrauchbar),
+  und /v1 existiert nicht (API liegt unter /api/v1). Neuer
+  external_url-Verdrahtungsstrang: settings ILIAS_EXTERNAL_URL (Default
+  http://localhost:8080) -> ilias_views -> ILIASLearningService.status()
+  -> Statusbox zeigt klickbaren Web-Link ('Web: http://localhost:8080'),
+  interne API-URL nur noch als Zusatzinfo; 'Open ILIAS'-Button wird
+  dynamisch auf external_url gesetzt (id=openIliasBtn, kein Hardcode
+  mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
+  T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
 ## Completed Task: OP51 - Startskript-Konsolidierung (EIN Startweg: Docker)
 
