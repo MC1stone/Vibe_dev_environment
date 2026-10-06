@@ -20,6 +20,9 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   (calibration-page) + /api/projects/calibration/overview/.
   i18n-Kataloge de/en um OP52-msgids ergaenzt (de Identity, en uebersetzt).
   Testmatrix test_op52_nav_menu.py 40/40 gruen, in CI aufgenommen.
+- NACHTRAG (Release-Feedback): Spektren-Datenbank zusaetzlich als Unterpunkt
+  unter 'Kalibrieren' erreichbar (Kalibration baut auf den Spektren auf).
+  OP52-Matrix um T3c/T3d erweitert (42/42 gruen).
 
 ## Completed Task: OP51 - Startskript-Konsolidierung (EIN Startweg: Docker)
 

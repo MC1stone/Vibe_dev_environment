@@ -93,6 +93,13 @@
                             <a href="/calibration/" class="c-nav-main__action {% if request.path == '/calibration/' %}c-nav-main__action--active{% endif %}">
                                 <span class="c-nav-main__label">{% trans "Kalibrieren" %}</span>
                             </a>
+                            <ul class="c-nav-sub">
+                                <li>
+                                    <a href="/projects/database/" class="c-nav-sub__action {% if request.path == '/projects/database/' %}c-nav-sub__action--active{% endif %}">
+                                        {% trans "Spektren-Datenbank" %}
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                         <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/ilias/" class="c-nav-main__action {% if request.path == '/ilias/' %}c-nav-main__action--active{% endif %}">

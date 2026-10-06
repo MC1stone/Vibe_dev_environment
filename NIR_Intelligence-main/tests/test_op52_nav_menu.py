@@ -80,6 +80,17 @@ check("T3a Spektren-Datenbank is sub-item under Projekte",
 check("T3b Spektren-Datenbank links to /projects/database/",
       'href="/projects/database/"' in nav)
 
+# T3c: Spektren-Datenbank additionally reachable under Kalibrieren
+cal_pos = nav.find('trans "Kalibrieren"')
+db_after_cal = nav.find('trans "Spektren-Datenbank"', cal_pos)
+check("T3c Spektren-Datenbank also sub-item under Kalibrieren",
+      -1 < cal_pos < db_after_cal,
+      f"cal={cal_pos} db_after_cal={db_after_cal}")
+
+db_count = nav.count('trans "Spektren-Datenbank"')
+check("T3d exactly two Spektren-Datenbank nav links (Projekte + Kalibrieren)",
+      db_count == 2, f"count={db_count}")
+
 # T4: calibration page route + view
 from django.urls import reverse, resolve
 try:
