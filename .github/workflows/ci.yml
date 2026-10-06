@@ -94,6 +94,7 @@ jobs:
           python tests/test_op52_nav_menu.py
           python tests/test_op53_sensor_pages.py
           python tests/test_op54_diy_pages.py
+          python tests/test_op55_async_prep.py
 
       - name: Django system check
         run: python django_project/manage.py check
