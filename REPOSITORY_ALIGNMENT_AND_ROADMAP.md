@@ -621,6 +621,13 @@ test_op53_sensor_pages.py 37/37.
 - Aufbereitungs-Banner zeigt verstrichene Zeit + Datensatz-Anzahl.
 - Testmatrix tests/test_op56_report_fixes.py 18/18; CI registriert.
 
+### OP57 — Analyse asynchron: Crew-Lauf im Hintergrund — ERLEDIGT
+- Release startet die 15-Agenten-Analyse in einem Background-Thread
+  (wie OP55 fuer die Aufbereitung); Antwort sofort mit analyzing:true.
+- Neuer Status-Endpoint /api/projects/<id>/crew-status/; Zwischenstaende
+  werden pro Datensatz persistiert -> sichtbarer Fortschritt.
+- Testmatrix tests/test_op57_async_crew.py 16/16; CI registriert.
+
 ### OP5 — MQTT-Worker + kommerzielle Spektrometer-Adapter (S4) — OFFEN
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.

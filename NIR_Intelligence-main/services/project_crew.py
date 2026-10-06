@@ -509,6 +509,14 @@ def run_project_crew(project) -> Dict[str, Any]:
             )
         results.append(result)
         all_reports.extend(_per_agent_reports(crew, result, project, dataset))
+        # OP57: intermediate progress is persisted per dataset so the
+        # status endpoint can show real progress while the background
+        # crew run is still working.
+        project.crew_results = {
+            'per_agent_reports': list(all_reports),
+            'datasets_analyzed': len(results),
+        }
+        project.save(update_fields=['crew_results', 'updated_at'])
 
     if not results:
         raise ValueError('Crew analysis produced no results')

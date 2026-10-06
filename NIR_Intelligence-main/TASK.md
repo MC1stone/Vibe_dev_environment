@@ -44,6 +44,34 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## Current Task: OP57 - Analyse asynchron: Crew-Lauf im Hintergrund mit Fortschritt
+
+### Problem (Feldtest)
+- "Die Analyse der neuen Daten fuer das Projekt laeuft SEEEEHR lange" -
+  ProjectReleaseView lief run_project_crew SYNCHRON im Request: 15 Agenten
+  mit je bis zu 120s LLM-Timeout pro Datensatz hingen den Request minutenlang
+  ohne jedes Feedback (identisch zum OP55-Problem der Aufbereitung).
+
+### Fixes
+- ProjectReleaseView: Phase-Wechsel + Spektrum-Persistenz bleiben im
+  Request, der Crew-Lauf startet in einem Background-Thread; Fehler werden
+  als crew_error in crew_results aufgezeichnet und die Phase zurueckgesetzt
+  (nie still). Response antwortet sofort mit analyzing:true.
+- Neuer ProjectCrewStatusView: GET /api/projects/<id>/crew-status/ liefert
+  {completed, error, agent_sections, has_final_report}.
+- services/project_crew.py: Zwischenstand (per_agent_reports) wird pro
+  Datensatz persistiert -> echte Fortschritts-Anzeige waehrend des Laufs.
+- project_report.html: Fortschritts-Banner (Spinner, verstrichene Zeit,
+  Agenten-Berichte bisher) solange phase=released ohne Ergebnis; Polling
+  alle 3s, Reload bei completed, rote Box bei Fehler.
+
+### Tests
+- OP57-Matrix tests/test_op57_async_crew.py (16 Checks): Release startet
+  Thread, Status-Endpoint (running/completed/anonym), Banner + Polling,
+  Zwischenstand-Persistenz, Release antwortet sofort.
+- 16/16; Regressionen OP10 56/56, OP55 14/14, OP56 18/18, OP24 29/29;
+  CI registriert.
+
 ## Current Task: OP56 - Release-Fixes: Bericht-Chatbot, Metadaten-Speichern, Sensor-Vorschlaege, Fortschritt
 
 ### Problem (Feldtest)
