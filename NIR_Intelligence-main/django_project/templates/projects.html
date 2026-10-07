@@ -378,5 +378,11 @@
         });
     }
 })();
+    // Deep-Link: /projects/#projectUploadModal oeffnet den Upload-Dialog
+    // (Dashboard-/Nav-Link 'Neues Projekt anlegen').
+    if (window.location.hash === '#projectUploadModal') {
+        var modal = new bootstrap.Modal(document.getElementById('projectUploadModal'));
+        modal.show();
+    }
 </script>
 {% endblock %}
