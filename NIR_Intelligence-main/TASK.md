@@ -80,6 +80,25 @@ bleibt vom Release ausgeschlossen.
   Tasks, OP5-Leak-Scan in Skripten und Repo-Payload, Guide-Inhalt, CI-
   Registrierung.
 
+### Nachtrag: KI-Metadaten-Rettungsstufe (Pflicht, nicht optional)
+- Anforderung: Der Data-Loader-Agent muss JEDE hochgeladene Datei
+  dateityp-agnostisch auf Metadaten UND Spektraldaten untersuchen -
+  Pflicht, keine Option. Der existierende Pfad war bereits agnostisch
+  (Extension-Fast-Path -> inhaltsgetriebene Kette, OP28/MO 1) und
+  untersucht Metadaten in jedem Zweig; Luecke: Dateien, die weder als
+  Spektrum noch als beschreibender Text erkannt wurden, bekamen nur den
+  deterministischen usable=False-Marker OHNE KI-Pass.
+- Fix: _ki_rescue_entry (services/project_ingest.py) - vor dem finalen
+  usable=False laeuft der KI-Pass (Mistral via Ollama, gleiche Anti-
+  Halluzinations-Belegpruefung wie OP31): findet die KI kanonische
+  Felder oder Klaerungsfragen, wird die Datei als Metadaten-Quelle
+  verwertet (dataset_type metadata, metadata_sources ki); findet auch
+  die KI nichts, bleibt der ehrliche usable=False-Marker. Never raises;
+  ohne Ollama unauffaellig uebersprungen.
+- OP59-Matrix um T7a-T7k erweitert (51 Checks), inkl. Funktionstest
+  mit gefaktem LLM-Client (Feld-Fund, Leerfund, Ausnahme, Offline).
+- Regressionen gruen: OP28 (Dateityp-Agnostik), OP30/31/32/33, OP55.
+
 ## Previous Task: OP58 - Federated-Setup: Optionen verstaendlich und nachvollziehbar
 
 ### Problem (Feldtest)

@@ -279,6 +279,92 @@ check('T6c roadmap documents OP59', 'OP59' in roadmap)
 # Ergebnis
 # ---------------------------------------------------------------------------
 print()
+
+# ---------------------------------------------------------------------------
+# T7: OP59-Nachtrag - KI-Metadaten-Rettungsstufe (Pflicht, nicht optional)
+# ---------------------------------------------------------------------------
+INGEST = PROJECT / 'services' / 'project_ingest.py'
+ingest_src = INGEST.read_text(encoding='utf-8')
+
+check('T7a KI-Rettungsstufe _ki_rescue_entry existiert',
+      'def _ki_rescue_entry' in ingest_src)
+check('T7b Rettungsstufe ist in den unparseable-Pfad eingebaut (vor usable=False)',
+      '_ki_rescue_entry(entry, file_path, loader)' in ingest_src and
+      ingest_src.index('_ki_rescue_entry(entry, file_path, loader)') <
+      ingest_src.index('"usable": False, "reason": "Not parseable as spectral data'))
+check('T7c Rettungsstufe dokumentiert Pflicht-Charakter (Metadaten-Untersuchung)',
+      'Metadaten-Untersuchung ist Pflicht' in ingest_src)
+check('T7d Rettungsstufe nutzt Anti-Halluzinations-Belegpruefung (MetadataLLMService)',
+      'from services.metadata_llm import MetadataLLMService' in ingest_src)
+check('T7e Rettungseintrag ist usable=True, dataset_type metadata',
+      '"dataset_type": "metadata"' in ingest_src and
+      '"metadata_sources": {field: "ki" for field in fields}' in ingest_src)
+check('T7f KI-Fragen werden eskaliert (open_questions)',
+      '"open_questions": [f"KI-Frage zu' in ingest_src)
+check('T7g Never-raises-Garantie (except mit logger.exception, return None)',
+      'KI rescue pass failed (non-fatal)' in ingest_src)
+check('T7h LLM nicht verfuegbar -> None -> ehrlicher usable=False-Marker bleibt',
+      'if not service.client.is_available():' in ingest_src)
+
+# Funktionspruefung mit gefaktem LLM-Client (Offline, kein Ollama noetig)
+import os  # noqa: E402
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_project.nir_web.settings')
+sys.path.insert(0, str(PROJECT))
+import tempfile  # noqa: E402
+import services.project_ingest as pi  # noqa: E402
+import services.metadata_llm as mlm  # noqa: E402
+
+with tempfile.NamedTemporaryFile(suffix='.dat', delete=False) as f:
+    f.write(b'binary-ish content Operator Dr. Meier')
+    rescue_path = f.name
+entry = {'file_id': '1', 'file_name': 'x.dat', 'file_extension': '.dat',
+         'file_category': 'unknown'}
+
+
+class _FakeClient:
+    def is_available(self):
+        return True
+
+
+class _FakeLLM:
+    def __init__(self, client=None):
+        self.client = _FakeClient()
+
+    def extract(self, text, file_name=''):
+        return {'fields': {'operator': {'value': 'Dr. Meier', 'evidence': 'x'}},
+                'questions': ['Welches Geraet?'], 'rejected': []}
+
+
+mlm.MetadataLLMService = _FakeLLM
+res = pi._ki_rescue_entry(entry, rescue_path, object())
+check('T7i Rettung liefert verwertbaren Eintrag (Feld, Quelle ki, Frage)',
+      bool(res) and res['usable'] is True and
+      res['metadata'] == {'operator': 'Dr. Meier'} and
+      res['metadata_sources'] == {'operator': 'ki'} and
+      any('Welches Geraet' in q for q in res['open_questions']),
+      str(res))
+
+
+class _FakeEmpty(_FakeLLM):
+    def extract(self, text, file_name=''):
+        return None
+
+
+mlm.MetadataLLMService = _FakeEmpty
+check('T7j KI findet nichts -> None (usable=False bleibt ehrlich)',
+      pi._ki_rescue_entry(entry, rescue_path, object()) is None)
+
+
+class _FakeBoom(_FakeLLM):
+    def extract(self, text, file_name=''):
+        raise RuntimeError('boom')
+
+
+mlm.MetadataLLMService = _FakeBoom
+check('T7k LLM-Ausnahme -> None (never raises)',
+      pi._ki_rescue_entry(entry, rescue_path, object()) is None)
+os.unlink(rescue_path)
+
 print(f'OP59 release install matrix: {PASS} passed, {FAIL} failed')
 if FAILED:
     print('failed checks:', ', '.join(FAILED))
