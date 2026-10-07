@@ -2283,6 +2283,28 @@ class EnhancedDataPreparationAgent(BaseAgent):
                 self.logger.info("Applied detrending")
 
             data["preprocessing"] = preprocessing_results
+            try:
+                from services.pipeline_record import (
+                    pipeline_from_load_result,
+                    record_preprocessing,
+                )
+                pipeline = data.get("pipeline_record")
+                if pipeline is None:
+                    pipeline = pipeline_from_load_result(data)
+                smoothing_params = self.issue_detection_params.get("smoothing", {})
+                intensity_columns_preview = {
+                    "snv": f"{intensity_col}_snv" if "SNV" in preprocessing_results else None,
+                    "msc": f"{intensity_col}_msc" if "MSC" in preprocessing_results else None,
+                    "savitzky_golay": f"{intensity_col}_sg" if "Savitzky-Golay" in preprocessing_results else None,
+                    "baseline_corrected": f"{intensity_col}_baseline_corrected" if "BaselineCorrection" in preprocessing_results else None,
+                    "detrended": f"{intensity_col}_detrended" if "Detrending" in preprocessing_results else None,
+                }
+                record_preprocessing(pipeline, preprocessing_results,
+                                     intensity_columns_preview,
+                                     smoothing_params=smoothing_params)
+                data["pipeline_record"] = pipeline
+            except Exception:
+                pass
             data["processed_data"] = df
             data["intensity_columns"] = {
                 "original": intensity_col,
