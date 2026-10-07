@@ -34,19 +34,11 @@ PROJECT = Path(__file__).resolve().parent.parent
 DJANGO_DIR = PROJECT / 'django_project'
 TEMPLATES = DJANGO_DIR / 'templates'
 
-LEGACY_HREFS = [
-    'href="/dashboard/"',
-    'href="/agents/"',
-    'href="/spectra/"',
-    'href="/files/"',
-    'href="/analysis/"',
-    'href="/jobs/"',
-    'href="/settings/"',
-    'href="/documentation/"',
-    'href="/chatbot/"',
-    # /ilias/ removed from the legacy list: OP52 reintroduces it
-    # intentionally as sub-item under 'Lernen mit Kursen'.
-]
+# Workflow-UI-Redesign (S1, PO-freigegeben 2026-10-07): Die frueher
+# verwaisten Seiten sind jetzt bewusster Teil der 7-Punkte-Navigation
+# (Schnell-Check = /spectra/, Diagnose = /jobs/ /agents/ /analysis/
+# /files/ /settings/, Chatbot = Schnell-Check-Unterpunkt).
+LEGACY_HREFS = []
 
 WORKFLOW_HREFS = [
     ('/projects/', 'projects list'),
@@ -82,8 +74,10 @@ for href, label in WORKFLOW_HREFS:
           f'{href} missing from base.html')
 check('T1d navbar labels present as i18n msgids (OP48)',
       '"Projects"' in base_src and '"Spectrum database"' in base_src)
+# Workflow-UI-Redesign (S1): Settings lebt in der Staff-Diagnose-Subnav.
+dropdown_src = base_src.split('userDropdown')[1].split('</ul>')[0] if 'userDropdown' in base_src else ''
 check('T1e settings link removed from the user dropdown',
-      'href="/settings/"' not in base_src)
+      'href="/settings/"' not in dropdown_src)
 
 # ---------------------------------------------------------------------------
 # T2: start page shows the workflow overview diagram with hover tooltips
