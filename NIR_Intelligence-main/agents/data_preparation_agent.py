@@ -393,8 +393,12 @@ class EnhancedDataPreparationAgent(BaseAgent):
                 result = self._load_json_spectral(file_path)
             elif file_ext in (".h5", ".hdf5"):
                 result = self._load_hdf5_spectral(file_path)
-            elif file_ext in (".jdx", ".txt"):
+            elif file_ext == ".jdx":
+                result = self._load_jcamp_dx_spectral(file_path)
+            elif file_ext == ".txt":
                 result = self._load_text_spectral(file_path)
+            elif file_ext == ".d":
+                result = self._load_opus_spectral(file_path)
             elif file_ext == ".spc":
                 result = self._load_spc_spectral(file_path)
             elif file_ext == ".mat":
@@ -1587,6 +1591,7 @@ class EnhancedDataPreparationAgent(BaseAgent):
                     "metadata": {
                         "spc_version": version,
                         "spc_flags": flags,
+                        "spc_x_units_code": int(x_units_code),
                         "x_units": x_unit_names.get(x_units_code, f"code {x_units_code}"),
                         "y_units": y_unit_names.get(y_units_code, f"code {y_units_code}"),
                         "x_start": x_start,
@@ -1668,6 +1673,89 @@ class EnhancedDataPreparationAgent(BaseAgent):
             self.log_error(f"Failed to load MATLAB file {file_path}: {str(e)}", ErrorSeverity.MEDIUM)
             return None
 
+    def _load_jcamp_dx_spectral(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Load via the dedicated JCAMP-DX parser (M2), fall back to the
+        adaptive text loader when the file is not JCAMP-DX structured."""
+        try:
+            from services.jcamp_parser import load_jcamp_file
+            result = load_jcamp_file(file_path)
+            if result is not None:
+                result["source_file"] = file_path
+                result["metadata"] = self._merge_jcamp_units(
+                    file_path, result.get("metadata", {}))
+                return result
+        except ImportError:
+            pass
+        except Exception as e:
+            self.log_error(
+                f"JCAMP-DX parse failed for {file_path}: {str(e)}",
+                ErrorSeverity.LOW)
+        return self._load_text_spectral(file_path)
+
+    def _load_opus_spectral(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Load a Bruker OPUS `.d` file/directory via the optional opusfc
+        reader (MIT); returns None when opusfc is unavailable so the
+        content-driven fallback chain takes over."""
+        try:
+            from services.opus_reader import load_opus_spectrum, opusfc_available
+            if not opusfc_available():
+                self.logger.info(
+                    "opusfc not installed; OPUS .d handled by fallback chain: %s",
+                    file_path)
+                return None
+            result = load_opus_spectrum(file_path)
+            if result is not None:
+                result["source_file"] = file_path
+            return result
+        except Exception as e:
+            self.log_error(
+                f"OPUS load failed for {file_path}: {str(e)}",
+                ErrorSeverity.LOW)
+            return None
+
+    _JCAMP_UNIT_ALIASES = {
+        "1/CM": "cm^-1", "CM-1": "cm^-1", "CM^-1": "cm^-1", "1/MM": "cm^-1",
+        "NANOMETERS": "nm", "NM": "nm",
+        "MICROMETERS": "um", "UM": "um",
+    }
+
+    @staticmethod
+    def _parse_jcamp_units_line(line: str):
+        parts = line.split('=', 1)
+        if len(parts) != 2:
+            return None
+        key = parts[0].strip().upper()
+        if key not in ("XUNITS", "YUNITS"):
+            return None
+        raw = parts[1].strip().strip('"').strip("'")
+        canonical = EnhancedDataPreparationAgent._JCAMP_UNIT_ALIASES.get(
+            raw.upper(), raw.lower() or None)
+        return ("x_units" if key == "XUNITS" else "y_units", canonical)
+
+    def _merge_jcamp_units(self, file_path: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract XUNITS/YUNITS from JCAMP-DX style headers into metadata."""
+        try:
+            with open(file_path, 'r', encoding=self._sniff_encoding_safe(file_path),
+                      errors='replace') as f:
+                for line in f:
+                    stripped = line.strip()
+                    if not stripped.startswith('##'):
+                        continue
+                    parsed = self._parse_jcamp_units_line(stripped[2:])
+                    if parsed:
+                        metadata[parsed[0]] = parsed[1]
+                    if len(metadata) > 500:
+                        break
+        except Exception:
+            pass
+        return metadata
+
+    def _sniff_encoding_safe(self, file_path: str) -> str:
+        try:
+            return sniff_text_encoding(file_path)
+        except Exception:
+            return 'utf-8'
+
     def _load_text_spectral(self, file_path: str) -> Dict[str, Any]:
         """Load spectral data from text-based formats (JDX, SPC, TXT).
 
@@ -1715,7 +1803,8 @@ class EnhancedDataPreparationAgent(BaseAgent):
                 "format": os.path.splitext(file_path)[1].lower(),
                 "wavelength_column": "wavelength",
                 "intensity_column": "intensity",
-                "metadata": self._extract_text_metadata(file_path)
+                "metadata": self._merge_jcamp_units(
+                    file_path, self._extract_text_metadata(file_path))
             }
             
         except Exception as e:
@@ -2194,6 +2283,28 @@ class EnhancedDataPreparationAgent(BaseAgent):
                 self.logger.info("Applied detrending")
 
             data["preprocessing"] = preprocessing_results
+            try:
+                from services.pipeline_record import (
+                    pipeline_from_load_result,
+                    record_preprocessing,
+                )
+                pipeline = data.get("pipeline_record")
+                if pipeline is None:
+                    pipeline = pipeline_from_load_result(data)
+                smoothing_params = self.issue_detection_params.get("smoothing", {})
+                intensity_columns_preview = {
+                    "snv": f"{intensity_col}_snv" if "SNV" in preprocessing_results else None,
+                    "msc": f"{intensity_col}_msc" if "MSC" in preprocessing_results else None,
+                    "savitzky_golay": f"{intensity_col}_sg" if "Savitzky-Golay" in preprocessing_results else None,
+                    "baseline_corrected": f"{intensity_col}_baseline_corrected" if "BaselineCorrection" in preprocessing_results else None,
+                    "detrended": f"{intensity_col}_detrended" if "Detrending" in preprocessing_results else None,
+                }
+                record_preprocessing(pipeline, preprocessing_results,
+                                     intensity_columns_preview,
+                                     smoothing_params=smoothing_params)
+                data["pipeline_record"] = pipeline
+            except Exception:
+                pass
             data["processed_data"] = df
             data["intensity_columns"] = {
                 "original": intensity_col,

@@ -130,13 +130,25 @@ class CalibrationAgent(BaseAgent):
 
         folds = max(2, min(folds, matrix.shape[0]))
         splitter = KFold(n_splits=folds, shuffle=True, random_state=42)
-        scores = cross_val_score(estimator, matrix, y, cv=splitter, scoring="r2")
+        from sklearn.model_selection import cross_validate
+        cv_results = cross_validate(
+            estimator, matrix, y, cv=splitter,
+            scoring=("r2", "neg_mean_squared_error"))
+        scores = cv_results["test_r2"]
+        rmse_cv = np.sqrt(np.maximum(0.0, -cv_results["test_neg_mean_squared_error"]))
+        mean_rmse_cv = float(np.mean(rmse_cv))
+        y_std = float(np.std(y, ddof=1)) if len(y) > 1 else 0.0
+        rpd = float(y_std / mean_rmse_cv) if mean_rmse_cv > 0 else None
         return {
             "status": "ok",
             "parameters": param_note,
             "r2_scores": [float(s) for s in scores],
             "mean_r2": float(np.mean(scores)),
             "std_r2": float(np.std(scores)),
+            "rmse_cv": mean_rmse_cv,
+            "std_rmse_cv": float(np.std(rmse_cv)),
+            "rpd": rpd,
+            "y_std": y_std,
             "cv_folds": folds,
         }
 

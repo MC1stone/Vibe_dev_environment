@@ -14,6 +14,9 @@ pybaselines>=1.0.0
 
 # NIR spectroscopy specific
 spectra>=0.0.11
+# Bruker OPUS .d import (MIT, verified in THIRD_PARTY_LICENSES.md);
+# the OPUS loader degrades gracefully when not installed
+opusfc>=1.5.0
 # pyopenms>=2.7.0  # Requires system libraries
 # nmrglue>=0.6    # Requires system libraries
 

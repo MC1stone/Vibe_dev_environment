@@ -295,14 +295,17 @@ function createSpectrumChart(spectrum) {
     
     const ctx = canvas.getContext('2d');
     
-    // Generate sample data if wavelengths are not available
+    // Scientific integrity: never render fabricated data. An empty or
+    // data-less spectrum shows an explicit empty state instead of a
+    // synthetic curve that could be mistaken for a real measurement.
     let wavelengths = spectrum.wavelengths || [];
     let intensities = spectrum.intensities || [];
-    
-    // If no data, generate sample data
-    if (wavelengths.length === 0) {
-        wavelengths = generateSampleWavelengths();
-        intensities = generateSampleIntensities();
+
+    const hasData = wavelengths.length > 0 && intensities.length > 0
+        && wavelengths.length === intensities.length;
+    if (!hasData) {
+        renderEmptySpectrumState(canvas);
+        return;
     }
     
     // Limit the number of data points for performance
@@ -318,13 +321,16 @@ function createSpectrumChart(spectrum) {
         spectraCharts[spectrum.id].destroy();
     }
     
+    const xUnit = spectrum.x_unit || 'nm';
+    const paired = wavelengths.map((w, i) => ({ x: w, y: intensities[i] }))
+        .sort((a, b) => a.x - b.x);
     const chart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: wavelengths,
             datasets: [{
                 label: 'Intensity',
-                data: intensities,
+                data: paired,
+                parsing: false,
                 borderColor: 'var(--color-primary)',
                 backgroundColor: 'rgba(122, 185, 41, 0.1)',
                 borderWidth: 1,
@@ -338,6 +344,7 @@ function createSpectrumChart(spectrum) {
             maintainAspectRatio: false,
             scales: {
                 x: {
+                    type: 'linear',
                     display: false
                 },
                 y: {
@@ -359,22 +366,32 @@ function createSpectrumChart(spectrum) {
 }
 
 function generateSampleWavelengths() {
-    const wavelengths = [];
-    for (let i = 700; i <= 2500; i += 10) {
-        wavelengths.push(i);
-    }
-    return wavelengths;
+    // Deprecated: retained only for backwards compatibility of call sites.
+    // Fabricated spectra must never be rendered or submitted for analysis;
+    // an empty axis is returned so callers fall back to explicit empty states.
+    return [];
 }
 
 function generateSampleIntensities() {
-    const intensities = [];
-    for (let i = 700; i <= 2500; i += 10) {
-        let intensity = Math.random() * 0.5 + 0.3;
-        if (i >= 1200 && i <= 1400) intensity += 0.8;
-        if (i >= 1700 && i <= 1900) intensity += 0.6;
-        intensities.push(intensity);
-    }
-    return intensities;
+    // Deprecated: retained only for backwards compatibility of call sites.
+    // Fabricated spectra must never be rendered or submitted for analysis.
+    return [];
+}
+
+function renderEmptySpectrumState(canvas) {
+    const container = canvas.parentElement;
+    if (!container) return;
+    canvas.style.display = 'none';
+    const empty = document.createElement('div');
+    empty.className = 'spectrum-empty-state';
+    empty.style.cssText = 'height:100%;display:flex;flex-direction:column;'
+        + 'align-items:center;justify-content:center;color:var(--color-text-muted);'
+        + 'font-size:0.85rem;text-align:center;padding:1rem;';
+    empty.innerHTML = '<i class="bi bi-slash-circle" style="font-size:1.5rem;margin-bottom:6px;"></i>'
+        + '<span>' + nirGettext('No spectral data available for this record') + '</span>'
+        + '<span style="font-size:0.75rem;">'
+        + nirGettext('Data preview was not persisted at upload time') + '</span>';
+    container.appendChild(empty);
 }
 
 function renderSpectraTable() {
@@ -771,9 +788,16 @@ function createDetailedSpectrumChart(spectrum) {
         spectraCharts['details'].destroy();
     }
     
-    // Use spectrum data or generate sample data
-    let wavelengths = spectrum.wavelengths || generateSampleWavelengths();
-    let intensities = spectrum.intensities || generateSampleIntensities();
+    // Scientific integrity: never chart fabricated data; show an explicit
+    // empty state when the record has no persisted spectral values.
+    let wavelengths = spectrum.wavelengths || [];
+    let intensities = spectrum.intensities || [];
+    if (wavelengths.length === 0 || wavelengths.length !== intensities.length) {
+        renderEmptySpectrumState(canvas);
+        return;
+    }
+    const xUnit = spectrum.x_unit || 'nm';
+    const yUnit = spectrum.y_unit || 'a.u.';
     
     // Limit data points for performance
     const maxPoints = 500;
@@ -783,13 +807,15 @@ function createDetailedSpectrumChart(spectrum) {
         intensities = intensities.filter((_, i) => i % step === 0);
     }
     
+    const paired = wavelengths.map((w, i) => ({ x: w, y: intensities[i] }))
+        .sort((a, b) => a.x - b.x);
     const chart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: wavelengths,
             datasets: [{
-                label: 'Spectral Intensity',
-                data: intensities,
+                label: 'Intensity (' + yUnit + ')',
+                data: paired,
+                parsing: false,
                 borderColor: 'var(--color-primary)',
                 backgroundColor: 'rgba(122, 185, 41, 0.1)',
                 borderWidth: 2,
@@ -803,9 +829,10 @@ function createDetailedSpectrumChart(spectrum) {
             maintainAspectRatio: false,
             scales: {
                 x: {
+                    type: 'linear',
                     title: {
                         display: true,
-                        text: 'Wavelength (nm)',
+                        text: 'Wavelength (' + xUnit + ')',
                         color: 'var(--color-text)'
                     },
                     grid: {
@@ -856,6 +883,14 @@ function analyzeSpectrum(spectrumId) {
         return;
     }
     
+
+    // Scientific integrity: refuse analysis when the record carries no
+    // persisted spectral data - fabricated fallback values must never
+    // enter the CrewAI analysis pipeline.
+    if (!Array.isArray(spectrum.wavelengths) || spectrum.wavelengths.length === 0) {
+        showError(nirGettext('This spectrum has no spectral data; re-upload the source file to enable analysis.'));
+        return;
+    }
     showLoading();
     
     // Prepare analysis request for Crew AI
@@ -875,8 +910,8 @@ function analyzeSpectrum(spectrumId) {
             description: spectrum.description
         },
         spectral_data: {
-            wavelengths: spectrum.wavelengths || generateSampleWavelengths(),
-            intensities: spectrum.intensities || generateSampleIntensities(),
+            wavelengths: spectrum.wavelengths || [],
+            intensities: spectrum.intensities || [],
             sample_id: spectrum.sample_id || spectrum.id
         }
     };
@@ -951,8 +986,8 @@ function quickAnalyzeSelected() {
                 batch_analysis: true
             },
             spectral_data: {
-                wavelengths: spectrum.wavelengths || generateSampleWavelengths(),
-                intensities: spectrum.intensities || generateSampleIntensities(),
+                wavelengths: spectrum.wavelengths || [],
+                intensities: spectrum.intensities || [],
                 sample_id: spectrum.sample_id || spectrum.id
             }
         };

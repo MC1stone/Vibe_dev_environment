@@ -105,6 +105,7 @@ class NIRSpectrumSerializer(serializers.ModelSerializer):
             'sample_id', 'sample_type', 'sample_source',
             'spectral_type', 'data_format',
             'original_file', 'processed_file',
+            'wavelengths', 'intensities', 'x_unit', 'y_unit',
             'wavelength_range_start', 'wavelength_range_end',
             'resolution', 'data_points',
             'instrument', 'collection_date', 'collection_conditions',
