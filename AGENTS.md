@@ -25,6 +25,18 @@
 - **Weaviate ist out of scope** — Qdrant ist der Ersatz für Vektor-/Embedding-Speicherung.
 - **Anti-Code-Creep:** Kleinste korrekte Lösung, Anforderungsbezug für jede Änderung,
   keine neuen Abhängigkeiten ohne zwingende Notwendigkeit, fokussierte Commits.
+- **Lizenz-Compliance bei Third-Party-Software:** Vor jeder Nutzung, Anleihe oder
+  Integration von Third-Party-/Open-Source-Software ist die Lizenz zu verifizieren
+  und im betroffenen Plan/Dokument zu dokumentieren.
+  - Zulässig als Abhängigkeit: permissive Lizenzen (MIT, BSD, Apache-2.0, CeCILL-B,
+    MPL) — Copyright-/Attribution-Hinweise sind zu wahren.
+  - Copyleft-Lizenzen (GPL/AGPL/LGPL, EPL): kein Code übernehmen und keine
+    Bibliotheks-Abhängigkeit einbinden; nur das Konzept darf als eigenständig
+    entwickelter Code nachgebaut werden.
+  - Restriktive/kommerzielle Lizenzen (z. B. CcpNmr Analysis v3): gar nicht nutzen.
+  - Kein Vorschlag und keine Implementierung darf dem Lizenzrecht entgegenstehen;
+    im Zweifel gilt "nachbauen, nicht übernehmen". Referenz-Auswertung der
+    analysierten Spektroskopie-Projekte: `THIRD_PARTY_LICENSES.md`.
 - **Iterationsregel:** Der Zyklus läuft bis `ERRORS = 0`, `CRITICAL_WARNINGS = 0`,
   `OPEN_CHANGE_REQUESTS = 0`.
 
