@@ -49,9 +49,20 @@
     service_name: "nir_intelligence"
     service_check_enabled: true
 
-    # ---- Verifikation ------------------------------------------------------
+    # ---- Docker (OP59a: Pflicht, nicht optional) ----------------------------
+    # Ohne Docker gibt es keinen Backend-Stack und damit keine KI-Analysen
+    # (Ollama/Mistral, Qdrant, Redis) - genau das soll der Release vermeiden.
+    # Die Installation erfolgt nur, wenn Docker/Compose fehlen (idempotent).
+    docker_packages:
+      - docker.io
+      - docker-compose-v2
+
+    # ---- Verifikation (OP59b: Ende-zu-Ende) --------------------------------
     verify_command: "systemctl is-active {{ service_name }}"
     verify_timeout: 30
+    app_wait_timeout: 60
+    docker_wait_timeout: 60
+    llm_model: "mistral:latest"
 
     # ---- Pre-Flight ----------------------------------------------------------
     # Maximale Wartezeit in Sekunden je stat-Check. Ein haengender Mount
@@ -290,11 +301,12 @@
         service_file_state.stat.exists and service_check_enabled | bool
 
     # ==========================================================================
-    # 5. Host-Backend-Stack (OP45): Ollama, Qdrant, Redis als Docker-Container
+    # 5. Docker installieren (OP59a: Pflicht, nicht optional)
     # ==========================================================================
-    # Die systemd-Django-App laeuft auf dem Host und erreicht die Analyse-
-    # Backends nur ueber localhost. Ohne den Stack sind die KI-Analysen
-    # degraded (Mistral-Chatbot, Qdrant-Aehnlichkeit, Redis-Cache).
+    # Ohne Docker gibt es keinen Backend-Stack (Ollama, Qdrant, Redis) und
+    # damit keine KI-Analysen. Der Release verlangt Docker deshalb als
+    # harte Abhaengigkeit: fehlt es, wird es per apt nachinstalliert
+    # (idempotent - vorhandene Installationen werden nicht angefasst).
     - name: Pruefe, ob Docker verfuegbar ist
       ansible.builtin.command:
         cmd: "docker --version"
@@ -302,41 +314,74 @@
       changed_when: false
       failed_when: false
 
+    - name: Installiere Docker und Docker Compose (apt)
+      ansible.builtin.apt:
+        name: "{{ docker_packages }}"
+        state: present
+      register: docker_install_result
+      when: docker_version_result.rc != 0
+
+    - name: Pruefe Docker erneut nach der Installation
+      ansible.builtin.command:
+        cmd: "docker --version"
+      register: docker_version_after
+      changed_when: false
+      failed_when: false
+      when: docker_install_result is changed
+
+    - name: Breche ab, wenn Docker auch nach der Installation fehlt
+      ansible.builtin.fail:
+        msg: >-
+          Docker konnte nicht installiert werden - ohne Docker gibt es
+          keinen Backend-Stack (Ollama, Qdrant, Redis) und keine
+          KI-Analysen. Diagnose: apt-get install -y docker.io
+          docker-compose-v2; danach das Playbook erneut ausfuehren.
+      when: >
+        docker_install_result is changed and
+        docker_version_after.rc is defined and docker_version_after.rc != 0
+
+    - name: Stelle sicher, dass der Docker-Daemon laeuft
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: true
+
     - name: Pruefe, ob Docker Compose verfuegbar ist
       ansible.builtin.command:
         cmd: "docker compose version"
       register: compose_version_result
       changed_when: false
-      failed_when: false
-      when: docker_version_result.rc == 0
 
+    - name: Warte, bis der Docker-Daemon antwortet (max. {{ docker_wait_timeout }}s)
+      ansible.builtin.command:
+        cmd: "docker info"
+      register: docker_info_result
+      until: docker_info_result.rc == 0
+      retries: "{{ docker_wait_timeout }}"
+      delay: 1
+      changed_when: false
+      failed_when: false
+
+    - name: Breche ab, wenn der Docker-Daemon nicht erreichbar ist
+      ansible.builtin.fail:
+        msg: >-
+          Der Docker-Daemon antwortet nicht. Diagnose:
+          systemctl status docker; journalctl -u docker -n 50.
+          Ohne Daemon kein Backend-Stack und keine KI-Analysen.
+      when: docker_info_result.rc != 0
+
+    # ==========================================================================
+    # 6. Host-Backend-Stack (OP45): Ollama, Qdrant, Redis als Docker-Container
+    # ==========================================================================
+    # Die systemd-Django-App laeuft auf dem Host und erreicht die Analyse-
+    # Backends nur ueber localhost.
     - name: Pruefe, ob das Backend-Stack-Skript installiert wurde
       ansible.builtin.stat:
         path: "{{ opt_install_dir }}/packaging/start_backend_stack.sh"
       register: backend_script_state
 
-    - name: Starte den Host-Backend-Stack (OP45)
-      ansible.builtin.command:
-        cmd: "bash {{ opt_install_dir }}/packaging/start_backend_stack.sh"
-      when: >
-        docker_version_result.rc == 0 and
-        compose_version_result.rc is defined and compose_version_result.rc == 0 and
-        backend_script_state.stat.exists
-
-    - name: Hinweis - Docker/Compose fehlt, Backend-Stack manuell starten
-      ansible.builtin.debug:
-        msg: >-
-          Docker bzw. Docker Compose ist nicht verfuegbar - der Backend-Stack
-          (Ollama, Qdrant, Redis) wurde nicht gestartet. Ohne ihn sind die
-          KI-Analysen degraded. Installation per apt-get install -y docker.io
-          docker-compose-v2, danach bash
-          {{ opt_install_dir }}/packaging/start_backend_stack.sh
-      when: >
-        docker_version_result.rc != 0 or
-        compose_version_result.rc is not defined or compose_version_result.rc != 0
-
-    - name: Hinweis - Backend-Stack-Skript fehlt im Payload
-      ansible.builtin.debug:
+    - name: Breche ab, wenn das Backend-Stack-Skript fehlt
+      ansible.builtin.fail:
         msg: >-
           Das Backend-Stack-Skript fehlt unter
           {{ opt_install_dir }}/packaging/ - der Payload ist veraltet
@@ -344,11 +389,117 @@
           packaging/build_ventoy_stick.sh.
       when: not backend_script_state.stat.exists
 
-    - name: Verifikation uebersprungen (kein Dienst, nur Installation)
+    - name: Starte den Host-Backend-Stack (OP45)
+      ansible.builtin.command:
+        cmd: "bash {{ opt_install_dir }}/packaging/start_backend_stack.sh"
+      register: backend_stack_result
+      changed_when: false
+
+    - name: Breche ab, wenn der Backend-Stack nicht startet
+      ansible.builtin.fail:
+        msg: >-
+          Der Backend-Stack (Ollama, Qdrant, Redis) konnte nicht gestartet
+          werden - ohne ihn sind alle KI-Analysen degraded. Diagnose:
+          docker ps; docker logs nir_ollama; danach das Playbook erneut
+          ausfuehren. {{ backend_stack_result.stderr | default('') }}
+      when: backend_stack_result.rc != 0
+
+    # ==========================================================================
+    # 7. Verifikation (OP59b): Ende-zu-Ende statt nur systemctl
+    # ==========================================================================
+    # Ein gruenes is-active beweist noch keine funktionierende Plattform.
+    # Der Release verlangt: Django antwortet, Ollama laeuft, das Modell
+    # liegt bereit, Qdrant und Redis sind erreichbar. Erst dann ist die
+    # Installation erfolgreich.
+    - name: Pruefe, ob der Django-Dienst aktiv ist
+      ansible.builtin.command:
+        cmd: "systemctl is-active {{ service_name }}"
+      register: django_active_result
+      changed_when: false
+      failed_when: false
+      when: service_file_state.stat.exists and service_check_enabled | bool
+
+    - name: Warte auf die Django-App (HTTP, max. {{ app_wait_timeout }}s)
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8000/"
+        status_code: [200, 302]
+      register: django_http_result
+      until: django_http_result.status in [200, 302]
+      retries: "{{ app_wait_timeout }}"
+      delay: 1
+      failed_when: false
+      when: >
+        service_file_state.stat.exists and service_check_enabled | bool and
+        django_active_result.rc == 0
+
+    - name: Pruefe Ollama auf Erreichbarkeit
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:11434/api/tags"
+        status_code: 200
+      register: ollama_tags_result
+      failed_when: false
+      changed_when: false
+
+    - name: Pruefe, ob das LLM-Modell vorhanden ist
+      ansible.builtin.command:
+        cmd: "curl -s http://127.0.0.1:11434/api/tags"
+      register: ollama_models_raw
+      changed_when: false
+      when: ollama_tags_result.status == 200
+
+    - name: Breche ab, wenn das LLM-Modell fehlt
+      ansible.builtin.fail:
+        msg: >-
+          Ollama laeuft, aber das Modell '{{ llm_model }}' fehlt - die
+          Analysen wuerden auf Fallback zurueckfallen. Nachladen:
+          docker exec nir_ollama ollama pull {{ llm_model }}, danach das
+          Playbook erneut ausfuehren.
+      when: >
+        ollama_tags_result.status == 200 and
+        llm_model.split(':')[0] not in ollama_models_raw.stdout
+
+    - name: Pruefe Qdrant auf Erreichbarkeit
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:6333/healthz"
+        status_code: 200
+      register: qdrant_health_result
+      failed_when: false
+      changed_when: false
+
+    - name: Pruefe Redis (PING)
+      ansible.builtin.command:
+        cmd: "docker exec nir_redis redis-cli ping"
+      register: redis_ping_result
+      changed_when: false
+      failed_when: false
+
+    - name: Sammle Verifikationsergebnisse
+      ansible.builtin.set_fact:
+        verify_checks: {
+          django_service: "{{ service_file_state.stat.exists and django_active_result.rc | default(1) == 0 }}",
+          django_http: "{{ django_http_result.status | default(0) in [200, 302] }}",
+          ollama: "{{ ollama_tags_result.status == 200 }}",
+          qdrant: "{{ qdrant_health_result.status == 200 }}",
+          redis: "{{ redis_ping_result.stdout | default('') in ['PONG', 'pong'] }}"
+        }
+
+    - name: Zeige Verifikationsbericht
+      ansible.builtin.debug:
+        var: verify_checks
+
+    - name: Breche bei verfehltem Verifikationsziel ab
+      ansible.builtin.fail:
+        msg: >-
+          Verifikation fehlgeschlagen (OP59b): {{ verify_checks | to_nice_yaml }}
+          Ohne diese Checks ist die Plattform nicht einsatzbereit.
+          Diagnose: systemctl status {{ service_name }} -l;
+          docker ps; docker logs nir_ollama; curl http://127.0.0.1:8000/.
+      when: verify_checks | dict2items | selectattr('value', 'equalto', false) | list | length > 0
+
+    - name: Installation erfolgreich verifiziert (OP59b)
       ansible.builtin.debug:
         msg: >-
-          NIR Intelligence Main wurde installiert (Methode:
-          {{ install_method }}). Kein systemd-Dienst '{{ service_name }}'
-          gefunden - Verifikation uebersprungen. Falls die Anwendung
-          keinen Service mitbringt, ist dieser Schritt optional.
-      when: not service_file_state.stat.exists
+          NIR Intelligence Main Release: Installation verifiziert
+          (Methode: {{ install_method }}) - Django antwortet auf
+          http://127.0.0.1:8000, Ollama mit Modell '{{ llm_model }}',
+          Qdrant und Redis sind aktiv. Alle Checks gruen.

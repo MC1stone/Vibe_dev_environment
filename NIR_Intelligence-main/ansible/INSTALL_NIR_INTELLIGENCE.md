@@ -5,12 +5,40 @@ auf einem frisch installierten **Debian 13 (x86_64)** direkt vom
 **Ventoy-Stick**. Es ist idempotent — mehrfaches Ausführen führt zum
 gleichen Ergebnis.
 
+Diese Anleitung ist die **kanonische Release-Installationsanleitung**.
+Die älteren Dokumente (`VENTOY_DEPLOYMENT.md`, `Ansible.md`,
+`ansible/ventoy_setup/RUN_ANSIBLE_GUIDE.md`) beschreiben historische
+Entwickler-Setups und sind für die Release-Installation nicht erforderlich.
+
+## Was der Installationslauf erledigt
+
+1. Pre-Flight: prüft Stick-Mount und Installationspaket (mit Timeout
+   gegen hängende USB-Mounts).
+2. Installiert das Paket — `.deb` bevorzugt, sonst Archiv mit
+   `install.sh` (beides automatisch erkannt).
+3. Aktiviert und startet den systemd-Dienst `nir_intelligence`
+   (Django auf `http://127.0.0.1:8000`).
+4. **Installiert Docker fehlendermaßen automatisch** (`docker.io`,
+   `docker-compose-v2` per apt) — Docker ist Pflicht, nicht optional:
+   ohne Docker gibt es keinen Backend-Stack und damit keine
+   KI-Analysen.
+5. Startet den Host-Backend-Stack (Ollama mit Mistral-Modell, Qdrant,
+   Redis) als Docker-Container und zieht fehlende Modelle.
+6. **Verifiziert die Installation Ende-zu-Ende**: Django antwortet
+   per HTTP, Ollama ist erreichbar **und** das LLM-Modell liegt bereit,
+   Qdrant meldet healthz, Redis antwortet auf PING. Erst wenn alle
+   Checks grün sind, gilt die Installation als erfolgreich — sonst
+   bricht der Lauf mit einer klaren Diagnose ab.
+
+Der Release enthält **bewusst keine OP5-Komponenten** (kein MQTT-Worker,
+keine kommerziellen Spektrometer-Adapter, kein MQTT-Broker). Die
+Packaging-Skripte prüfen das beim Bauen und brechen bei einem Fund ab.
+
 ## Voraussetzungen auf dem Zielsystem
 
-1. Frisch installiertes Debian 13 (mit `sudo`-fähigem Benutzer)
+1. Frisch installiertes Debian 13 (mit `sudo`-fähigem Benutzer).
 2. Ansible wird automatisch vom Bootstrap-Skript installiert, falls es
-   fehlt (apt-Paket `ansible`; Fallback `pipx`). Die manuelle Installation
-   entfällt damit:
+   fehlt (apt-Paket `ansible`; Fallback `pipx`):
    ```bash
    sudo bash /mnt/ventoy/ansible/bootstrap_install.sh
    ```
@@ -31,26 +59,27 @@ gleichen Ergebnis.
    - `nir_intelligence_main.tar.gz` (mit `install.sh` im Wurzelverzeichnis
      des entpackten Ordners)
 
-   **Stick-Inhalt bauen (ein Befehl):**
+   **Stick-Inhalt bauen (ein Befehl, auf dem Entwickler-Rechner):**
    ```bash
    ./packaging/build_ventoy_stick.sh /mnt/ventoy
    ```
-   Das Skript baut das `.deb` (via `build_deb.sh`) und das `tar.gz`
-   (OP26/OP27-Layout), kopiert Playbook, `bootstrap_install.sh` und diesen
-   Guide nach `dist/ventoy_stick/ansible/` und — bei Angabe eines
-   Mountpunkts — direkt auf den Stick. Der Stick ist danach einsatzbereit.
+   Das Skript baut das `.deb` (via `build_deb.sh`) und das `tar.gz`,
+   prüft beide auf OP5-Freiheit, und kopiert Playbook,
+   `bootstrap_install.sh` und diesen Guide nach
+   `dist/ventoy_stick/ansible/` — bei Angabe eines Mountpunkts direkt
+   auf den Stick. Der Stick ist danach einsatzbereit.
 
 ## Ausführung
 
-**Ein Befehl (empfohlen)** — installiert fehlendes Ansible und startet das
-Playbook direkt:
+**Ein Befehl (empfohlen)** — installiert fehlendes Ansible, installiert
+die Plattform inkl. Docker und Backend-Stack und verifiziert alles:
 
 ```bash
 sudo bash /mnt/ventoy/ansible/bootstrap_install.sh
 ```
 
-Das Skript ist idempotent: ist `ansible-playbook` bereits vorhanden,
-entfällt die Installation; Argumente werden durchgereicht (z. B.
+Das Skript ist idempotent: bereits Installiertes wird übersprungen.
+Argumente werden durchgereicht (z. B.
 `--extra-vars "ventoy_mount=/media/$USER/VENTOY"`).
 
 **Manuell** (wenn Ansible bereits installiert ist):
@@ -61,20 +90,27 @@ ansible-playbook -i localhost, -c local install_nir_intelligence.yml \
     --ask-become-pass
 ```
 
-Das Playbook:
+Am Ende des Laufs steht der Verifikationsbericht — alle fünf Checks
+(`django_service`, `django_http`, `ollama`, `qdrant`, `redis`) müssen
+`true` sein:
 
-1. prüft, ob der Stick eingehängt ist und ein `.deb`- oder Archiv-Paket
-   vorhanden ist (bricht mit klarer Meldung ab, falls nicht),
-2. aktualisiert den Paketindex (`apt update`),
-3. installiert die Abhängigkeiten (`python3`, `wget`, `git`, `unzip`),
-4. **.deb-Methode**: kopiert das Paket nach `/tmp/` und installiert es mit
-   `apt` (inkl. automatischer Abhängigkeitsauflösung),
-   **Archiv-Methode** (falls kein `.deb` vorliegt): kopiert das Archiv nach
-   `/opt/`, entpackt es nach `/opt/nir_intelligence` und führt
-   `/opt/nir_intelligence/install.sh` mit Root-Rechten aus,
-5. aktiviert und startet den systemd-Dienst `nir_intelligence`,
-   falls vorhanden (Name über die Variable `service_name` anpassbar),
-6. verifiziert die Installation (Dienst-Status-Check).
+```
+verify_checks:
+  django_service: true
+  django_http: true
+  ollama: true
+  qdrant: true
+  redis: true
+```
+
+## Dienste nach der Installation
+
+| Dienst | Adresse (Host) |
+|---|---|
+| Django (systemd) | `http://127.0.0.1:8000` |
+| Ollama (Mistral) | `http://127.0.0.1:11434` |
+| Qdrant | `http://127.0.0.1:6333` |
+| Redis | `redis://127.0.0.1:6379` |
 
 ## Variablen (Wartbarkeit)
 
@@ -86,9 +122,13 @@ bei Bedarf oder per `--extra-vars` überschrieben werden:
 | `ventoy_mount` | `/mnt/ventoy` | Mountpunkt des Sticks |
 | `deb_path` | `…/nir_intelligence_main.deb` | `.deb` auf dem Stick |
 | `archive_path` | `…/nir_intelligence_main.tar.gz` | Archiv auf dem Stick |
-| `opt_install_dir` | `/opt/nir_intelligence` | Entpackziel (Archiv) |
+| `opt_install_dir` | `/opt/nir_intelligence` | Installationsziel |
 | `required_packages` | `python3, wget, git, unzip` | Abhängigkeiten |
+| `docker_packages` | `docker.io, docker-compose-v2` | Docker (OP59a, Pflicht) |
 | `service_name` | `nir_intelligence` | systemd-Dienst |
+| `llm_model` | `mistral:latest` | Modell-Check der Verifikation (OP59b) |
+| `app_wait_timeout` | `60` | Sekunden Wartezeit auf die Django-App |
+| `docker_wait_timeout` | `60` | Sekunden Wartezeit auf den Docker-Daemon |
 
 ## Fehlerbehandlung
 
@@ -97,56 +137,44 @@ bei Bedarf oder per `--extra-vars` überschrieben werden:
 - Hängt der Mount im Kernel (z. B. entfernte/defekte USB-Medien, die noch
   als gemountet registriert sind), blockiert jeder Dateizugriff. Die
   Pre-Flight-`stat`-Checks laufen deshalb mit Timeout (`preflight_timeout`,
-  Standard 10 s): Das Playbook bricht nach Ablauf mit einer
-  Diagnose-Meldung ab (`mount | grep -i ventoy`,
-  `timeout 10 stat /mnt/ventoy`, `lsblk -f`) statt endlos still zu stehen.
-  Ein Kernel-D-State lässt sich nicht immer killen - im Zweifel hilft nur
-  ein Neustart; danach den Stick neu mounten und erneut ausführen.
-- Schlägt die Paketinstallation oder `install.sh` fehl, greift der
+  Standard 10 s): das Playbook bricht nach Ablauf mit einer
+  Diagnose-Meldung ab (`mount | grep -i ventoy`, `timeout 10 stat
+  /mnt/ventoy`, `lsblk -f`) statt endlos still zu stehen. Ein
+  Kernel-D-State lässt sich nicht immer killen — im Zweifel hilft nur ein
+  Neustart; danach den Stick neu mounten und erneut ausführen.
+- Schlagen die Paketinstallation oder `install.sh` fehl, greift der
   jeweilige `rescue`-Block und meldet Diagnose-Hinweise
   (`dpkg-deb --info …` bzw. `tar -tzf …`).
-- Existiert kein systemd-Dienst, wird die Installation trotzdem als
-  abgeschlossen gemeldet und die Dienstprüfung übersprungen.
+- Fehlt Docker, wird es automatisch per apt installiert; schlägt das
+  fehl oder antwortet der Daemon nicht, bricht der Lauf mit
+  Diagnose-Hinweisen ab (`systemctl status docker`,
+  `journalctl -u docker -n 50`) — kein stiller degraded-Zustand.
+- Fehlt das LLM-Modell in Ollama, bricht die Verifikation ab und nennt
+  den Nachlade-Befehl
+  (`docker exec nir_ollama ollama pull mistral:latest`).
+- Fällt ein Ende-zu-Ende-Check fehl, nennt der Abbruch die konkreten
+  Checks und Diagnose-Befehle (`systemctl status nir_intelligence -l`,
+  `docker ps`, `docker logs nir_ollama`, `curl http://127.0.0.1:8000/`).
 
 ## Idempotenz
 
 - `apt`-Module prüfen den Paketstatus, `copy` vergleicht Prüfsummen.
+- Docker wird nur installiert, wenn `docker --version` es nicht meldet.
 - `unarchive` nutzt `creates:` gegen `install.sh`, `command` gegen
   `.install_completed` — ein zweiter Lauf führt die Skripte nicht erneut aus.
 - Der Dienst wird nur gestartet/aktiviert, wenn er nicht schon läuft.
+- `start_backend_stack.sh` ist idempotent: fehlende Container werden
+  nachgestartet, das Modell nur gezogen, wenn es fehlt.
 
-## Host-Backend-Stack (OP45)
+## Nach einem Reboot
 
-Die systemd-Django-App laeuft auf dem Host (`127.0.0.1:8000`). Die
-Analyse-Backends laufen als Docker-Container mit Port-Freigabe an
-`127.0.0.1` - nur so erreicht die Host-App Ollama (Mistral), Qdrant
-(Aehnlichkeitssuche) und Redis (Cache). Ohne den Stack sind alle
-KI-Analysen degraded.
+Der systemd-Dienst startet automatisch. Der Backend-Stack kommt über
+`restart: unless-stopped` der Container ebenfalls automatisch hoch.
+Falls Docker erst später startet, genügt:
 
-Das Playbook prueft Docker und Docker Compose und startet den Stack dann
-automatisch:
-
-    bash /opt/nir_intelligence/packaging/start_backend_stack.sh
-
-Manuell (z. B. nach einem Reboot, falls Docker erst spaeter startet):
-
-    sudo bash /opt/nir_intelligence/packaging/start_backend_stack.sh
-
-Fehlt Docker oder Compose, bricht die Installation nicht ab - das Playbook
-meldet einen klaren Hinweis (Installation z. B. per
-`apt-get install -y docker.io docker-compose-v2` auf Mint/Debian/Ubuntu)
-und die KI-Analysen bleiben bis zum Stack-Start degraded. Das Skript ist
-idempotent: Ein erneuter Lauf startet fehlende Container nach und zieht
-das Mistral-Modell nur, wenn es fehlt.
-
-Dienste nach dem Start:
-
-| Dienst | Adresse (Host) |
-|---|---|
-| Django (systemd) | `http://127.0.0.1:8000` |
-| Ollama | `http://127.0.0.1:11434` |
-| Qdrant | `http://127.0.0.1:6333` |
-| Redis | `redis://127.0.0.1:6379` |
+```bash
+sudo bash /opt/nir_intelligence/packaging/start_backend_stack.sh
+```
 
 Diagnose: `docker logs nir_ollama`, `docker logs nir_qdrant`,
 `docker compose -f /opt/nir_intelligence/packaging/docker-compose.host-backend.yml ps`.
