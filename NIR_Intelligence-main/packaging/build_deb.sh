@@ -54,6 +54,17 @@ test -f "${APP_DIR}/packaging/docker-compose.host-backend.yml"
 test -f "${APP_DIR}/packaging/start_backend_stack.sh"
 test -x "${APP_DIR}/packaging/start_backend_stack.sh"
 
+# sanity (OP59c): OP5 (MQTT-Worker + kommerzielle Spektrometer-Adapter) ist
+# vom Release ausgeschlossen. Der Payload enthaelt bewusst keinen MQTT-Broker
+# und keine Device-Adapter - ein Fund hier bedeutet ein Leck im Release.
+if grep -rli "mqtt" "${APP_DIR}" --include="*.py" --include="*.yml" --include="*.sh" \
+        | grep -v "napari_server" | grep -v "/packaging/" >/dev/null 2>&1; then
+    echo "ERROR: OP5/MQTT-Komponenten im Release-Payload gefunden:" >&2
+    grep -rli "mqtt" "${APP_DIR}" --include="*.py" --include="*.yml" --include="*.sh" \
+        | grep -v "napari_server" | grep -v "/packaging/" >&2
+    exit 1
+fi
+
 echo "-- staged payload: $(du -sh "${APP_DIR}" | cut -f1)"
 
 dpkg-deb -b --root-owner-group "${STAGE}" "${DIST_DIR}/nir_intelligence_main.deb"

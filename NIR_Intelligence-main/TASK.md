@@ -44,7 +44,62 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
-## Current Task: OP58 - Federated-Setup: Optionen verstaendlich und nachvollziehbar
+## Current Task: OP59 - Release: Perfekte Ansible-Installationsroutine mit Anleitung
+
+### Ziel
+Releaseversion des NIR-IP mit einer Installationsroutine, die auf einem
+frischen Debian 13 mit einem Befehl vom Ventoy-Stick eine vollstaendig
+verifizierte, einsatzbereite Plattform hinterlaesst. Docker ist Pflicht,
+nicht optional. OP5 (MQTT-Worker, kommerzielle Spektrometer-Adapter)
+bleibt vom Release ausgeschlossen.
+
+### Fixes
+- OP59a (Playbook): Fehlt Docker, wird es automatisch per apt
+  nachinstalliert (docker.io + docker-compose-v2, nur wenn fehlend -
+  idempotent); Docker-Daemon wird started/enabled gesichert; der
+  Backend-Stack-Start ist kein Hinweis-Debug mehr, sondern harte
+  Fehlerquelle mit Abbruch + Diagnose (kein stiller degraded-Zustand).
+- OP59b (Verifikation): Ende-zu-Ende statt nur systemctl is-active:
+  Django-HTTP-Check mit Wartezeit (app_wait_timeout), Ollama /api/tags
+  inkl. LLM-Modell-Check (Verifikation schlaegt fehl, wenn das Modell
+  fehlt - sonst 1%-Fallback statt 99% LLM), Qdrant /healthz, Redis PING.
+  Am Laufende steht ein Verifikationsbericht (verify_checks); faellt ein
+  Check aus, bricht der Lauf mit konkreten Diagnose-Befehlen ab.
+- OP59c (Packaging): build_deb.sh und build_ventoy_stick.sh pruefen den
+  Release-Payload auf OP5/MQTT-Komponenten und brechen bei einem Fund ab
+  (napari_server ausgenommen - nur Env-Vars, kein OP5-Anteil).
+- OP59d (Anleitung): INSTALL_NIR_INTELLIGENCE.md ist die kanonische
+  Release-Installationsanleitung: Ein-Befehl-Installation,
+  Docker-Pflicht, Verifikationsbericht, OP5-Ausschluss, Variablen-
+  Tabelle inkl. docker_packages/llm_model, Fehlerbehandlung, Reboot-
+  Verhalten; alte Dokumente als historische Entwickler-Setups markiert.
+
+### Tests
+- OP59-Matrix tests/test_op59_release_install.py (40 Checks): Playbook-
+  Struktur (Docker-Pflicht, Abbrueche statt Hinweise), Verifikations-
+  Tasks, OP5-Leak-Scan in Skripten und Repo-Payload, Guide-Inhalt, CI-
+  Registrierung.
+
+### Nachtrag: KI-Metadaten-Rettungsstufe (Pflicht, nicht optional)
+- Anforderung: Der Data-Loader-Agent muss JEDE hochgeladene Datei
+  dateityp-agnostisch auf Metadaten UND Spektraldaten untersuchen -
+  Pflicht, keine Option. Der existierende Pfad war bereits agnostisch
+  (Extension-Fast-Path -> inhaltsgetriebene Kette, OP28/MO 1) und
+  untersucht Metadaten in jedem Zweig; Luecke: Dateien, die weder als
+  Spektrum noch als beschreibender Text erkannt wurden, bekamen nur den
+  deterministischen usable=False-Marker OHNE KI-Pass.
+- Fix: _ki_rescue_entry (services/project_ingest.py) - vor dem finalen
+  usable=False laeuft der KI-Pass (Mistral via Ollama, gleiche Anti-
+  Halluzinations-Belegpruefung wie OP31): findet die KI kanonische
+  Felder oder Klaerungsfragen, wird die Datei als Metadaten-Quelle
+  verwertet (dataset_type metadata, metadata_sources ki); findet auch
+  die KI nichts, bleibt der ehrliche usable=False-Marker. Never raises;
+  ohne Ollama unauffaellig uebersprungen.
+- OP59-Matrix um T7a-T7k erweitert (51 Checks), inkl. Funktionstest
+  mit gefaktem LLM-Client (Feld-Fund, Leerfund, Ausnahme, Offline).
+- Regressionen gruen: OP28 (Dateityp-Agnostik), OP30/31/32/33, OP55.
+
+## Previous Task: OP58 - Federated-Setup: Optionen verstaendlich und nachvollziehbar
 
 ### Problem (Feldtest)
 - "Die verschiedenen Optionen muessen verstaendlich und nachvollziehbar

@@ -164,9 +164,10 @@ check('T4c playbook runs the backend stack script',
       'start_backend_stack.sh' in playbook_src)
 check('T4d playbook reports a clear hint when docker/compose is missing',
       'docker-compose-v2' in playbook_src and 'degraded' in playbook_src)
-check('T4e backend stack start guarded by docker+compose+script checks',
-      'compose_version_result.rc == 0' in playbook_src
-      and 'backend_script_state.stat.exists' in playbook_src)
+check('T4e backend stack start guarded by docker+compose+script checks (OP59)',
+      'Installiere Docker und Docker Compose' in playbook_src
+      and 'backend_script_state.stat.exists' in playbook_src
+      and 'Breche ab, wenn der Backend-Stack nicht startet' in playbook_src)
 check('T4f playbook purges an installed package before deb install (OP47)',
       any((t.get('ansible.builtin.apt') or {}).get('state') == 'absent'
           and (t.get('ansible.builtin.apt') or {}).get('purge') is True

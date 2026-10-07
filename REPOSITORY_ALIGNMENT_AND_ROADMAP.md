@@ -628,6 +628,21 @@ test_op53_sensor_pages.py 37/37.
   werden pro Datensatz persistiert -> sichtbarer Fortschritt.
 - Testmatrix tests/test_op57_async_crew.py 16/16; CI registriert.
 
+### OP59 — Release: Perfekte Ansible-Installationsroutine — ERLEDIGT
+- Playbook installiert Docker automatisch nach (docker.io,
+  docker-compose-v2; Pflicht statt optional - ohne Docker keine
+  KI-Analysen), sichert den Daemon (started/enabled) und bricht bei
+  fehlgeschlagenem Backend-Stack-Start hart ab statt nur einen Hinweis
+  zu drucken.
+- Verifikation Ende-zu-Ende: Django-HTTP, Ollama inkl.
+  LLM-Modell-Check (kein stiller Fallback-Betrieb), Qdrant /healthz,
+  Redis PING; Verifikationsbericht mit Abbruch bei fehlgeschlagenem
+  Check.
+- Packaging prueft den Payload auf OP5/MQTT-Lecks und bricht bei Fund
+  ab (OP5 bleibt vom Release ausgeschlossen).
+- INSTALL_NIR_INTELLIGENCE.md ist die kanonische Release-Anleitung.
+- Testmatrix tests/test_op59_release_install.py 40/40; CI registriert.
+
 ### OP58 — Federated-Optionen verstaendlich — ERLEDIGT
 - Federated-Seite: Intro (Parameter-only-Vertrag, 3-Schritt-Flow), je
   Lernmodus/Strategie/Privacy-Stufe eine Erklaerung mit Wirkung und

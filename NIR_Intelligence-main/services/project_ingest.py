@@ -540,6 +540,17 @@ def _ingest_single_file(record, file_path: str) -> Dict[str, Any]:
             logger.info('Metadata-only ingest for %s (description file with '
                         'no measurement values)', file_path)
             return text_metadata
+        # OP59-Nachtrag: KI-Rettungsstufe - auch fuer Dateien, die weder als
+        # Spektrum noch als beschreibender Text erkannt wurden, ist die
+        # Metadaten-Untersuchung Pflicht. Der KI-Pass sieht den Dateitext
+        # (soweit lesbar) und kann kanonische Felder mit Beleg oder
+        # Klaerungsfragen liefern; nur wenn auch die KI nichts findet,
+        # bleibt der ehrliche usable=False-Marker mit Grund.
+        ki_entry = _ki_rescue_entry(entry, file_path, loader)
+        if ki_entry is not None:
+            logger.info('KI-Rescue ingest for %s (metadata from LLM pass)',
+                        file_path)
+            return ki_entry
         entry.update({"usable": False, "reason": "Not parseable as spectral data (S3 loader)"})
         return entry
 
@@ -606,6 +617,49 @@ def _metadata_only_entry(file_record, file_path, loader) -> Dict[str, Any] | Non
     _ki_metadata_pass(entry, file_path, loader)
     return entry
 
+
+def _ki_rescue_entry(entry: Dict[str, Any], file_path: str, loader) -> Dict[str, Any] | None:
+    """KI-Rettungsstufe (OP59-Nachtrag): Dateityp-agnostische
+    Metadaten-Untersuchung ist Pflicht - auch fuer Dateien, die weder als
+    Spektrum noch als beschreibender Text erkannt wurden. Der KI-Pass
+    (Mistral via Ollama, mit Anti-Halluzinations-Belegpruefung wie immer)
+    sieht den lesbaren Dateitext und kann kanonische Felder liefern oder
+    Klaerungsfragen aufwerfen. Findet die KI nichts, bleibt der ehrliche
+    usable=False-Marker beim Aufrufer. Gibt eine ergaenzte Entry-Kopie
+    zurueck (dataset_type 'metadata', metadata_sources 'ki'), oder None,
+    wenn die KI nichts beitragen kann. Never raises."""
+    try:
+        from services.metadata_llm import MetadataLLMService
+        text = _file_text_for_llm(file_path, loader)
+        if not text.strip():
+            return None
+        service = MetadataLLMService()
+        if not service.client.is_available():
+            return None
+        result = service.extract(text, file_name=str(entry.get("file_name")))
+        if result is None:
+            return None
+        fields = {field: str(payload.get("value") or "").strip()
+                  for field, payload in result.get("fields", {}).items()
+                  if str(payload.get("value") or "").strip()}
+        questions = [q for q in result.get("questions", []) if str(q).strip()]
+        if not fields and not questions:
+            return None
+        rescue = dict(entry)
+        rescue.update({
+            "usable": True,
+            "dataset_type": "metadata",
+            "metadata": fields,
+            "metadata_sources": {field: "ki" for field in fields},
+            "open_questions": [f"KI-Frage zu '{entry.get('file_name')}': {q}"
+                               for q in questions],
+        })
+        if result.get("rejected"):
+            rescue["llm_rejected_values"] = result["rejected"]
+        return rescue
+    except Exception:
+        logger.exception("KI rescue pass failed (non-fatal): %s", file_path)
+        return None
 
 def _propagate_project_metadata(datasets: List[Dict[str, Any]]) -> None:
     """Fill measurement datasets with the metadata of the project's
