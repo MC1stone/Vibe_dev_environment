@@ -53,7 +53,9 @@
                 {% trans "Der Weg von der Messung zum belastbaren Ergebnis - in einem Workflow." %}
             </p>
         </div>
-        <a href="/projects/create/" class="c-button c-button--primary">
+        <!-- Neues Projekt ist der Upload-Dialog auf der Projekte-Seite
+             (#projectUploadModal); /projects/create/ ist die POST-API (405 bei GET). -->
+        <a href="/projects/#projectUploadModal" class="c-button c-button--primary">
             <i class="bi bi-plus-circle c-button__icon"></i>
             <span class="c-button__text">{% trans "Neues Projekt anlegen" %}</span>
         </a>
