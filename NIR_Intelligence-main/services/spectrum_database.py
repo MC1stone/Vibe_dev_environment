@@ -117,6 +117,11 @@ def references_for_dataset(user, dataset: Dict[str, Any],
         records = records.exclude(project_id=exclude_project_id)
     references = []
     ids = []
+    provenance = []
+    try:
+        from services.reference_import import reference_hit_display
+    except Exception:
+        reference_hit_display = None
     for record in records:
         references.append({
             'data': {'wavelength': record.wavelengths,
@@ -125,4 +130,9 @@ def references_for_dataset(user, dataset: Dict[str, Any],
             'intensity_column': 'intensity',
         })
         ids.append(record.file_name or str(record.id))
-    return {'references': references, 'ids': ids}
+        if reference_hit_display is not None:
+            provenance.append(reference_hit_display(record))
+    result = {'references': references, 'ids': ids}
+    if provenance:
+        result['provenance'] = provenance
+    return result
