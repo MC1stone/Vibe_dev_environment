@@ -193,8 +193,12 @@ services:
         condition: service_healthy
       ollama:
         condition: service_healthy
+      # ILIAS bewusst nur auf service_started: die Lernplattform hat beim
+      # Erstsetup lange Health-Zeiten und kann in Restart-Schleifen fallen -
+      # ein ILIAS-Problem darf den Start der Kernplattform nie blockieren
+      # (Docker-First-Betrieb, Lehre aus dem Vorfall 2026-10-07).
       ilias:
-        condition: service_healthy
+        condition: service_started
     networks:
       - nir_network
 
