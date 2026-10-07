@@ -396,7 +396,9 @@
                         
                         <div class="col-12">
                             <div class="c-form-check">
-                                <input class="c-checkbox" type="checkbox" id="autoAnalyze" checked>
+                                <!-- Auto-analyze default OFF: the synchronous CrewAI analysis blocks the
+     UI for minutes on CPU-only systems. Users opt in explicitly. -->
+                                <input class="c-checkbox" type="checkbox" id="autoAnalyze">
                                 <label class="c-checkbox__label" for="autoAnalyze">
                                     {% trans "Auto-analyze after upload" %}
                                 </label>
