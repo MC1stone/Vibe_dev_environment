@@ -123,6 +123,44 @@ def start_analysis(request):
                 {"error": gettext("spectral_data must contain wavelengths and intensities")},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        # Legacy fallback (bestandsdaten): records uploaded before the curve
+        # persistence feature have no wavelengths in the payload. As long as
+        # the original file exists, load the measured curve live from disk so
+        # every existing spectrum stays analysable (KI-Metadaten-Auswertung
+        # included). Only records without a persisted curve AND without a
+        # reachable original file are rejected.
+        wavelengths = spectral_data.get('wavelengths') or []
+        if not wavelengths:
+            fallback = None
+            spectrum_id = (payload.get('metadata') or {}).get('spectrum_id')
+            if spectrum_id:
+                try:
+                    from core.models import NIRSpectrum
+                    from services.spectrum_curve import apply_curve_to_spectrum
+                    record = NIRSpectrum.objects.filter(id=spectrum_id).first()
+                    if record is not None:
+                        if apply_curve_to_spectrum(record):
+                            record.save(update_fields=[
+                                'wavelengths', 'intensities', 'x_unit',
+                                'y_unit', 'data_points',
+                                'wavelength_range_start', 'wavelength_range_end',
+                                'resolution'])
+                            fallback = record
+                except Exception:
+                    fallback = None
+            if fallback is not None:
+                spectral_data['wavelengths'] = fallback.wavelengths
+                spectral_data['intensities'] = fallback.intensities
+                payload['spectral_data'] = spectral_data
+            else:
+                return Response(
+                    {"error": gettext(
+                        "No spectral data: neither a persisted curve nor a "
+                        "readable original file is available for this record. "
+                        "Re-upload the source file to enable analysis.")},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         
         # Create analysis request
         analysis_request = AnalysisRequest(

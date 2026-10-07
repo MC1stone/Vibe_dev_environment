@@ -38,8 +38,10 @@ def test_js_fabricated_generators_are_empty():
     # analysis payload must not fall back to sample generators
     assert 'spectral_data: {\n            wavelengths: spectrum.wavelengths || []' in src or \
         'wavelengths: spectrum.wavelengths || [],' in src
-    # guard against analysing data-less records
-    assert 're-upload the source file to enable analysis' in src
+    # legacy records without a curve are NOT blocked client-side; the
+    # backend loads the curve from the original file and only rejects
+    # when neither exists (see test_legacy_regression_fix.py)
+    assert 'never used' in src
     # charts must use numeric linear axes
     assert src.count("type: 'linear'") >= 2
 

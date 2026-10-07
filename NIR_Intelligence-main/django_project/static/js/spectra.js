@@ -884,13 +884,10 @@ function analyzeSpectrum(spectrumId) {
     }
     
 
-    // Scientific integrity: refuse analysis when the record carries no
-    // persisted spectral data - fabricated fallback values must never
-    // enter the CrewAI analysis pipeline.
-    if (!Array.isArray(spectrum.wavelengths) || spectrum.wavelengths.length === 0) {
-        showError(nirGettext('This spectrum has no spectral data; re-upload the source file to enable analysis.'));
-        return;
-    }
+    // Legacy records without a persisted curve stay analysable: the backend
+    // loads the measured curve live from the original file (fallback in
+    // start_analysis). Only when neither exists does the server reject.
+    // Fabricated fallback values are never used.
     showLoading();
     
     // Prepare analysis request for Crew AI
