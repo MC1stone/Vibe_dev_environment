@@ -46,6 +46,17 @@ erneut gegen die jeweilige Quelle prüfen).
    selbst unterliegen teils anderen Lizenzen → je Datensatz Quelle und Lizenz
    dokumentieren, nur eindeutig weitergabe-fähige Daten einbringen.
 
+## Für die Umsetzung konkret genutzte/geprüfte Pakete (M2)
+
+| Paket | Lizenz | Entscheidung | Datum |
+|---|---|---|---|
+| opusfc | MIT | Als optionale Dependency für OPUS-`.d`-Import zulässig (`services/opus_reader.py`, lazy import; ohne Installation greift der content-driven Fallback) | bei M2-Umsetzung verifiziert |
+| brukeropusreader | GPLv3 | **Verworfen** — Copyleft-Verstoß gegen die eigene Regel | bei M2-Umsetzung verifiziert |
+| brukeropus | MIT (PyPI) | Nicht genutzt; Alternative falls opusfc nicht genügt | bei M2-Umsetzung verifiziert |
+
+Der JCAMP-DX-Parser (`services/jcamp_parser.py`) ist eigenständig gegen die
+öffentliche JCAMP-DX-Data-Label-Spezifikation entwickelt — kein Third-Party-Code.
+
 ## Regel für künftige Third-Party-Software
 
 Siehe `AGENTS.md`, Abschnitt „Nicht verhandelbare Regeln" → Lizenz-Compliance.
