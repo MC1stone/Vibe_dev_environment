@@ -482,6 +482,49 @@ class ShiftDetectorAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Peak matching shift detection failed: {e}")
             return None
+
+    def detect_peak_drift(self, wavelengths: np.ndarray, intensities: np.ndarray,
+                          reference_wavelengths: np.ndarray,
+                          reference_intensities: np.ndarray) -> Optional[SpectralShiftResult]:
+        """Per-peak drift via the shared peak analysis module (M5).
+
+        Matches peaks one-to-one (nearest reference peak within a relative
+        tolerance) instead of the all-pairs heuristic, giving a robust
+        mean/max shift for wavelength calibration monitoring.
+        """
+        try:
+            from services.peak_analysis import peak_drift
+            min_height = self.processing_config.get('min_peak_height', 0.1)
+            drift = peak_drift(
+                reference_wavelengths, reference_intensities,
+                wavelengths, intensities,
+                max_relative_shift=0.02,
+                min_height=min_height,
+            )
+            if drift["matched"] == 0:
+                return None
+            mean_shift = drift["mean_shift"]
+            max_shift = drift["max_shift"]
+            if abs(mean_shift) <= self.shift_threshold:
+                return None
+            confidence = min(1.0, drift["matched"] / 5.0)
+            severity = self._get_severity_from_shift(abs(mean_shift))
+            return SpectralShiftResult(
+                shift_type="wavelength",
+                shift_value=mean_shift,
+                confidence=confidence,
+                detection_method="per_peak_drift",
+                affected_range=(wavelengths[0], wavelengths[-1]),
+                severity=severity,
+                correction_suggestion=(
+                    f"Check wavelength calibration: {drift['matched']} peaks "
+                    f"shifted on average {mean_shift:.2f} nm "
+                    f"(max {max_shift:.2f} nm)"),
+                quality_impact=min(100, abs(mean_shift) * 8),
+            )
+        except Exception as e:
+            self.logger.error(f"Per-peak drift detection failed: {e}")
+            return None
     
     def detect_wavelength_shift_derivative(self, wavelengths: np.ndarray, intensities: np.ndarray,
                                           reference_wavelengths: np.ndarray, reference_intensities: np.ndarray) -> Optional[SpectralShiftResult]:
