@@ -1587,6 +1587,7 @@ class EnhancedDataPreparationAgent(BaseAgent):
                     "metadata": {
                         "spc_version": version,
                         "spc_flags": flags,
+                        "spc_x_units_code": int(x_units_code),
                         "x_units": x_unit_names.get(x_units_code, f"code {x_units_code}"),
                         "y_units": y_unit_names.get(y_units_code, f"code {y_units_code}"),
                         "x_start": x_start,
@@ -1668,6 +1669,49 @@ class EnhancedDataPreparationAgent(BaseAgent):
             self.log_error(f"Failed to load MATLAB file {file_path}: {str(e)}", ErrorSeverity.MEDIUM)
             return None
 
+    _JCAMP_UNIT_ALIASES = {
+        "1/CM": "cm^-1", "CM-1": "cm^-1", "CM^-1": "cm^-1", "1/MM": "cm^-1",
+        "NANOMETERS": "nm", "NM": "nm",
+        "MICROMETERS": "um", "UM": "um",
+    }
+
+    @staticmethod
+    def _parse_jcamp_units_line(line: str):
+        parts = line.split('=', 1)
+        if len(parts) != 2:
+            return None
+        key = parts[0].strip().upper()
+        if key not in ("XUNITS", "YUNITS"):
+            return None
+        raw = parts[1].strip().strip('"').strip("'")
+        canonical = EnhancedDataPreparationAgent._JCAMP_UNIT_ALIASES.get(
+            raw.upper(), raw.lower() or None)
+        return ("x_units" if key == "XUNITS" else "y_units", canonical)
+
+    def _merge_jcamp_units(self, file_path: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract XUNITS/YUNITS from JCAMP-DX style headers into metadata."""
+        try:
+            with open(file_path, 'r', encoding=self._sniff_encoding_safe(file_path),
+                      errors='replace') as f:
+                for line in f:
+                    stripped = line.strip()
+                    if not stripped.startswith('##'):
+                        continue
+                    parsed = self._parse_jcamp_units_line(stripped[2:])
+                    if parsed:
+                        metadata[parsed[0]] = parsed[1]
+                    if len(metadata) > 500:
+                        break
+        except Exception:
+            pass
+        return metadata
+
+    def _sniff_encoding_safe(self, file_path: str) -> str:
+        try:
+            return sniff_text_encoding(file_path)
+        except Exception:
+            return 'utf-8'
+
     def _load_text_spectral(self, file_path: str) -> Dict[str, Any]:
         """Load spectral data from text-based formats (JDX, SPC, TXT).
 
@@ -1715,7 +1759,8 @@ class EnhancedDataPreparationAgent(BaseAgent):
                 "format": os.path.splitext(file_path)[1].lower(),
                 "wavelength_column": "wavelength",
                 "intensity_column": "intensity",
-                "metadata": self._extract_text_metadata(file_path)
+                "metadata": self._merge_jcamp_units(
+                    file_path, self._extract_text_metadata(file_path))
             }
             
         except Exception as e:
