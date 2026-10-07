@@ -16,6 +16,7 @@ from django.http import HttpResponse, Http404
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
+from django.views import View
 from django.views.generic import TemplateView
 
 logger = logging.getLogger("API.ProjectViews")
@@ -57,6 +58,97 @@ class SpectrumDatabaseView(TemplateView):
             'total_count': len(spectra),
         }
         return render(request, self.template_name, context)
+
+
+class ReferenceImportView(View):
+    """Import external reference spectra into the spectral database (M3 UI).
+
+    POST with multipart: file (CSV/JDX/SPC... via the format-agnostic loader),
+    source, license, version (all mandatory - the license gate rejects
+    entries without provenance), optional sample_type. Creates one
+    SpectrumRecord per spectrum in the file, visible lab-wide, normalised
+    to nm, and redirects back to the database page with a summary."""
+
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=' + request.get_full_path())
+        return redirect('/projects/database/')
+
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=' + request.get_full_path())
+        from django.contrib import messages
+        from services.spectrum_curve import extract_curve
+        from services.reference_import import (
+            import_reference_dataset, LicenseViolationError,
+        )
+        from core.models import SpectrumRecord
+
+        uploaded = request.FILES.get('reference_file')
+        source = (request.POST.get('source') or '').strip()
+        license_name = (request.POST.get('license') or '').strip()
+        version = (request.POST.get('version') or '').strip()
+        sample_type = (request.POST.get('sample_type') or '').strip()
+
+        if uploaded is None or not source or not license_name or not version:
+            messages.error(request, gettext(
+                'Bitte Datei, Quelle, Lizenz und Version angeben - Referenz-'
+                'Import ohne Herkunft wird abgelehnt (Lizenz-Gate).'))
+            return redirect('/projects/database/')
+
+        import tempfile
+        import os
+        from django.conf import settings as dj_settings
+        tmp_dir = os.path.join(dj_settings.MEDIA_ROOT, 'tmp')
+        os.makedirs(tmp_dir, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+                dir=tmp_dir, delete=False,
+                suffix=os.path.splitext(uploaded.name)[1] or '.dat') as tmp:
+            for chunk in uploaded.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
+        try:
+            curve = extract_curve(tmp_path)
+            if curve is None:
+                messages.error(request, gettext(
+                    'In der Datei konnte kein Spektrum erkannt werden '
+                    '(unterstützt: CSV, JCAMP-DX, SPC, MATLAB, HDF5, TXT).'))
+                return redirect('/projects/database/')
+            entry = {
+                'file_name': uploaded.name,
+                'wavelengths': curve['wavelengths'],
+                'intensities': curve['intensities'],
+                'x_unit': curve['x_unit'],
+                'metadata': {
+                    'source': source,
+                    'license': license_name,
+                    'version': version,
+                    'sample_type': sample_type,
+                    'instrument': 'reference import',
+                    'y_unit': curve['y_unit'],
+                },
+            }
+            summary = import_reference_dataset(
+                [entry], user=request.user, visibility='lab_shared')
+            if summary['imported'] > 0:
+                messages.success(request, gettext(
+                    'Referenzspektrum importiert: ') + uploaded.name +
+                    ' (' + curve['x_unit'] + ', ' +
+                    str(len(curve['wavelengths'])) + ' Punkte). Quelle: ' +
+                    source + ' · ' + license_name)
+            else:
+                reasons = '; '.join(summary.get('rejections') or
+                                     ['unbekannter Fehler'])
+                messages.error(request, gettext(
+                    'Import abgelehnt: ') + reasons)
+        except LicenseViolationError as e:
+            messages.error(request, str(e))
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+        return redirect('/projects/database/')
 
 
 class SpectrumDatabaseDetailView(TemplateView):

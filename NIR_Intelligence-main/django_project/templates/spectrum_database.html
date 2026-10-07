@@ -8,6 +8,48 @@
             <i class="bi bi-folder2-open me-1"></i>{% trans "Zurück zu den Projekten" %}
         </a>
     </div>
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert {{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Schliessen"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <strong><i class="bi bi-download me-1"></i>{% trans "Referenzspektrum importieren" %}</strong>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">
+                {% trans "Externe Referenzspektren (z. B. aus offenen Datenbanken) laden. Quelle, Lizenz und Version sind Pflicht - Eintraege ohne Herkunft werden abgelehnt. Die Wellenlaengenachse wird automatisch auf nm normalisiert." %}
+            </p>
+            <form method="post" action="/api/projects/database/import-reference/" enctype="multipart/form-data" class="row g-2 align-items-end">
+                {% csrf_token %}
+                <div class="col-md-4">
+                    <label class="form-label small mb-1" for="ref-file">{% trans "Spektrumsdatei (CSV, JDX, SPC, MAT, H5)" %}</label>
+                    <input class="form-control form-control-sm" type="file" name="reference_file" id="ref-file" required accept=".csv,.jdx,.spc,.mat,.h5,.hdf5,.txt">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small mb-1" for="ref-source">{% trans "Quelle (Pflicht)" %}</label>
+                    <input class="form-control form-control-sm" type="text" name="source" id="ref-source" required placeholder="z. B. Open Specy">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1" for="ref-license">{% trans "Lizenz (Pflicht)" %}</label>
+                    <input class="form-control form-control-sm" type="text" name="license" id="ref-license" required placeholder="z. B. CC-BY-4.0">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1" for="ref-version">{% trans "Version (Pflicht)" %}</label>
+                    <input class="form-control form-control-sm" type="text" name="version" id="ref-version" required placeholder="v1.0">
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-sm btn-primary w-100">{% trans "Importieren" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card shadow-sm">
         <div class="card-body">
             <p class="text-muted">

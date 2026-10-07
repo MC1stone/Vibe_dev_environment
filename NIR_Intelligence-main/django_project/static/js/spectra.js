@@ -277,6 +277,11 @@ function renderSpectraGallery() {
                             <span><i class="bi bi-database"></i> ${dataPoints} points</span>
                             <span><i class="bi bi-clock"></i> ${date}</span>
                         </div>
+                        <button class="c-button c-button--outline-success c-button--sm mt-2 w-100"
+                                onclick="event.stopPropagation(); analyzeSpectrum('${spectrum.id}')">
+                            <i class="bi bi-play-circle c-button__icon"></i>
+                            <span class="c-button__text">${nirGettext('Analyse starten')}</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -441,8 +446,9 @@ function renderSpectraTable() {
                     </button>
                     <button class="c-button c-button--outline-success c-button--sm" 
                             onclick="analyzeSpectrum('${spectrum.id}')" 
-                            data-bs-toggle="tooltip" title="Analyze">
+                            data-bs-toggle="tooltip" title="Analyse starten">
                         <i class="bi bi-play-circle c-button__icon"></i>
+                        <span class="c-button__text">${nirGettext('Analyse starten')}</span>
                     </button>
                     <button class="c-button c-button--outline-danger c-button--sm" 
                             onclick="deleteSpectrum('${spectrum.id}')" 
@@ -923,20 +929,22 @@ function analyzeSpectrum(spectrumId) {
             const result = response.data;
             
             if (result.success) {
-                showSuccess(nirGettext('Analysis started successfully!'));
+                showSuccess(nirGettext('Analyse gestartet - Ergebnis erscheint auf der Analyse-Seite.'));
                 
                 // Redirect to analysis page or jobs page
                 setTimeout(() => {
                     window.location.href = '/analysis/';
                 }, 1000);
             } else {
-                showError(nirGettext('Failed to start analysis: ') + (result.error || nirGettext('Unknown error')));
+                showError(nirGettext('Analyse fehlgeschlagen: ') + (result.error || nirGettext('Unknown error')));
             }
         })
         .catch(function(error) {
             console.error('Error starting analysis:', error);
             hideLoading();
-            showError(nirGettext('Failed to start analysis. Please try again.'));
+            const detail = error.response && error.response.data && error.response.data.error
+                ? error.response.data.error : '';
+            showError(nirGettext('Analyse fehlgeschlagen. ') + detail);
         });
 }
 

@@ -22,6 +22,7 @@ from .project_views import (
     SensorDocumentDeleteView,
     SpectrumDatabaseView,
     SpectrumDatabaseDetailView,
+    ReferenceImportView,
     CalibrationOverviewView,
 )
 
@@ -39,6 +40,7 @@ urlpatterns = [
     path('<uuid:project_id>/final-report/', ProjectFinalReportView.as_view(), name='project-final-report'),
     path('<uuid:project_id>/final-report/markdown/', ProjectFinalReportMarkdownView.as_view(), name='project-final-report-markdown'),
     path('database/', SpectrumDatabaseView.as_view(), name='spectrum-database'),
+    path('database/import-reference/', ReferenceImportView.as_view(), name='reference-import'),
     path('database/<uuid:spectrum_id>/', SpectrumDatabaseDetailView.as_view(), name='spectrum-detail'),
     path('calibration/overview/', CalibrationOverviewView.as_view(), name='calibration-overview'),
     path('sensors/', SensorListView.as_view(), name='sensor-list'),
