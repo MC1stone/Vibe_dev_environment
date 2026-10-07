@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+{% block title %}{% trans "Start" %} - NIR-IP{% endblock %}
+{% block extra_css %}
+<style>
+    .phase-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-lg);
+        box-shadow: var(--glass-shadow);
+        border: 1px solid var(--glass-border);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    .phase-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(122, 185, 41, 0.18);
+        border-color: var(--color-primary);
+    }
+    .phase-card__icon {
+        width: 52px; height: 52px;
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.6rem; margin-bottom: var(--spacing-md);
+        background: rgba(122, 185, 41, 0.12); color: var(--color-primary);
+    }
+    .phase-card__step {
+        font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.08em; color: var(--color-text-muted);
+    }
+    .phase-card__title { font-weight: 700; margin-bottom: 0.25rem; }
+    .phase-card__desc { color: var(--color-text-muted); font-size: 0.9rem; }
+    .project-status-chip {
+        display: inline-block; padding: 2px 10px; border-radius: 12px;
+        font-size: 0.72rem; font-weight: 600;
+    }
+    .chip--prep { background: rgba(245, 158, 11, 0.15); color: #b45309; }
+    .chip--analyzed { background: rgba(59, 130, 246, 0.15); color: #1d4ed8; }
+    .chip--released { background: rgba(16, 185, 129, 0.15); color: #047857; }
+    .empty-state { color: var(--color-text-muted); text-align: center; padding: var(--spacing-xl); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container mt-4">
+
+    <!-- Welcome / Einstieg -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h1 class="mb-1">{% trans "NIR Intelligence Platform" %}</h1>
+            <p class="text-muted mb-0">
+                {% trans "Der Weg von der Messung zum belastbaren Ergebnis - in einem Workflow." %}
+            </p>
+        </div>
+        <a href="/projects/create/" class="c-button c-button--primary">
+            <i class="bi bi-plus-circle c-button__icon"></i>
+            <span class="c-button__text">{% trans "Neues Projekt anlegen" %}</span>
+        </a>
+    </div>
+
+    <!-- Meine Projekte (echte Daten) -->
+    <div class="phase-card mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 mb-0"><i class="bi bi-folder2-open me-2"></i>{% trans "Meine Projekte" %}</h2>
+            <a href="/projects/" class="btn btn-sm btn-outline-primary">{% trans "Alle Projekte" %}</a>
+        </div>
+        {% if projects %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>{% trans "Projekt" %}</th>
+                        <th>{% trans "Status" %}</th>
+                        <th>{% trans "Dateien" %}</th>
+                        <th>{% trans "Qualität" %}</th>
+                        <th>{% trans "Aktualisiert" %}</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in projects %}
+                    <tr>
+                        <td><a href="/projects/{{ p.id }}/"><strong>{{ p.name }}</strong></a></td>
+                        <td>
+                            {% if p.phase == 'released' %}
+                            <span class="project-status-chip chip--released">{% trans "Freigegeben" %}</span>
+                            {% elif p.phase == 'analyzed' %}
+                            <span class="project-status-chip chip--analyzed">{% trans "Analysiert" %}</span>
+                            {% else %}
+                            <span class="project-status-chip chip--prep">{% trans "In Vorbereitung" %}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ p.file_count }}</td>
+                        <td>
+                            {% if p.metadata_score %}
+                            {{ p.metadata_score|floatformat:0 }} / 100
+                            {% else %}-{% endif %}
+                        </td>
+                        <td><small>{{ p.updated_at|date:"d.m.Y H:i" }}</small></td>
+                        <td>
+                            <a href="/projects/{{ p.id }}/" class="btn btn-sm btn-outline-primary">
+                                {% trans "Öffnen" %}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+            <p class="mt-2 mb-1">{% trans "Noch keine Projekte." %}</p>
+            <p class="small">{% trans "Legen Sie Ihr erstes Projekt an und laden Sie Ihre NIR-Messdaten hoch - Metadaten-Erkennung und Analyse laufen danach automatisch." %}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Workflow-Phasen -->
+    <h2 class="h5 mb-3"><i class="bi bi-signpost-2 me-2"></i>{% trans "So arbeitet die Plattform" %}</h2>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4 col-6">
+            <div class="phase-card">
+                <div class="phase-card__icon"><i class="bi bi-upload"></i></div>
+                <div class="phase-card__step">{% trans "Schritt 1-2" %}</div>
+                <div class="phase-card__title">{% trans "Projekt &amp; Messdaten" %}</div>
+                <div class="phase-card__desc">
+                    {% trans "Dateien hochladen - jedes Format. Metadaten werden automatisch erkannt (KI), Datenqualität bewertet." %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-6">
+            <div class="phase-card">
+                <div class="phase-card__icon"><i class="bi bi-activity"></i></div>
+                <div class="phase-card__step">{% trans "Schritt 3-4" %}</div>
+                <div class="phase-card__title">{% trans "Analyse &amp; Kalibration" %}</div>
+                <div class="phase-card__desc">
+                    {% trans "Statistik (PCA/PLS) und neuronale Netze parallel, Kalibration mit RMSECV/RPD-Gütebeurteilung." %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-6">
+            <div class="phase-card">
+                <div class="phase-card__icon"><i class="bi bi-file-earmark-text"></i></div>
+                <div class="phase-card__step">{% trans "Schritt 5-6" %}</div>
+                <div class="phase-card__title">{% trans "Vergleich &amp; Report" %}</div>
+                <div class="phase-card__desc">
+                    {% trans "Ähnliche Spektren finden, gegen Referenz-Datenbank vergleichen, reproduzierbaren Report erzeugen." %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sekundäreinstiege -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-12">
+            <div class="phase-card d-flex align-items-center gap-3">
+                <div class="phase-card__icon mb-0"><i class="bi bi-lightning-charge"></i></div>
+                <div class="flex-grow-1">
+                    <div class="phase-card__title">{% trans "Einzelnes Spektrum schnell prüfen" %}</div>
+                    <div class="phase-card__desc">{% trans "Ohne Projekt: Spektrum hochladen, Qualität und Metadaten prüfen." %}</div>
+                </div>
+                <a href="/spectra/" class="btn btn-sm btn-outline-primary">{% trans "Zum Schnell-Check" %}</a>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="phase-card d-flex align-items-center gap-3">
+                <div class="phase-card__icon mb-0"><i class="bi bi-database"></i></div>
+                <div class="flex-grow-1">
+                    <div class="phase-card__title">{% trans "Referenzspektrum importieren" %}</div>
+                    <div class="phase-card__desc">{% trans "Externe Bibliotheks-Spektren mit Quellen- und Lizenzangabe." %}</div>
+                </div>
+                <a href="/projects/database/" class="btn btn-sm btn-outline-primary">{% trans "Zur Datenbank" %}</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Systemstatus (echt, geprüft) -->
+    <div class="phase-card">
+        <h2 class="h5 mb-3"><i class="bi bi-heart-pulse me-2"></i>{% trans "Systemstatus" %}</h2>
+        <div class="row g-2 small">
+            <div class="col-md-4">
+                <div class="d-flex justify-content-between">
+                    <span>{% trans "Web-Oberfläche" %}</span>
+                    <span class="c-status c-status--success"><span class="c-status__indicator"></span>{% trans "Erreichbar" %}</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex justify-content-between">
+                    <span>{% trans "KI-Analyse (CrewAI)" %}</span>
+                    {% if crew_available %}
+                    <span class="c-status c-status--success"><span class="c-status__indicator"></span>{% trans "Bereit" %}</span>
+                    {% else %}
+                    <span class="c-status c-status--warning"><span class="c-status__indicator"></span>{% trans "Nicht verfügbar" %}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex justify-content-between">
+                    <span>{% trans "Statistiken" %}</span>
+                    <span>{{ total_projects }} {% trans "Projekte" %} &middot; {{ total_spectra }} {% trans "Spektren" %}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -61,27 +61,51 @@
                 <nav class="c-nav-main">
                     <ul class="c-nav-main__list js-disclosure-nav">
                         <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/projects/" class="c-nav-main__action {% if request.path == '/projects/' %}c-nav-main__action--active{% endif %}">
+                            <a href="/" class="c-nav-main__action {% if request.path == '/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">{% trans "Start" %}</span>
+                            </a>
+                        </li>
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="/projects/" class="c-nav-main__action {% if '/projects/' in request.path and '/database/' not in request.path and '/sensors/' not in request.path %}c-nav-main__action--active{% endif %}">
                                 <span class="c-nav-main__label">{% trans "Projekte" %}</span>
                             </a>
                             <ul class="c-nav-sub">
                                 <li>
-                                    <a href="/projects/database/" class="c-nav-sub__action {% if request.path == '/projects/database/' %}c-nav-sub__action--active{% endif %}">
-                                        {% trans "Spektren-Datenbank" %}
+                                    <a href="/projects/create/" class="c-nav-sub__action">
+                                        {% trans "Neues Projekt anlegen" %}
                                     </a>
                                 </li>
                             </ul>
                         </li>
                         <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/projects/sensors/" class="c-nav-main__action {% if request.path == '/projects/sensors/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">{% trans "Sensoren" %}</span>
+                            <a href="/calibration/" class="c-nav-main__action {% if request.path == '/calibration/' or request.path == '/projects/database/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">{% trans "Kalibration &amp; Datenbank" %}</span>
                             </a>
                             <ul class="c-nav-sub">
                                 <li>
-                                    <a href="/projects/sensors/" class="c-nav-sub__action {% if request.path == '/projects/sensors/' %}c-nav-sub__action--active{% endif %}">
-                                        {% trans "Sensoren" %}
+                                    <a href="/projects/database/" class="c-nav-sub__action {% if request.path == '/projects/database/' %}c-nav-sub__action--active{% endif %}">
+                                        {% trans "Referenzspektren &amp; Datenbank" %}
                                     </a>
                                 </li>
+                            </ul>
+                        </li>
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="/spectra/" class="c-nav-main__action {% if request.path == '/spectra/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">{% trans "Schnell-Check" %}</span>
+                            </a>
+                            <ul class="c-nav-sub">
+                                <li>
+                                    <a href="/chatbot/" class="c-nav-sub__action {% if request.path == '/chatbot/' %}c-nav-sub__action--active{% endif %}">
+                                        {% trans "Analyse-Chatbot" %}
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="/projects/sensors/" class="c-nav-main__action {% if request.path == '/projects/sensors/' or request.path == '/api/projects/sensors/diy/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">{% trans "Sensoren" %}</span>
+                            </a>
+                            <ul class="c-nav-sub">
                                 <li>
                                     <a href="/api/projects/sensors/diy/" class="c-nav-sub__action {% if request.path == '/api/projects/sensors/diy/' %}c-nav-sub__action--active{% endif %}">
                                         {% trans "DIY-Spektrometer" %}
@@ -90,20 +114,8 @@
                             </ul>
                         </li>
                         <li class="c-nav-main__item c-nav-main__item--desktop">
-                            <a href="/calibration/" class="c-nav-main__action {% if request.path == '/calibration/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">{% trans "Kalibrieren" %}</span>
-                            </a>
-                            <ul class="c-nav-sub">
-                                <li>
-                                    <a href="/projects/database/" class="c-nav-sub__action {% if request.path == '/projects/database/' %}c-nav-sub__action--active{% endif %}">
-                                        {% trans "Spektren-Datenbank" %}
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-                        <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/ilias/" class="c-nav-main__action {% if request.path == '/ilias/' %}c-nav-main__action--active{% endif %}">
-                                <span class="c-nav-main__label">{% trans "Lernen mit Kursen" %}</span>
+                                <span class="c-nav-main__label">{% trans "Lernen" %}</span>
                             </a>
                             <ul class="c-nav-sub">
                                 <li>
@@ -113,11 +125,35 @@
                                 </li>
                                 <li>
                                     <a href="/federated/" class="c-nav-sub__action {% if request.path == '/federated/' %}c-nav-sub__action--active{% endif %}">
-                                        {% trans "Federated" %}
+                                        {% trans "Federated Learning" %}
                                     </a>
                                 </li>
                             </ul>
                         </li>
+                        {% if user.is_staff %}
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="/jobs/" class="c-nav-main__action {% if request.path in '/jobs/ /agents/ /analysis/ /settings/ /files/' %}c-nav-main__action--active{% endif %}">
+                                <span class="c-nav-main__label">{% trans "Diagnose" %}</span>
+                            </a>
+                            <ul class="c-nav-sub">
+                                <li>
+                                    <a href="/jobs/" class="c-nav-sub__action {% if request.path == '/jobs/' %}c-nav-sub__action--active{% endif %}">{% trans "Jobs" %}</a>
+                                </li>
+                                <li>
+                                    <a href="/agents/" class="c-nav-sub__action {% if request.path == '/agents/' %}c-nav-sub__action--active{% endif %}">{% trans "Agenten" %}</a>
+                                </li>
+                                <li>
+                                    <a href="/analysis/" class="c-nav-sub__action {% if request.path == '/analysis/' %}c-nav-sub__action--active{% endif %}">{% trans "Analysen" %}</a>
+                                </li>
+                                <li>
+                                    <a href="/files/" class="c-nav-sub__action {% if request.path == '/files/' %}c-nav-sub__action--active{% endif %}">{% trans "Dateien" %}</a>
+                                </li>
+                                <li>
+                                    <a href="/settings/" class="c-nav-sub__action {% if request.path == '/settings/' %}c-nav-sub__action--active{% endif %}">{% trans "Einstellungen" %}</a>
+                                </li>
+                            </ul>
+                        </li>
+                        {% endif %}
                     </ul>
                 </nav>
             </div>

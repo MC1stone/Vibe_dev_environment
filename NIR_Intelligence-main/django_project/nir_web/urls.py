@@ -13,6 +13,7 @@ from django.http import JsonResponse
 from rest_framework_simplejwt.views import TokenRefreshView
 from api.views import CustomTokenObtainPairView
 from api.project_views import CalibrationOverviewView
+from api.dashboard_views import DashboardStartView
 from api.views import (
     AgentListView, AgentDetailView, AgentExecuteView,
     SpectrumListCreateView, SpectrumRetrieveView,
@@ -81,7 +82,7 @@ urlpatterns = [
     
     
     # Main Entry Point
-    path('', TemplateView.as_view(template_name='index.html'), name='home'),
+    path('', DashboardStartView.as_view(), name='home'),
     path('dashboard/', TemplateView.as_view(template_name='dashboard_colorful.html'), name='dashboard'),
     path('agents/', TemplateView.as_view(template_name='agents.html'), name='agents-page'),
     path('spectra/', TemplateView.as_view(template_name='spectra.html'), name='spectra-page'),
@@ -123,7 +124,7 @@ urlpatterns = [
 # OP48: UI pages get locale-prefixed URLs (/en/dashboard/ ...); the default
 # language (de) stays unprefixed for backward compatibility (bookmarks, JS links).
 urlpatterns += i18n_patterns(
-    path('', TemplateView.as_view(template_name='index.html'), name='home'),
+    path('', DashboardStartView.as_view(), name='home'),
     path('dashboard/', TemplateView.as_view(template_name='dashboard_colorful.html'), name='dashboard'),
     path('agents/', TemplateView.as_view(template_name='agents.html'), name='agents-page'),
     path('spectra/', TemplateView.as_view(template_name='spectra.html'), name='spectra-page'),

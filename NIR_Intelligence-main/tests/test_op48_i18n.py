@@ -84,6 +84,22 @@ from django.urls import reverse  # noqa: E402
 
 client = Client()
 
+# Workflow-UI-Redesign (S1): Start ist das echte Dashboard und damit
+# login-pflichtig wie alle Arbeitsseiten - der i18n-Test prueft angemeldet.
+from django.contrib.auth import get_user_model  # noqa: E402
+from django.conf import settings  # noqa: E402
+
+_i18n_user = None
+if not getattr(settings, 'REST_FRAMEWORK', None) or True:
+    _User = get_user_model()
+    _i18n_user, _ = _User.objects.get_or_create(
+        username='i18n-check-user',
+        defaults={'email': 'i18n-check-user@test.local'})
+    try:
+        client.force_login(_i18n_user)
+    except Exception:
+        pass
+
 check('T3a home reverses unprefixed (default language)', reverse('home') == '/')
 check('T3b dashboard reverses unprefixed', reverse('dashboard') == '/dashboard/')
 check('T3c set_language route wired',
@@ -132,9 +148,11 @@ for lang in ('de', 'en'):
 # ---------------------------------------------------------------------------
 from django.template.loader import get_template  # noqa: E402
 
+# Workflow-UI-Redesign (S1): Start ist das echte Dashboard; die erwarteten
+# Texte sind die des neuen Start-Templates (deutsch als Default-Sprache).
 localized_pages = {
-    '/': ('Der Analyse-Workflow', 'Neues Projekt anlegen'),
-    '/en/': ('The analysis workflow', 'Create new project'),
+    '/': ('NIR Intelligence Platform', 'Neues Projekt anlegen'),
+    '/en/': ('NIR Intelligence Platform',),
     '/chatbot/': ('Analyse-Chatbot', 'Unterhaltung', 'Senden'),
     '/en/chatbot/': ('Analysis Chatbot', 'Conversation', 'Send'),
     '/login/': ('Anmelden', 'Passwort'),

@@ -715,7 +715,7 @@ function showSpectrumDetails(spectrumId) {
     const spectrum = allSpectra.find(s => s.id === spectrumId);
     
     if (!spectrum) {
-        showError(nirGettext('Spectrum not found'));
+        showError(nirGettext('Spektrum nicht gefunden'));
         return;
     }
     
@@ -885,7 +885,7 @@ function analyzeSpectrum(spectrumId) {
     const spectrum = allSpectra.find(s => s.id === spectrumId);
     
     if (!spectrum) {
-        showError(nirGettext('Spectrum not found'));
+        showError(nirGettext('Spektrum nicht gefunden'));
         return;
     }
     
@@ -1063,7 +1063,7 @@ function deleteSpectrum(spectrumId) {
     currentSpectrum = allSpectra.find(s => s.id === spectrumId);
     
     if (!currentSpectrum) {
-        showError(nirGettext('Spectrum not found'));
+        showError(nirGettext('Spektrum nicht gefunden'));
         return;
     }
     

@@ -42,16 +42,18 @@ except ValueError as exc:
     nav = ""
     check("T1a nav block extractable", False, str(exc))
 
+# Workflow-UI-Redesign (S1, PO-freigegeben): 7-Punkte-Navigation entlang
+# des NIR-Fachprozesses (Start/Projekte/Kalibration/Schnell-Check/Sensoren/Lernen).
 positions = []
-for label in ("Projekte", "Sensoren", "Kalibrieren",
-              "Lernen mit Kursen"):
-    pos = nav.find('trans "%s"' % label)
+for label in ("Start", "Projekte", "Kalibration", "Schnell-Check",
+              "Sensoren", "Lernen"):
+    pos = nav.find(label)
     positions.append((label, pos))
     check(f"T1b nav contains '{label}'", pos != -1)
 
 order_ok = (all(p != -1 for _, p in positions)
             and [p for _, p in positions] == sorted(p for _, p in positions))
-check("T1c nav order: Projekte < Sensoren < Kalibrieren < Lernen",
+check("T1c nav order: Start < Projekte < Kalibration < Schnell-Check < Sensoren < Lernen",
       order_ok, f"positions: {positions}")
 
 # OP52b: 'Workflow' nav tab removed (release feedback); the start page
@@ -79,24 +81,17 @@ check("T2b DIY-Spektrometer sub-item after Sensoren",
 check("T2c DIY sub-item links to /api/projects/sensors/diy/",
       'href="/api/projects/sensors/diy/"' in nav)
 
-# T3: Spektren-Datenbank as sub-item under Projekte
-db_pos = nav.find('trans "Spektren-Datenbank"')
-check("T3a Spektren-Datenbank is sub-item under Projekte",
-      -1 < nav.find('trans "Projekte"') < db_pos,
+# Workflow-UI-Redesign (S1, PO-freigegeben): Die Datenbank ist Unterpunkt
+# von "Kalibration & Datenbank" (Fachprozess-Phase 4-5), nicht mehr doppelt.
+db_pos = nav.find('Referenzspektren')
+check("T3a Referenzspektren sub-item under Kalibration",
+      -1 < nav.find('Kalibration') < db_pos,
       f"db_pos={db_pos}")
 check("T3b Spektren-Datenbank links to /projects/database/",
       'href="/projects/database/"' in nav)
-
-# T3c: Spektren-Datenbank additionally reachable under Kalibrieren
-cal_pos = nav.find('trans "Kalibrieren"')
-db_after_cal = nav.find('trans "Spektren-Datenbank"', cal_pos)
-check("T3c Spektren-Datenbank also sub-item under Kalibrieren",
-      -1 < cal_pos < db_after_cal,
-      f"cal={cal_pos} db_after_cal={db_after_cal}")
-
-db_count = nav.count('trans "Spektren-Datenbank"')
-check("T3d exactly two Spektren-Datenbank nav links (Projekte + Kalibrieren)",
-      db_count == 2, f"count={db_count}")
+db_count = nav.count('Referenzspektren')
+check("T3d exactly one Datenbank nav link (under Kalibration)",
+      db_count == 1, f"count={db_count}")
 
 # T4: calibration page route + view
 from django.urls import reverse, resolve

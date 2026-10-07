@@ -4,7 +4,15 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1>{% trans "Kalibrierung - Übersicht" %}</h1>
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link active" href="/calibration/">{% trans "Kalibrationen" %}</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/projects/database/">{% trans "Referenzspektren &amp; Datenbank" %}</a>
+        </li>
+    </ul>
+    <h1>{% trans "Kalibrierung - Übersicht" %}
     <p class="text-muted">
         {% trans "PLS/PCR-Kalibrationen Ihrer analysierten Projekte. Eine Kalibration entsteht automatisch im Rahmen der Crew-Analyse eines Projekts mit Referenzwerten." %}
     </p>
@@ -50,7 +58,7 @@
                             <td>{{ model.status }}</td>
                             <td>{% if model.mean_r2 %}{{ model.mean_r2|floatformat:3 }}{% else %}-{% endif %}</td>
                             <td>{% if model.rmse_cv %}{{ model.rmse_cv|floatformat:4 }}{% else %}-{% endif %}</td>
-                            <td>{% if model.rpd %}{{ model.rpd|floatformat:1 }}{% else %}-{% endif %}</td>
+                            <td>{% if model.rpd %}<span class="badge bg-{{ model.rpd_class }}" title="RPD &gt; 5 exzellent, &gt; 3 gut, &gt; 2 nutzbar">{{ model.rpd|floatformat:1 }}</span>{% else %}-{% endif %}</td>
                             <td>{{ model.cv_folds|default:"-" }}</td>
                         </tr>
                         {% endfor %}

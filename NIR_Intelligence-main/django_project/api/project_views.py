@@ -1161,10 +1161,24 @@ class CalibrationOverviewView(TemplateView):
                 for name, res in (data.get('models') or {}).items():
                     if not isinstance(res, dict):
                         continue
+                    rpd = res.get('rpd')
+                    rpd_class = 'secondary'
+                    if rpd is not None:
+                        if rpd > 5:
+                            rpd_class = 'success'
+                        elif rpd > 3:
+                            rpd_class = 'info'
+                        elif rpd > 2:
+                            rpd_class = 'warning'
+                        else:
+                            rpd_class = 'danger'
                     models.append({
                         'name': name,
                         'status': res.get('status', ''),
                         'mean_r2': res.get('mean_r2'),
+                        'rmse_cv': res.get('rmse_cv'),
+                        'rpd': rpd,
+                        'rpd_class': rpd_class,
                         'cv_folds': res.get('cv_folds'),
                     })
                 entries.append({

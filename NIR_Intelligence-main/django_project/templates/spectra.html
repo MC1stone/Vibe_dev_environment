@@ -105,10 +105,10 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
                 <h1 class="c-page-header__title text-white mb-0">
-                    <i class="bi bi-graph-up"></i> {% trans "Spectra Management" %}
+                    <i class="bi bi-graph-up"></i> {% trans "Schnell-Check: Einzelne Spektren" %}
                 </h1>
                 <p class="c-page-header__subtitle text-white opacity-75 mb-0">
-                    {% trans "Upload, view, and analyze NIR spectroscopy data with Crew AI" %}
+                    {% trans "Einzelne Spektren hochladen und prüfen - für vollständige Analysen ein Projekt anlegen" %}
                 </p>
             </div>
             <div class="d-flex gap-2">
@@ -187,7 +187,7 @@
                             <i class="bi bi-upload text-primary" style="font-size: 3rem;"></i>
                         </div>
                         <h3 class="h5 mb-2">{% trans "Upload Spectrum" %}</h3>
-                        <p class="text-muted small mb-3">{% trans "Upload new NIR spectroscopy data for analysis" %}</p>
+                        <p class="text-muted small mb-3">{% trans "NIR-Messdaten hochladen (CSV, JCAMP-DX, SPC, MATLAB, HDF5)" %}</p>
                         <button class="c-button c-button--outline-primary" data-bs-toggle="modal" data-bs-target="#uploadSpectrumModal">
                             <i class="bi bi-upload c-button__icon"></i>
                             <span class="c-button__text">Upload Now</span>
@@ -196,21 +196,7 @@
                 </div>
             </div>
             
-            <div class="col-md-4">
-                <div class="c-card h-100">
-                    <div class="c-card__body text-center">
-                        <div class="mb-3">
-                            <i class="bi bi-play-circle text-primary" style="font-size: 3rem;"></i>
-                        </div>
-                        <h3 class="h5 mb-2">{% trans "Quick Analysis" %}</h3>
-                        <p class="text-muted small mb-3">{% trans "Run quick analysis on selected spectra" %}</p>
-                        <button class="c-button c-button--outline-primary" onclick="quickAnalyzeSelected()">
-                            <i class="bi bi-play-circle c-button__icon"></i>
-                            <span class="c-button__text">Analyze Now</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
+
             
             <div class="col-md-4">
                 <div class="c-card h-100">
