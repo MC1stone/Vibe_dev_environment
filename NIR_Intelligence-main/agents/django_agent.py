@@ -25,7 +25,10 @@ class DjangoAgent(BaseAgent):
         self.apps = kwargs.get("apps", ["core", "api", "visualization"])
         self.port = int(kwargs.get("port", 8000))
         self.debug = kwargs.get("debug", True)
-        self.base_url = kwargs.get("base_url") or f"http://localhost:{self.port}"
+        import os
+        self.base_url = (kwargs.get("base_url")
+                         or os.environ.get("DJANGO_BASE_URL")
+                         or f"http://localhost:{self.port}")
 
     def _request(self, url: str, timeout: int = 10):
         import requests

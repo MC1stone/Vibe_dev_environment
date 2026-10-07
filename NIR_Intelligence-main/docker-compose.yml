@@ -214,6 +214,15 @@ services:
       - .:/app
     environment:
       - PYTHONPATH=/app:/app/agents
+      # Container-to-container: der Runner prueft Django/Postgres von innen
+      # ueber die Service-Namen, nicht localhost (Vorfall 2026-10-07:
+      # 'platform ok: 3/5 degraded: django, postgresql' - der Worker konnte
+      # Django/DB nicht erreichen und verarbeitete keine Projekt-Jobs).
+      - DJANGO_BASE_URL=http://django_app:8000
+      - DATABASE_URL=postgres://nir_user:${POSTGRES_PASSWORD:-nir_password_change_me}@postgresql:5432/nir_mistral
+      - DJANGO_DB_NAME=nir_mistral
+      - DJANGO_DB_USER=nir_user
+      - DJANGO_DB_PASSWORD=${POSTGRES_PASSWORD:-nir_password_change_me}
       - DJANGO_DB_HOST=postgresql
       - DJANGO_DB_PORT=5432
       - OLLAMA_URL=http://ollama:11434

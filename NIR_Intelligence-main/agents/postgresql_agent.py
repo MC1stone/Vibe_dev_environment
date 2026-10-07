@@ -29,8 +29,10 @@ class PostgreSQLAgent(BaseAgent):
         self.host = kwargs.get("host", "postgresql")
         self.port = int(kwargs.get("port", 5432))
         self.database = kwargs.get("database", "nir_mistral")
-        self.user = kwargs.get("user", "nir_user")
-        self.password = kwargs.get("password", "")
+        import os
+        self.user = kwargs.get("user") or os.environ.get("DJANGO_DB_USER", "nir_user")
+        self.password = (kwargs.get("password")
+                         or os.environ.get("DJANGO_DB_PASSWORD", ""))
 
     def _connect(self, context: Dict[str, Any]):
         try:
