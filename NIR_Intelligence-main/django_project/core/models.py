@@ -1072,6 +1072,10 @@ class SpectrumRecord(models.Model):
             'sample_type': self.sample_type,
             'project_id': str(self.project_id) if self.project_id else None,
             'created_at': self.created_at.isoformat(),
+            'reference_source': (self.metadata or {}).get('source', ''),
+            'reference_license': (self.metadata or {}).get('license', ''),
+            'reference_version': (self.metadata or {}).get('version', ''),
+            'is_reference_import': bool((self.metadata or {}).get('reference_import')),
         }
 
 

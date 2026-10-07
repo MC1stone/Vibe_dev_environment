@@ -48,9 +48,15 @@
                                 {% else %}
                                 <span class="badge bg-info">{% trans "Geteilt (anderer Nutzer)" %}</span>
                                 {% endif %}
+                                {% if s.is_reference_import %}
+                                <span class="badge bg-warning text-dark" title="{% trans 'Externe Referenzdaten' %}">{% trans "Referenz" %}</span>
+                                {% endif %}
                             </td>
                             <td>{{ s.created_at|date:'d.m.Y H:i' }}</td>
                             <td>
+                                {% if s.reference_license %}
+                                <div class="small text-muted">{{ s.reference_source }} &middot; {{ s.reference_license }}{% if s.reference_version %} &middot; {{ s.reference_version }}{% endif %}</div>
+                                {% endif %}
                                 <a href="/projects/database/{{ s.id }}/" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-search me-1"></i>{% trans "Details" %}
                                 </a>
