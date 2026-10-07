@@ -587,9 +587,21 @@ function renderStatisticalResults(stats) {
     }
     if (methodResults.PLS && methodResults.PLS.mean_r2 !== undefined && methodResults.PLS.mean_r2 !== null) {
         html += `<tr><td>PLS CV R&sup2;</td><td>${Number(methodResults.PLS.mean_r2).toFixed(3)}</td></tr>`;
+        if (methodResults.PLS.rmse_cv !== undefined && methodResults.PLS.rmse_cv !== null) {
+            html += `<tr><td>PLS RMSECV</td><td>${Number(methodResults.PLS.rmse_cv).toFixed(4)}</td></tr>`;
+        }
+        if (methodResults.PLS.rpd !== undefined && methodResults.PLS.rpd !== null) {
+            html += `<tr><td>PLS RPD</td><td>${Number(methodResults.PLS.rpd).toFixed(1)}</td></tr>`;
+        }
     }
     if (methodResults.PCR && methodResults.PCR.mean_r2 !== undefined && methodResults.PCR.mean_r2 !== null) {
         html += `<tr><td>PCR CV R&sup2;</td><td>${Number(methodResults.PCR.mean_r2).toFixed(3)}</td></tr>`;
+        if (methodResults.PCR.rmse_cv !== undefined && methodResults.PCR.rmse_cv !== null) {
+            html += `<tr><td>PCR RMSECV</td><td>${Number(methodResults.PCR.rmse_cv).toFixed(4)}</td></tr>`;
+        }
+        if (methodResults.PCR.rpd !== undefined && methodResults.PCR.rpd !== null) {
+            html += `<tr><td>PCR RPD</td><td>${Number(methodResults.PCR.rpd).toFixed(1)}</td></tr>`;
+        }
     }
     if (methodResults.ClusterAnalysis && methodResults.ClusterAnalysis.silhouette_score !== undefined && methodResults.ClusterAnalysis.silhouette_score !== null) {
         html += `<tr><td>Cluster silhouette</td><td>${Number(methodResults.ClusterAnalysis.silhouette_score).toFixed(3)} (k=${methodResults.ClusterAnalysis.k})</td></tr>`;
