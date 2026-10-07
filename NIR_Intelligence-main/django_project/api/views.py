@@ -746,8 +746,11 @@ class SpectrumListCreateView(generics.ListCreateAPIView):
         # Save the spectrum with the current user
         spectrum = serializer.save(user=self.request.user, status='uploaded')
         
-        # Process the uploaded file if it's a text file
-        if spectrum.original_file and spectrum.data_format == 'txt':
+        # Persist the real curve via the format-agnostic loader chain so the
+        # UI always renders measured data (scientific integrity: no fabricated
+        # preview curves) - works for txt/csv/jdx/spc/mat/h5/... (MO 1).
+        if spectrum.original_file:
+            self._persist_curve_data(spectrum)
             self._process_text_file(spectrum)
         
         # Update status to processed
@@ -755,6 +758,54 @@ class SpectrumListCreateView(generics.ListCreateAPIView):
         spectrum.processed_at = datetime.now()
         spectrum.save()
     
+    def _persist_curve_data(self, spectrum):
+        """Persist the measured curve (wavelengths/intensities/units) from
+        the uploaded file using the platform's format-agnostic loaders.
+        The spectrum UI renders only this real data; if no curve can be
+        extracted the fields stay empty and the UI shows an empty state."""
+        try:
+            file_path = spectrum.get_file_path()
+            if not file_path or not os.path.exists(file_path):
+                return
+            import sys as _sys
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+            if repo_root not in _sys.path:
+                _sys.path.insert(0, repo_root)
+            from agents.data_preparation_agent import EnhancedDataPreparationAgent
+            from services.spectrum_units import canonical_xunit
+            loader = EnhancedDataPreparationAgent(
+                input_directory=os.path.dirname(file_path),
+                output_directory=os.path.dirname(file_path),
+                temp_directory=os.path.dirname(file_path),
+            )
+            loaded = loader._load_spectral_data(file_path)
+            if not loaded or loaded.get('data') is None or len(loaded['data']) == 0:
+                return
+            df = loaded['data']
+            x_col = loaded.get('wavelength_column') or 'wavelength'
+            y_col = loaded.get('intensity_column') or 'intensity'
+            if x_col not in df.columns or y_col not in df.columns:
+                return
+            wavelengths = [round(float(v), 6) for v in df[x_col].tolist()]
+            intensities = [round(float(v), 6) for v in df[y_col].tolist()]
+            if not wavelengths or len(wavelengths) != len(intensities):
+                return
+            metadata = loaded.get('metadata') or {}
+            spectrum.wavelengths = wavelengths
+            spectrum.intensities = intensities
+            spectrum.x_unit = canonical_xunit(
+                metadata.get('x_unit') or metadata.get('x_units') or 'nm')
+            y_unit = metadata.get('y_unit') or metadata.get('y_units') or 'a.u.'
+            spectrum.y_unit = str(y_unit)[:40] or 'a.u.'
+            spectrum.data_points = len(wavelengths)
+            spectrum.wavelength_range_start = wavelengths[0]
+            spectrum.wavelength_range_end = wavelengths[-1]
+            spectrum.resolution = (
+                (wavelengths[-1] - wavelengths[0]) / (len(wavelengths) - 1)
+                if len(wavelengths) > 1 else 1.0)
+        except Exception as e:
+            logger.error(f"Error persisting curve data for spectrum {spectrum.id}: {e}")
+
     def _process_text_file(self, spectrum):
         """Process a text file to extract spectral data"""
         try:

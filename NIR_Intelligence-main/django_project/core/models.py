@@ -165,6 +165,15 @@ class NIRSpectrum(models.Model):
     # Tags and categories
     tags = models.JSONField(default=list, blank=True, verbose_name='Tags')
     categories = models.JSONField(default=list, blank=True, verbose_name='Categories')
+
+    # Persisted curve preview (M-UI: scientific integrity in the frontend).
+    # Full curve data as uploaded; populated by the upload pipeline via the
+    # format-agnostic loaders. The UI renders ONLY this real data and shows
+    # an explicit empty state when it is absent - never fabricated values.
+    wavelengths = models.JSONField(default=list, blank=True, verbose_name='Wavelengths')
+    intensities = models.JSONField(default=list, blank=True, verbose_name='Intensities')
+    x_unit = models.CharField(max_length=20, default='nm', blank=True, verbose_name='X-Axis Unit')
+    y_unit = models.CharField(max_length=40, default='a.u.', blank=True, verbose_name='Y-Axis Unit')
     
     class Meta:
         verbose_name = 'NIR Spectrum'
