@@ -41,7 +41,7 @@ jobs:
               echo "::warning::gettext install failed (mirror problem?). compilemessages needs msgfmt - i18n compile may fail"
             }
           fi
-          python django_project/manage.py compilemessages || echo "::warning::compilemessages failed (gettext missing?) - continuing, i18n tests will report
+          python django_project/manage.py compilemessages || echo "::warning::compilemessages failed (gettext missing?) - continuing, i18n tests will report"
       - name: Run offline test matrices (S3-S9, OP1-OP4, OP6-OP8)
         run: |
           python tests/test_s3_format_loaders.py
