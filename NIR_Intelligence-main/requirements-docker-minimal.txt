@@ -7,6 +7,9 @@ pandas>=2.0.0
 scipy>=1.10.0
 scikit-learn>=1.3.0
 h5py>=3.9.0
+# Bruker OPUS .d import (MIT, verified in THIRD_PARTY_LICENSES.md);
+# the OPUS loader degrades gracefully when not installed
+opusfc>=1.5.0
 
 # Database and storage
 qdrant-client>=1.9.0
