@@ -185,6 +185,84 @@ class StatisticalAnalysisAgent(BaseAgent):
             "max_f_statistic": float(np.max(f_stats)),
         }
 
+    def _run_lda_classification(self, matrix: np.ndarray,
+                                labels: List[str]) -> Dict[str, Any]:
+        """Klassifikationstool LDA (Kategorien-Datensaetze): trennt Klassen
+        linear-optimal und liefert Konfusionsmatrix + Kreuzvalidierungs-
+        Genauigkeit - das Klassifikations-Pendant zur PLS-Kalibration."""
+        try:
+            from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+            from sklearn.model_selection import cross_val_score, StratifiedKFold
+            from sklearn.metrics import confusion_matrix
+            import numpy as _np
+            y = _np.asarray([str(l) for l in labels])
+            n_classes = len(set(y))
+            if n_classes < 2:
+                return {"status": "skipped",
+                        "reason": "classification needs >= 2 classes"}
+            folds = min(5, int(_np.bincount(
+                _np.searchsorted(sorted(set(y)), y)).min()))
+            folds = max(2, folds)
+            lda = LinearDiscriminantAnalysis()
+            cv = StratifiedKFold(n_splits=folds, shuffle=True, random_state=42)
+            scores = cross_val_score(lda, matrix, y, cv=cv, scoring="accuracy")
+            lda.fit(matrix, y)
+            predictions = lda.predict(matrix)
+            cm = confusion_matrix(y, predictions, labels=sorted(set(y)))
+            return {
+                "status": "ok",
+                "method": "LDA",
+                "n_classes": int(n_classes),
+                "classes": sorted(set(y.tolist())),
+                "cv_accuracy_mean": float(scores.mean()),
+                "cv_accuracy_std": float(scores.std()),
+                "cv_folds": int(folds),
+                "confusion_matrix": cm.tolist(),
+                "confusion_labels": sorted(set(y.tolist())),
+                "n_features_lda": int(lda.scalings_.shape[1])
+                if hasattr(lda, "scalings_") and lda.scalings_ is not None
+                else None,
+                "summary": (f"LDA-Klassifikation: {n_classes} Klassen, "
+                            f"CV-Genauigkeit {scores.mean() * 100:.1f}% "
+                            f"(+/- {scores.std() * 100:.1f}%)"),
+            }
+        except Exception as e:
+            return {"status": "skipped", "reason": f"LDA fehlgeschlagen: {e}"}
+
+    def _run_knn_classification(self, matrix: np.ndarray,
+                                 labels: List[str],
+                                 k: int = 5) -> Dict[str, Any]:
+        """Klassifikationstool kNN: nichtlinearer Vergleichsklassifikator
+        mit Kreuzvalidierung (k-adaptiv an die Klassenzahl)."""
+        try:
+            from sklearn.neighbors import KNeighborsClassifier
+            from sklearn.model_selection import cross_val_score, StratifiedKFold
+            import numpy as _np
+            y = _np.asarray(labels)
+            n_classes = len(set(y))
+            if n_classes < 2:
+                return {"status": "skipped",
+                        "reason": "classification needs >= 2 classes"}
+            k = max(3, min(k, len(y) // max(1, n_classes)))
+            knn = KNeighborsClassifier(n_neighbors=k)
+            folds = min(5, int(_np.bincount(
+                _np.searchsorted(sorted(set(y)), y)).min()))
+            folds = max(2, folds)
+            cv = StratifiedKFold(n_splits=folds, shuffle=True, random_state=42)
+            scores = cross_val_score(knn, matrix, y, cv=cv, scoring="accuracy")
+            return {
+                "status": "ok",
+                "method": f"kNN (k={k})",
+                "n_classes": int(n_classes),
+                "cv_accuracy_mean": float(scores.mean()),
+                "cv_accuracy_std": float(scores.std()),
+                "cv_folds": int(folds),
+                "summary": (f"kNN-Klassifikation (k={k}): CV-Genauigkeit "
+                            f"{scores.mean() * 100:.1f}%"),
+            }
+        except Exception as e:
+            return {"status": "skipped", "reason": f"kNN fehlgeschlagen: {e}"}
+
     def _run_cluster(self, matrix: np.ndarray) -> Dict[str, Any]:
         from sklearn.cluster import KMeans
         from sklearn.metrics import silhouette_score
@@ -311,6 +389,60 @@ class StatisticalAnalysisAgent(BaseAgent):
                 results["status"] = "ok"
                 self.status = AgentStatus.COMPLETED
                 return self._create_success_output(results)
+
+            # ------------------------------------------------------------
+            # (a) Datengetriebene Modus-Wahl + (b) yaml-konfigurierbare
+            # Prioritaeten: analysis_mode/class_labels aus dem Kontext
+            # steuern die Methodenwahl IM AGENTEN - die Crew-Orchestrierung
+            # bleibt unveraendert (kein hartcodierter Analysepfad).
+            analysis_mode = context.get("analysis_mode")
+            class_labels = context.get("class_labels")
+            classification_methods = self.config.get(
+                "classification_methods", ["LDA", "kNN", "PCA"])
+            if analysis_mode == "classification" and class_labels:
+                labels = list(class_labels)
+                if len(labels) != matrix.shape[0]:
+                    self.logger.warning(
+                        "class_labels length %s != rows %s - classification "
+                        "skipped", len(labels), matrix.shape[0])
+                    labels = None
+                if labels:
+                    self.journal_entry(
+                        "entscheidung",
+                        f"analysis_mode=classification erkannt "
+                        f"({len(set(labels))} Klassen) - Klassifikations-"
+                        f"methoden statt Regressionskalibration",
+                        action=f"Methoden: {', '.join(classification_methods)}",
+                        iteration=0)
+                    for method_name in classification_methods:
+                        method_name = str(method_name).strip()
+                        try:
+                            if method_name == "LDA":
+                                outcome = self._run_lda_classification(matrix, labels)
+                            elif method_name == "kNN":
+                                outcome = self._run_knn_classification(matrix, labels)
+                            elif method_name == "PCA":
+                                outcome = self._run_pca(matrix)
+                            else:
+                                continue
+                            if outcome.get("status") == "skipped":
+                                results["methods_skipped"].append(
+                                    {"method": method_name,
+                                     "reason": outcome["reason"]})
+                                continue
+                            results["method_results"][method_name] = outcome
+                            results["methods_applied"].append(method_name)
+                            self.journal_entry(
+                                "schlussfolgerung",
+                                f"{method_name}: {outcome.get('summary', 'ok')}",
+                                iteration=0)
+                        except Exception as exc:
+                            results["methods_skipped"].append(
+                                {"method": method_name, "reason": str(exc)})
+                    results["status"] = "ok"
+                    results["analysis_mode"] = "classification"
+                    self.status = AgentStatus.COMPLETED
+                    return self._create_success_output(results)
 
             for method in methods:
                 method_name = str(method).strip()

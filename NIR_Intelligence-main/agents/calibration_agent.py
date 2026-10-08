@@ -191,6 +191,33 @@ class CalibrationAgent(BaseAgent):
             return {"status": "deferred", "reason": f"CNN calibration failed: {exc}"}
 
     def execute(self, context: Dict[str, Any]) -> AgentOutput:
+        # Klassifikations-Kontext (2026-10-08): analysis_mode=classification
+        # heisst, das Analyseziel sind Kategorien (z.B. Kaffeesorten) -
+        # Regressionskalibration (R2/RMSECV) ist dann fachlich nicht
+        # anwendbar. Der Agent meldet das ehrlich (statt falsch zu
+        # rechnen) und verweist auf die Klassifikationsmethoden; die
+        # Entscheidung + Begruendung steht im Journal (Iterationsregel).
+        if (context or {}).get("analysis_mode") == "classification":
+            self.journal_entry(
+                "entscheidung",
+                "analysis_mode=classification erkannt - "
+                "Regressionskalibration nicht anwendbar",
+                conclusion="Das Analyseziel ist eine Kategorie "
+                          "(z.B. Kaffeesorte), kein numerischer "
+                          "Referenzwert; R2/RMSECV waeren fachlich "
+                          "bedeutungslos.",
+                action="Klassifikation laeuft im Statistik-Agent "
+                       "(LDA/kNN laut Konfiguration); dieser Agent "
+                       "ueberspringt die Kalibration ehrlich.",
+                iteration=0)
+            return self._create_success_output({
+                "status": "not_applicable",
+                "reason": "analysis_mode=classification - "
+                          "Regressionskalibration nicht anwendbar; "
+                          "Klassifikation erfolgt im Statistik-Agent "
+                          "(LDA/kNN)",
+                "analysis_mode": "classification",
+            })
         """Execute calibration workflow."""
         try:
             self.status = AgentStatus.PROCESSING

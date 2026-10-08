@@ -70,6 +70,10 @@ agents:
     version: "1.0.0"
     params:
       methods: ["PCA", "PLS", "PCR", "ANOVA", "ClusterAnalysis"]
+      # Klassifikations-Modus (analysis_mode=classification, z.B. Kaffeesorten):
+      # Der Agent waehlt diese Methoden datengetrieben statt der
+      # Regressionsmethoden - hier konfigurierbar ohne Code-Aenderung.
+      classification_methods: ["LDA", "kNN", "PCA"]
       default_components: 10
       validation_method: "cross_validation"
       cv_folds: 5
