@@ -337,6 +337,50 @@ class EnhancedDataPreparationAgent(BaseAgent):
         self.logger.info(f"Found {len(files)} data files in {self.input_directory}")
         return True
 
+    def _extract_7z_file(self, sz_path: str) -> Optional[Dict[str, str]]:
+        """Extract a 7z archive (py7zr, MIT - see THIRD_PARTY_LICENSES.md).
+        Degrades gracefully: without py7zr the file is left to the content
+        chain (which reports the structure dialog offer). Never raises."""
+        try:
+            import py7zr  # lazy: optionale Abhaengigkeit (MIT)
+        except ImportError:
+            self.log_error(
+                "7z support needs py7zr (MIT): pip install py7zr",
+                ErrorSeverity.LOW)
+            return None
+        try:
+            extract_dir = os.path.join(
+                self.temp_directory, "extracted",
+                os.path.splitext(os.path.basename(sz_path))[0])
+            os.makedirs(extract_dir, exist_ok=True)
+            with py7zr.SevenZipFile(sz_path, mode="r") as z:
+                try:
+                    z.extractall(path=extract_dir)
+                except Exception:
+                    # Einige Archive tragen Sonder-Eintraege ('.' oder
+                    # absolute Pfade); targets beschraenkt die Extraktion
+                    # auf die regulren Archivmitglieder.
+                    z.reset()
+                    names = [n for n in z.getnames()
+                             if n and not n.startswith(('/', '\\', '.'))
+                             and '..' not in n]
+                    if names:
+                        z.extractall(path=extract_dir, targets=names)
+                    else:
+                        raise
+            extracted = {}
+            for root, _, files in os.walk(extract_dir):
+                for name in files:
+                    path = os.path.join(root, name)
+                    with open(path, "rb") as f:
+                        extracted[os.path.relpath(path, extract_dir)] = f.read().decode(
+                            "utf-8", errors="replace")
+            return extracted or None
+        except Exception as e:
+            self.log_error(f"7z extraction failed for {sz_path}: {str(e)}",
+                           ErrorSeverity.MEDIUM)
+            return None
+
     def _extract_zip_file(self, zip_path: str) -> Optional[Dict[str, str]]:
         """Extract a ZIP file and return the paths of extracted files"""
         try:
@@ -483,6 +527,33 @@ class EnhancedDataPreparationAgent(BaseAgent):
             except Exception:
                 return None
 
+        archive_candidates = []
+        if ext == ".7z":
+            contents = self._extract_7z_file(file_path)
+            if contents:
+                base_dir = os.path.join(
+                    self.temp_directory, "extracted",
+                    os.path.splitext(os.path.basename(file_path))[0])
+                for rel_name, text in contents.items():
+                    out_path = os.path.join(base_dir, rel_name)
+                    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+                    try:
+                        with open(out_path, "w", encoding="utf-8") as f:
+                            f.write(text)
+                        archive_candidates.append(out_path)
+                    except OSError:
+                        continue
+        if archive_candidates:
+            for candidate in archive_candidates:
+                nested = self._load_spectral_data(candidate)
+                if nested is not None and nested.get("data") is not None \
+                        and len(nested["data"]) > 0:
+                    nested["source_file"] = file_path
+                    nested["extracted_from"] = candidate
+                    for key, value in (nested.get("metadata") or {}).items():
+                        collected_metadata.setdefault(key, value)
+                    nested["metadata"] = collected_metadata
+                    return nested
         if zipfile.is_zipfile(file_path) or self._is_tar_like(file_path, ext):
             for candidate in self._extract_archive_candidates(file_path):
                 nested = self._load_spectral_data(candidate)
