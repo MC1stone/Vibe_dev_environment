@@ -191,6 +191,74 @@ def _escape(value: Any) -> str:
     return html.escape('' if value is None else str(value))
 
 
+def _journal_html(entries: Any) -> str:
+    """HTML rendering of agent journal entries (MO 13)."""
+    if not isinstance(entries, list) or not entries:
+        return ''
+    items = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        head = (f"{_escape(entry.get('agent', '?'))} &middot; "
+                f"{_escape(entry.get('phase', '?'))}"
+                + (f" &middot; Iteration {_escape(entry.get('iteration'))}"
+                   if entry.get('iteration') else ''))
+        body = _escape(entry.get('analysis', ''))
+        if entry.get('conclusion'):
+            body += f" &rarr; R&uuml;ckschluss: {_escape(entry['conclusion'])}"
+        if entry.get('action'):
+            body += f" &rarr; {_escape(entry['action'])}"
+        options_html = ''
+        options = entry.get('options') or []
+        if options:
+            opts = ''.join(
+                f'<li><em>{_escape(o.get("label", o.get("id", "Option")))}</em>: '
+                f'{_escape(o.get("description", ""))} '
+                f'(erwartete Wirkung: {_escape(o.get("expected_effect", ""))})</li>'
+                for o in options if isinstance(o, dict))
+            options_html = f'<ul class="journal-options">{opts}</ul>'
+        items.append(f'<li><strong>{head}</strong>: {body}{options_html}</li>')
+    return f'<ul class="agent-journal">{"".join(items)}</ul>'
+
+
+def _journal_md_lines(entries: Any) -> List[str]:
+    """Render agent journal entries (MO 13) as markdown.
+
+    Journal entries are a list of dicts - _metric_rows skips those, so the
+    iterative documentation (analyses, conclusions, decisions, offered
+    improvement options and executed iterations) needs its own rendering
+    path to become VISIBLE in the final report."""
+    if not isinstance(entries, list):
+        return []
+    lines: List[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        agent = entry.get('agent', '?')
+        phase = entry.get('phase', '?')
+        iteration = entry.get('iteration', 0)
+        head = f"- **{agent}** · {phase}"
+        if iteration:
+            head += f" · Iteration {iteration}"
+        analysis = entry.get('analysis', '')
+        conclusion = entry.get('conclusion', '')
+        action = entry.get('action', '')
+        body = f"{analysis}"
+        if conclusion:
+            body += f" → Rückschluss: {conclusion}"
+        if action:
+            body += f" → {action}"
+        lines.append(f"{head}: {body}")
+        for option in entry.get('options') or []:
+            if isinstance(option, dict):
+                label = option.get('label', option.get('id', 'Option'))
+                lines.append(f"  - *Option:* {label} — "
+                             f"{option.get('description', '')} "
+                             f"(erwartete Wirkung: "
+                             f"{option.get('expected_effect', '')})")
+    return lines
+
+
 def _metric_rows(data: Any, prefix: str = '') -> List[Any]:
     """Flatten agent data to (key, value) rows, two levels deep."""
     rows: List[Any] = []
@@ -429,6 +497,16 @@ def _agent_section_html(section: Dict[str, Any],
     if findings:
         paras = ''.join(f'<p>{_escape(f)}</p>' for f in findings)
         findings_html = f'<h3>Befunde</h3>{paras}'
+    # Agenten-Journal (MO 13): iterative Dokumentation sichtbar machen
+    journal_html = ''
+    if section.get('agent') == 'agenten_journal':
+        entries = (section.get('data', {}) or {}).get('entries') or []
+        journal_html = _journal_html(entries)
+    else:
+        journal = (section.get('data', {}) or {}).get('journal') or []
+        if journal:
+            journal_html = ('<h3>Agenten-Journal (Analysen, R&uuml;ckschl&uuml;sse, '
+                            'Iterationen)</h3>' + _journal_html(journal))
     charts_html = ''
     charts = section.get('charts') or {}
     if charts:
@@ -448,7 +526,7 @@ def _agent_section_html(section: Dict[str, Any],
     source_html = _section_source_html(section)
     return (f'<div class="card"><h3>{_escape(section.get("title", section.get("agent", "Agent")))} '
             f'<span class="badge {badge}">{_escape(status)}</span></h3>'
-            f'{table}{equation_html}{charts_html}{findings_html}{recs}'
+            f'{table}{equation_html}{charts_html}{findings_html}{recs}{journal_html}'
             f'{source_html}</div>')
 
 
@@ -639,7 +717,21 @@ def generate_markdown_report(project, crew_results: Dict[str, Any],
                   f" ({section.get('status', '?')})", '']
         data = section.get('data') or {}
         rows = [(k, v) for k, v in _metric_rows(data)
-                if k != 'calibration_equation' and not k.startswith('calibration_equation.')]
+                if k != 'calibration_equation' and not k.startswith('calibration_equation.')
+                and k != 'journal']
+        # Agenten-Journal (MO 13): iterative Dokumentation sichtbar machen
+        if agent == 'agenten_journal':
+            for line in _journal_md_lines(data.get('entries')):
+                lines.append(line)
+            lines.append('')
+            note = data.get('note')
+            if note:
+                lines += [f"*{note}*", '']
+        journal_lines = _journal_md_lines(data.get('journal'))
+        if journal_lines:
+            lines += ['**Agenten-Journal (Analysen, Rückschlüsse, Iterationen):**', '']
+            lines += journal_lines
+            lines.append('')
         if rows:
             lines += [_md_table(['Feld', 'Wert'],
                                 [[k, str(v)[:120]] for k, v in rows]), '']

@@ -288,10 +288,14 @@ ingest_src = INGEST.read_text(encoding='utf-8')
 
 check('T7a KI-Rettungsstufe _ki_rescue_entry existiert',
       'def _ki_rescue_entry' in ingest_src)
+# Struktur-Klaerungsdialog (2026-10-08): der unparseable-Pfad bietet jetzt
+# zusaetzlich den KI-Struktur-Dialog an; die Reihenfolge bleibt
+# Rettungsstufe -> usable=False (mit structure_dialog-Angebot).
 check('T7b Rettungsstufe ist in den unparseable-Pfad eingebaut (vor usable=False)',
       '_ki_rescue_entry(entry, file_path, loader)' in ingest_src and
       ingest_src.index('_ki_rescue_entry(entry, file_path, loader)') <
-      ingest_src.index('"usable": False, "reason": "Not parseable as spectral data'))
+      ingest_src.index('Not parseable as spectral data'),
+      'order check with structure dialog fallback')
 check('T7c Rettungsstufe dokumentiert Pflicht-Charakter (Metadaten-Untersuchung)',
       'Metadaten-Untersuchung ist Pflicht' in ingest_src)
 check('T7d Rettungsstufe nutzt Anti-Halluzinations-Belegpruefung (MetadataLLMService)',

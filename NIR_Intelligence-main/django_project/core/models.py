@@ -1079,6 +1079,44 @@ class SpectrumRecord(models.Model):
         }
 
 
+class StructureProfile(models.Model):
+    """Persistente Struktur-Erinnerung (Struktur-Klaerungsdialog Stufe B).
+
+    Wenn der Loader eine Datei nicht lesen konnte und der Nutzer (KI-
+    unterstuetzt) die Struktur geklaert hat, wird die bestaetigte
+    Interpretation unter der Muster-Signatur (normalisierte Spaltennamen)
+    gespeichert. Der naechste Datensatz desselben Formats laeuft damit
+    automatisch - keine neue Software-Version noetig (MO 1, Nutzer-
+    Anforderung 2026-10-08).
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='structure_profiles', verbose_name='User')
+    signature = models.CharField(max_length=32, db_index=True,
+                                 verbose_name='Spalten-Signatur')
+    hints = models.JSONField(default=dict,
+                             verbose_name='Bestätigte Struktur-Hinweise')
+    confirmed_count = models.IntegerField(
+        default=1, verbose_name='Bestätigungen')
+    last_file_name = models.CharField(max_length=255, blank=True,
+                                      verbose_name='Letzte Datei')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'signature'],
+                                    name='unique_user_structure_signature'),
+        ]
+        verbose_name = 'Struktur-Profil'
+        verbose_name_plural = 'Struktur-Profile'
+
+    def __str__(self):
+        return f"{self.signature} (x{self.confirmed_count})"
+
+
 class SensorDocument(models.Model):
     """One uploaded document for a spectrometer (OP53).
 
