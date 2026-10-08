@@ -551,7 +551,32 @@ def _ingest_single_file(record, file_path: str) -> Dict[str, Any]:
             logger.info('KI-Rescue ingest for %s (metadata from LLM pass)',
                         file_path)
             return ki_entry
-        entry.update({"usable": False, "reason": "Not parseable as spectral data (S3 loader)"})
+        # Struktur-Klaerungsdialog (Stufe B): statt stillem usable=False
+        # erhaelt der Eintrag die KI-Struktur-Analyse (Vorschlag +
+        # Klaerungsfragen). Der Nutzer klart im Dialog, die Antworten
+        # fuehren uber den Struktur-Endpunkt zu einem erneuten Load - und
+        # die bestaetigte Struktur wird als StructureProfile gelernt,
+        # damit das naechste File dieses Formats automatisch laeuft.
+        try:
+            from services.structure_dialog import ki_structure_proposal
+            proposal = ki_structure_proposal(file_path)
+        except Exception:
+            proposal = None
+        entry.update({
+            "usable": False,
+            "reason": "Not parseable as spectral data (S3 loader)",
+            "structure_dialog": {
+                "available": proposal is not None,
+                "signature": (proposal or {}).get("signature"),
+                "proposal": (proposal or {}).get("proposal"),
+                "questions": (proposal or {}).get("questions") or [
+                    {"field": "layout",
+                     "question": "Wie sind die Daten aufgebaut: zwei Spalten "
+                                 "(Wellenlaenge/Intensitaet) oder Kanaele als "
+                                 "Spalten (eine Messung je Zeile)?"},
+                ],
+            },
+        })
         return entry
 
     df = spectral.get("data")

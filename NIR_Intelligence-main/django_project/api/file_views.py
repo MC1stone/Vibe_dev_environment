@@ -1015,3 +1015,144 @@ class FileCrewReportView(TemplateView):
             'summary_json': json.dumps(crew_summary),
         }
         return render(request, self.template_name, context)
+
+
+class FileStructureDialogView(APIView):
+    """Struktur-Klaerungsdialog (Stufe B) fuer nicht-lesbare Datendateien.
+
+    GET  /api/files/<id>/structure/   -> KI-Struktur-Analyse: Vorschlag
+                                        (layout/spalten/delimiter, mit
+                                        Konfidenz + Beleg) und/oder
+                                        Klaerungsfragen; bekannte
+                                        StructureProfile (gelernte
+                                        Struktur) werden automatisch
+                                        vorgeschlagen.
+    POST /api/files/<id>/structure/   -> Antworten anwenden: Datei wird
+                                        mit den StructureHints erneut
+                                        geladen; Erfolg -> die Struktur
+                                        wird als StructureProfile
+                                        gelernt (naechstes File dieses
+                                        Formats laeuft automatisch).
+                                        Body: {'answers': {...}} oder
+                                        {'confirm_proposal': true}.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def _file_record(self, request, file_id):
+        from core.models import GenericFile
+        return GenericFile.objects.filter(
+            id=file_id, user=request.user).first()
+
+    def get(self, request, file_id):
+        record = self._file_record(request, file_id)
+        if record is None:
+            return Response({'error': gettext('File not found')},
+                            status=status.HTTP_404_NOT_FOUND)
+        file_path = record.get_file_path()
+        if not file_path or not os.path.exists(file_path):
+            return Response({'error': gettext('File not found on server')},
+                            status=status.HTTP_404_NOT_FOUND)
+        from services.structure_dialog import (
+            file_fingerprints, structure_signature, ki_structure_proposal)
+        fingerprints = file_fingerprints(file_path)
+        signature = structure_signature(fingerprints)
+        # Gelerntes Profil?
+        profile_hints = None
+        try:
+            from core.models import StructureProfile
+            profile = StructureProfile.objects.filter(
+                user=request.user, signature=signature).first()
+            if profile is not None:
+                profile_hints = profile.hints
+        except Exception:
+            profile_hints = None
+        ki = ki_structure_proposal(file_path)
+        return Response({
+            'file_id': str(record.id),
+            'file_name': record.name,
+            'signature': signature,
+            'known_profile': profile_hints,
+            'ki_proposal': (ki or {}).get('proposal'),
+            'questions': (ki or {}).get('questions') or [
+                {'field': 'layout',
+                 'question': gettext('Wie sind die Daten aufgebaut: zwei '
+                                     'Spalten (Wellenlaenge/Intensitaet) '
+                                     'oder Kanaele als Spalten?')}],
+            'fingerprints': fingerprints,
+        })
+
+    def post(self, request, file_id):
+        record = self._file_record(request, file_id)
+        if record is None:
+            return Response({'error': gettext('File not found')},
+                            status=status.HTTP_404_NOT_FOUND)
+        file_path = record.get_file_path()
+        if not file_path or not os.path.exists(file_path):
+            return Response({'error': gettext('File not found on server')},
+                            status=status.HTTP_404_NOT_FOUND)
+        from services.structure_dialog import (
+            apply_hints, hints_from_answers, file_fingerprints,
+            structure_signature)
+        from agents.data_preparation_agent import EnhancedDataPreparationAgent
+        from django.contrib import messages  # noqa: F401  (nur Symmetrie)
+
+        body = request.data or {}
+        answers = body.get('answers')
+        confirm = body.get('confirm_proposal')
+        if confirm:
+            ki = ki_structure_proposal_safe(file_path)
+            answers = (ki or {}).get('proposal') if ki else None
+        if not answers:
+            return Response({'error': gettext(
+                'answers or confirm_proposal required')},
+                status=status.HTTP_400_BAD_REQUEST)
+        hints = hints_from_answers(answers)
+        loader = EnhancedDataPreparationAgent(
+            input_directory=os.path.dirname(file_path) or '.',
+            output_directory=os.path.dirname(file_path) or '.',
+            temp_directory=os.path.dirname(file_path) or '.')
+        result = apply_hints(loader, file_path, hints)
+        if result is None or result.get('data') is None \
+                or len(result['data']) == 0:
+            return Response({
+                'success': False,
+                'error': gettext('Mit diesen Hinweisen konnte die Datei '
+                                 'ebenfalls nicht gelesen werden. Bitte '
+                                 'Antworten pruefen.'),
+                'hints': hints,
+            }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        # Erfolg -> Struktur lernen (StructureProfile upsert)
+        fingerprints = file_fingerprints(file_path)
+        signature = structure_signature(fingerprints)
+        learned = False
+        try:
+            from core.models import StructureProfile
+            profile, created = StructureProfile.objects.get_or_create(
+                user=request.user, signature=signature,
+                defaults={'hints': hints, 'last_file_name': record.name})
+            if not created:
+                profile.hints = hints
+                profile.confirmed_count += 1
+                profile.last_file_name = record.name
+                profile.save()
+            learned = True
+        except Exception:
+            learned = False
+        df = result['data']
+        preview = df.head(50)
+        return Response({
+            'success': True,
+            'message': gettext('Datei mit geklaerter Struktur gelesen.'),
+            'structure_learned': learned,
+            'signature': signature,
+            'rows': int(len(df)),
+            'columns': [str(c) for c in df.columns][:40],
+            'preview': preview.to_dict(orient='list'),
+            'metadata': result.get('metadata', {}),
+        })
+
+
+def ki_structure_proposal_safe(file_path):
+    from services.structure_dialog import ki_structure_proposal
+    return ki_structure_proposal(file_path)

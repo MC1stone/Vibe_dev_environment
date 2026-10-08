@@ -14,8 +14,8 @@ from .file_views import (
     FileCrewAnalysisView,
     MultipleFileAnalyzeView,
     FileCategoryView,
-    FileStatisticsView
-)
+    FileStatisticsView,
+    FileStructureDialogView)
 
 urlpatterns = [
     # File listing and details
@@ -32,6 +32,11 @@ urlpatterns = [
     # File download
     path('<uuid:file_id>/download/', FileDownloadView.as_view(), name='file-download'),
     
+    # Struktur-Klaerungsdialog (Stufe B): nicht-lesbare Dateien KI-gestuetzt
+    # klaeren und die Struktur fuer Folge-Uploads lernen
+    path('<uuid:file_id>/structure/', FileStructureDialogView.as_view(),
+         name='file-structure-dialog'),
+
     # File analysis
     path('<uuid:file_id>/analyze/', FileAnalyzeView.as_view(), name='file-analyze'),
     path('<uuid:file_id>/crew-analysis/', FileCrewAnalysisView.as_view(), name='file-crew-analysis'),
