@@ -528,6 +528,10 @@ class GenericFileHandlerAgent(BaseAgent):
             if not mime_type:
                 try:
                     mime_type = mimetypes.guess_type(file_path)[0]
+                    if not mime_type and file_path.lower().endswith('.7z'):
+                        # Python kennt application/x-7z-compressed erst
+                        # ab 3.14 in der Registry - hier selbst ergaenzen
+                        mime_type = 'application/x-7z-compressed'
                 except:
                     pass
             

@@ -828,7 +828,12 @@ class GenericFile(models.Model):
         if 'file_category' in metadata_dict:
             self.file_category = metadata_dict['file_category']
         if 'mime_type' in metadata_dict:
-            self.mime_type = metadata_dict['mime_type']
+            # NOT-NULL-Schutz (Upload-Vorfall 2026-10-08): Der
+            # GenericFileHandlerAgent liefert fuer unbekannte Typen (z.B.
+            # .7z ohne libmagic) None - das Feld hat keinen null-Wert
+            # zugelassen; None ueberschreibt nie einen gesetzten Wert.
+            if metadata_dict['mime_type']:
+                self.mime_type = metadata_dict['mime_type']
         if 'quality_score' in metadata_dict:
             self.quality_score = metadata_dict['quality_score']
         if 'quality_grade' in metadata_dict:
