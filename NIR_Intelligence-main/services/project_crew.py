@@ -533,6 +533,20 @@ def run_project_crew(project) -> Dict[str, Any]:
                       'file_extension': dataset.get('file_extension', ''),
                       'measurement_samples': dataset.get('measurement_samples') or [],
                       'calibration_samples': dataset.get('calibration_samples') or [],
+                      # Analyse-Modus + Klassen-Labels aus Phase 1: die
+                      # Agenten waehlen daraus datengetrieben ihre Methoden
+                      # (Klassifikation vs. Regression) - nicht die
+                      # Orchestrierung.
+                      **({'analysis_mode': dataset['metadata']['analysis_mode']}
+                         if (dataset.get('metadata') or {}).get('analysis_mode')
+                         else {}),
+                      **({'class_labels': dataset['metadata']['class_labels']}
+                         if (dataset.get('metadata') or {}).get('class_labels')
+                         else {}),
+                      **({'class_label_column':
+                          dataset['metadata']['class_label_column']}
+                         if (dataset.get('metadata') or {}).get('class_label_column')
+                         else {}),
                       **({'reference_values': dataset['reference_values']}
                          if dataset.get('reference_values') else {}),
                       **_meta},

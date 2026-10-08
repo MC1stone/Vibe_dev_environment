@@ -754,6 +754,13 @@ class NIRAnalysisCrew:
                             or request.metadata.get("measurement_samples")
                             or request.spectral_data),
                 "reference_values": self._extract_reference_values(request.metadata),
+                # Analyse-Modus aus den Datensaetzen (Phase 1) durchreichen:
+                # Die AGENTEN waehlen daraus ihre Methoden datengetrieben
+                # (Statistik: LDA/kNN bei classification; Kalibration:
+                # ehrliches not_applicable) - die Orchestrierung bleibt
+                # unverändert, es gibt keinen hartcodierten Analysepfad.
+                "analysis_mode": (request.metadata or {}).get("analysis_mode"),
+                "class_labels": (request.metadata or {}).get("class_labels"),
             }
             sensor_output = self.sensor_quality_agent.execute(
                 {**parallel_context, "sample_id": request.sample_id}
