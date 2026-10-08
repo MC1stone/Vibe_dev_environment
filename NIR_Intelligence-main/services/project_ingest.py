@@ -671,9 +671,23 @@ def _metadata_only_entry(file_record, file_path, loader) -> Dict[str, Any] | Non
     # 2026-10-08 (Kaffee-Datensatz): experiment_name/purpose sind jetzt
     # kanonische Felder - eine Beschreibungsdatei mit Versuchsname/Zweck
     # ist ein WERTVOLLER Kontext-Datensatz, auch wenn sie sonst nur eine
-    # description traegt. Nur völlig leere Extraktionen werden verworfen.
+    # description traegt. Verworfen wird weiterhin ehrlich:
+    # (a) gar keine Extraktion, (b) NUR eine description, die aus
+    # Binaermuell stammt (hoher Anteil undruckbarer Zeichen) - Binaer-
+    # Rauschen ist keine Metadatenquelle (OP28 T5m).
     if not metadata:
         return None
+    only_description = set(metadata.keys()) == {"description"}
+    if only_description:
+        text = str(metadata.get("description") or "")
+        # Binaermuell-Erkennung: Anteil einfacher Textzeichen (ASCII-
+        # Buchstaben/Ziffern/Satz + Leerzeichen/Umbruch). Zufallsbytes
+        # erzeugen viele Steuer- und Exotic-Unicode-Zeichen; echter
+        # Prosa-Text liegt fast immer bei >0.9 (OP28 T5m).
+        text_chars = sum(1 for ch in text
+                         if ch.isalnum() or ch in " \n\r\t.,;:!?-_()/'\"")
+        if not text or text_chars / len(text) < 0.75:
+            return None
     _sync_recommended_aliases(metadata)
     entry = {
         "file_id": str(file_record.id),
