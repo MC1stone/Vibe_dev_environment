@@ -41,6 +41,12 @@ CANONICAL_FIELDS = [
     "temperature", "humidity", "location", "integration_time",
     "scan_count", "resolution", "wavelength_range", "serial_number",
     "notes", "description",
+    # Versuchskontext (2026-10-08, Kaffee-Datensatz): Name und Zweck des
+    # Versuchs stehen in der beschreibenden Datei - ohne diese Felder
+    # verwirft der Ingest reine Beschreibungsdateien und die Messdaten
+    # wissen nicht, worum der Versuch geht (Sortenunterscheidung statt
+    # Kalibration).
+    "experiment_name", "purpose",
 ]
 
 _EXTRACTION_PROMPT = """Du extrahierst Mess-Metadaten aus dem Text einer Spektrometer-Datei.
@@ -57,7 +63,8 @@ Antworte NUR mit JSON in exakt dieser Struktur:
 
 Kanonische Felder: sample_id, operator_name, instrument_type, timestamp,
 temperature, humidity, location, integration_time, scan_count,
-resolution, wavelength_range, serial_number, notes, description.
+resolution, wavelength_range, serial_number, notes, description,
+experiment_name, purpose.
 
 Text aus der Datei "{file_name}":
 {text}
