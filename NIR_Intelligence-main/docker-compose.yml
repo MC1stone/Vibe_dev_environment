@@ -200,7 +200,12 @@ services:
       ilias:
         condition: service_started
     networks:
-      - nir_network
+      nir_network:
+        # RFC-1034-Host-Alias ohne Unterstrich: Djangos Host-Validierung
+        # lehnt 'django_app' ab (Vorfall 2026-10-08: background_crew-Health-
+        # check -> DisallowedHost -> 'platform ok: 3/5 degraded: django').
+        aliases:
+          - django-app
 
   # Background crew runner (OP6): the agent crew operates the platform
   # interfaces (Django, PostgreSQL, Qdrant, ILIAS, MCP) in the background.
@@ -218,7 +223,7 @@ services:
       # ueber die Service-Namen, nicht localhost (Vorfall 2026-10-07:
       # 'platform ok: 3/5 degraded: django, postgresql' - der Worker konnte
       # Django/DB nicht erreichen und verarbeitete keine Projekt-Jobs).
-      - DJANGO_BASE_URL=http://django_app:8000
+      - DJANGO_BASE_URL=http://django-app:8000
       - DATABASE_URL=postgres://nir_user:${POSTGRES_PASSWORD:-nir_password_change_me}@postgresql:5432/nir_mistral
       - DJANGO_DB_NAME=nir_mistral
       - DJANGO_DB_USER=nir_user
