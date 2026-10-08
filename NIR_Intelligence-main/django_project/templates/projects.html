@@ -378,6 +378,23 @@
         });
     }
 })();
+    // Modal-Reset (2026-10-08): Abbrechen/Seitenwechsel/Schliessen leert
+    // das Formular und den Status, damit der naechste Oeffnen sauber startet
+    // (User-Befund: 'Modal loescht sich nicht nach Abbrechen').
+    var uploadModalEl = document.getElementById('projectUploadModal');
+    function resetProjectUploadModal() {
+        var nameInput = document.getElementById('projectName');
+        var fileInput = document.getElementById('projectFiles');
+        if (nameInput) nameInput.value = '';
+        if (fileInput) fileInput.value = '';
+        statusBox.style.display = 'none';
+        statusBox.innerHTML = '';
+        createBtn.disabled = false;
+    }
+    if (uploadModalEl) {
+        uploadModalEl.addEventListener('hidden.bs.modal', resetProjectUploadModal);
+    }
+
     // Deep-Link: /projects/#projectUploadModal oeffnet den Upload-Dialog
     // (Dashboard-/Nav-Link 'Neues Projekt anlegen').
     if (window.location.hash === '#projectUploadModal') {

@@ -52,6 +52,7 @@ erneut gegen die jeweilige Quelle prüfen).
 |---|---|---|---|
 | opusfc | MIT | Als optionale Dependency für OPUS-`.d`-Import zulässig (`services/opus_reader.py`, lazy import; ohne Installation greift der content-driven Fallback) | bei M2-Umsetzung verifiziert |
 | brukeropusreader | GPLv3 | **Verworfen** — Copyleft-Verstoß gegen die eigene Regel | bei M2-Umsetzung verifiziert |
+| py7zr | MIT | 7z-Archiv-Import (lazy, degradiert ohne Installation) | 2026-10-08 |
 | brukeropus | MIT (PyPI) | Nicht genutzt; Alternative falls opusfc nicht genügt | bei M2-Umsetzung verifiziert |
 
 Der JCAMP-DX-Parser (`services/jcamp_parser.py`) ist eigenständig gegen die
