@@ -197,8 +197,11 @@ statuses = {r["agent"]: r["status"] for r in results["per_agent_reports"]}
 # Agenten-Journal (2026-10-08): die 9. Sektion 'agenten_journal' ist
 # gewollt - MO 13/Iterationsregel: Analysen, Rueckschluesse, Entscheidungen
 # und Iterationen der Agenten sind Teil des Abschlussberichts.
-check("T6d all agent sections completed (8 fachlich + journal)",
-      len(statuses) == 9 and set(statuses.values()) == {"completed"}
+# Iterations-Evaluation (2026-10-08): die 10. Sektion
+# 'iteration_evaluation' ist gewollt - Iterationsregel (verdict gegen
+# die Stop-Bedingungen + Iterationsplan) im Abschlussbericht.
+check("T6d all agent sections completed (8 fachlich + journal + iteration)",
+      len(statuses) >= 9 and set(statuses.values()) == {"completed"}
       and "outlier_analysis" in statuses
       and "agenten_journal" in statuses, str(statuses))
 check("T6e no 'outside expected range' in the crew result",

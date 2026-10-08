@@ -108,6 +108,9 @@ class AnalysisResult:
     processing_time: float = 0.0
     privacy_level: PrivacyLevel = PrivacyLevel.LOCAL_ONLY
     user_id: Optional[str] = None
+    # Iterationsregel: Bewertung gegen die Stop-Bedingungen + Plan fuer
+    # die naechste Iteration (siehe services/iteration_evaluator.py)
+    iteration_evaluation: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -972,6 +975,41 @@ class NIRAnalysisCrew:
                     result.warnings.extend(metadata_data["validation_errors"])
 
             result.processing_time = time.time() - start_time
+
+            # ------------------------------------------------------------
+            # Iterationsregel (Mission Statement): Analyse -> Evaluation ->
+            # Optimierung -> Reanalyse bis ERRORS=0, CRITICAL_WARNINGS=0,
+            # OPEN_CHANGE_REQUESTS=0. Die Evaluation bewertet das Result
+            # gegen die Stop-Bedingungen und liefert den datengestuetzten
+            # Iterationsplan (services/iteration_evaluator.py); das
+            # Ergebnis geht in das Result und damit in Journal/Report.
+            try:
+                from services.iteration_evaluator import evaluate_iteration
+                iteration_eval = evaluate_iteration(
+                    result,
+                    iteration=int(getattr(request, 'iteration', 0) or 0),
+                    max_iterations=int(getattr(self, 'max_iterations', 100)
+                                       or 100))
+                result.iteration_evaluation = iteration_eval
+                for step in iteration_eval.get("iteration_plan", []):
+                    self.journal_entry(
+                        "iteration",
+                        f"Iterations-Plan (Schritt {step.get('step')}): "
+                        f"{step.get('finding', '')}",
+                        conclusion="Bewertung gegen die Stop-Bedingungen "
+                                  "der Iterationsregel",
+                        action=step.get("action", ""),
+                        iteration=iteration_eval.get("iteration", 0))
+                self.logger.info(
+                    "Iterations-Evaluation: verdict=%s (errors=%s, "
+                    "critical_warnings=%s, open_change_requests=%s)",
+                    iteration_eval.get("verdict"),
+                    iteration_eval.get("errors"),
+                    len(iteration_eval.get("critical_warnings") or []),
+                    len(iteration_eval.get("open_change_requests") or []))
+            except Exception as eval_exc:
+                self.logger.warning(
+                    "Iteration evaluation failed (non-fatal): %s", eval_exc)
 
             # Log completion
             self.logger.info(f"Analysis completed for sample: {request.sample_id}")
