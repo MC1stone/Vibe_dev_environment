@@ -120,6 +120,7 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
     intensities = [s[1] for s in series]
 
     reference_columns = []
+    text_reference_columns = []
     for col in df.columns:
         if col in (c for c, _ in channels):
             continue
@@ -132,6 +133,18 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
                 'min': float(values.min()),
                 'max': float(values.max()),
             })
+        else:
+            # Nicht-numerische Spalte (z.B. 'Messobjekt' = Kaffeesorte,
+            # Proben-Name): Klassen-Label-Kandidat fuer die
+            # Klassifikations-Erkennung - numerische Spalten sind fuer
+            # Kategorien unbrauchbar, deshalb getrennt erfasst.
+            as_text = df[col].astype(str)
+            if 2 <= as_text.nunique() <= 30 and as_text.str.len().mean() <= 40:
+                text_reference_columns.append({
+                    'name': col,
+                    'count': int(len(as_text)),
+                    'unique_values': int(as_text.nunique()),
+                })
 
     # Measurement replicas for the sensor quality agent: replicate-based
     # noise/drift/offset checks are meaningful, channel-shape-based ones are
@@ -219,6 +232,31 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
             target_name = str(ref['name'])
             break
 
+    # Klassifikations-Erkennung (2026-10-08, Kaffee-Datensatz): eine
+    # nicht-numerische Referenzspalte mit wenigen wiederholten Werten
+    # (z.B. 'Messobjekt' = Kaffeesorte) ist ein KLASSEN-LABEL, kein
+    # numerischer Zielwert. analysis_mode='classification' steuert die
+    # Folgeauswertung (Sorten unterscheiden statt Kalibration); die
+    # Klassen-Labels werden fuer Klassifikations-Samples mitgefuehrt.
+    class_label_column = None
+    class_labels = None
+    analysis_mode = 'regression' if target_name else 'unsupervised'
+    if text_reference_columns:
+        # Text-Label-Spalte (Sorte/Probe) hat Vorrang: Kategorien sind der
+        # fachliche Zweck des Versuchs (z.B. Kaffeesorten unterscheiden).
+        best_text = max(text_reference_columns, key=lambda r: r['unique_values'])
+        class_label_column = best_text['name']
+        class_labels = df[class_label_column].astype(str).unique().tolist()
+        analysis_mode = 'classification'
+    elif reference_columns:
+        for ref in reference_columns:
+            values = df[ref['name']].astype(str)
+            num_unique = values.nunique()
+            if 2 <= num_unique <= 30 and values.str.len().mean() <= 40:
+                class_label_column = str(ref['name'])
+                class_labels = values.unique().tolist()
+                analysis_mode = 'classification'
+                break
     return {
         'usable': True,
         'dataset_type': 'measurement',
@@ -239,6 +277,10 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
             'channel_names': [c for c, _ in channels],
             'saturated_measurements': saturated_measurements,
             'target_name': target_name,
+            'analysis_mode': analysis_mode,
+            **({'class_label_column': class_label_column,
+                'class_labels': class_labels}
+               if class_label_column else {}),
             **({'reference_values': reference_values}
                if reference_values is not None else {}),
         },
@@ -626,7 +668,11 @@ def _metadata_only_entry(file_record, file_path, loader) -> Dict[str, Any] | Non
         metadata = loader._extract_text_metadata(file_path)
     except Exception:
         return None
-    if not metadata or all(key == "description" for key in metadata):
+    # 2026-10-08 (Kaffee-Datensatz): experiment_name/purpose sind jetzt
+    # kanonische Felder - eine Beschreibungsdatei mit Versuchsname/Zweck
+    # ist ein WERTVOLLER Kontext-Datensatz, auch wenn sie sonst nur eine
+    # description traegt. Nur völlig leere Extraktionen werden verworfen.
+    if not metadata:
         return None
     _sync_recommended_aliases(metadata)
     entry = {
@@ -739,7 +785,12 @@ def _ki_forward_questions(entry: Dict[str, Any],
                         for q in questions if "thema '" in q}
         # Zielwert-Thema: nur fragen, wenn weder Metadaten noch die
         # Messwertlisten einen Rueckschluss zulassen (target_name fehlt und
-        # keine geeignete Referenzspalte existiert).
+        # keine geeignete Referenzspalte existiert). Bei
+        # analysis_mode='classification' (Kategorien-Versuch, z.B.
+        # Kaffeesorten unterscheiden) ist die Kalibrationsziel-Frage
+        # fachlich falsch - die Klassen-Labels sind das Analyseziel.
+        if metadata.get("analysis_mode") == "classification":
+            asked_topics.add("zielwert")  # Thema gilt als geklaert
         if not (metadata.get("target_name") or entry.get("reference_values")):
             if "zielwert" not in asked_topics:
                 std = sorted({name for name, req in (standards or {}).items()
