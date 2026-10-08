@@ -312,6 +312,50 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
         sections.append(cal_section)
     sections.append(_similarity_section(project, dataset))
     sections.append(_outlier_section(dataset))
+    # Agenten-Journal & Iterationen (MO 13, Iterationsregel): die Journale
+    # der beteiligten Agenten werden als eigene Berichts-Sektion gefuehrt -
+    # Analysen, Rueckschluesse, Entscheidungen und angebotene
+    # Verbesserungsoptionen sind damit im Abschlussbericht nachvollziehbar.
+    journal_entries = []
+    for agent in (getattr(crew, 'statistical_analysis_agent', None),
+                  getattr(crew, 'neural_network_agent', None),
+                  getattr(crew, 'calibration_agent', None),
+                  getattr(crew, 'sensor_quality_agent', None),
+                  getattr(crew, 'metadata_quality_agent', None),
+                  getattr(crew, 'spectral_analysis_agent', None)):
+        if agent is None:
+            continue
+        for entry in list(getattr(agent, 'journal', []) or []):
+            journal_entries.append(_json_safe(entry))
+    # Journale auch an die jeweiligen Fach-Sektionen anhaengen (data.journal)
+    for section in sections:
+        agent_name = section.get('agent')
+        for agent in (getattr(crew, 'statistical_analysis_agent', None),
+                      getattr(crew, 'calibration_agent', None),
+                      getattr(crew, 'sensor_quality_agent', None),
+                      getattr(crew, 'metadata_quality_agent', None)):
+            if agent is None:
+                continue
+            if agent.name == agent_name:
+                section['data'] = dict(section.get('data') or {})
+                section['data']['journal'] = _json_safe(
+                    list(getattr(agent, 'journal', []) or []))
+                break
+    if journal_entries:
+        sections.append({
+            'agent': 'agenten_journal',
+            'title': 'Agenten-Journal & Iterationen (MO 13)',
+            'status': 'completed',
+            'data': {
+                'entries': journal_entries,
+                'entry_count': len(journal_entries),
+                'note': ('Jeder Agent dokumentiert seine Analysen, '
+                         'Rueckschluesse und Entscheidungen; '
+                         'Verbesserungsoptionen werden angeboten und die '
+                         'Auswahl als naechste Iteration ausgefuehrt und '
+                         'dokumentiert (Iterationsregel).'),
+            },
+        })
     return sections
 
 

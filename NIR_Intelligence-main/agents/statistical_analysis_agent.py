@@ -351,7 +351,59 @@ class StatisticalAnalysisAgent(BaseAgent):
                     results["methods_skipped"].append(
                         {"method": method_name, "reason": str(exc)})
 
+            # Agenten-Journal (MO 13): angewandte Methoden, Ergebnisse und
+            # konkrete Verbesserungsoptionen dokumentieren
+            self.journal_entry(
+                "analyse",
+                f"Statistische Methoden auf {matrix.shape[0]} Messungen x "
+                f"{matrix.shape[1]} Kanaele: "
+                f"{', '.join(results['methods_applied']) or 'keine'}"
+                + (f"; uebersprungen: "
+                   f"{', '.join(s['method'] for s in results['methods_skipped'])}"
+                   if results['methods_skipped'] else ""),
+                iteration=0)
+            for method_name, outcome in results["method_results"].items():
+                conclusion = outcome.get("summary") or outcome.get("status", "ok")
+                self.journal_entry(
+                    "schlussfolgerung",
+                    f"{method_name}: {conclusion}",
+                    iteration=0)
+            options = []
+            if any(s.get("reason") == "reference values required"
+                   for s in results["methods_skipped"]):
+                options.append({
+                    "id": "add_reference_values",
+                    "label": "Referenzwerte ergänzen",
+                    "description": "PLS/PCR benötigen Referenzwerte (z. B. "
+                                   "Brix) je Messung, um die "
+                                   "Kalibrationsmethoden zu ermöglichen.",
+                    "expected_effect": "Ermöglicht PLS/PCR und damit eine "
+                                       "quantitative Kalibration.",
+                })
+            if matrix.shape[0] < 10:
+                options.append({
+                    "id": "more_samples",
+                    "label": "Mehr Messungen aufnehmen",
+                    "description": f"Aktuell nur {matrix.shape[0]} Messungen - "
+                                   "PCA/Cluster-Ergebnisse sind bei kleinen "
+                                   "Stichproben wenig belastbar.",
+                    "expected_effect": "Stabilere Hauptkomponenten und "
+                                       "Cluster-Strukturen.",
+                })
+            if options:
+                self.journal_entry(
+                    "entscheidung",
+                    "Verbesserungsoptionen zur Auswahl angeboten",
+                    action="Option auswählen - die Auswahl wird als "
+                           "nächste Iteration dokumentiert und ausgeführt.",
+                    iteration=0,
+                    options=options)
             results["status"] = "ok"
+            results["improvement_options"] = [
+                {"id": o["id"], "label": o["label"],
+                 "description": o["description"],
+                 "expected_effect": o["expected_effect"]}
+                for o in options]
             self.status = AgentStatus.COMPLETED
             return self._create_success_output(results)
         except Exception as e:

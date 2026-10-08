@@ -852,6 +852,95 @@ class EnhancedDataPreparationAgent(BaseAgent):
             "metadata": metadata,
         }
 
+    _WAVELENGTH_SUFFIX_RE = None  # lazy import cache
+
+    def _extract_channel_wavelengths(self, df: pd.DataFrame) -> Optional[Dict[str, float]]:
+        """Wide-format detection: column names carrying a wavelength suffix
+        like A_610, B_680, K_900 (channel_wavelength, nm) mark one spectrum
+        per ROW (one sample per line, channels as columns). Returns the
+        mapping channel-column -> wavelength when at least two such
+        channels exist, else None."""
+        import re
+        mapping = {}
+        for col in df.columns:
+            match = re.search(r'[_\s-]?(\d{3,4}(?:\.\d+)?)\s*(?:nm)?\s*$', str(col).strip())
+            if match:
+                wavelength = float(match.group(1))
+                if 200.0 <= wavelength <= 3000.0:
+                    mapping[str(col)] = wavelength
+        return mapping if len(mapping) >= 2 else None
+
+    def _load_wide_format_spectra(self, file_path: str, df: pd.DataFrame,
+                                  channel_map: Dict[str, float]) -> Optional[Dict[str, Any]]:
+        """Expand a wide-format spectrum table (one sample per row, channel
+        columns A_610/L_940...) into the unified long schema: one row per
+        (sample, wavelength, intensity). Sample id column = first
+        non-channel, non-numeric column; reference columns (e.g. Brix)
+        are preserved per sample. Returns None when expansion fails."""
+        try:
+            import pandas as pd_inner
+            channel_cols = list(channel_map.keys())
+            sample_col = None
+            reference_cols = []
+            for col in df.columns:
+                if col in channel_cols:
+                    continue
+                coerced = pd.to_numeric(df[col], errors='coerce')
+                if coerced.notna().mean() > 0.8:
+                    df[col] = coerced
+                    reference_cols.append(str(col))
+                elif sample_col is None:
+                    sample_col = str(col)
+            # Keine Textspalte: generierte Probe-IDs statt der ersten
+            # (numerischen) Spalte - eine Referenzspalte wie Brix darf nie
+            # zur Probe-ID werden.
+            if sample_col is None:
+                sample_col = None
+            frames = []
+            for idx, row in df.iterrows():
+                sample_id = str(row[sample_col]) if sample_col is not None else f"probe_{idx + 1}"
+                rows = []
+                for col in channel_cols:
+                    value = row[col]
+                    try:
+                        value = float(value)
+                    except (TypeError, ValueError):
+                        try:
+                            value = float(self._normalise_decimal_string(str(value)))
+                        except Exception:
+                            continue
+                    rows.append({"probe": sample_id,
+                                 "wavelength": channel_map[col],
+                                 "intensity": value})
+                if rows:
+                    ref = {c: row[c] for c in reference_cols}
+                    for r in rows:
+                        r.update(ref)
+                    frames.append(pd_inner.DataFrame(rows))
+            if not frames:
+                return None
+            long_df = pd.concat(frames, ignore_index=True)
+            metadata = {
+                "wide_format": True,
+                "channel_count": len(channel_cols),
+                "sample_count": int(df.shape[0]),
+                "wavelengths_nm": sorted(set(channel_map.values())),
+                "reference_columns": reference_cols,
+                "sample_column": sample_col,
+            }
+            metadata.update(self._extract_text_metadata(file_path))
+            return {
+                "data": long_df,
+                "source_file": file_path,
+                "format": os.path.splitext(file_path)[1].lower() or ".csv",
+                "wavelength_column": "wavelength",
+                "intensity_column": "intensity",
+                "metadata": metadata,
+            }
+        except Exception as e:
+            self.logger.warning(f"Wide-format expansion failed for {file_path}: {e}")
+            return None
+
     def _load_table_spectral(self, file_path: str) -> Optional[Dict[str, Any]]:
         """Generic table parse for any delimited text file.
 
@@ -887,6 +976,12 @@ class EnhancedDataPreparationAgent(BaseAgent):
             # else is metadata. Delimiter-aware, so '900,15200' stays two
             # values (no German-decimal token merge).
             return self._load_line_filtered_spectral(file_path)
+        # Wide-format check BEFORE the XY interpretation (see CSV loader)
+        channel_map = self._extract_channel_wavelengths(best_df)
+        if channel_map:
+            expanded = self._load_wide_format_spectra(file_path, best_df, channel_map)
+            if expanded is not None:
+                return expanded
         df = self._identify_spectral_columns(best_df)
         if df is None:
             return self._load_line_filtered_spectral(file_path)
@@ -1284,6 +1379,17 @@ class EnhancedDataPreparationAgent(BaseAgent):
         except Exception as e:
             self.logger.warning(f"CSV re-parse with ';' delimiter failed: {e}")
         semicolon_score = self._score_delimiter_parse(semicolon_df)
+        # Wide-format check (one spectrum per row, channels A_610/L_940...):
+        # evaluate BEFORE the XY interpretation - a wide table has no
+        # wavelength axis column and would otherwise be misread as one.
+        wide_candidates = [d for d in (df, semicolon_df)
+                          if d is not None and not d.empty]
+        for wide_df in wide_candidates:
+            channel_map = self._extract_channel_wavelengths(wide_df)
+            if channel_map:
+                expanded = self._load_wide_format_spectra(file_path, wide_df, channel_map)
+                if expanded is not None:
+                    return expanded
         if semicolon_score > comma_score:
             df = semicolon_df
             self.logger.info(
