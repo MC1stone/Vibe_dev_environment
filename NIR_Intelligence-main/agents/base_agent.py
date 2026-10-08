@@ -47,6 +47,10 @@ class AgentOutput:
     errors: List[AgentError] = field(default_factory=list)
     version: str = "1.0.0"
     dependencies: List[str] = field(default_factory=list)
+    # Agenten-Journal (MO 13, Iterationsregel): jeder Agent dokumentiert
+    # seine Analysen, Rueckschluesse und Iterationen strukturiert, damit
+    # der Abschlussbericht nachvollziehbar ist.
+    journal: List[Dict[str, Any]] = field(default_factory=list)
 
 
 class BaseAgent:
@@ -60,9 +64,57 @@ class BaseAgent:
         self.logger = logging.getLogger(f"Agent.{name}")
         self.dependencies: List[str] = []
         self.config = kwargs.get("config", {})
+        # Agenten-Journal: Analysen/Rueckschluesse/Iterationen dieses Agents
+        self.journal: List[Dict[str, Any]] = []
 
         # Initialize logging
         self._setup_logging()
+
+    def journal_entry(self, phase: str, analysis: str,
+                      conclusion: str = "", action: str = "",
+                      iteration: int = 0,
+                      options: List[Dict[str, Any]] = None) -> None:
+        """Document one analysis step with its conclusion (MO 13).
+
+        phase: 'analyse' | 'schlussfolgerung' | 'iteration' | 'entscheidung'
+        analysis: what was examined (data, method, scope)
+        conclusion: the drawn conclusion / reasoning
+        action: resulting action or recommendation
+        iteration: iteration counter (0 = first pass, Iterationsregel)
+        options: improvement options offered to the user/crew, each as
+                  {'id', 'label', 'description', 'expected_effect'}
+        """
+        import datetime
+        self.journal.append({
+            "agent": self.name,
+            "phase": phase,
+            "analysis": analysis,
+            "conclusion": conclusion,
+            "action": action,
+            "iteration": iteration,
+            "options": options or [],
+            "timestamp": datetime.datetime.now().isoformat(),
+        })
+
+    def journal_decision(self, iteration: int, selected_option_id: str,
+                         rationale: str, outcome: str = "") -> None:
+        """Document a made improvement decision as its own iteration entry.
+
+        Called when a previously offered option (see journal_entry with
+        options) is selected and executed: the selection, its rationale and
+        the outcome become part of the documented iteration chain.
+        """
+        import datetime
+        self.journal.append({
+            "agent": self.name,
+            "phase": "iteration",
+            "analysis": f"Ausgewaehlte Verbesserungsoption: {selected_option_id}",
+            "conclusion": rationale,
+            "action": outcome,
+            "iteration": iteration,
+            "options": [],
+            "timestamp": datetime.datetime.now().isoformat(),
+        })
 
     def _setup_logging(self):
         """Setup agent-specific logging"""
@@ -127,11 +179,12 @@ class BaseAgent:
         return AgentOutput(agent_name=self.name, status=AgentStatus.ERROR, errors=[error])
 
     def _create_success_output(self, data: Dict[str, Any] = None) -> AgentOutput:
-        """Create a successful AgentOutput"""
+        """Create a successful AgentOutput (carries the agent journal)"""
         return AgentOutput(
             agent_name=self.name,
             status=AgentStatus.COMPLETED,
             data=data or {},
             version=self.version,
             dependencies=self.dependencies,
+            journal=list(self.journal),
         )

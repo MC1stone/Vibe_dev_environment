@@ -194,9 +194,13 @@ project.crew_results = None
 project.final_report_path = None
 results = run_project_crew(project)
 statuses = {r["agent"]: r["status"] for r in results["per_agent_reports"]}
-check("T6d all eight agent sections completed",
-      len(statuses) == 8 and set(statuses.values()) == {"completed"}
-      and "outlier_analysis" in statuses, str(statuses))
+# Agenten-Journal (2026-10-08): die 9. Sektion 'agenten_journal' ist
+# gewollt - MO 13/Iterationsregel: Analysen, Rueckschluesse, Entscheidungen
+# und Iterationen der Agenten sind Teil des Abschlussberichts.
+check("T6d all agent sections completed (8 fachlich + journal)",
+      len(statuses) == 9 and set(statuses.values()) == {"completed"}
+      and "outlier_analysis" in statuses
+      and "agenten_journal" in statuses, str(statuses))
 check("T6e no 'outside expected range' in the crew result",
       all("outside expected range" not in str(results).lower() for _ in [0]))
 report_html = Path(project.final_report_path).read_text(encoding="utf-8")

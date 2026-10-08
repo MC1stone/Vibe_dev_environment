@@ -330,15 +330,21 @@ pd.DataFrame({
 out = mcp.execute({'operation': 'ingest', 'file_path': wide_path})
 d = out.data
 prep = d.get('prepared_dataset') or {}
+# Wide-Format-Loader (2026-10-08): Spaltennamen mit Wellenlaengen-Suffix
+# (ch_410/A_610) liefern ECHTE nm-Wellenlaengen statt channel_index;
+# Referenzspalten (Brix) sind kein Kanal mehr.
 check('T9a MCP ingest extracts the wide measurement matrix',
-      d.get('status') == 'ok' and prep.get('num_channels') == 4
-      and prep.get('num_measurements') == 4,
+      d.get('status') == 'ok' and prep.get('num_channels') == 3
+      and prep.get('num_measurements') == 4
+      and prep.get('wavelength_unit') == 'nm'
+      and prep.get('wavelengths') == [410.0, 500.0, 600.0],
       f"prep={ {k: v for k, v in prep.items() if k != 'measurements'} }")
 check('T9b wide layout is flagged in the metadata',
       (d.get('metadata') or {}).get('dataset_layout') == 'wide_measurement_matrix',
       f"meta={d.get('metadata')}")
 check('T9c Brix is not misread as a wavelength axis',
-      prep.get('wavelength_unit') == 'channel_index', f"prep={prep.get('wavelength_unit')}")
+      prep.get('wavelength_unit') == 'nm' and 'Brix' in prep.get('reference_columns', []),
+      f"prep_unit={prep.get('wavelength_unit')} refs={prep.get('reference_columns')}")
 
 # ---------------------------------------------------------------- T10 (upload whitelist removed)
 views = (PROJECT / 'django_project' / 'api' / 'views.py').read_text(encoding='utf-8')

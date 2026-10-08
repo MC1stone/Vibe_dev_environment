@@ -244,6 +244,20 @@ class CalibrationAgent(BaseAgent):
                     results["methods_deferred"].append(
                         {"method": name, "reason": outcome.get("reason", "skipped")})
 
+            # Agenten-Journal (MO 13): Methodenvergleich dokumentieren
+            self.journal_entry(
+                "analyse",
+                f"Methodenvergleich auf {matrix.shape[0]} Messungen x "
+                f"{matrix.shape[1]} Kanaele: "
+                f"{', '.join(results['method_results'].keys())}",
+                iteration=0)
+            for name, outcome in results["method_results"].items():
+                self.journal_entry(
+                    "schlussfolgerung",
+                    f"{name}: CV R2={outcome['mean_r2']:.3f}, "
+                    f"RMSECV={outcome.get('rmse_cv', float('nan')):.4f}, "
+                    f"RPD={outcome.get('rpd') or 'n/a'}",
+                    iteration=0)
             best_method = None
             best_r2 = None
             for name, outcome in results["method_results"].items():
@@ -255,6 +269,37 @@ class CalibrationAgent(BaseAgent):
                 results["best_r2_score"] = best_r2
                 threshold = float(self.performance_thresholds.get("r2", 0.8))
                 results["thresholds_met"] = bool(best_r2 >= threshold)
+                # Entscheidung dokumentieren (Iterationsregel: nicht erreichter
+                # Schwellwert fuehrt zu Empfehlung der Nachbesserung)
+                verdict = ("Schwellwert erreicht" if results["thresholds_met"]
+                           else f"Schwellwert R2>={threshold} NICHT erreicht - "
+                                "Kalibration nur eingeschraenkt nutzbar")
+                improvement_options = []
+                if not results["thresholds_met"]:
+                    improvement_options = [
+                        {"id": "more_calibration_samples",
+                         "label": "Mehr Kalibrationsmessungen",
+                         "description": "Messumfang erweitern und die "
+                                        "Kalibration erneut durchfuehren.",
+                         "expected_effect": "Robustere Kreuzvalidierung, "
+                                            "hoehere R2/RLPD-Erwartung."},
+                        {"id": "preprocessing_variant",
+                         "label": "Präprozessing-Variante testen",
+                         "description": "SNV/MSC/Savitzky-Golay-Kombination "
+                                        "variieren und neu kalibrieren.",
+                         "expected_effect": "Streuungs-/Baseline-Effekte "
+                                            "reduzieren, R2 verbessern."},
+                    ]
+                self.journal_entry(
+                    "entscheidung",
+                    f"Bestes Modell: {best_method} (R2={best_r2:.3f})",
+                    conclusion=verdict,
+                    action=("Kalibration freigeben" if results["thresholds_met"]
+                            else "Verbesserungsoption waehlen: "
+                                 + '; '.join(o['label'] for o in improvement_options)),
+                    iteration=0,
+                    options=improvement_options)
+                results["improvement_options"] = improvement_options
 
             unique_refs = np.unique(y)
             if 3 <= unique_refs.size < y.size * 0.9 and y.size >= 8:

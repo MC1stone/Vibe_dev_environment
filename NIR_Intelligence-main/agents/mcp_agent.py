@@ -147,6 +147,43 @@ class MCPAgent(BaseAgent):
                                 re.IGNORECASE)
         channel_cols = [c for c in df.columns
                         if channel_re.match(str(c).strip())]
+        # Fast-Path Wide-Format (data_preparation_agent): der Loader hat die
+        # Kanaltabelle (Spaltennamen mit Wellenlaengen-Suffix wie ch_600 /
+        # A_610) bereits ins Long-Schema expandiert - Wellenlaengen sind dann
+        # echt (nm) statt channel_index, und der MCP-Ingest uebernimmt das
+        # Ergebnis direkt (kein zweites Mal interpretieren).
+        if (spectral.get("metadata") or {}).get("wide_format"):
+            wide_meta = spectral["metadata"]
+            long_df = spectral["data"]
+            wavelength_values = sorted({float(w) for w in
+                                        long_df["wavelength"].dropna().unique()})
+            prepared = {
+                "channels": [str(c) for c in long_df.columns],
+                "num_channels": wide_meta.get("channel_count", len(wavelength_values)),
+                "num_measurements": wide_meta.get("sample_count",
+                                                  long_df["probe"].nunique()
+                                                  if "probe" in long_df.columns
+                                                  else len(long_df)),
+                "wavelength_unit": "nm",
+                "wavelengths": wavelength_values,
+                "reference_columns": wide_meta.get("reference_columns", []),
+                "sample_column": wide_meta.get("sample_column"),
+                "ready_for": "statistical_analysis",
+            }
+            metadata["dataset_layout"] = "wide_measurement_matrix"
+            metadata.update({k: v for k, v in wide_meta.items()
+                             if k not in ("description",)})
+            return {
+                "operation": "ingest",
+                "file_path": file_path,
+                "format": spectral.get("format"),
+                "source_file": os.path.basename(file_path),
+                "status": "ok",
+                "metadata": metadata,
+                "wavelength_column": spectral.get("wavelength_column"),
+                "intensity_column": spectral.get("intensity_column"),
+                "prepared_dataset": prepared,
+            }
         if len(channel_cols) >= 3:
             numeric_cols = [c for c in df.columns
                             if pd.api.types.is_numeric_dtype(df[c])]
