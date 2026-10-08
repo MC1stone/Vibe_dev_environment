@@ -341,6 +341,24 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
                 section['data']['journal'] = _json_safe(
                     list(getattr(agent, 'journal', []) or []))
                 break
+    # Iterations-Evaluation (Iterationsregel) als eigene Sektion: verdict
+    # gegen die Stop-Bedingungen + der datengestuetzte Iterationsplan sind
+    # damit im Abschlussbericht sichtbar.
+    iter_eval = _json_safe(getattr(result, "iteration_evaluation", None) or {})
+    if iter_eval.get("verdict"):
+        sections.append({
+            'agent': 'iteration_evaluation',
+            'title': 'Iterations-Evaluation (Iterationsregel)',
+            'status': 'completed',
+            'data': {
+                'verdict': iter_eval.get('verdict'),
+                'iteration': iter_eval.get('iteration'),
+                'stop_conditions': iter_eval.get('stop_conditions'),
+                'open_change_requests': iter_eval.get('open_change_requests'),
+                'iteration_plan': iter_eval.get('iteration_plan'),
+                'note': iter_eval.get('note'),
+            },
+        })
     if journal_entries:
         sections.append({
             'agent': 'agenten_journal',
@@ -455,6 +473,11 @@ def _generate_final_report_legacy(project, crew, result, per_agent: List[Dict[st
         "statistical_analysis_results": _json_safe(result.statistical_analysis_results or {}),
         "neural_network_results": _json_safe(result.neural_network_results or {}),
         "per_agent_reports": _json_safe(per_agent),
+        # Iterationsregel: Bewertung der Analyse gegen die Stop-Bedingungen
+        # (ERRORS=0, CRITICAL_WARNINGS=0, OPEN_CHANGE_REQUESTS=0) inkl.
+        # datengestuetztem Iterationsplan - sichtbar im Bericht.
+        "iteration_evaluation": _json_safe(
+            getattr(result, "iteration_evaluation", None) or {}),
         "recommendations": list(result.recommendations or []),
         "warnings": list(result.warnings or []),
         "errors": list(result.errors or []),
