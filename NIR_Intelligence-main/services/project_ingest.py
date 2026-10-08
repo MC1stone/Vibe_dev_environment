@@ -200,6 +200,8 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
     # index/counter-like and row-unique columns are skipped.
     calibration_samples = []
     reference_values = None
+    classification_samples = None
+    classification_labels = None
     if channel_names:
         numeric_all = df[channel_names].apply(pd.to_numeric, errors='coerce') \
             .dropna(how='any')
@@ -231,6 +233,27 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
             reference_values = [float(v) for v in rows['__target'].tolist()]
             target_name = str(ref['name'])
             break
+        # Klassifikations-Samples (2026-10-08, Kaffee): ALLE Zeilen mit
+        # Klassen-Label (nicht nur der Replica-Block) - bei
+        # Messobjekt-wechselnden Datensaetzen ist der Replica-Block winzig
+        # und die Klassifikation bekam zu wenige/gar keine Zeilen -> keine
+        # Konfusionsmatrix. Gecappt wie die Kalibration (2000 Zeilen).
+        if class_label_column:
+            label_series = df[class_label_column].astype(str)
+            numeric_rows = df[channel_names].apply(
+                pd.to_numeric, errors='coerce').dropna(how='any')
+            numeric_rows = numeric_rows[
+                ~(numeric_rows >= 2 ** 31).any(axis=1)]
+            paired = numeric_rows.join(label_series.rename('__label'),
+                                       how='inner').dropna(subset=['__label'])
+            if len(paired) >= 10:
+                max_cls = min(2000, len(paired))
+                step_cls = max(1, len(paired) // max_cls)
+                cls_rows = paired.iloc[::step_cls].head(max_cls)
+                classification_samples = [
+                    [float(v) for v in row]
+                    for row in cls_rows[channel_names].to_numpy().tolist()]
+                classification_labels = cls_rows['__label'].astype(str).tolist()
 
     # Klassifikations-Erkennung (2026-10-08, Kaffee-Datensatz): eine
     # nicht-numerische Referenzspalte mit wenigen wiederholten Werten
@@ -271,6 +294,9 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
             'wavelengths': wavelengths,
             'intensities': intensities,
         },
+        **({'classification_samples': classification_samples,
+            'classification_labels': classification_labels}
+           if classification_samples else {}),
         'metadata': {
             'channel_count': len(series),
             'measurement_count': wide['measurement_count'],
