@@ -46,6 +46,15 @@ RUN python django_project/manage.py collectstatic --noinput || echo "Static file
 # Create a non-root user for security
 RUN useradd -m -u 1000 nir_user && \
     chown -R nir_user:nir_user /app
+# Upload-Speicher: media/files muss existieren und schreibbar sein
+# (Upload-Vorfall 2026-10-08: 'Es konnten keine Dateien hochgeladen
+# werden', wenn das Volume-Mount ein nicht-schreibbares/fehlendes
+# media-Verzeichnis uebergibt - Django FileField.save scheitert dann
+# je Datei).
+RUN mkdir -p /app/django_project/media/files \
+    /app/django_project/media/spectra/original \
+    /app/django_project/media/tmp \
+    && chown -R nir_user:nir_user /app/django_project/media
 USER nir_user
 
 WORKDIR /app

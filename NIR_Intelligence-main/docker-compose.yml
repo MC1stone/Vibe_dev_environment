@@ -162,6 +162,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.django
+    # Upload-Robustheit (Vorfall 2026-10-08): Media-Uploads landen im
+    # Volume-Mount .:/app - der Container-Prozess als UID 1000 entspricht
+    # dem Host-Owner (martin), damit FileField.save schreiben kann.
+    user: "1000:1000"
     working_dir: /app
     command: sh -c "python django_project/manage.py migrate && python django_project/manage.py runserver 0.0.0.0:8000"
     ports:
