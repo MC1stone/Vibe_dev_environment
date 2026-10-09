@@ -47,6 +47,18 @@
                 <span class="text-muted fs-6">(Dateien &rarr; verwertbare Datensätze)</span></h5>
         </div>
         <div class="card-body">
+            {% if preparation.ki_status %}
+            <div class="alert {% if preparation.ki_status.available %}alert-success{% else %}alert-warning{% endif %} d-flex align-items-start" role="status">
+                <i class="bi {% if preparation.ki_status.available %}bi-check-circle-fill text-success{% else %}bi-exclamation-triangle-fill text-warning{% endif %} me-2 fs-5"></i>
+                <div>
+                    <strong>{% if preparation.ki_status.available %}{% trans "KI beteiligt" %}{% else %}{% trans "KI nicht beteiligt - Aufbereitung lief deterministisch" %}{% endif %}</strong>
+                    <div class="small">{{ preparation.ki_status.message }}</div>
+                    {% if preparation.ki_status.solution %}
+                    <div class="small mt-1"><strong>{% trans "L&ouml;sung:" %}</strong> <code>{{ preparation.ki_status.solution }}</code></div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
             <div class="row mb-3">
                 <div class="col-md-4">
                     <div class="border rounded p-3 text-center">

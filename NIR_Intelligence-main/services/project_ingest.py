@@ -72,9 +72,18 @@ def _detect_wide_format(file_path: str) -> Dict[str, Any] | None:
             channels.append((col, float(match.group(1))))
     if len(channels) < 8 or len(df) < 2:
         return None
+    # Deterministic preamble metadata (2026-10-09, Kaffee-Vorfall): the
+    # lines ABOVE the header carry the measurement context ('Bediener: ...',
+    # 'Instrument: ...') - the Data Preparation Agent extracts them so the
+    # many meta infos in DIY exports are not silently dropped when no
+    # LLM is available.
+    from agents.data_preparation_agent import EnhancedDataPreparationAgent
+    preamble_metadata = EnhancedDataPreparationAgent._extract_metadata_from_lines(
+        lines[:header_row])
     return {
         'channel_columns': channels,
         'header_row': header_row,
+        'preamble_metadata': preamble_metadata,
         'dataframe': df,
         'measurement_count': len(df),
     }
@@ -310,6 +319,7 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
             'classification_labels': classification_labels}
            if classification_samples else {}),
         'metadata': {
+            **wide.get('preamble_metadata', {}),
             'channel_count': len(series),
             'measurement_count': wide['measurement_count'],
             'channel_names': [c for c, _ in channels],
@@ -1160,6 +1170,65 @@ def apply_metadata_overrides(entry: Dict[str, Any], overrides: Dict[str, Any]) -
     entry["metadata_user_entered"] = applied
 
 
+def _ki_llm_status() -> Dict[str, Any]:
+    """KI-first transparency (User-Befund 2026-10-09): das LLM ist der
+    ganze Antrieb der Metadaten-Extraktion - die Aufbereitung muss
+    sichtbar machen, OB es beteiligt war. Ohne LLM: ehrlicher Status
+    mit konkreter Start-Anleitung (docker compose + ollama pull),
+    damit der Nutzer das Problem selbst loesen kann. Never raises."""
+    try:
+        from services.metadata_llm import MetadataLLMService
+        service = MetadataLLMService()
+        if service.client.is_available():
+            return {
+                "available": True,
+                "used": True,
+                "model": service.client.model,
+                "base_url": service.client.base_url,
+                "message": (
+                    f"KI beteiligt: lokale LLM ({service.client.model}) "
+                    "liest jede Datei und extrahiert Metadaten."),
+            }
+        from services.ollama_health import ollama_reachable
+        reachable = ollama_reachable(service.client.base_url)
+        if reachable:
+            return {
+                "available": False,
+                "used": False,
+                "model": service.client.model,
+                "base_url": service.client.base_url,
+                "reason": "server_up_model_missing",
+                "message": (
+                    f"Ollama laeuft, aber das Modell '{service.client.model}' "
+                    "fehlt - die Aufbereitung lief deterministisch ohne KI."),
+                "solution": (
+                    "Modell laden: docker compose exec ollama ollama pull "
+                    f"{service.client.model} - danach 'Aufbereitung erneut "
+                    "ausfuehren' klicken."),
+            }
+        return {
+            "available": False,
+            "used": False,
+            "model": service.client.model,
+            "base_url": service.client.base_url,
+            "reason": "server_down",
+            "message": (
+                "Das lokale LLM (Ollama) ist nicht erreichbar - die "
+                "Aufbereitung lief deterministisch ohne KI."),
+            "solution": (
+                "Ollama starten: docker compose up -d ollama (ggf. vorher "
+                "'docker compose pull ollama'), dann Modell laden: "
+                "docker compose exec ollama ollama pull "
+                f"{service.client.model} - danach 'Aufbereitung erneut "
+                "ausfuehren' klicken."),
+        }
+    except Exception as exc:
+        return {"available": False, "used": False,
+                "reason": f"status check failed: {exc}",
+                "message": "KI-Status konnte nicht geprueft werden.",
+                "solution": ""}
+
+
 def build_preparation_report(project) -> Dict[str, Any]:
     """Build the full phase-1 preparation report for an AnalysisProject.
 
@@ -1202,6 +1271,7 @@ def build_preparation_report(project) -> Dict[str, Any]:
         "recommendations": recommendations,
         "usable_dataset_count": usable_count,
         "total_dataset_count": len(datasets),
+        "ki_status": _ki_llm_status(),
     }
     # OP53: sensor database reference check - does the sensor used in
     # this new project have a reference entry (documents) in the sensor

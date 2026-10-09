@@ -200,3 +200,57 @@ def test_sensor_overflow_sentinels_cleaned():
             assert max(sample) < 2 ** 31
         labels = entry.get('classification_labels') or []
         assert len(labels) == len(entry['classification_samples'])
+
+
+def test_wide_format_preamble_metadata_deterministic():
+    """Kaffee-Befund 2026-10-09: die vielen Meta-Infos stehen in den
+    Zeilen UEBER dem Header des Wide-Format-Exports - bisher wurden sie
+    still verworfen (nur der LLM-Pass sah sie). Der Data Preparation
+    Agent extrahiert die Preamble jetzt deterministisch."""
+    import logging
+    logging.disable(logging.WARNING)
+    from services.project_ingest import (_detect_wide_format,
+                                         _ingest_wide_format)
+    preamble = [
+        'Projekt: Kaffee-Sortierung',
+        'Bediener: Yvonne',
+        'Instrument: Triadsensor NIR-900',
+        'Luftfeuchte: 88%',
+    ]
+    header = 'Messobjekt;Counter;' + ';'.join(
+        f'{ch}_{wl}' for ch, wl
+        in zip('ABCDEFGH', [610, 635, 660, 685, 710, 735, 760, 900]))
+    rows = [f'Sorte_{i % 2};{i};' + ';'.join(str(900 + i) for _ in range(8))
+            for i in range(12)]
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, 'coffee_meta.csv')
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(preamble + [header] + rows))
+        wide = _detect_wide_format(path)
+
+        class Rec:
+            id = 't'; name = 'c.csv'
+            file_extension = '.csv'; file_category = 'spectral'
+        entry = _ingest_wide_format(Rec(), path, wide)
+        md = entry['metadata']
+        assert md.get('instrument_type') == 'Triadsensor NIR-900'
+        assert md.get('humidity') == '88%'
+        assert md.get('bediener') == 'Yvonne'
+        assert md.get('projekt') == 'Kaffee-Sortierung'
+
+
+def test_ki_llm_status_reports_missing_llm_with_solution():
+    """KI-first-Transparenz (User-Wunsch 2026-10-09): das LLM ist der
+    Antrieb - der Preparation-Report zeigt OB es beteiligt war, und wenn
+    nicht, warum + konkrete Loesung zum Selbst-Starten."""
+    import logging
+    logging.disable(logging.WARNING)
+    from services.project_ingest import _ki_llm_status
+    status = _ki_llm_status()
+    assert set(('available', 'used', 'message')) <= set(status)
+    assert status['used'] == status['available']
+    if not status['available']:
+        assert status['reason'] in ('server_down', 'server_up_model_missing') \
+            or 'status check failed' in str(status['reason'])
+        assert status.get('solution'), 'ohne LLM muss eine Loesung stehen'
+        assert 'ollama' in status['solution'].lower()
