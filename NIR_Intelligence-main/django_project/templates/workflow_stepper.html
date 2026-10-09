@@ -1,0 +1,71 @@
+{% load i18n %}
+{% comment %}
+  Workflow stepper + decision bar for the six-step project workflow
+  (WORKFLOW_DESIGN.md). Included from project pages; expects the context
+  variable `workflow_context` (from api.workflow_context.project_workflow_context).
+{% endcomment %}
+{% if workflow_context %}
+<div class="card shadow-sm mb-4" id="workflowStepper">
+  <div class="card-body">
+    {% if workflow_context.open_decision_count %}
+    <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" role="alert">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span>
+        {% blocktrans count counter=workflow_context.open_decision_count %}
+          {{ counter }} Entscheidung offen - der Workflow wartet auf Sie:
+        {% plural %}
+          {{ counter }} Entscheidungen offen - der Workflow wartet auf Sie:
+        {% endblocktrans %}
+      </span>
+      {% for d in workflow_context.open_decisions %}
+      <a href="#decision-{{ d.pk }}" class="badge bg-dark text-decoration-none">
+        {{ d.question|truncatechars:60 }}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="d-flex flex-wrap gap-2 align-items-center" aria-label="{% trans 'Workflow-Position' %}">
+      {% for s in workflow_context.stations %}
+      <div class="d-flex align-items-center gap-2">
+        {% if forloop.first %}{% else %}<i class="bi bi-arrow-right text-muted"></i>{% endif %}
+        {% if s.state == 'done' %}
+        <span class="badge bg-success p-2" title="{{ s.get_state_display }}">
+          <i class="bi bi-check-circle-fill me-1"></i>{{ s.get_station_display }}
+        </span>
+        {% elif s.state == 'awaiting_user' %}
+        <span class="badge bg-warning text-dark p-2" title="{{ s.get_state_display }}">
+          <i class="bi bi-hourglass-split me-1"></i>{{ s.get_station_display }}
+          <span class="badge bg-dark ms-1">{{ s.open_decision_count }}</span>
+        </span>
+        {% elif s.state == 'in_progress' %}
+        <span class="badge bg-info p-2" title="{{ s.get_state_display }}">
+          <i class="bi bi-arrow-repeat me-1"></i>{{ s.get_station_display }}
+        </span>
+        {% else %}
+        <span class="badge bg-secondary-subtle text-secondary-emphasis p-2" title="{{ s.get_state_display }}">
+          {{ s.get_station_display }}
+        </span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% for d in workflow_context.open_decisions %}
+<div class="card shadow-sm mb-3 border-warning" id="decision-{{ d.pk }}">
+  <div class="card-body">
+    <h5 class="card-title"><i class="bi bi-question-circle me-2 text-warning"></i>{{ d.question }}</h5>
+    {% if d.ki_basis %}
+    <p class="text-muted small mb-2">{% trans "KI-Basis" %}: {{ d.ki_basis }}</p>
+    {% endif %}
+    <div class="d-flex flex-wrap gap-2" data-decision="{{ d.pk }}" data-project="{{ workflow_context.project_id }}">
+      {% for opt in d.options %}
+      <button type="button" class="btn btn-outline-primary js-workflow-decision-option" data-option="{{ opt.id }}">
+        {{ opt.label }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
