@@ -87,16 +87,17 @@ def offer_spectrum_comparison(project, datasets, user=None):
         return None
     dataset, wavelength, intensity = found
 
-    matches = _faiss_matches(wavelength, intensity, user)
-    if not matches:
+    comparison = _faiss_comparison(wavelength, intensity, user)
+    if not comparison:
         return None
 
-    best = matches[0]
-    best_label = best.get('id') or best.get('reference_id') or 'unbekannt'
+    best = comparison[0]
+    best_label = best.get('file_name') or 'unbekannt'
     sample_name = dataset.get('name') or dataset.get('file_name') or 'Datensatz'
     question = (
         f"Spektrenabgleich: vergleichbare Spektren gefunden "
-        f"(beste Übereinstimmung: {best_label}). "
+        f"(beste Übereinstimmung: {best_label}, "
+        f"Ähnlichkeit {best.get('similarity_pct', '?')}%). "
         f"Wie soll '{sample_name}' bewertet werden?")
     options = [
         {'id': 'use_existing_model',
@@ -109,20 +110,19 @@ def offer_spectrum_comparison(project, datasets, user=None):
     ]
     decision = _create_decision(
         project, STATION_COMPARISON, question, options,
-        ki_basis=f"FAISS-Spektrenabgleich, top {len(matches)} Treffer")
+        ki_basis=f"FAISS-Spektrenabgleich, top {len(comparison)} Treffer")
     logger.info('Spectrum comparison decision %s for project %s',
                 decision.id, project.id)
     return decision
 
 
-def _faiss_matches(wavelength, intensity, user=None):
-    """Comparable spectra from the local spectral database (FAISS, top-3)."""
+def _faiss_comparison(wavelength, intensity, user=None):
+    """Comparable spectra from the local spectral database (FAISS, top-3),
+    enriched with the database metadata for the comparison window."""
     try:
         from core.models import SpectrumRecord
         from agents.faiss_agent import FaissAgent
-        records = SpectrumRecord.objects.filter(user=user)
-        if user is None:
-            records = SpectrumRecord.objects.none()
+        records = list(SpectrumRecord.objects.filter(user=user))
         references = [{
             'data': {'wavelength': r.wavelengths, 'intensity': r.intensities},
             'wavelength_column': 'wavelength',
@@ -142,7 +142,27 @@ def _faiss_matches(wavelength, intensity, user=None):
             },
             'top_k': 3,
         })
-        return output.data.get('matches', []) if output else []
+        matches = output.data.get('matches', []) if output else []
+        comparison = []
+        for match in matches:
+            index = match.get('reference_index')
+            record = records[index] if isinstance(index, int) and 0 <= index < len(records) else None
+            entry = {
+                'file_name': match.get('reference_id') or 'unbekannt',
+                'similarity': round(float(match.get('similarity') or 0), 4),
+                'similarity_pct': round(float(match.get('similarity') or 0) * 100, 1),
+            }
+            if record is not None:
+                entry.update({
+                    'file_name': record.file_name,
+                    'sample_type': record.sample_type,
+                    'instrument_type': record.instrument_type,
+                    'metadata': {k: v for k, v in (record.metadata or {}).items()
+                                 if k not in ('wavelengths', 'intensities')},
+                    'detail_url': f"/projects/database/{record.id}/",
+                })
+            comparison.append(entry)
+        return comparison
     except Exception as exc:
         logger.warning('FAISS comparison failed (degraded, non-fatal): %s', exc)
         return []

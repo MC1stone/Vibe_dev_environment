@@ -58,6 +58,42 @@
     {% if d.ki_basis %}
     <p class="text-muted small mb-2">{% trans "KI-Basis" %}: {{ d.ki_basis }}</p>
     {% endif %}
+    {% for opt in d.options %}
+      {% if opt.match %}
+      <div class="table-responsive mb-3">
+        <table class="table table-sm table-bordered align-middle small">
+          <thead>
+            <tr>
+              <th>{% trans "Vergleichsspektrum" %}</th>
+              <th>{% trans "&#196;hnlichkeit" %}</th>
+              <th>{% trans "Proben-/Materialtyp" %}</th>
+              <th>{% trans "Spektrometer" %}</th>
+              <th>{% trans "Metadaten" %}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ opt.match.file_name }}</td>
+              <td><span class="badge bg-primary">{{ opt.match.similarity_pct }}%</span></td>
+              <td>{{ opt.match.sample_type|default:"-" }}</td>
+              <td>{{ opt.match.instrument_type|default:"-" }}</td>
+              <td>
+                {% for key, value in opt.match.metadata.items %}
+                <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ key }}: {{ value }}</span>
+                {% empty %}<span class="text-muted">-</span>{% endfor %}
+              </td>
+              <td>
+                {% if opt.match.detail_url %}
+                <a href="{{ opt.match.detail_url }}" class="btn btn-sm btn-outline-secondary">{% trans "Detail" %}</a>
+                {% endif %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    {% endfor %}
     <div class="d-flex flex-wrap gap-2" data-decision="{{ d.pk }}" data-project="{{ workflow_context.project_id }}">
       {% for opt in d.options %}
       <button type="button" class="btn btn-outline-primary js-workflow-decision-option" data-option="{{ opt.id }}">
