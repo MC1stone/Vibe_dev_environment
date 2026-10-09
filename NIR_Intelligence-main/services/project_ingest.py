@@ -121,6 +121,20 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
     # ungueltige Messwerte - zentrale Erkennung durch den Agenten, damit
     # sie weder den Median (Darstellung) noch Statistiken verzerren.
     from agents.data_preparation_agent import EnhancedDataPreparationAgent
+    # Kanal-Diagnose (Kaffee-Vorfall 2026-10-09): ein Kanal mit
+    # durchgaengigem Overflow-Sentinel (C_460: 99%, F_535: 84%) ist ein
+    # DEFEKTER KANAL des Spektrometers - ihn ausschliessen und die
+    # Messungen behalten. Der bisherige Zeilen-Filter warf bei diesem
+    # Datensatz 447 von 451 Messungen weg.
+    channel_diag = EnhancedDataPreparationAgent.detect_defective_channels(
+        df, [c for c, _ in channels])
+    defective_channels = channel_diag['defective_channels']
+    channels = [(c, wl) for c, wl in channels
+                if c not in defective_channels]
+    if defective_channels:
+        logger.info(
+            'Defekte Kanaele ausgeschlossen (%s): %s - Messungen '
+            'bleiben erhalten', file_path, ', '.join(defective_channels))
     overflow = EnhancedDataPreparationAgent.detect_sensor_overflow(
         df, [c for c, _ in channels])
     saturated_values_total = overflow['saturated_values']
@@ -326,6 +340,7 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
             'saturated_measurements': saturated_measurements,
             'saturated_values': saturated_values_total,
             'overflow_rows_total': len(overflow['saturated_rows']),
+            'defective_channels': defective_channels,
             'target_name': target_name,
             'analysis_mode': analysis_mode,
             **({'class_label_column': class_label_column,
@@ -479,6 +494,12 @@ def _archive_entries(file_record, file_path: str) -> List[Dict[str, Any]] | None
     import zipfile
 
     archive_ext = os.path.splitext(file_path)[1].lower()
+    # Strukturierte Dokumente (docx/xlsx, Kaffee-Vorfall 2026-10-09) sind
+    # KEINE Archive, obwohl sie ZIP-Container sind: als 'Archiv'
+    # zerfiel das Versuchsprotokoll in 13 XML-Innendateien und der
+    # Metadaten-Inhalt (Experimentator, Geraet, Datum) ging verloren.
+    # Erkennung inhaltlich, nicht nach Endung: nur echte Archive
+    # (docProps/word/xl ausschliessen) werden als Container behandelt.
     try:
         is_archive = zipfile.is_zipfile(file_path) or (
             archive_ext in (".tar", ".tar.gz", ".tgz", ".gz", ".bz2", ".xz")
@@ -487,6 +508,16 @@ def _archive_entries(file_record, file_path: str) -> List[Dict[str, Any]] | None
         return None
     if not is_archive:
         return None
+    if zipfile.is_zipfile(file_path):
+        try:
+            with zipfile.ZipFile(file_path) as zf:
+                names = set(zf.namelist())
+            doc_markers = ({"word/document.xml", "xl/workbook.xml",
+                            "ppt/presentation.xml"})
+            if names & doc_markers:
+                return None
+        except Exception:
+            pass
     from agents.data_preparation_agent import EnhancedDataPreparationAgent
     loader = EnhancedDataPreparationAgent(
         input_directory=str(Path(file_path).parent),
@@ -519,6 +550,17 @@ def _file_text_for_llm(file_path: str, loader) -> str:
             parts.append(text[:6000])
     except Exception:
         pass
+    if not parts:
+        # Strukturierte Dokumente (docx, Kaffee-Vorfall 2026-10-09): das
+        # Versuchsprotokoll traegt den Kontext (Experimentator, Geraet,
+        # Datum, Ort) - ohne diese Quelle sieht die KI den Operator nie.
+        try:
+            from agents.data_preparation_agent import read_document_text
+            doc_text = read_document_text(file_path)
+            if doc_text.strip():
+                parts.append(doc_text[:6000])
+        except Exception:
+            pass
     return "\n".join(parts)
 
 
@@ -714,9 +756,27 @@ def _metadata_only_entry(file_record, file_path, loader) -> Dict[str, Any] | Non
     discarded as 'not parseable'. Returns None for binary/unreadable files
     or when no metadata was found - those keep the honest usable=False
     marker. Never raises."""
+    metadata = {}
+    # Strukturierte Dokumente (docx, Kaffee-Vorfall 2026-10-09): der
+    # echte Dokumenttext ist die PRIMAERE Quelle - read_text_lines
+    # dekodiert docx als Binaermuell, dessen 'description' zu Recht
+    # verworfen wird und den DOCX-Pfad blockierte. Nie hartkodiert:
+    # nur wenn echten Dokumenttext gibt.
     try:
-        metadata = loader._extract_text_metadata(file_path)
+        from agents.data_preparation_agent import (
+            read_document_text, EnhancedDataPreparationAgent)
+        doc_lines = read_document_text(file_path).splitlines()
+        if doc_lines:
+            metadata = (EnhancedDataPreparationAgent
+                        ._extract_metadata_from_lines(doc_lines))
     except Exception:
+        metadata = {}
+    if not metadata:
+        try:
+            metadata = loader._extract_text_metadata(file_path)
+        except Exception:
+            metadata = {}
+    if not metadata:
         return None
     # 2026-10-08 (Kaffee-Datensatz): experiment_name/purpose sind jetzt
     # kanonische Felder - eine Beschreibungsdatei mit Versuchsname/Zweck

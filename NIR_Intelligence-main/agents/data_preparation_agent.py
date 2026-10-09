@@ -62,6 +62,30 @@ def read_text_lines(file_path: str) -> list:
         return handle.readlines()
 
 
+def read_document_text(file_path: str) -> str:
+    """Text content of a structured document (docx: paragraphs + table
+    cells) for the metadata layers - the Versuchsprotokoll carries the
+    experiment context (Experimentatoren, Geraet, Datum, Ort) that
+    neither the spectral CSV nor the LLM pass can see otherwise.
+    Content-driven (MO 1): the zip/xml structure is detected, not the
+    extension. Never raises."""
+    try:
+        import zipfile
+        import re as _re
+        with zipfile.ZipFile(file_path) as zf:
+            names = zf.namelist()
+            if "word/document.xml" in names:
+                xml = zf.read("word/document.xml").decode("utf-8",
+                                                          errors="replace")
+                xml = _re.sub(r"<w:p[ >]", "\n<w:p ", xml)
+                text = _re.sub(r"<[^>]+>", "", xml)
+                lines = [ln.strip() for ln in text.splitlines()]
+                return "\n".join(ln for ln in lines if ln)
+    except Exception:
+        pass
+    return ""
+
+
 class DataQualityGrade(Enum):
     """Quality grading for spectral data and metadata"""
     EXCELLENT = "A"
@@ -506,6 +530,18 @@ class EnhancedDataPreparationAgent(BaseAgent):
         if not os.path.isfile(file_path):
             return None
 
+        # Strukturierte Dokumente (docx, Kaffee-Vorfall 2026-10-09) sind
+        # keine Spektral-Quelle: der content-driven Chain liest die
+        # Probentabelle als Fake-Spektrum und blockiert damit den
+        # Metadaten-Pfad (_metadata_only_entry). Der echte Dokumenttext
+        # wird von read_document_text fuer die Metadaten-Ebene gelesen.
+        try:
+            doc_text = read_document_text(file_path)
+            if doc_text.strip():
+                return None
+        except Exception:
+            pass
+
         ext = os.path.splitext(file_path)[1].lower()
         collected_metadata: Dict[str, Any] = {}
 
@@ -742,6 +778,44 @@ class EnhancedDataPreparationAgent(BaseAgent):
         }
 
     SENSOR_OVERFLOW_THRESHOLD = 2 ** 31
+
+    @classmethod
+    def detect_defective_channels(cls, df, channel_columns,
+                                  saturation_ratio: float = 0.8):
+        """Sensor-Diagnose (Data Preparation Agent, Kaffee-Vorfall
+        2026-10-09): ein Kanal, der in fast JEDER Messung den Overflow-
+        Sentinel traegt (z. B. C_460 durchgaengig 4294967300.0), ist ein
+        DEFEKTER KANAL des Spektrometers - nicht ein Ausreisser einzelner
+        Messungen. Richtig ist, den KANAL auszuschliessen und die
+        Messungen zu behalten; der bisherige Zeilen-Filter warf bei so
+        einem Datensatz 99% der Messungen weg. Gibt
+        {'defective_channels': [...], 'remaining_channels': [...],
+        'saturated_rows_after': n} zurueck. Never raises."""
+        import pandas as pd
+        try:
+            cols = [c for c in (channel_columns or [])
+                    if c in getattr(df, 'columns', [])]
+            if not cols:
+                return {'defective_channels': [],
+                        'remaining_channels': list(channel_columns or []),
+                        'saturated_rows_after': None}
+            numeric = df[cols].apply(pd.to_numeric, errors='coerce')
+            sat = (numeric >= cls.SENSOR_OVERFLOW_THRESHOLD)
+            defective = [c for c in cols
+                         if sat[c].fillna(False).mean() >= saturation_ratio]
+            remaining = [c for c in cols if c not in defective]
+            if remaining:
+                sat_rows = int(sat[remaining].fillna(False)
+                               .any(axis=1).sum())
+            else:
+                sat_rows = None
+            return {'defective_channels': defective,
+                    'remaining_channels': remaining,
+                    'saturated_rows_after': sat_rows}
+        except Exception:
+            return {'defective_channels': [],
+                    'remaining_channels': list(channel_columns or []),
+                    'saturated_rows_after': None}
 
     @classmethod
     def detect_sensor_overflow(cls, df: pd.DataFrame,

@@ -301,3 +301,57 @@ def test_no_hardcoded_mapping_but_ki_question():
             'Mapping-Frage muss beim Nutzer ankommen'
         # die Frage wird aus metadata in open_questions verschoben
         assert 'field_mapping_questions' not in (entry.get('metadata') or {})
+
+
+def test_docx_protokoll_is_metadata_source():
+    """Kaffee-Vorfall 2026-10-09 (echte Daten): das Versuchsprotokoll
+    (.docx) traegt den Experimentator, Geraet, Datum, Ort - es wurde
+    aber als 'Archiv' (docx ist ein ZIP) in XML-Innendateien zerlegt und
+    der Inhalt ging verloren. Jetzt: docx ist eine Metadaten-Quelle, der
+    Experimentator bleibt Rohwert + Mapping-Frage (Grundregel: KI
+    entscheidet), defekte Kanaele werden diagnostiziert statt 99% der
+    Messungen zu verwerfen."""
+    import logging
+    import os
+    logging.disable(logging.WARNING)
+    import pandas as pd
+    from agents.data_preparation_agent import (
+        EnhancedDataPreparationAgent, read_document_text)
+
+    # Kanal-Diagnose: konstant gesaettigte Kanaele = defekt, Messungen
+    # bleiben erhalten (nicht Zeilen verwerfen)
+    df = pd.DataFrame({
+        'Messobjekt': ['A', 'B', 'C'],
+        'C_460': [4294967300.0] * 3,
+        'A_410': [100.0, 101.0, 102.0],
+    })
+    diag = EnhancedDataPreparationAgent.detect_defective_channels(
+        df, ['C_460', 'A_410'])
+    assert diag['defective_channels'] == ['C_460']
+    assert diag['remaining_channels'] == ['A_410']
+    assert diag['saturated_rows_after'] == 0
+
+    # docx: kein Archiv, echte Metadaten-Quelle
+    import zipfile
+    with tempfile.TemporaryDirectory() as tmp:
+        docx_path = os.path.join(tmp, 'protokoll.docx')
+        with zipfile.ZipFile(docx_path, 'w') as zf:
+            zf.writestr(
+                'word/document.xml',
+                '<?xml version="1.0"?><w:document>'
+                '<w:body><w:p><w:r><w:t>Name(n): Katja Hofacker</w:t></w:r></w:p>'
+                '<w:p><w:r><w:t>Spektrometer: KT1370</w:t></w:r></w:p>'
+                '</w:body></w:document>')
+        text = read_document_text(docx_path)
+        assert 'Katja Hofacker' in text
+        lines = text.splitlines()
+        md = EnhancedDataPreparationAgent._extract_metadata_from_lines(lines)
+        assert md.get('name_n') == 'Katja Hofacker'
+        # Grundregel: KEIN hartkodiertes Mapping auf operator_name -
+        # offene Mapping-Frage statt stiller Zuordnung
+        assert 'operator_name' not in md
+        assert any('Katja' in q
+                   for q in md.get('field_mapping_questions', []))
+        # ... und der Ingest behandelt docx NICHT als Archiv
+        from services.project_ingest import _archive_entries
+        assert _archive_entries(None, docx_path) is None
