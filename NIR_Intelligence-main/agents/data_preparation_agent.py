@@ -1196,7 +1196,25 @@ class EnhancedDataPreparationAgent(BaseAgent):
                 continue
             key_norm = re.sub(r"[\s/()\-]+", "_", key).strip("_").lower()
             canonical = cls._canonical_metadata_key(key_norm)
-            metadata[canonical if canonical else key_norm] = value
+            key_out = canonical if canonical else key_norm
+            # Erster Wert gewinnt: bei Mehrfachnennung bleibt der zuerst
+            # dokumentierte Wert stehen, spaetere Dubletten
+            # ueberschreiben ihn nicht still.
+            if key_out not in metadata:
+                metadata[key_out] = value
+                if canonical is None:
+                    # Grundregel (User 2026-10-09): KEIN hartkodiertes
+                    # Mapping - ob 'Bediener' = operator_name ist,
+                    # entscheidet die KI (LLM-Pass); kann auch sie es
+                    # nicht, wird der Nutzer gefragt. Der Rohwert bleibt
+                    # ehrlich als field_mapping_question dokumentiert,
+                    # damit nichts still faellt.
+                    questions = metadata.setdefault(
+                        'field_mapping_questions', [])
+                    questions.append(
+                        f"Ist '{key}' (Wert: '{value}') eines der "
+                        "kanonischen Felder (z. B. operator_name, "
+                        "instrument_type, temperature)?")
         for key, value in cls._extract_prose_metadata(lines).items():
             metadata.setdefault(key, value)
         return metadata
