@@ -192,10 +192,33 @@ class NIRAnalysisCrew:
         # Analysis tracking
         self.analysis_history = []
         self.current_request_id = None
+        # Crew-Journal (Iterationsregel): Iterations-Plan-Schritte und
+        # crew-weite Entscheidungen werden hier dokumentiert (MO 13).
+        self.journal: List[Dict[str, Any]] = []
 
         self.logger.info("NIRAnalysisCrew initialized")
         self.logger.info(f"CrewAI available: {CREWAI_AVAILABLE and self.config.enable_crewai}")
         self.logger.info(f"Federated learning enabled: {self.config.enable_federated_learning}")
+
+    def journal_entry(self, phase: str, analysis: str,
+                      conclusion: str = "", action: str = "",
+                      iteration: int = 0,
+                      options: List[Dict[str, Any]] = None) -> None:
+        """Document one crew-level analysis step with its conclusion
+        (MO 13); same schema as BaseAgent.journal_entry so the report
+        builder can merge crew and agent journals uniformly.
+        """
+        import datetime
+        self.journal.append({
+            "agent": "NIRAnalysisCrew",
+            "phase": phase,
+            "analysis": analysis,
+            "conclusion": conclusion,
+            "action": action,
+            "iteration": iteration,
+            "options": options or [],
+            "timestamp": datetime.datetime.now().isoformat(),
+        })
 
     def _agent_tool(self, base_agent, description):
         """Wrap a real platform agent as a CrewAI-compatible tool.

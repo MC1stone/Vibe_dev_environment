@@ -322,7 +322,8 @@ def _per_agent_reports(crew, result, project, dataset) -> List[Dict[str, Any]]:
                   getattr(crew, 'calibration_agent', None),
                   getattr(crew, 'sensor_quality_agent', None),
                   getattr(crew, 'metadata_quality_agent', None),
-                  getattr(crew, 'spectral_analysis_agent', None)):
+                  getattr(crew, 'spectral_analysis_agent', None),
+                  crew):
         if agent is None:
             continue
         for entry in list(getattr(agent, 'journal', []) or []):
