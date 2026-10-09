@@ -918,6 +918,30 @@ def _ki_forward_questions(entry: Dict[str, Any],
                         f"{std_part} Antworte NUR mit dem Fragetext.")
                     if isinstance(llm, str) and llm.strip() and len(llm) <= 400:
                         question = llm.strip()
+                        # Der Client erzwingt format=json - die Antwort
+                        # kann als JSON-Objekt kommen. Ehrlich entpacken
+                        # statt das rohe JSON in die Frage zu kleben
+                        # (User-Befund 2026-10-09: '{"Question (German):
+                        # ...": "..."}' im Fragetext).
+                        try:
+                            import json as _json
+                            parsed = _json.loads(question)
+                            if isinstance(parsed, dict):
+                                for _key in ('question', 'frage', 'text',
+                                             'frage_text'):
+                                    if isinstance(parsed.get(_key), str):
+                                        parsed = parsed[_key]
+                                        break
+                                else:
+                                    vals = [v for v in parsed.values()
+                                            if isinstance(v, str)]
+                                    parsed = vals[0] if vals else None
+                            if isinstance(parsed, str) and parsed.strip():
+                                question = parsed.strip()
+                            else:
+                                question = None
+                        except (ValueError, TypeError):
+                            pass
             except Exception:
                 question = None
             if not question:
