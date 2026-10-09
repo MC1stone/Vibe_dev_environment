@@ -909,6 +909,66 @@ class ProjectDecisionResolveView(APIView if DRF_AVAILABLE else object):
         return Response({'success': True})
 
 
+class ProjectKIAcceptView(APIView if DRF_AVAILABLE else object):
+    """Accept/Adapt eines KI-Vorschlags mit EINEM Klick (User-Wunsch
+    2026-10-09): der Nutzer bestaetigt die Zuordnung eines Rohwerts auf
+    ein kanonisches Feld (oder passt den Wert an) - die Antwort wird als
+    Metadaten-Override gespeichert, der Preparation-Report neu gebaut,
+    die Frage ist damit beantwortet und verschwindet."""
+    def post(self, request, project_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        project = _get_project(project_id, request.user)
+        if project.phase != 'drafted':
+            return Response({'success': False,
+                             'error': gettext('Project already released')},
+                            status=status.HTTP_409_CONFLICT)
+        file_id = str(request.data.get('file_id') or '')
+        field = str(request.data.get('field') or '').strip()
+        value = str(request.data.get('value') or '').strip()
+        action = str(request.data.get('action') or 'accept').strip()
+        if not file_id or not field:
+            return Response({'success': False,
+                             'error': gettext('file_id and field required')},
+                            status=status.HTTP_400_BAD_REQUEST)
+        known_file_ids = {str(f.id) for f in project.files.all()}
+        from services.project_ingest import _project_dataset_names
+        known_file_ids.update(
+            f'{fid}:{name}' for fid in list(known_file_ids)
+            for name in _project_dataset_names(project, fid))
+        if file_id not in known_file_ids:
+            return Response({'success': False,
+                             'error': gettext('Unknown file_id')},
+                            status=status.HTTP_400_BAD_REQUEST)
+        overrides = dict(project.metadata_overrides or {})
+        merged = dict(overrides.get(file_id, {}))
+        if action == 'dismiss':
+            merged.pop(field, None)
+            merged[f'__dismissed__{field}'] = '1'
+        else:
+            if len(value) > 512:
+                return Response({'success': False,
+                                 'error': gettext('Value too long')},
+                                status=status.HTTP_400_BAD_REQUEST)
+            merged[field] = value
+            merged.pop(f'__dismissed__{field}', None)
+        overrides[file_id] = merged
+        project.metadata_overrides = overrides
+        project.save(update_fields=['metadata_overrides', 'updated_at'])
+        from services.project_ingest import build_preparation_report
+        report = build_preparation_report(project)
+        remaining = 0
+        for q in report.get('metadata_quality', {}).get('open_questions', []):
+            remaining += 1
+        return Response({
+            'success': True,
+            'accepted': {'file_id': file_id, 'field': field, 'value': value},
+            'metadata_quality_score': report.get('metadata_quality', {}).get('overall_quality_score'),
+            'open_question_count': remaining,
+        })
+
+
 class ProjectDeleteView(APIView if DRF_AVAILABLE else object):
     """Delete one of the user's projects (OP17). The uploaded files stay in
     the media store (they may be shared by other projects); persisted

@@ -26,6 +26,7 @@ from .project_views import (
     SpectrumDatabaseDetailView,
     ReferenceImportView,
     CalibrationOverviewView,
+    ProjectKIAcceptView,
 )
 
 urlpatterns = [
@@ -37,6 +38,7 @@ urlpatterns = [
     path('<uuid:project_id>/files/add/', ProjectFilesAddView.as_view(), name='project-files-add'),
     path('<uuid:project_id>/reingest/', ProjectReingestView.as_view(), name='project-reingest'),
     path('<uuid:project_id>/metadata/', ProjectMetadataView.as_view(), name='project-metadata'),
+    path('<uuid:project_id>/ki-accept/', ProjectKIAcceptView.as_view(), name='project-ki-accept'),
     path('<uuid:project_id>/release/', ProjectReleaseView.as_view(), name='project-release'),
     path('<uuid:project_id>/crew-status/', ProjectCrewStatusView.as_view(), name='project-crew-status'),
     path('<uuid:project_id>/final-report/', ProjectFinalReportView.as_view(), name='project-final-report'),
