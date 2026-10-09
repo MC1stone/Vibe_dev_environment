@@ -741,6 +741,40 @@ class EnhancedDataPreparationAgent(BaseAgent):
             "metadata": self._extract_metadata_from_dataframe(df),
         }
 
+    SENSOR_OVERFLOW_THRESHOLD = 2 ** 31
+
+    @classmethod
+    def detect_sensor_overflow(cls, df: pd.DataFrame,
+                               channel_columns: Optional[List[str]] = None
+                               ) -> Dict[str, Any]:
+        """Datenbereinigung (Mission Statement, Data Preparation Agent):
+        recognize sensor overflow sentinels (32-bit ADC markers like
+        2**32 + 4 = 4294967300.0) as INVALID readings and report them as
+        their own defect so they cannot skew any downstream statistic or
+        chart scale. Returns {'clean': df without saturated channel rows,
+        'saturated_rows': [..], 'saturated_values': n, 'threshold': ..};
+        never raises, never mutates the input."""
+        import pandas as pd
+        try:
+            cols = ([c for c in (channel_columns or [])
+                     if c in df.columns] or list(df.columns))
+            numeric = df[cols].apply(pd.to_numeric, errors='coerce')
+            sat_mask = (numeric >= cls.SENSOR_OVERFLOW_THRESHOLD)
+            rows = sorted(int(i) for i in
+                          sat_mask.any(axis=1).fillna(False).to_numpy().nonzero()[0])
+            return {
+                'clean': (df.drop(index=df.index[rows])
+                          if rows else df.copy()),
+                'saturated_rows': rows,
+                'saturated_values': int(sat_mask.fillna(False)
+                                        .to_numpy().sum()),
+                'threshold': cls.SENSOR_OVERFLOW_THRESHOLD,
+            }
+        except Exception:
+            return {'clean': df.copy(), 'saturated_rows': [],
+                    'saturated_values': 0,
+                    'threshold': cls.SENSOR_OVERFLOW_THRESHOLD}
+
     def _identify_spectral_columns(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
         """Identify wavelength/intensity columns in an arbitrary table.
 
