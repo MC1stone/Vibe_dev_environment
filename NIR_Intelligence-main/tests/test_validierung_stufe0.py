@@ -155,3 +155,48 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def test_sensor_overflow_sentinels_cleaned():
+    """Vorfall 2026-10-09 (Live-Validierung): Werte wie 4294967300.0
+    (2**32 + 4, 32-Bit-ADC-Overflow-Sentinel) machten jede Darstellung
+    unmoeglich. Der Data Preparation Agent (Datenbereinigung, MO) erkennt
+    sie zentral; Ingest, Preview-Median, Klassifikations- und
+    Kalibrations-Samples arbeiten nur noch mit bereinigten Werten."""
+    import logging
+    logging.disable(logging.WARNING)
+    import pandas as pd
+    from agents.data_preparation_agent import EnhancedDataPreparationAgent
+    from services.project_ingest import (_detect_wide_format,
+                                         _ingest_wide_format)
+
+    channels = ['A_610', 'B_635', 'C_660', 'D_685', 'E_710', 'F_735',
+                'G_760', 'H_900']
+    data = {'Messobjekt': ['Sorte_A'] * 6 + ['Sorte_B'] * 6,
+            'Counter': list(range(12))}
+    for j, ch in enumerate(channels):
+        col = [900 + 25 * j + i for i in range(12)]
+        col[0 if j % 2 == 0 else 6] = 4294967300.0
+        data[ch] = col
+    df = pd.DataFrame(data)
+    res = EnhancedDataPreparationAgent.detect_sensor_overflow(df, channels)
+    assert res['saturated_rows'] == [0, 6]
+    assert res['saturated_values'] == 8
+    assert 4294967300.0 not in res['clean']['A_610'].tolist()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, 'coffee_overflow.csv')
+        df.to_csv(path, index=False, sep=';')
+        wide = _detect_wide_format(path)
+
+        class Rec:
+            id = 't'; name = 'c.csv'
+            file_extension = '.csv'; file_category = 'spectral'
+        entry = _ingest_wide_format(Rec(), path, wide)
+        assert entry['metadata']['saturated_values'] == 8
+        assert entry['metadata']['overflow_rows_total'] == 2
+        assert max(entry['preview']['intensities']) < 2 ** 31
+        for sample in (entry.get('classification_samples') or []):
+            assert max(sample) < 2 ** 31
+        labels = entry.get('classification_labels') or []
+        assert len(labels) == len(entry['classification_samples'])

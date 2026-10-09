@@ -107,9 +107,18 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
     df = wide['dataframe']
     channels = wide['channel_columns']
 
+    # Datenbereinigung (Data Preparation Agent, MO): Sensor-Overflow-
+    # Sentinels (32-Bit-ADC-Marker wie 2**32 + 4 = 4294967300.0) sind
+    # ungueltige Messwerte - zentrale Erkennung durch den Agenten, damit
+    # sie weder den Median (Darstellung) noch Statistiken verzerren.
+    from agents.data_preparation_agent import EnhancedDataPreparationAgent
+    overflow = EnhancedDataPreparationAgent.detect_sensor_overflow(
+        df, [c for c, _ in channels])
+    saturated_values_total = overflow['saturated_values']
     series = []
     for col, wavelength_nm in channels:
         values = _wide_column_numeric(df[col])
+        values = values[values < EnhancedDataPreparationAgent.SENSOR_OVERFLOW_THRESHOLD]
         if values.empty:
             continue
         series.append((wavelength_nm, float(values.median()), int(len(values))))
@@ -183,9 +192,10 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
         if best_len >= 3:
             block = df[channel_names].iloc[best_start:best_start + best_len]
             numeric = block.apply(pd.to_numeric, errors='coerce').dropna(how='any')
-            saturated = numeric[(numeric >= 2 ** 31).any(axis=1)]
-            saturated_measurements = int(len(saturated))
-            numeric = numeric[~(numeric >= 2 ** 31).any(axis=1)]
+            block_overflow = EnhancedDataPreparationAgent.detect_sensor_overflow(
+                numeric)
+            saturated_measurements = len(block_overflow['saturated_rows'])
+            numeric = block_overflow['clean']
             if len(numeric) >= 3:
                 measurement_samples = [
                     [float(v) for v in row]
@@ -205,7 +215,8 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
     if channel_names:
         numeric_all = df[channel_names].apply(pd.to_numeric, errors='coerce') \
             .dropna(how='any')
-        numeric_all = numeric_all[~(numeric_all >= 2 ** 31).any(axis=1)]
+        numeric_all = EnhancedDataPreparationAgent.detect_sensor_overflow(
+            numeric_all)['clean']
         target_keys = ('brix', 'zucker', 'sugar', 'refe', 'target',
                        'kalibration', 'calibration', 'y')
         ordered_refs = sorted(
@@ -268,8 +279,8 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
         label_series = df[class_label_column].astype(str)
         numeric_rows = df[channel_names].apply(
             pd.to_numeric, errors='coerce').dropna(how='any')
-        numeric_rows = numeric_rows[
-            ~(numeric_rows >= 2 ** 31).any(axis=1)]
+        numeric_rows = EnhancedDataPreparationAgent.detect_sensor_overflow(
+            numeric_rows)['clean']
         paired = numeric_rows.join(label_series.rename('__label'),
                                    how='inner').dropna(subset=['__label'])
         if len(paired) >= 10:
@@ -303,6 +314,8 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
             'measurement_count': wide['measurement_count'],
             'channel_names': [c for c, _ in channels],
             'saturated_measurements': saturated_measurements,
+            'saturated_values': saturated_values_total,
+            'overflow_rows_total': len(overflow['saturated_rows']),
             'target_name': target_name,
             'analysis_mode': analysis_mode,
             **({'class_label_column': class_label_column,
