@@ -752,8 +752,19 @@ class NIRAnalysisCrew:
                             or request.spectral_data),
                 "reference_values": self._extract_reference_values(request.metadata),
             }
+            # Zeilensynchrone Klassifikations-Samples (Stufe 0.1): bei
+            # analysis_mode=classification bevorzugen sie Kalibration und
+            # Replica-Block - die class_labels MUESSEN zeilensynchron zur
+            # Spektrenmatrix sein, sonst wuerde LDA die Zeilen falsch
+            # zuordnen (Vorfall 2026-10-08: keine Konfusionsmatrix, weil
+            # der Replica-Block bei 451 Einzelmessungen winzig war).
+            classification_samples = (request.metadata or {}).get(
+                "classification_samples")
+            classification_labels = (request.metadata or {}).get(
+                "classification_labels")
             supervised_context = {
-                "spectra": (calibration_samples
+                "spectra": (classification_samples
+                            or calibration_samples
                             or request.metadata.get("measurement_samples")
                             or request.spectral_data),
                 "reference_values": self._extract_reference_values(request.metadata),
@@ -763,7 +774,8 @@ class NIRAnalysisCrew:
                 # ehrliches not_applicable) - die Orchestrierung bleibt
                 # unverändert, es gibt keinen hartcodierten Analysepfad.
                 "analysis_mode": (request.metadata or {}).get("analysis_mode"),
-                "class_labels": (request.metadata or {}).get("class_labels"),
+                "class_labels": classification_labels
+                or (request.metadata or {}).get("class_labels"),
             }
             sensor_output = self.sensor_quality_agent.execute(
                 {**parallel_context, "sample_id": request.sample_id}

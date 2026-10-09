@@ -124,7 +124,7 @@ _CHART_EXPLANATIONS = {
               "die Vektoren die Wellenl\u00e4ngen. Zeigt ein Vektor zu einer "
               "Messgruppe, tr\u00e4gt die entsprechende Wellenl\u00e4nge zur "
               "Trennung dieser Gruppe bei.",
-    "scree_plot": "den Scree-Plot: die Gr\u00f6sse (Eigenwert) jeder "
+    "scree_plot": "den Scree-Plot: die Gr\u00f6sse (Eigenwert = erklärte Varianz) jeder "
                   "Hauptkomponente, absteigend sortiert. Wird die Kurve flach, "
                   "liefern weitere Komponenten kaum zus\u00e4tzliche Information - "
                   "dort wird die Componentenzahl gew\u00e4hlt.",

@@ -203,6 +203,18 @@ class StatisticalAnalysisAgent(BaseAgent):
             folds = min(5, int(_np.bincount(
                 _np.searchsorted(sorted(set(y)), y)).min()))
             folds = max(2, folds)
+            # Degenerations-Guard: vollstaendig linear abhaengige
+            # Kanaele (z.B. konstante Rampen ohne Rauschen) lassen die
+            # SVD zusammenbrechen (S leer). sklearn liefert dann einen
+            # kryptischen IndexError - hier ehrlich skipped melden und
+            # kNN als Alternative benennen.
+            import numpy as _np_g
+            if _np_g.linalg.matrix_rank(
+                    _np_g.asarray(matrix, dtype=float)) < 2:
+                return {"status": "skipped",
+                        "reason": "Kanale vollständig linear abhängig "
+                                  "(kein Rauschen/Varianz) - LDA nicht "
+                                  "anwendbar; kNN liefert das Ergebnis"}
             lda = LinearDiscriminantAnalysis()
             cv = StratifiedKFold(n_splits=folds, shuffle=True, random_state=42)
             scores = cross_val_score(lda, matrix, y, cv=cv, scoring="accuracy")
