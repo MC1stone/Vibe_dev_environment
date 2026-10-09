@@ -946,7 +946,13 @@ def _mapping_question_to_proposal(question: str) -> Dict[str, Any]:
     match = _re.search(r"Ist '([^']+)' \(Wert: '([^']+)'\)", str(question))
     term, value = (match.group(1), match.group(2)) if match else (
         str(question)[:40], "")
-    value_clean = str(value).strip().strip("[]")
+    value_clean = str(value).strip().strip("[]").strip()
+    # Platzhalter aus Formular-Vorlagen sind keine Werte (Kaffee-Vorfall
+    # 2026-10-09): '[Bitte eintragen]' und '[_____]' nicht als Vorschlag
+    # anbieten - sie waeren Muess-Fragen ohne Informationsgehalt.
+    if not value_clean or value_clean.lower() in (
+            "bitte eintragen", "_____", "n/a", "-", "keine angabe"):
+        return None
     return {
         "id": f"map_{_re.sub(r'[^a-z0-9]+', '_', term.lower()).strip('_')}",
         "kind": "field_mapping",
@@ -1023,9 +1029,17 @@ def _ki_forward_questions(entry: Dict[str, Any],
         proposals = entry.setdefault("ki_proposals", [])
         for mapping_q in (metadata.pop("field_mapping_questions", None)
                          or []):
-            proposals.append(
-                _mapping_question_to_proposal(mapping_q))
-        proposals.extend(_ki_field_proposals(entry))
+            if not isinstance(mapping_q, str) or len(mapping_q) < 10:
+                continue
+            proposal = _mapping_question_to_proposal(mapping_q)
+            if proposal:
+                proposals.append(proposal)
+        proposals.extend(
+            p for p in _ki_field_proposals(entry) if p)
+        # Deckel: nur die ersten 15 Vorschlaege pro Datensatz; eine
+        # endlose Liste ist nicht bedienbar (Kaffee-Vorfall 2026-10-09:
+        # 2028 durch propagierte Listen-Felder).
+        proposals[:] = [p for p in proposals if p][:15]
         for prop in proposals:
             questions.append(
                 f"KI-Vorschlag zu '{entry.get('file_name')}': "
