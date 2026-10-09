@@ -118,3 +118,40 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def test_crew_journal_entry_and_report_merge():
+    """Iterationsregel-Vorfall 2026-10-09: NIRAnalysisCrew.journal_entry
+    fehlte -> die komplette Iterations-Evaluation fiel still weg (auch
+    verdict-Log und Iterationsplan). Crew-Journal folgt dem BaseAgent-
+    Schema und wird von project_crew mit in die Journal-Sektion gemergt."""
+    import logging
+    logging.disable(logging.WARNING)
+    from agents.nir_analysis_crew import NIRAnalysisCrew
+    from services.project_crew import _per_agent_reports
+
+    crew = NIRAnalysisCrew()
+    assert hasattr(crew, 'journal_entry')
+    crew.journal_entry('iteration', 'Iterations-Plan (Schritt 1): Test',
+                       conclusion='Bewertung gegen Stop-Bedingungen',
+                       action='Nachmessung', iteration=1)
+    assert crew.journal and crew.journal[0]['agent'] == 'NIRAnalysisCrew'
+    assert crew.journal[0]['phase'] == 'iteration'
+
+    class R:
+        spectral_analysis = None
+        metadata_quality = None
+        sensor_quality_results = None
+        statistical_analysis_results = None
+        neural_network_results = None
+        calibration_results = None
+        errors = []
+        warnings = []
+        iteration_evaluation = {'verdict': 'iterate',
+                                'iteration': 1,
+                                'iteration_plan': [{'step': 1}]}
+    sections = _per_agent_reports(crew, R(), None, {})
+    journal_section = next(s for s in sections
+                           if s.get('agent') == 'agenten_journal')
+    assert any(e.get('agent') == 'NIRAnalysisCrew'
+               for e in journal_section['data']['entries'])
