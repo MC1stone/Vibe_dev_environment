@@ -38,10 +38,16 @@ def derive_station_state(project, station):
         return 'done'
     if project.phase == 'released':
         return 'done' if station.station in (1, 2, 3) else 'in_progress'
-    # drafted: station 1 done (project exists with data), station 2 in progress
+    # drafted: station 1 done (project exists with data); station 2 done as
+    # soon as the ingest finished with at least one usable dataset - the
+    # stepper turns green right after the data upload instead of staying
+    # 'in progress' until the release.
     if station.station == 1:
         return 'done'
     if station.station == 2:
+        preparation = getattr(project, 'preparation_report', None) or {}
+        if preparation.get('datasets'):
+            return 'done'
         return 'in_progress'
     return 'open'
 

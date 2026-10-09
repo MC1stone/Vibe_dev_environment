@@ -28,16 +28,16 @@
       {% for s in workflow_context.stations %}
       <div class="d-flex align-items-center gap-2">
         {% if forloop.first %}{% else %}<i class="bi bi-arrow-right text-muted"></i>{% endif %}
-        {% if s.state == 'done' %}
+        {% if s.derived_state == 'done' %}
         <span class="badge bg-success p-2" title="{{ s.get_state_display }}">
           <i class="bi bi-check-circle-fill me-1"></i>{{ s.get_station_display }}
         </span>
-        {% elif s.state == 'awaiting_user' %}
+        {% elif s.derived_state == 'awaiting_user' %}
         <span class="badge bg-warning text-dark p-2" title="{{ s.get_state_display }}">
           <i class="bi bi-hourglass-split me-1"></i>{{ s.get_station_display }}
           <span class="badge bg-dark ms-1">{{ s.open_decision_count }}</span>
         </span>
-        {% elif s.state == 'in_progress' %}
+        {% elif s.derived_state == 'in_progress' %}
         <span class="badge bg-info p-2" title="{{ s.get_state_display }}">
           <i class="bi bi-arrow-repeat me-1"></i>{{ s.get_station_display }}
         </span>
