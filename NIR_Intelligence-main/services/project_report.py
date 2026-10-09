@@ -722,6 +722,75 @@ def _md_source(section: Dict[str, Any]) -> str:
     return '\n'.join(parts)
 
 
+def _decision_log_entries(project):
+    """Chronological user decisions of the project workflow (WORKFLOW_DESIGN.md
+    station 6): every decision with its options, AI basis and resolution, so
+    the final report renders all iterative steps traceably."""
+    try:
+        from core.models import WorkflowDecision
+        return list(WorkflowDecision.objects.filter(project=project)
+                    .select_related('station').order_by('created_at'))
+    except Exception:
+        return []
+
+
+def _decision_log_html(entries) -> str:
+    """HTML rendering of the decision log (station 6)."""
+    if not entries:
+        return ''
+    items = []
+    for entry in entries:
+        answer = entry.answer or {}
+        head = (f"Station {entry.station.station} "
+                f"({entry.station.get_station_display()}) &middot; "
+                f"{entry.created_at.strftime('%d.%m.%Y %H:%M')}")
+        body = f"<strong>{_escape(entry.question)}</strong>"
+        if entry.ki_basis:
+            body += f' <span class="muted small">(KI-Basis: {_escape(entry.ki_basis)})</span>'
+        if entry.resolved_at:
+            option = next((o for o in (entry.options or [])
+                           if o.get('id') == answer.get('option_id')), {})
+            label = option.get('label', answer.get('option_id', '?'))
+            body += (f" &rarr; <em>Entscheidung ({entry.resolved_at.strftime('%d.%m.%Y %H:%M')}):"
+                     f" {_escape(label)}</em>")
+            modified = answer.get('modified_values') or {}
+            if modified:
+                body += f' <span class="small">abge&auml;ndert: {_escape(str(modified)[:200])}</span>'
+        else:
+            body += ' <span class="muted small">offen</span>'
+        items.append(f'<li>{head}: {body}</li>')
+    return ('<h2>Nutzer-Entscheidungen im Workflow</h2>\n'
+            f'<div class="card"><ul class="decision-log">{"".join(items)}</ul></div>')
+
+
+def _decision_log_md_lines(entries) -> List[str]:
+    """Markdown rendering of the decision log (station 6)."""
+    if not entries:
+        return []
+    lines = ['## Nutzer-Entscheidungen im Workflow', '']
+    for entry in entries:
+        answer = entry.answer or {}
+        head = (f"- **Station {entry.station.station} "
+                f"({entry.station.get_station_display()})** "
+                f"· {entry.created_at.strftime('%d.%m.%Y %H:%M')}")
+        body = entry.question
+        if entry.ki_basis:
+            body += f" (KI-Basis: {entry.ki_basis})"
+        if entry.resolved_at:
+            option = next((o for o in (entry.options or [])
+                           if o.get('id') == answer.get('option_id')), {})
+            label = option.get('label', answer.get('option_id', '?'))
+            body += f" → Entscheidung: {label}"
+            modified = answer.get('modified_values') or {}
+            if modified:
+                body += f" (abgeändert: {str(modified)[:200]})"
+        else:
+            body += " (offen)"
+        lines.append(f"{head}: {body}")
+    lines.append('')
+    return lines
+
+
 def generate_markdown_report(project, crew_results: Dict[str, Any],
                              full_series: Optional[List[Dict[str, Any]]] = None) -> str:
     """Render the final report as Markdown (OP39): same structure as the
@@ -752,6 +821,8 @@ def generate_markdown_report(project, crew_results: Dict[str, Any],
          ['Bearbeitungszeit (s)',
           round(float(crew_results.get('processing_time') or 0), 1)]]))
     lines.append('')
+    decision_lines = _decision_log_md_lines(_decision_log_entries(project))
+    lines += decision_lines
     for dataset in datasets:
         rating = dataset.get('metadata_rating') or {}
         rows = [[f, str(r.get('value', ''))[:60], str(r.get('source', ''))]
@@ -925,6 +996,7 @@ Quellcode im Ausdruck einbeziehen</label>
 
 {_metadata_overview_html(datasets, preparation.get('metadata_quality') or {})}
 
+{_decision_log_html(_decision_log_entries(project))}
 <h2>Agenten-Berichte (je Bereich)</h2>
 {agent_html}
 
