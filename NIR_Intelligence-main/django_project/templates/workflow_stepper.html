@@ -5,8 +5,8 @@
   variable `workflow_context` (from api.workflow_context.project_workflow_context).
 {% endcomment %}
 {% if workflow_context %}
-<div class="card shadow-sm mb-4" id="workflowStepper">
-  <div class="card-body">
+<div class="card shadow-sm mb-4 mx-auto" id="workflowStepper" style="max-width: 1100px;">
+  <div class="card-body text-center">
     {% if workflow_context.open_decision_count %}
     <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" role="alert">
       <i class="bi bi-exclamation-triangle-fill"></i>
@@ -24,7 +24,7 @@
       {% endfor %}
     </div>
     {% endif %}
-    <div class="d-flex flex-wrap gap-2 align-items-center" aria-label="{% trans 'Workflow-Position' %}">
+    <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center" aria-label="{% trans 'Workflow-Position' %}">
       {% for s in workflow_context.stations %}
       <div class="d-flex align-items-center gap-2">
         {% if forloop.first %}{% else %}<i class="bi bi-arrow-right text-muted"></i>{% endif %}
