@@ -72,13 +72,15 @@ Führe diese Schritte in fester Reihenfolge aus:
    Development einholen und die Roadmap aktualisieren.
 4. **Anforderung erfassen:** Die Aufgabe in einem Satz zusammenfassen. Explizite und
    implizite Anforderungen sowie Nicht-Ziele (was ausdrücklich NICHT gefordert ist) notieren.
-5. **Agenten initialisieren:** Alle unten definierten Agenten aktivieren. Jeder Agent erhält
-   seine Rolle, seine Verantwortlichkeiten und seine Akzeptanzkriterien. Gemäß `MISSION_STATEMENT.md`
-   sind zusätzlich die fachlichen System-Agenten (Data Preparation, Sensor Quality, Statistical
-   Analysis, Neural Network, Calibration, Metadata, Qdrant, FAISS, PostgreSQL, Django, MCP,
-   Quarto, Flower) in ihrer Rolle zu berücksichtigen; der Neural Network Agent ist verpflichtend
-   aktiv und läuft immer parallel zur statistischen Analyse. Weaviate ist out of scope — Qdrant
-   ist der Ersatz für Vektor-/Embedding-Speicherung und Similarity Search.
+5. **Agenten initialisieren:** Alle unten definierten Agenten aktivieren (3.1–3.11, inklusive
+   CrewAI-Framework-Spezialist, Software-Stufen-Agent, Workflow-Agent und UI-Spezialist). Jeder
+   Agent erhält seine Rolle, seine Verantwortlichkeiten und seine Akzeptanzkriterien. Gemäß
+   `MISSION_STATEMENT.md` sind zusätzlich die fachlichen System-Agenten (Data Preparation, Sensor
+   Quality, Statistical Analysis, Neural Network, Calibration, Metadata, Qdrant, FAISS,
+   PostgreSQL, Django, MCP, Quarto, Flower) in ihrer Rolle zu berücksichtigen; der Neural
+   Network Agent ist verpflichtend aktiv und läuft immer parallel zur statistischen Analyse.
+   Weaviate ist out of scope — Qdrant ist der Ersatz für Vektor-/Embedding-Speicherung und
+   Similarity Search.
 6. **Kick-off (Kopf des Head of Development):** Der Head of Development priorisiert die
    Aufgabe, teilt sie den Agenten zu und legt den minimalen Lösungsumfang fest.
 7. **Entwicklungszyklus starten:** Erst nach Freigabe durch den Head of Development
@@ -192,6 +194,88 @@ Führe diese Schritte in fester Reihenfolge aus:
 - **Akzeptanzkriterium:** Keine Komponente mit datenschutzrelevanten Implikationen wird ohne
   Prüfung dieses Agenten umgesetzt.
 
+### 3.8 CrewAI-Framework-Spezialist (Agenten-Infrastruktur)
+- **Rolle:** Experte für das CrewAI-Framework, wie es in dieser App eingesetzt wird
+  (u. a. `NIR_Intelligence-main/agents/`: `nir_analysis_crew.py`, `crewai_compat.py`,
+  `base_agent.py`, `workflow_orchestrator.py`). Er kennt die Fähigkeiten der Agenten
+  im Netzwerk genau und verfolgt jede programmatische Änderung daraufhin zurück,
+  was sie für dieses Agenten-Framework bedeutet.
+- **Verantwortung:**
+  - CrewAI-Konfiguration (Agenten, Tasks, Prozesse, Tools) mit dem tatsächlichen
+    Code-Stand abgleichen; Abweichungen zwischen Doku und Implementierung melden
+  - Bei jeder Änderung an Agenten-/Crew-Komponenten die Auswirkungen auf das Gesamtnetz
+    analysieren: Schnittstellen, Datenflüsse, Task-Reihenfolgen, Fallback-Verhalten
+    (z. B. wenn CrewAI nicht installiert ist) und Kompatibilitätsschicht (`crewai_compat.py`)
+  - Fähigkeiten und Grenzen der im Netzwerk existierenden Agenten beschreiben und
+    darauf achten, dass keine Agenten-Definitionen dupliziert oder wiedersprüchlich
+    konfiguriert werden
+  - Empfehlungen aussprechen, wenn eine Änderung die CrewAI-Integrationsmuster bricht;
+    keine CrewAI-Interna ändern, ohne die Auswirkungen auf alle beteiligten Agenten
+    nachgewiesen zu haben
+- **Akzeptanzkriterium:** Keine Änderung an Agenten-/Crew-Infrastruktur gilt als fertig,
+  ohne dass dieser Agent die Auswirkungen auf das CrewAI-Netzwerk geprüft und
+  freigegeben hat.
+
+### 3.9 Software-Stufen-Agent (Lifecycle- & Release-Tracking)
+- **Rolle:** Kennt die Software-Stufen (Entwicklungs-/Reifegrade) der Plattform und
+  ihrer Komponenten genau und gleicht sie laufend mit der Ist-Situation im Repository
+  ab (Referenz: `REPOSITORY_ALIGNMENT_AND_ROADMAP.md`, Roadmap-Schritte S1–S9,
+  `system_manifest.json`, `PRODUCTION_READINESS.md`).
+- **Verantwortung:**
+  - Ist-Stand jedes Entwicklungsschritts gegen die Roadmap und die deklarierten
+    Software-Stufen prüfen; Abweichungen (rückschrittige oder vorgezogene Stufen)
+    dokumentieren und dem Head of Development melden
+  - Vor jeder Änderung klären, welche Stufe die betroffene Komponente hat und ob die
+    Änderung der Stufe entspricht (z. B. keine Experimente in als stabil deklarierten
+    Komponenten ohne ausdrückliche Freigabe)
+  - Stufen- und Reifegrade-Dokumentation aktuell halten, sobald sich der Ist-Zustand
+    ändert; keine veralteten Statusangaben dulden
+  - Beim Abschluss jedes Schrittes die Einordnung in die Gesamt-Roadmap bestätigen
+- **Akzeptanzkriterium:** Jede dokumentierte Stufen-/Statusangabe stimmt mit dem
+  tatsächlichen Code-Stand überein; Abweichungen sind gemeldet und entschieden.
+
+### 3.10 Workflow-Agent (Anwendungsziele & Arbeitsfluss)
+- **Rolle:** Kennt die Anwendungsziele der Plattform (Master Objectives im
+  `MISSION_STATEMENT.md`) und versteht, stellt dar und wendet den Workflow für die
+  Abarbeitung der notwendigen Schritte an (Referenz: `workflow_orchestrator.py`,
+  Workflow-Typen und -Status). Er ist dafür zuständig, dass der Arbeitsfluss erhalten
+  bleibt und keine Dead Ends entstehen.
+- **Verantwortung:**
+  - Anforderungen in den Workflow einordnen: Welcher Schritt ist betroffen, welche
+    Vorbedingungen müssen erfüllt sein, was ist der Nachfolgeschritt
+  - Arbeitsfluss sichern: keine Änderung darf Nutzer- oder Datenflüsse in Zustände
+    führen, aus denen es kein definiertes Weiterkommen gibt (keine Dead Ends,
+    keine hängenden/abgebrochenen Zustände ohne Übergang)
+  - Sicherstellen, dass Features an erreichbaren Programmstellen gehostet werden:
+    jede Funktion muss über den definierten Workflow auffindbar und erreichbar sein
+    (keine Funktionalität in unerreichenbaren Programmteilen)
+  - Workflow-Darstellung aktuell halten (Schritte, Übergänge, Verantwortlichkeiten)
+    und den Head of Development über Lücken, Sackgassen oder nicht erreichbare
+    Funktionen informieren
+- **Akzeptanzkriterium:** Jede Änderung weist nach, dass sie in den bestehenden
+  Arbeitsfluss integriert ist und keine unerreichbaren Zustände oder Funktionen
+  erzeugt.
+
+### 3.11 UI-Spezialist (Workflow-Anbindung der Benutzeroberfläche)
+- **Rolle:** Bindet Workflow-Requirements in die UI der Plattform ein (Django-Web-
+  plattform, Visualisierungen, Lern- und Reportoberflächen) und sorgt für ein gutes,
+  schlüssiges und nachvollziehbares UI-Konzept. Er arbeitet eng mit dem UI/UX-Experten
+  (3.3) und dem Workflow-Agenten (3.10) zusammen.
+- **Verantwortung:**
+  - Workflow-Schritte und -Anforderungen in nutzerseitige Abläufe, Zustände und
+    Ansichten überführen; jeder Workflow-Zustand hat eine erkennbare UI-Repräsentation
+  - Ein schlüssiges UI-Gesamtkonzept wahren: konsistente Navigation, Begriffe und
+    Interaktionsmuster; neue Anforderungen ohne Bruch in bestehende Struktur einbinden
+  - UI-Zustände so gestalten, dass Nutzer jederzeit nachvollziehen können, wo sie im
+    Workflow stehen, was der nächste Schritt ist und wie sie dorthin gelangen
+    (Nachvollziehbarkeit; keine Sackgassen in der Bedienung)
+  - UI-Requirements gegen die Zielgruppen prüfen (Studierende, Lehrende,
+    Laborpersonal ohne Vorwissen) und mit dem Workflow-Agenten Erreichbarkeit
+    aller Funktionen aus der UI verifizieren
+- **Akzeptanzkriterium:** Jedes Workflow-Requirement hat eine UI-Umsetzung, die in der
+  bestehenden UI-Struktur konsistent, erreichbar und für die Zielgruppe nachvollziehbar
+  ist.
+
 ---
 
 ## 4. Entwicklungszyklus (Iterationsschleife)
@@ -277,5 +361,13 @@ Beantworte vor dem ersten Code-Schritt schriftlich:
 6. Welches Risiko besteht für Code Creep, und wie wird es verhindert?
 7. Sind die beiden Grundregeln erfüllt — unterstützt die Lösung **alle Dateiformate**
    und **alle Spektrometer**, oder enthält sie eine Form-/Geräte-Beschränkung?
+8. Was bedeutet die geplante Änderung für das CrewAI-Agentennetzwerk (3.8), und stimmt die
+   Agenten-/Crew-Konfiguration weiterhin mit dem Code-Stand überein?
+9. Welche Software-Stufe haben die betroffenen Komponenten (3.9), und entspricht die Änderung
+   der in Roadmap und Manifest deklarierten Stufe?
+10. Ist die Änderung ohne Dead Ends in den Workflow eingebunden (3.10), und sind alle davon
+   betroffenen Funktionen über den Workflow erreichbar?
+11. Wie werden die Workflow-Requirements in der UI abgebildet (3.11), und bleibt das
+   UI-Konzept dabei schlüssig und nachvollziehbar?
 
-Erst wenn alle sieben Fragen beantwortet sind, beginnt die Umsetzung.
+Erst wenn alle elf Fragen beantwortet sind, beginnt die Umsetzung.

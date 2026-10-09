@@ -25,6 +25,59 @@ class WorkflowStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    AWAITING_DECISION = "awaiting_decision"
+
+
+class Decision:
+    """
+    A pending user decision raised by an agent during the workflow.
+
+    A decision always offers at least two options; every option must define a
+    defined continuation (no dead ends). The decision object is persisted in the
+    workflow's decision log (see WorkflowOrchestrator.register_decision).
+    """
+
+    def __init__(
+        self,
+        decision_id: str,
+        station: int,
+        question: str,
+        options: List[Dict[str, Any]],
+        ki_basis: str = "",
+    ):
+        if len(options) < 2:
+            raise ValueError("A decision requires at least two options (no dead ends)")
+        self.decision_id = decision_id
+        self.station = station
+        self.question = question
+        self.options = options
+        self.ki_basis = ki_basis
+        self.answer: Optional[Dict[str, Any]] = None
+        self.created_at = datetime.now().isoformat()
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "decision_id": self.decision_id,
+            "station": self.station,
+            "question": self.question,
+            "options": self.options,
+            "ki_basis": self.ki_basis,
+            "answer": self.answer,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Decision":
+        decision = cls(
+            decision_id=data["decision_id"],
+            station=data["station"],
+            question=data["question"],
+            options=data["options"],
+            ki_basis=data.get("ki_basis", ""),
+        )
+        decision.answer = data.get("answer")
+        decision.created_at = data.get("created_at", decision.created_at)
+        return decision
 
 
 class WorkflowType(Enum):
@@ -54,6 +107,8 @@ class WorkflowResult:
     input_files: List[str] = field(default_factory=list)
     output_directory: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
+    open_decisions: List[Dict[str, Any]] = field(default_factory=list)
+    decision_log: List[Dict[str, Any]] = field(default_factory=list)
 
 
 class WorkflowOrchestrator(BaseAgent):
@@ -99,6 +154,8 @@ class WorkflowOrchestrator(BaseAgent):
         # Workflow tracking
         self.workflow_history = []
         self.current_workflow_id = None
+        self.decision_log: List[Dict[str, Any]] = []
+        self._decision_seq = 0
         
         # Initialize directories
         self._initialize_directories()
@@ -465,6 +522,100 @@ class WorkflowOrchestrator(BaseAgent):
     def execute_quick_workflow(self, file_paths: List[str]) -> WorkflowResult:
         """Execute the quick workflow (convenience method)"""
         return self.execute_workflow(file_paths, WorkflowType.QUICK_ANALYSIS)
+
+    def register_decision(
+        self,
+        workflow_id: str,
+        station: int,
+        question: str,
+        options: List[Dict[str, Any]],
+        ki_basis: str = "",
+    ) -> Optional[Decision]:
+        """
+        Register a pending user decision for a workflow and move the workflow
+        into the AWAITING_DECISION state.
+
+        Every option must define a continuation via its 'effect' key; options
+        without a defined continuation are rejected (no dead ends).
+        """
+        workflow = self.get_workflow_status(workflow_id)
+        if workflow is None:
+            self.logger.warning(f"Workflow {workflow_id} not found for decision registration")
+            return None
+
+        for option in options:
+            if "id" not in option or "label" not in option or "effect" not in option:
+                raise ValueError("Every option needs 'id', 'label' and 'effect' (no dead ends)")
+
+        self._decision_seq += 1
+        decision = Decision(
+            decision_id=f"dec-{workflow_id}-{self._decision_seq:04d}",
+            station=station,
+            question=question,
+            options=options,
+            ki_basis=ki_basis,
+        )
+
+        workflow.open_decisions.append(decision.to_dict())
+        workflow.status = WorkflowStatus.AWAITING_DECISION
+        self.logger.info(
+            f"Workflow {workflow_id} awaits user decision {decision.decision_id} at station {station}"
+        )
+        return decision
+
+    def resolve_decision(
+        self,
+        workflow_id: str,
+        decision_id: str,
+        option_id: str,
+        modified_values: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """
+        Resolve a pending user decision by choosing one of its options.
+
+        The resolution is appended to the workflow's decision log (append-only)
+        and the global decision log, so the final report can render every
+        iterative step and user decision in a traceable way. The workflow
+        returns to PROCESSING if no other decisions are open.
+        """
+        workflow = self.get_workflow_status(workflow_id)
+        if workflow is None:
+            self.logger.warning(f"Workflow {workflow_id} not found for decision resolution")
+            return False
+
+        pending = None
+        for entry in workflow.open_decisions:
+            if entry["decision_id"] == decision_id:
+                pending = Decision.from_dict(entry)
+                break
+        if pending is None:
+            self.logger.warning(f"Decision {decision_id} not open for workflow {workflow_id}")
+            return False
+
+        chosen = next((o for o in pending.options if o["id"] == option_id), None)
+        if chosen is None:
+            self.logger.warning(f"Option {option_id} is not part of decision {decision_id}")
+            return False
+
+        pending.answer = {
+            "option_id": option_id,
+            "effect": chosen["effect"],
+            "modified_values": modified_values or {},
+            "resolved_at": datetime.now().isoformat(),
+        }
+
+        workflow.open_decisions = [
+            e for e in workflow.open_decisions if e["decision_id"] != decision_id
+        ]
+        record = pending.to_dict()
+        workflow.decision_log.append(record)
+        self.decision_log.append(record)
+
+        if not workflow.open_decisions and workflow.status == WorkflowStatus.AWAITING_DECISION:
+            workflow.status = WorkflowStatus.PROCESSING
+            self.logger.info(f"Workflow {workflow_id} continues after decision {decision_id}")
+
+        return True
 
     def get_workflow_status(self, workflow_id: str) -> Optional[WorkflowResult]:
         """Get the status of a specific workflow"""
