@@ -1220,4 +1220,11 @@ def build_preparation_report(project) -> Dict[str, Any]:
         "Preparation report for project %s: %s/%s usable datasets",
         project.id, usable_count, len(datasets),
     )
+    # WORKFLOW_DESIGN.md stations 3/4: translate agent findings (sensor
+    # standard values, comparable spectra) into user decisions. Never raises.
+    try:
+        from services.workflow_integration import integrate_preparation_report
+        integrate_preparation_report(project, report)
+    except Exception as exc:
+        logger.warning("Workflow integration failed (non-fatal): %s", exc)
     return report
