@@ -926,10 +926,21 @@ class ProjectReingestView(APIView if DRF_AVAILABLE else object):
             return Response({'success': False, 'error': gettext('Authentication required')},
                             status=status.HTTP_401_UNAUTHORIZED)
         project = _get_project(project_id, request.user)
+        # OP13-Logik wie ProjectFilesAddView: Der Reingest nach einer
+        # Freigabe bedeutet neue/geaenderte Datenbasis - das Projekt kehrt
+        # in die Vorbereitung zurueck und muss fuer eine erneute Analyse
+        # explizit freigegeben werden (User-Befund 2026-10-09: Buttons
+        # fuer released Projekte nicht erreichbar).
+        phase_returned = False
+        if project.phase != 'drafted':
+            project.phase = 'drafted'
+            project.save(update_fields=['phase', 'updated_at'])
+            phase_returned = True
         from services.project_ingest import build_preparation_report
         report = build_preparation_report(project)
         return Response({
             'success': True,
+            'phase_returned_to_preparation': phase_returned,
             'usable_dataset_count': report.get('usable_dataset_count'),
             'total_dataset_count': report.get('total_dataset_count'),
             'recommendations': report.get('recommendations', []),
