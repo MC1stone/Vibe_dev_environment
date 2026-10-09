@@ -191,6 +191,47 @@ def _escape(value: Any) -> str:
     return html.escape('' if value is None else str(value))
 
 
+def _confusion_matrix_html(matrix_data: Any) -> str:
+    """Render an LDA confusion matrix as an HTML table (Klassen x Klassen)."""
+    if not isinstance(matrix_data, dict):
+        return ''
+    cm = matrix_data.get('confusion_matrix')
+    labels = matrix_data.get('confusion_labels') or matrix_data.get('classes')
+    if not isinstance(cm, list) or not cm or not labels:
+        return ''
+    head = ''.join(f'<th>{_escape(str(l))}</th>' for l in labels)
+    rows = []
+    for i, row in enumerate(cm):
+        cells = ''.join(f'<td style="text-align:center">{_escape(str(v))}</td>'
+                        for v in row)
+        rows.append(f'<tr><th>{_escape(str(labels[i]))}</th>{cells}</tr>')
+    return (f'<h3>Konfusionsmatrix (LDA-Klassifikation)</h3>'
+            f'<p>Zeilen: tats&auml;chliche Klasse, Spalten: Vorhersage. '
+            f'Diagonale = korrekt klassifiziert.</p>'
+            f'<table class="confusion-matrix"><thead><tr><th></th>{head}</tr>'
+            f'</thead><tbody>{"".join(rows)}</tbody></table>')
+
+
+def _confusion_matrix_md(matrix_data: Any) -> List[str]:
+    """Render an LDA confusion matrix as markdown table lines."""
+    if not isinstance(matrix_data, dict):
+        return []
+    cm = matrix_data.get('confusion_matrix')
+    labels = matrix_data.get('confusion_labels') or matrix_data.get('classes')
+    if not isinstance(cm, list) or not cm or not labels:
+        return []
+    lines = ['**Konfusionsmatrix (LDA-Klassifikation)** — '
+             'Zeilen: tatsächliche Klasse, Spalten: Vorhersage:', '']
+    header = ['tatsächlich \\ Vorhersage'] + [str(l) for l in labels]
+    lines.append('| ' + ' | '.join(header) + ' |')
+    lines.append('|' + '---|' * len(header))
+    for i, row in enumerate(cm):
+        lines.append('| ' + ' | '.join([str(labels[i])] +
+                                       [str(v) for v in row]) + ' |')
+    lines.append('')
+    return lines
+
+
 def _journal_html(entries: Any) -> str:
     """HTML rendering of agent journal entries (MO 13)."""
     if not isinstance(entries, list) or not entries:
@@ -497,6 +538,16 @@ def _agent_section_html(section: Dict[str, Any],
     if findings:
         paras = ''.join(f'<p>{_escape(f)}</p>' for f in findings)
         findings_html = f'<h3>Befunde</h3>{paras}'
+    # Konfusionsmatrix (Klassifikations-Modus): sichtbar in der
+    # Statistik-Sektion rendern (Vorfall 2026-10-08: Matrix war in den
+    # Daten, wurde aber nicht angezeigt).
+    confusion_html = ''
+    data_dict = section.get('data') or {}
+    lda_result = ((data_dict.get('method_results') or {}).get('LDA')
+                  if isinstance(data_dict, dict) else None)
+    if lda_result and isinstance(data_dict, dict) \
+            and data_dict.get('analysis_mode') == 'classification':
+        confusion_html = _confusion_matrix_html(lda_result)
     # Agenten-Journal (MO 13): iterative Dokumentation sichtbar machen
     journal_html = ''
     if section.get('agent') == 'agenten_journal':
@@ -526,7 +577,7 @@ def _agent_section_html(section: Dict[str, Any],
     source_html = _section_source_html(section)
     return (f'<div class="card"><h3>{_escape(section.get("title", section.get("agent", "Agent")))} '
             f'<span class="badge {badge}">{_escape(status)}</span></h3>'
-            f'{table}{equation_html}{charts_html}{findings_html}{recs}{journal_html}'
+            f'{table}{equation_html}{charts_html}{findings_html}{confusion_html}{recs}{journal_html}'
             f'{source_html}</div>')
 
 
@@ -727,6 +778,9 @@ def generate_markdown_report(project, crew_results: Dict[str, Any],
             note = data.get('note')
             if note:
                 lines += [f"*{note}*", '']
+        if isinstance(data, dict) and data.get('analysis_mode') == 'classification':
+            lda = (data.get('method_results') or {}).get('LDA') or {}
+            lines += _confusion_matrix_md(lda)
         journal_lines = _journal_md_lines(data.get('journal'))
         if journal_lines:
             lines += ['**Agenten-Journal (Analysen, Rückschlüsse, Iterationen):**', '']

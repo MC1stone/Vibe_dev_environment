@@ -143,8 +143,10 @@ def pca_chart_data_urls(measurement_samples: List[List[float]],
         eigenvalues = pca.explained_variance_
         ax.plot(range(1, len(eigenvalues) + 1), eigenvalues, "o-")
         ax.set_xlabel("Hauptkomponente")
-        ax.set_ylabel("Eigenwert")
-        ax.set_title("Scree-Plot: Eigenwerte der Hauptkomponenten")
+        ax.set_ylabel("Eigenwert (erklärte Varianz je Hauptkomponente)")
+        ax.set_title("Scree-Plot: Eigenwerte der Hauptkomponenten\n"
+                     "(Größe jeder Hauptkomponente: große Eigenwerte "
+                     "bedeuten viel Information in dieser Komponente)")
         ax.grid(alpha=0.3)
         charts["scree_plot"] = _figure_to_data_url(fig)
 

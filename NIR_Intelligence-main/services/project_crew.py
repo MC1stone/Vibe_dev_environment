@@ -385,6 +385,36 @@ def _outlier_section(dataset: Dict[str, Any]) -> Dict[str, Any]:
     from services.outlier_analysis import analyse_dataset
     try:
         result = analyse_dataset(dataset)
+        # Stufe 0.2 (Vorfall 2026-10-08): die Ausreisser-Analyse lief nur
+        # ueber den Replica-Block (measurement_samples) - bei Datensaetzen
+        # mit wechselndem Messobjekt (Kaffee: 451 Einzelmessungen) ist der
+        # Block winzig und die Analyse meldete 'zu wenige Messungen'.
+        # Ehrlicher Fallback: wenn nicht bewertbar, ALLE Messreihen
+        # (classification_samples, sonst Kalibrations-Samples) bewerten -
+        # ohne Objekt-Wiederholungen ist die Aussage 'globale Ausreisser
+        # ueber alle Messungen' statt 'Replikat-Streuung'.
+        if not result['verdict'].get('assessable'):
+            all_rows = (dataset.get('classification_samples')
+                        or dataset.get('calibration_samples') or [])
+            if len(all_rows) >= 10:
+                wl = (dataset.get('preview') or {}).get('wavelengths') or []
+                from services.outlier_analysis import detect_outliers, \
+                    outlier_charts, outlier_findings_text
+                verdict = detect_outliers(all_rows, wl)
+                if verdict.get('assessable'):
+                    file_name = str(dataset.get('file_name') or 'Datensatz')
+                    result = {
+                        'file_name': file_name,
+                        'verdict': verdict,
+                        'charts': outlier_charts(all_rows, wl, verdict,
+                                                 file_name),
+                        'findings': outlier_findings_text(verdict, file_name),
+                    }
+                    result['findings'] = [
+                        f'Bewertet ueber alle {len(all_rows)} Messungen '
+                        '(keine Objekt-Wiederholungen im Datensatz - '
+                        'globale Ausreisserstatistik statt '
+                        'Replikat-Streuung).'] + result['findings']
     except Exception:
         logger.exception('Outlier analysis failed (non-fatal)')
         result = {'file_name': dataset.get('file_name', 'Datensatz'),
@@ -563,6 +593,16 @@ def run_project_crew(project) -> Dict[str, Any]:
                       **({'analysis_mode': dataset['metadata']['analysis_mode']}
                          if (dataset.get('metadata') or {}).get('analysis_mode')
                          else {}),
+                      # Zeilensynchrone Klassifikations-Samples (Stufe 0.1):
+                      # ALLE Messreihen mit Label, nicht nur der Replica-
+                      # Block - und die Labels zeilensynchron dazu
+                      # (metadata.class_labels ist nur die unique-Liste).
+                      **({'classification_samples':
+                          dataset['classification_samples']}
+                         if dataset.get('classification_samples') else {}),
+                      **({'classification_labels':
+                          dataset['classification_labels']}
+                         if dataset.get('classification_labels') else {}),
                       **({'class_labels': dataset['metadata']['class_labels']}
                          if (dataset.get('metadata') or {}).get('class_labels')
                          else {}),
