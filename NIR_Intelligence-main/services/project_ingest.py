@@ -847,6 +847,15 @@ def _ki_forward_questions(entry: Dict[str, Any],
         questions = entry.setdefault("open_questions", [])
         asked_topics = {q.split("thema '")[1].split("'")[0]
                         for q in questions if "thema '" in q}
+        # Grundregel (User 2026-10-09): keine hartkodierten Feld-Mappings.
+        # Begriffe ohne kanonische Zuordnung (z. B. 'Bediener' ?=
+        # operator_name) entscheidet die KI im LLM-Pass; entscheidet auch
+        # sie nicht eindeutig, wird der Nutzer gefragt - die Rohwerte
+        # fallen nie still weg.
+        for mapping_q in (metadata.pop("field_mapping_questions", None)
+                          or []):
+            questions.append(
+                f"KI-Frage zu '{entry.get('file_name')}': {mapping_q}")
         # Zielwert-Thema: nur fragen, wenn weder Metadaten noch die
         # Messwertlisten einen Rueckschluss zulassen (target_name fehlt und
         # keine geeignete Referenzspalte existiert). Bei

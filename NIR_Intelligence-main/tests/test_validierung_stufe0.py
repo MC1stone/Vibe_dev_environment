@@ -254,3 +254,50 @@ def test_ki_llm_status_reports_missing_llm_with_solution():
             or 'status check failed' in str(status['reason'])
         assert status.get('solution'), 'ohne LLM muss eine Loesung stehen'
         assert 'ollama' in status['solution'].lower()
+
+
+def test_no_hardcoded_mapping_but_ki_question():
+    """Grundregel (User 2026-10-09): NIE hartkodierte Mappings - die KI
+    entscheidet Zuordnungen ('Bediener' ?= operator_name) selbst; kann
+    sie es nicht eindeutig, wird der Nutzer gefragt. Deterministische
+    Schicht: Rohwert bleibt erhalten + Mapping-Frage wird gestellt."""
+    import logging
+    logging.disable(logging.WARNING)
+    from agents.data_preparation_agent import EnhancedDataPreparationAgent
+    from services.project_ingest import (_detect_wide_format,
+                                         _ingest_wide_format,
+                                         _ki_forward_questions,
+                                         _metadata_standards)
+    md = EnhancedDataPreparationAgent._extract_metadata_from_lines(
+        ['Bediener: Yvonne', 'Temperatur: 25'])
+    # KEIN hartkodiertes Mapping: 'bediener' bleibt Rohwert
+    assert md.get('bediener') == 'Yvonne'
+    assert 'operator_name' not in md
+    # bekanntes Alias 'Temperatur' bleibt deterministisch
+    assert md.get('temperature') == '25'
+    # offene Mapping-Frage statt stiller Zuordnung
+    assert any('Bediener' in q for q in md.get('field_mapping_questions', []))
+
+    preamble = ['Bediener: Yvonne', 'Instrument: Triadsensor NIR-900']
+    header = ('Messobjekt;Counter;' + ';'.join(
+        f'{ch}_{wl}' for ch, wl
+        in zip('ABCDEFGH', [610, 635, 660, 685, 710, 735, 760, 900])))
+    rows = [f'Sorte_{i % 2};{i};' + ';'.join(str(900 + i) for _ in range(8))
+            for i in range(12)]
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, 'coffee_bedien.csv')
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(preamble + [header] + rows))
+        wide = _detect_wide_format(path)
+
+        class Rec:
+            id = 't'; name = 'c.csv'
+            file_extension = '.csv'; file_category = 'spectral'
+        entry = _ingest_wide_format(Rec(), path, wide)
+        assert entry['metadata'].get('bediener') == 'Yvonne'
+        _ki_forward_questions(entry, _metadata_standards())
+        assert any('Bediener' in q
+                   for q in entry.get('open_questions', [])), \
+            'Mapping-Frage muss beim Nutzer ankommen'
+        # die Frage wird aus metadata in open_questions verschoben
+        assert 'field_mapping_questions' not in (entry.get('metadata') or {})

@@ -66,6 +66,16 @@ temperature, humidity, location, integration_time, scan_count,
 resolution, wavelength_range, serial_number, notes, description,
 experiment_name, purpose.
 
+ZUSATZ-AUFTRAG (Feld-Zuordnung): Stehen im Text Begriffe, die keinem kanonischen
+Feld woertlich entsprechen (z. B. "Bediener", "Pruefer", "Messperson",
+"Raumtemperatur", "Projekt"), entscheidest DU, ob so ein Begriff einem kanonischen
+Feld entspricht (Bediener/Pruefer/Messperson -> operator_name, Raumtemperatur ->
+temperature, Projekt/Versuch -> experiment_name). Begriffe, die DU keinem
+kanonischen Feld zuordnen kannst, darfst du NICHT zuordnen: setze das Feld null
+und stelle stattdessen eine Frage in "questions" (z. B. "Ist 'Bediener' hier die
+Messperson (operator_name) oder etwas anderes?"). Nenne in der evidence das
+Original-Zitat inklusive des Original-Begriffs.
+
 Text aus der Datei "{file_name}":
 {text}
 """
