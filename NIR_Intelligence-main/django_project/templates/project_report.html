@@ -102,6 +102,25 @@
             </div>
 
             <!-- OP31: field-level metadata rating (field / value / source / rating) -->
+            <!-- Transparenz (User-Befund 2026-10-09): Werte, die die KI
+                 las, aber der Anti-Halluzinations-Schutz verworfen hat,
+                 duerfen nicht still verschwinden - der Nutzer sieht sie
+                 mit Grund und kann im Metadaten-Editor eintragen. -->
+            {% if datasets %}
+            {% for d in datasets %}
+            {% if d.llm_rejected_values %}
+            <div class="alert alert-secondary mt-3 mb-2" role="note">
+                <strong><i class="bi bi-funnel me-1"></i>{% trans "Von der KI gelesen, aber verworfen (Anti-Halluzinations-Schutz)" %} &mdash; {{ d.file_name }}:</strong>
+                <ul class="mb-0 mt-1">
+                    {% for r in d.llm_rejected_values %}
+                    <li>{{ r }}</li>
+                    {% endfor %}
+                </ul>
+                <p class="mb-0 mt-1 small">{% trans "Diese Werte stehen nicht w&ouml;rtlich im Quelltext. Falls sie dennoch korrekt sind, tragen Sie sie bitte im Metadaten-Editor ein." %}</p>
+            </div>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
             {% if metadata_quality.open_questions %}
             <div class="alert alert-warning mt-3 mb-2" role="alert">
                 <strong><i class="bi bi-question-circle me-1"></i>{% trans "Offene KI-Fragen zu Ihren Metadaten:" %}</strong>
