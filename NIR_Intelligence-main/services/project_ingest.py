@@ -36,6 +36,35 @@ def _detect_wide_format(file_path: str) -> Dict[str, Any] | None:
                           errors='replace')
     lines = text.splitlines()
 
+    # Excel (Kaffee-Vorfall 2026-10-09, User-Befund "file-type agnostic
+    # heisst auch Excel"): der bisherige Text-Scan sah Binaer-Muell und
+    # der Excel-Loader las das ERSTE Sheet (Messbedingungen) als Fake-
+    # Spektrum - das Messdaten-Sheet (451x23, Kanal-Spalten A_410..L_940)
+    # wurde nie erreicht. Alle Sheets auf Wide-Format pruefen, das
+    # erste Treffer-Sheet gewinnt.
+    if str(file_path).lower().endswith(('.xlsx', '.xls')):
+        try:
+            import pandas as _pd
+            xl = _pd.ExcelFile(file_path)
+            for sheet in xl.sheet_names:
+                sdf = xl.parse(sheet, dtype=str)
+                channel_cols = []
+                for col in sdf.columns:
+                    match = _WAVELENGTH_COLUMN_RE.match(str(col).strip())
+                    if match:
+                        channel_cols.append((str(col),
+                                             float(match.group(1))))
+                if len(channel_cols) >= 8 and len(sdf) >= 2:
+                    return {
+                        'channel_columns': channel_cols,
+                        'header_row': 0,
+                        'dataframe': sdf,
+                        'measurement_count': len(sdf),
+                        'preamble_metadata': {},
+                    }
+        except Exception:
+            return None
+        return None
     header_row, header_fields, delimiter = None, None, None
     for index, line in enumerate(lines[:50]):
         if not line.strip():
@@ -907,6 +936,68 @@ def _propagate_project_metadata(datasets: List[Dict[str, Any]]) -> None:
         logger.exception("Project metadata propagation failed (non-fatal)")
 
 
+def _mapping_question_to_proposal(question: str) -> Dict[str, Any]:
+    """Eine field_mapping_question als strukturierter Akzept-Vorschlag:
+    der Nutzer sieht Original-Begriff + Wert, akzeptiert mit EINEM Klick
+    (oder passt an) - die Antwort landet als Metadaten-Override, kein
+    Editor-Umweg. Kandidaten sind die plausiblen kanonischen Felder; die
+    Wahl bleibt beim Nutzer (Grundregel: kein hartcodiertes Mapping)."""
+    import re as _re
+    match = _re.search(r"Ist '([^']+)' \(Wert: '([^']+)'\)", str(question))
+    term, value = (match.group(1), match.group(2)) if match else (
+        str(question)[:40], "")
+    value_clean = str(value).strip().strip("[]")
+    return {
+        "id": f"map_{_re.sub(r'[^a-z0-9]+', '_', term.lower()).strip('_')}",
+        "kind": "field_mapping",
+        "question": (
+            f"Welches Metadatenfeld ist '{term}' (Wert: '{value_clean}')?"),
+        "raw_key": term,
+        "value": value_clean,
+        "options": [
+            {"id": "operator_name", "label": "operator_name (Messperson)"},
+            {"id": "instrument_type", "label": "instrument_type (Geraet)"},
+            {"id": "instrument_model", "label": "instrument_model (Modell)"},
+            {"id": "temperature", "label": "temperature"},
+            {"id": "humidity", "label": "humidity"},
+            {"id": "timestamp", "label": "timestamp (Datum/Zeit)"},
+            {"id": "location", "label": "location (Ort)"},
+            {"id": "notes", "label": "notes (Notiz - kein Standardfeld)"},
+        ],
+    }
+
+
+def _ki_field_proposals(entry: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """KI-Transparenz 2.0: verworfene LLM-Werte (Anti-Halluzinations-
+    Schutz) als Accept-Vorschlaege - der Nutzer sieht WAS die KI las
+    und entscheidet mit einem Klick, statt dass der Wert still
+    verschwindet."""
+    proposals = []
+    for rejected in (entry.get("llm_rejected_values") or [])[:10]:
+        try:
+            field = str(rejected.get("field") or rejected.get("name") or "")
+            value = str(rejected.get("value") or "")
+            reason = str(rejected.get("reason") or "")[:120]
+        except AttributeError:
+            field, value, reason = "", "", str(rejected)[:120]
+        if not field or not value:
+            continue
+        proposals.append({
+            "id": f"rej_{field}",
+            "kind": "rejected_value",
+            "question": (
+                f"KI las '{field}' = '{value}', verworfen ({reason}). "
+                "Uebernehmen?"),
+            "raw_key": field,
+            "value": value,
+            "options": [
+                {"id": field, "label": f"Als {field} uebernehmen"},
+                {"id": "notes", "label": "In Notizen uebernehmen"},
+            ],
+        })
+    return proposals
+
+
 def _ki_forward_questions(entry: Dict[str, Any],
                         standards: Dict[str, List[str]]) -> None:
     """KI asks the user explicitly for standard-relevant fields that the
@@ -924,14 +1015,21 @@ def _ki_forward_questions(entry: Dict[str, Any],
         asked_topics = {q.split("thema '")[1].split("'")[0]
                         for q in questions if "thema '" in q}
         # Grundregel (User 2026-10-09): keine hartkodierten Feld-Mappings.
-        # Begriffe ohne kanonische Zuordnung (z. B. 'Bediener' ?=
+        # Begriffe ohne kanonische Zuordnung (z. B. 'Name(n)' ?=
         # operator_name) entscheidet die KI im LLM-Pass; entscheidet auch
-        # sie nicht eindeutig, wird der Nutzer gefragt - die Rohwerte
-        # fallen nie still weg.
+        # sie nicht eindeutig, wird der Nutzer gefragt - aber mit EINEM
+        # Klick: strukturierte Vorschlaege (ki_proposals) mit Accept/
+        # Adapt statt Editor-Suche (User-Wunsch 2026-10-09).
+        proposals = entry.setdefault("ki_proposals", [])
         for mapping_q in (metadata.pop("field_mapping_questions", None)
-                          or []):
+                         or []):
+            proposals.append(
+                _mapping_question_to_proposal(mapping_q))
+        proposals.extend(_ki_field_proposals(entry))
+        for prop in proposals:
             questions.append(
-                f"KI-Frage zu '{entry.get('file_name')}': {mapping_q}")
+                f"KI-Vorschlag zu '{entry.get('file_name')}': "
+                f"{prop.get('question')}")
         # Zielwert-Thema: nur fragen, wenn weder Metadaten noch die
         # Messwertlisten einen Rueckschluss zulassen (target_name fehlt und
         # keine geeignete Referenzspalte existiert). Bei

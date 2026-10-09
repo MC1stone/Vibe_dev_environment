@@ -469,6 +469,44 @@ document.addEventListener('click', function (ev) {
   var decisionId = wrap.getAttribute('data-decision');
   var projectId = wrap.getAttribute('data-project');
   var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+  // KI-Vorschlaege: Accept (1 Klick) / Wert anpassen + Accept / Dismiss
+  document.querySelectorAll('.ki-proposals').forEach(function (card) {
+    var fileId = card.getAttribute('data-file-id');
+    card.querySelectorAll('.ki-proposal').forEach(function (row) {
+      var acceptBtn = row.querySelector('.ki-accept');
+      var dismissBtn = row.querySelector('.ki-dismiss');
+      var fieldSel = row.querySelector('.ki-field');
+      var valueInput = row.querySelector('.ki-value');
+      var feedback = row.querySelector('.ki-feedback');
+      function send(action, field, value) {
+        acceptBtn.disabled = true; dismissBtn.disabled = true;
+        fetch('/projects/' + projectId + '/ki-accept/', {
+          method: 'POST', credentials: 'same-origin',
+          headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
+          body: JSON.stringify({file_id: fileId, field: field,
+                                value: value, action: action})
+        }).then(function (r) { return r.json(); }).then(function (data) {
+          if (data.success) {
+            row.style.opacity = '0.45';
+            feedback.style.display = 'inline';
+            setTimeout(function () { window.location.reload(); }, 700);
+          } else {
+            acceptBtn.disabled = false; dismissBtn.disabled = false;
+            alert(data.error || 'Fehler beim Speichern');
+          }
+        }).catch(function () {
+          acceptBtn.disabled = false; dismissBtn.disabled = false;
+        });
+      }
+      acceptBtn.addEventListener('click', function () {
+        send('accept', fieldSel.value, valueInput.value);
+      });
+      dismissBtn.addEventListener('click', function () {
+        send('dismiss', fieldSel.value, valueInput.value);
+      });
+    });
+  });
   btn.disabled = true;
   fetch('/projects/' + projectId + '/decisions/' + decisionId + '/resolve/', {
     method: 'POST',
