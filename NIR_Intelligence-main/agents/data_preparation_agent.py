@@ -1155,9 +1155,23 @@ class EnhancedDataPreparationAgent(BaseAgent):
         'Key = Value' pairs become metadata entries; keys are folded to
         snake_case and mapped onto the canonical platform metadata
         fields via alias lists. Never raises."""
-        metadata: Dict[str, Any] = {}
         try:
             lines = read_text_lines(file_path)
+        except Exception:
+            return {}
+        return self._extract_metadata_from_lines(lines)
+
+    @classmethod
+    def _extract_metadata_from_lines(cls, lines) -> Dict[str, Any]:
+        """Metadata extraction for already-read text lines (shared by
+        _extract_text_metadata and the wide-format preamble pass in the
+        project ingest: header rows above a wide-format table carry the
+        measurement context ('Bediener: ...', 'Instrument: ...') - the
+        deterministic layer must not silently drop them when no LLM is
+        available). Never raises."""
+        metadata: Dict[str, Any] = {}
+        try:
+            lines = list(lines or [])
         except Exception:
             return metadata
 
@@ -1181,9 +1195,9 @@ class EnhancedDataPreparationAgent(BaseAgent):
             if "\ufffd" in value or not value.isprintable():
                 continue
             key_norm = re.sub(r"[\s/()\-]+", "_", key).strip("_").lower()
-            canonical = self._canonical_metadata_key(key_norm)
+            canonical = cls._canonical_metadata_key(key_norm)
             metadata[canonical if canonical else key_norm] = value
-        for key, value in self._extract_prose_metadata(lines).items():
+        for key, value in cls._extract_prose_metadata(lines).items():
             metadata.setdefault(key, value)
         return metadata
 
@@ -1206,7 +1220,8 @@ class EnhancedDataPreparationAgent(BaseAgent):
         r"(?:in\s+der|in\s+dem|im)\s+([A-Z\u00c0-\u00ff][\w\u00c0-\u00ff\-]*(?:\s+[A-Z\u00c0-\u00ff][\w\u00c0-\u00ff\-]*)*)"
         r"(?:\s+werkstatt|\s+labor|\s+raum)", re.IGNORECASE)
 
-    def _extract_prose_metadata(self, lines) -> Dict[str, Any]:
+    @classmethod
+    def _extract_prose_metadata(cls, lines) -> Dict[str, Any]:
         """Extract metadata from free-text (prose) descriptions: files that
         document an experiment ('Die Messungen wurden von Yvonne mit dem
         Triadsensor ... 25' Raumtemperatur ... 88% Luftfeuchte ausgefuehrt')
@@ -1219,16 +1234,16 @@ class EnhancedDataPreparationAgent(BaseAgent):
             text = "\n".join(str(ln) for ln in lines[:500])
             compact = re.sub(r"\s+", " ", text)
             for regex, field in (
-                (self._PROSE_OPERATOR_RE, "operator_name"),
-                (self._PROSE_INSTRUMENT_RE, "instrument_type"),
-                (self._PROSE_TEMPERATURE_RE, "temperature"),
-                (self._PROSE_HUMIDITY_RE, "humidity"),
-                (self._PROSE_LOCATION_RE, "location"),
+                (cls._PROSE_OPERATOR_RE, "operator_name"),
+                (cls._PROSE_INSTRUMENT_RE, "instrument_type"),
+                (cls._PROSE_TEMPERATURE_RE, "temperature"),
+                (cls._PROSE_HUMIDITY_RE, "humidity"),
+                (cls._PROSE_LOCATION_RE, "location"),
             ):
                 match = regex.search(compact)
                 if match:
                     prose[field] = match.group(1).strip().rstrip(".,;")
-            match = self._PROSE_INSTRUMENT_RE_2.search(compact)
+            match = cls._PROSE_INSTRUMENT_RE_2.search(compact)
             if match and "instrument_type" not in prose:
                 prose["instrument_type"] = match.group(1).strip()
             description = text.strip()
