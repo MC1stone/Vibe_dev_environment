@@ -121,6 +121,36 @@
             {% endif %}
             {% endfor %}
             {% endif %}
+            {% if datasets %}
+            {% for d in datasets %}
+            {% if d.ki_proposals %}
+            <div class="card border-warning mb-3 ki-proposals" data-file-id="{{ d.file_id }}">
+                <div class="card-header bg-warning-subtle d-flex align-items-center">
+                    <strong><i class="bi bi-lightbulb me-1"></i>{% trans "KI-Vorschl&auml;ge" %} &mdash; {{ d.file_name }}</strong>
+                    <span class="text-muted fs-6 ms-2">{% trans "Ein Klick: &Uuml;bernehmen, Wert anpassen oder verwerfen" %}</span>
+                </div>
+                <div class="card-body">
+                    {% for prop in d.ki_proposals %}
+                    <div class="ki-proposal border rounded p-2 mb-2" data-raw-key="{{ prop.raw_key }}" data-value="{{ prop.value }}">
+                        <div class="mb-1"><strong>{{ prop.question }}</strong></div>
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <select class="form-select form-select-sm w-auto ki-field" aria-label="{% trans 'Zielfeld' %}">
+                                {% for opt in prop.options %}
+                                <option value="{{ opt.id }}">{{ opt.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" class="form-control form-control-sm ki-value" value="{{ prop.value }}" style="max-width:200px" aria-label="{% trans 'Wert' %}">
+                            <button type="button" class="btn btn-sm btn-success ki-accept"><i class="bi bi-check-lg"></i> {% trans "&Uuml;bernehmen" %}</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ki-dismiss"><i class="bi bi-x-lg"></i> {% trans "Verwerfen" %}</button>
+                            <span class="ki-feedback small text-success" style="display:none"><i class="bi bi-check-circle-fill"></i> {% trans "gespeichert" %}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
             {% if metadata_quality.open_questions %}
             <div class="alert alert-warning mt-3 mb-2" role="alert">
                 <strong><i class="bi bi-question-circle me-1"></i>{% trans "Offene KI-Fragen zu Ihren Metadaten:" %}</strong>
