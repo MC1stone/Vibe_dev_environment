@@ -995,6 +995,98 @@ class AnalysisProject(models.Model):
         }
 
 
+class WorkflowStation(models.Model):
+    """One workflow station of the six-step project workflow (WORKFLOW_DESIGN.md).
+
+    Stations track where the user currently is in the project workflow
+    (1 project setup, 2 ingest, 3 sensor assignment, 4 spectrum comparison,
+    5 analysis cycle, 6 final report) and whether the station is open,
+    in progress, awaiting a user decision or done.
+    """
+    STATES = [
+        ('open', 'Open'),
+        ('in_progress', 'In Progress'),
+        ('awaiting_user', 'Awaiting User Decision'),
+        ('done', 'Done'),
+    ]
+    STATIONS = [
+        (1, 'Project Setup'),
+        (2, 'Ingest & Data Basis'),
+        (3, 'Sensor Assignment'),
+        (4, 'Spectrum Comparison'),
+        (5, 'Analysis Cycle'),
+        (6, 'Final Report'),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        AnalysisProject,
+        on_delete=models.CASCADE,
+        related_name='workflow_stations',
+        verbose_name='Project'
+    )
+    station = models.IntegerField(choices=STATIONS, verbose_name='Station Number')
+    state = models.CharField(
+        max_length=20, choices=STATES, default='open', verbose_name='State'
+    )
+    detail = models.JSONField(default=dict, blank=True, verbose_name='Station Detail')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated At')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')
+
+    class Meta:
+        verbose_name = 'Workflow Station'
+        verbose_name_plural = 'Workflow Stations'
+        ordering = ['project', 'station']
+        unique_together = [('project', 'station')]
+        indexes = [models.Index(fields=['project', 'state'])]
+
+    def __str__(self):
+        return f"{self.project.name} - Station {self.station} ({self.get_state_display()})"
+
+
+class WorkflowDecision(models.Model):
+    """A user decision raised by an agent during the project workflow.
+
+    Every decision offers at least two options, each with a defined continuation
+    (no dead ends). Resolved decisions stay in the log (append-only) so the
+    final report can render every iterative step and user decision traceably.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        AnalysisProject,
+        on_delete=models.CASCADE,
+        related_name='workflow_decisions',
+        verbose_name='Project'
+    )
+    station = models.ForeignKey(
+        WorkflowStation,
+        on_delete=models.CASCADE,
+        related_name='decisions',
+        verbose_name='Workflow Station'
+    )
+    question = models.TextField(verbose_name='Question')
+    options = models.JSONField(default=list, verbose_name='Options')
+    ki_basis = models.TextField(blank=True, verbose_name='AI Basis')
+    answer = models.JSONField(
+        default=dict, blank=True, verbose_name='Answer (option_id, effect, values)'
+    )
+    resolved_at = models.DateTimeField(null=True, blank=True, verbose_name='Resolved At')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')
+
+    class Meta:
+        verbose_name = 'Workflow Decision'
+        verbose_name_plural = 'Workflow Decisions'
+        ordering = ['project', 'created_at']
+        indexes = [models.Index(fields=['project', 'resolved_at'])]
+
+    def __str__(self):
+        status = 'resolved' if self.resolved_at else 'open'
+        return f"{self.project.name} - {status}: {self.question[:60]}"
+
+    @property
+    def is_resolved(self):
+        return self.resolved_at is not None
+
+
 class SpectrumRecord(models.Model):
     """One persisted spectrum in the local spectral database (OP15).
 
