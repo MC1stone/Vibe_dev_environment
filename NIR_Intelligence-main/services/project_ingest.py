@@ -446,7 +446,11 @@ def _extract_archive_members(file_path: str, loader) -> List[str]:
 
     try:
         extract_dir = tempfile.mkdtemp(prefix="nir_project_archive_")
-        if zipfile.is_zipfile(file_path):
+        if os.path.splitext(file_path)[1].lower() == ".7z":
+            import py7zr
+            with py7zr.SevenZipFile(file_path, mode="r") as z:
+                z.extractall(extract_dir)
+        elif zipfile.is_zipfile(file_path):
             with zipfile.ZipFile(file_path, "r") as zip_ref:
                 total_size = sum(info.file_size for info in zip_ref.infolist())
                 if total_size > loader.max_file_size:
@@ -500,14 +504,26 @@ def _archive_entries(file_record, file_path: str) -> List[Dict[str, Any]] | None
     # Metadaten-Inhalt (Experimentator, Geraet, Datum) ging verloren.
     # Erkennung inhaltlich, nicht nach Endung: nur echte Archive
     # (docProps/word/xl ausschliessen) werden als Container behandelt.
+    # 7z-Archive (Kaffee-Vorfall 2026-10-09): ohne diese Erkennung fiel
+    # Kaffee.7z in den Single-File-Pfad, der Agenten-Loader extrahierte
+    # intern und lief EINEN Eintrag ohne Sentinel-/Kanal-Behandlung und
+    # ohne die Protokoll-Metadaten (OP30 'jede Innendatei einzeln' lief
+    # fuer 7z nie). py7zr ist optional (MIT) - ohne es bleibt der ehrliche
+    # Single-File-Fallback.
+    is_7z = archive_ext == ".7z"
     try:
-        is_archive = zipfile.is_zipfile(file_path) or (
+        is_archive = is_7z or zipfile.is_zipfile(file_path) or (
             archive_ext in (".tar", ".tar.gz", ".tgz", ".gz", ".bz2", ".xz")
             and tarfile.is_tarfile(file_path))
     except Exception:
         return None
     if not is_archive:
         return None
+    if is_7z:
+        try:
+            import py7zr  # noqa: F401
+        except ImportError:
+            return None
     if zipfile.is_zipfile(file_path):
         try:
             with zipfile.ZipFile(file_path) as zf:

@@ -355,3 +355,59 @@ def test_docx_protokoll_is_metadata_source():
         # ... und der Ingest behandelt docx NICHT als Archiv
         from services.project_ingest import _archive_entries
         assert _archive_entries(None, docx_path) is None
+
+
+def test_7z_archive_ingests_every_inner_file():
+    """Kaffee-Vorfall 2026-10-09 (User-Upload Kaffee.7z): 7z wurde von
+    _archive_entries nicht erkannt -> Single-File-Pfad -> der Agenten-
+    Loader lief EINEN Eintrag (8118 Fake-Punkte, ohne Sentinel-/
+    Kanal-Behandlung, ohne Protokoll-Metadaten). OP30 gilt auch fuer
+    7z: jede Innendatei einzeln, gleiche Regeln wie Direktupload."""
+    import logging
+    import os
+    import zipfile
+    logging.disable(logging.WARNING)
+    try:
+        import py7zr
+    except ImportError:
+        import pytest
+        pytest.skip("py7zr nicht verfuegbar")
+    from services.project_ingest import ingest_file
+
+    channels = [f'{ch}_{wl}' for ch, wl
+               in zip('ABCDEFGH', [610, 635, 660, 685, 710, 735, 760, 900])]
+    header = 'Messobjekt;Counter;' + ';'.join(channels)
+    rows = [f'Sorte_{i % 2};{i};'
+            + ';'.join(str(900 + i) for _ in range(8))
+            for i in range(12)]
+    protocol = ('Versuchsprotokoll\nName(n): Katja Hofacker\n'
+                'Spektrometer: KT1370\n')
+
+    with tempfile.TemporaryDirectory() as tmp:
+        inner = os.path.join(tmp, 'inner')
+        os.makedirs(inner)
+        with open(os.path.join(inner, 'messreihe.csv'), 'w',
+                  encoding='utf-8') as f:
+            f.write('\n'.join([header] + rows))
+        with open(os.path.join(inner, 'protokoll.txt'), 'w',
+                  encoding='utf-8') as f:
+            f.write(protocol)
+        arch = os.path.join(tmp, 'projekt.7z')
+        with py7zr.SevenZipFile(arch, 'w') as z:
+            z.writeall(inner, '')
+
+        class Rec:
+            id = 'a1'; name = 'projekt.7z'
+            file_extension = '.7z'; file_category = 'archive'
+            def get_file_path(self): return arch
+        entries = ingest_file(Rec())
+        assert isinstance(entries, list) and len(entries) == 2, entries
+        kinds = {e.get('dataset_type') for e in entries}
+        assert 'measurement' in kinds and 'metadata' in kinds
+        meas = next(e for e in entries
+                    if e.get('dataset_type') == 'measurement')
+        assert meas['metadata']['analysis_mode'] == 'classification'
+        assert len(meas.get('classification_samples') or []) == 12
+        meta = next(e for e in entries
+                   if e.get('dataset_type') == 'metadata')
+        assert 'Katja Hofacker' in str(meta.get('metadata', {}).values())
