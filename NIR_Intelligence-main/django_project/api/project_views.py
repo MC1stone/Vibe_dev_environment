@@ -30,6 +30,8 @@ except ImportError:  # offline test mode without djangorestframework
     DRF_AVAILABLE = False
 
 from core.models import AnalysisProject, GenericFile, SensorDocument
+from .workflow_context import project_workflow_context, create_decision, resolve_decision
+from core.models import WorkflowDecision
 from django.utils.translation import gettext
 
 
@@ -844,8 +846,67 @@ class ProjectDetailView(TemplateView):
             'crew_analysis': crew_results.get('crew_analysis', {}),
             'final_report_path': project.final_report_path,
             'final_report_url': f'/projects/{project.id}/final-report/' if project.final_report_path else None,
+            'workflow_context': project_workflow_context(project),
         }
         return render(request, self.template_name, context)
+
+
+class ProjectDecisionCreateView(APIView if DRF_AVAILABLE else object):
+    """Register a pending user decision for a project (WORKFLOW_DESIGN.md §3a)."""
+
+    def post(self, request, project_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        project = _get_project(project_id, request.user)
+        station = request.data.get('station')
+        question = (request.data.get('question') or '').strip()
+        options = request.data.get('options') or []
+        try:
+            station = int(station)
+        except (TypeError, ValueError):
+            station = None
+        if not station or not 1 <= station <= 6:
+            return Response({'success': False, 'error': gettext('station must be 1-6')},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if not question:
+            return Response({'success': False, 'error': gettext('question required')},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            decision = create_decision(
+                project, station, question, options,
+                ki_basis=request.data.get('ki_basis', ''))
+        except ValueError as exc:
+            return Response({'success': False, 'error': str(exc)},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return Response({'success': True, 'decision_id': str(decision.id)})
+
+
+class ProjectDecisionResolveView(APIView if DRF_AVAILABLE else object):
+    """Resolve a pending decision with one of its options (WORKFLOW_DESIGN.md §3c)."""
+
+    def post(self, request, project_id, decision_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        project = _get_project(project_id, request.user)
+        try:
+            decision = WorkflowDecision.objects.get(id=decision_id, project=project,
+                                                    resolved_at__isnull=True)
+        except (WorkflowDecision.DoesNotExist, ValueError):
+            return Response({'success': False, 'error': gettext('Decision not found')},
+                            status=status.HTTP_404_NOT_FOUND)
+        option_id = request.data.get('option_id')
+        if not option_id:
+            return Response({'success': False, 'error': gettext('option_id required')},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            resolve_decision(decision, option_id,
+                             modified_values=request.data.get('modified_values'))
+        except ValueError as exc:
+            return Response({'success': False, 'error': str(exc)},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return Response({'success': True})
 
 
 class ProjectDeleteView(APIView if DRF_AVAILABLE else object):
