@@ -4,4 +4,4 @@ postgres/
 redis/
 consume/
 export/
-paperless-ai/
+ollama/

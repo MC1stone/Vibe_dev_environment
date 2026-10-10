@@ -58,19 +58,26 @@ services:
       PAPERLESS_ADMIN_USER: admin
       PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
 
+  ollama:
+    image: docker.io/ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ./ollama:/root/.ollama
+
   paperless-ai:
     image: ghcr.io/clusterzx/paperless-ai:latest
     restart: unless-stopped
     depends_on:
       - paperless
+      - ollama
     ports:
       - "3000:3000"
     environment:
       PAPERLESS_API_URL: http://paperless:8000
       PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN}
-      PAPERLESS_AI_PROVIDER: openai
-      OPENAI_API_KEY: ${MISTRAL_API_KEY}
-      OPENAI_BASE_URL: https://api.mistral.ai/v1
-      OPENAI_MODEL: mistral-small-latest
+      PAPERLESS_AI_INITIAL_SETUP: "no"
+      AI_PROVIDER: ollama
+      OLLAMA_API_URL: http://ollama:11434
+      OLLAMA_MODEL: mistral
     volumes:
       - ./paperless-ai/data:/app/data
