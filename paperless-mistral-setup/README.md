@@ -60,6 +60,9 @@ docker compose logs -f paperless    # beim ersten Start wird der Superuser angel
 - Über die Weboberfläche (Drag & Drop)
 - Oder Dateien in den lokalen Ordner `./consume` legen — der Watch-Folder
   wird automatisch in Paperless eingelesen
+- Per **ESP32-CAM**: Dokument unter die Kamera legen, Button drücken — das Foto
+  fließt direkt über die REST-API in Paperless und wird automatisch verarbeitet.
+  Details, Arduino-Sketch und Auslöser-Varianten: [esp32-cam/README.md](esp32-cam/README.md)
 - Export/Backup landet in `./export`
 
 ## Nützliche Befehle
