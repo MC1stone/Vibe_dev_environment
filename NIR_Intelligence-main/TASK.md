@@ -76,6 +76,23 @@ Umsetzung der offenen Schritte des Expertengruppen-Entwurfs
 - node --check auf spectra.js/analysis.js/chatbot_panel.js; Django-
   Template-Kompilierbarkeit aller geaenderten Templates verifiziert.
 
+### Release-Feedback (OP60-Fix, 2 Befunde vom Nutzer)
+- FIX 1 (keine Reaktion auf KI-Vorschlags-Auswahl): Die Accept/Dismiss-
+  Verdrahtung war versehentlich INNERHALB des Workflow-Entscheidungs-
+  Click-Handlers verschachtelt und lief erst nach einem Klick auf eine
+  Entscheidung. Jetzt eigener IIFE beim Seitenladen; Feedback-Span
+  ('gespeichert') + Ausgrauen + Reload bleiben. Ausserdem erscheint
+  bei Fehlern eine alert-Meldung statt stiller Nichtreaktion.
+- FIX 2 (Erklaerungen zu Grafiken): Jede Grafik im Agenten-Bericht hat
+  jetzt ein direkt zugeordnetes aufklappbares Erklaerungs-Dropdown
+  ('Was zeigt dieses Diagramm?') wie der Code-Block; neuer Template-
+  Filter core/templatetags/chart_explanations.py mit Klartext-
+  Erklaerungen (PCA-Score/Loading/Biplot/Scree/R2/SPE, Similarity,
+  Kalibration, Sensor-Drift/Noise/SNR, XAI, Outlier) und generischem
+  Fallback fuer unbekannte Keys.
+- Matrix test_s3_s4_s6_redesign.py um T4a-T4f erweitert: 23/23 gruen;
+  Regressionen S1/S2/S5 6/6, OP52 56/56, OP3 45/45, OP56 18/18 gruen.
+
 ## Current Task: OP59 - Release: Perfekte Ansible-Installationsroutine mit Anleitung
 
 ### Ziel

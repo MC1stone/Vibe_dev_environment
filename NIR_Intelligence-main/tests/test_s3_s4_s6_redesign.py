@@ -78,10 +78,30 @@ def test_s6_chatbot_panel():
           os.path.exists(os.path.join(TEMPLATES, 'chatbot.html')))
 
 
+def test_op60_fixes():
+    report_tpl = read(os.path.join(TEMPLATES, 'project_report.html'))
+    check("T4a KI-Vorschlags-Verdrahtung laeuft beim Seitenladen, nicht im Decision-Handler (OP60-Fix)",
+          'OP60-Fix' in report_tpl and
+          report_tpl.index('OP60-Fix') < report_tpl.index("document.addEventListener('click'"))
+    check("T4b Verdrahtung sendet an ki-accept-Endpoint mit sichtbarem Feedback (OP60-Fix)",
+          "ki-accept" in report_tpl and 'ki-feedback' in report_tpl)
+    check("T4c Charts haben ein zugeordnetes Erklaerungs-Dropdown (OP60)",
+          'Was zeigt dieses Diagramm?' in report_tpl)
+    check("T4d Erklaerungs-Dropdown nutzt den chart_explanation-Filter (OP60)",
+          'chart_explanation' in report_tpl)
+    expl = read(os.path.join(REPO_ROOT, 'django_project', 'core', 'templatetags',
+                             'chart_explanations.py'))
+    check("T4e Erklärungen decken PCA-, Similarity-, Kalibrations- und XAI-Keys ab (OP60)",
+          all(k in expl for k in ('score_plot', 'similarity_top3', 'rmse_cv', 'feature_importance')))
+    check("T4f unbekannte Chart-Keys erhalten einen generischen Hinweis (OP60)",
+          'GENERIC_EXPLANATION' in expl)
+
+
 def main():
     test_s3_result_panel()
     test_s4_next_step_hint()
     test_s6_chatbot_panel()
+    test_op60_fixes()
     failed = [name for name, ok in results if not ok]
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed")
     if failed:
