@@ -919,29 +919,86 @@ function analyzeSpectrum(spectrumId) {
         }
     };
     
+    // S8: run the quick check asynchronously (OP57 pattern) so the request
+    // returns immediately with 202 and the page polls the quick-status endpoint.
+    analysisRequest.async = true;
+    showQuickCheckProgress(spectrum);
+
     axios.post('/api/crewai/analysis/start/', analysisRequest, {
         headers: {
             'X-CSRFToken': getCSRFToken()
         }
     })
         .then(function(response) {
-            hideLoading();
             const result = response.data;
-            
-            if (result.success) {
-                // S3: show the result on this page instead of redirecting
-                // to the unlinked /analysis/ page.
+            if (result.success && result.async && result.request_id) {
+                pollQuickCheck(spectrum, result.request_id);
+            } else if (result.success) {
+                hideLoading();
                 showQuickCheckResult(spectrum, response.data);
             } else {
+                hideLoading();
                 showError(nirGettext('Analyse fehlgeschlagen: ') + (result.error || nirGettext('Unknown error')));
             }
         })
         .catch(function(error) {
             console.error('Error starting analysis:', error);
             hideLoading();
+            closeQuickCheckResult();
             const detail = error.response && error.response.data && error.response.data.error
                 ? error.response.data.error : '';
             showError(nirGettext('Analyse fehlgeschlagen. ') + detail);
+        });
+}
+
+function showQuickCheckProgress(spectrum) {
+    const section = document.getElementById('quickCheckResultSection');
+    const body = document.getElementById('quickCheckResultBody');
+    const sample = document.getElementById('quickCheckResultSample');
+    if (!section || !body) return;
+    sample.textContent = spectrum.name || spectrum.sample_name || spectrum.sample_id || spectrum.id;
+    body.innerHTML =
+        '<div class="d-flex align-items-center gap-3">' +
+        '<div class="spinner-border text-primary" role="status"></div>' +
+        '<div>' +
+        '<div>' + nirGettext('Analyse läuft im Hintergrund - Statistik und neuronales Netz arbeiten parallel.') + '</div>' +
+        '<div class="small text-muted" id="quickCheckElapsed"></div>' +
+        '</div></div>';
+    section.hidden = false;
+}
+
+function pollQuickCheck(spectrum, requestId, attempt) {
+    attempt = attempt || 0;
+    if (attempt > 600) {
+        hideLoading();
+        showError(nirGettext('Analyse dauert zu lange - bitte später auf der Analyse-Seite (Menü Diagnose) nachsehen.'));
+        return;
+    }
+    axios.get('/api/crewai/analysis/quick-status/', {
+        params: { request_id: requestId }
+    })
+        .then(function(response) {
+            const data = response.data;
+            if (data.status === 'completed') {
+                hideLoading();
+                showQuickCheckResult(spectrum, data);
+            } else {
+                const el = document.getElementById('quickCheckElapsed');
+                if (el && typeof data.elapsed !== 'undefined') {
+                    el.textContent = nirGettext('Verstrichene Zeit') + ': ' + data.elapsed + ' s';
+                }
+                setTimeout(function() { pollQuickCheck(spectrum, requestId, attempt + 1); }, 2000);
+            }
+        })
+        .catch(function(error) {
+            const data = error.response && error.response.data;
+            if (data && data.status === 'error') {
+                hideLoading();
+                closeQuickCheckResult();
+                showError(nirGettext('Analyse fehlgeschlagen: ') + (data.error || nirGettext('Unknown error')));
+            } else {
+                setTimeout(function() { pollQuickCheck(spectrum, requestId, attempt + 1); }, 5000);
+            }
         });
 }
 

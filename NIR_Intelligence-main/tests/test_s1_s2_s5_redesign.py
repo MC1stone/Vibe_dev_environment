@@ -63,7 +63,9 @@ def test_seven_point_navigation():
     assert 'href="/jobs/"' in base
     assert 'href="/agents/"' in base
     assert 'href="/analysis/"' in base
-    assert 'href="/files/"' in base
+    # S7: /files/ moved out of the Diagnose submenu; the page itself stays
+    # reachable (OP8) via project files and its URL, and the API is in use.
+    assert 'href="/files/"' not in base
     # diagnose section is staff-only
     assert '{% if user.is_staff %}' in base
 

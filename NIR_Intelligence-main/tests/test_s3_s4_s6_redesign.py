@@ -91,10 +91,39 @@ def test_op60_fixes():
           'chart_explanation' in report_tpl)
     expl = read(os.path.join(REPO_ROOT, 'django_project', 'core', 'templatetags',
                              'chart_explanations.py'))
-    check("T4e Erklärungen decken PCA-, Similarity-, Kalibrations- und XAI-Keys ab (OP60)",
+    check("T4e Erklaerungen decken PCA-, Similarity-, Kalibrations- und XAI-Keys ab (OP60)",
           all(k in expl for k in ('score_plot', 'similarity_top3', 'rmse_cv', 'feature_importance')))
     check("T4f unbekannte Chart-Keys erhalten einen generischen Hinweis (OP60)",
           'GENERIC_EXPLANATION' in expl)
+
+
+def test_s7_s8_redesign():
+    base = read(os.path.join(TEMPLATES, 'base.html'))
+    check("T5a /files/ removed from the Diagnose submenu (S7)",
+          'href="/files/"' not in base)
+    check("T5b files page itself remains reachable (S7, OP8)",
+          os.path.exists(os.path.join(TEMPLATES, 'files.html')))
+    check("T5c dead workflow display layer removed: views/urls/templates (S7)",
+          not os.path.exists(os.path.join(REPO_ROOT, 'django_project', 'api', 'workflow_display_views.py')) and
+          not os.path.exists(os.path.join(REPO_ROOT, 'django_project', 'api', 'workflow_display_urls.py')) and
+          not os.path.exists(os.path.join(REPO_ROOT, 'django_project', 'api', 'workflow_views.py')) and
+          not os.path.exists(os.path.join(REPO_ROOT, 'django_project', 'api', 'workflow_urls.py')) and
+          not os.path.exists(os.path.join(TEMPLATES, 'workflow_list.html')) and
+          not os.path.exists(os.path.join(TEMPLATES, 'workflow_results.html')))
+    cv = read(os.path.join(REPO_ROOT, 'django_project', 'api', 'crewai_views.py'))
+    check("T5d start_analysis supports async payload flag (S8)",
+          "payload.get('async')" in cv and 'HTTP_202_ACCEPTED' in cv)
+    check("T5e quick-check job registry + thread run in background (S8)",
+          'QUICK_JOBS' in cv and 'threading.Thread' in cv)
+    check("T5f quick-status endpoint registered (S8)",
+          'quick-status' in read(os.path.join(REPO_ROOT, 'django_project', 'api', 'crewai_urls.py')))
+    check("T5g shared response builder keeps sync+async shape identical (S8)",
+          'def _build_analysis_response' in cv)
+    sj = read(os.path.join(STATIC_JS, 'spectra.js'))
+    check("T5h spectra quick check runs async with progress panel (S8)",
+          'showQuickCheckProgress' in sj and "analysisRequest.async = true" in sj)
+    check("T5i spectra polls quick-status and renders into the S3 panel (S8)",
+          "pollQuickCheck" in sj and '/api/crewai/analysis/quick-status/' in sj)
 
 
 def main():
@@ -102,6 +131,7 @@ def main():
     test_s4_next_step_hint()
     test_s6_chatbot_panel()
     test_op60_fixes()
+    test_s7_s8_redesign()
     failed = [name for name, ok in results if not ok]
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed")
     if failed:

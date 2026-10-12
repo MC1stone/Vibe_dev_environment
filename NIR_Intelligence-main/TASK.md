@@ -93,6 +93,47 @@ Umsetzung der offenen Schritte des Expertengruppen-Entwurfs
 - Matrix test_s3_s4_s6_redesign.py um T4a-T4f erweitert: 23/23 gruen;
   Regressionen S1/S2/S5 6/6, OP52 56/56, OP3 45/45, OP56 18/18 gruen.
 
+## Current Task: OP61 - Redesign S7+S8 (Rueckbau + Async Schnell-Check)
+
+### S7 - Rueckbau (mit PO-Freigabe vom 2026-10-12)
+- /files/ aus dem Diagnose-Untermenue entfernt (Seite + API bleiben
+  erreichbar, OP8/OP3-Kontrakten unveraendert; Analyse-Seite nutzt
+  /api/files/ weiterhin).
+- Tote Workflow-Anzeige-Schicht komplett entfernt (nie in urls.py
+  eingebunden gewesen): api/workflow_views.py, api/workflow_urls.py,
+  api/workflow_display_views.py, api/workflow_display_urls.py,
+  templates/workflow_list.html, templates/workflow_results.html
+  (ca. 1800 Zeilen Leichen). OP3 T7a prueft jetzt die Entfernung.
+- agents/workflow_orchestrator.py bleibt bestehen (Agenten-Referenz,
+  von TASK.md/WORKFLOW_DESIGN referenziert), war nur von den Leichen
+  importiert worden.
+
+### S8 - Schnell-Check asynchron (OP57-Muster)
+- crewai_views.py: start_analysis unterstuetzt payload.async=true ->
+  validiert wie bisher, startet den Crew-Lauf in einem Background-
+  Thread (QUICK_JOBS-Registry), antwortet sofort mit 202 + request_id.
+  Sync-Pfad unveraendert; gemeinsamer _build_analysis_response-Helper
+  garantiert identische Response-Shape.
+- Neuer Endpoint GET /api/crewai/analysis/quick-status/?request_id=...
+  liefert {status: running|completed|error, elapsed, ...vollstaendige
+  Analyse-Antwort bei completed} (500 mit Klartext-Fehler bei error,
+  nie still).
+- spectra.js: Schnell-Check sendet async=true, zeigt Fortschritts-
+  Panel (Spinner + verstrichene Zeit) im S3-Ergebnis-Bereich, pollt
+  alle 2s (max. 20 Min, dann Hinweis auf Analyse-Seite) und rendert
+  das Ergebnis bei Abschluss im selben Panel. Batch-Analyse nutzt den
+  unverenderten Pfad.
+
+### Nachtrag: OP60-Fix-Cherry-Pick
+- Der OP60-Fix-Commit (KI-Vorschlags-Handler + Chart-Erklaerungs-
+  Dropdowns) war im PR-#163-Merge NICHT enthalten (Merge erfolgte vor
+  dem Push des Fixes) und ist hier mit dabei (Cherry-Pick b5abf2c).
+
+### Verifikation
+- Matrix test_s3_s4_s6_redesign.py: 32/32 gruen (S3/S4/S6/OP60/S7/S8).
+- Regressionen: S1/S2/S5 6/6, OP52 56/56, OP3 45/45, OP56 18/18,
+  OP57 16/16 gruen. py_compile + Django-URL-Reverse + node --check ok.
+
 ## Current Task: OP59 - Release: Perfekte Ansible-Installationsroutine mit Anleitung
 
 ### Ziel

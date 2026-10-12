@@ -7,6 +7,8 @@ import json
 import tempfile
 from pathlib import Path
 from typing import Dict, Any, List
+import threading
+import time
 
 from django.http import JsonResponse, HttpResponse, HttpResponseBadRequest
 from django.views.decorators.csrf import csrf_exempt
@@ -20,6 +22,11 @@ from rest_framework import status
 # Import path configuration
 from path_config import setup_project_paths
 from django.utils.translation import gettext
+
+
+# S8: registry for asynchronous quick-check analyses (OP57 pattern).
+QUICK_JOBS = {}
+QUICK_JOBS_LOCK = threading.Lock()
 setup_project_paths()
 
 # Import NIR Analysis Crew
@@ -63,6 +70,74 @@ def get_crew_instance():
         )
         api_crew = NIRAnalysisCrew(config)
     return api_crew
+
+
+def _build_analysis_response(result, summary, analysis_request):
+    """S8: shared response builder for sync and async quick-check path."""
+    response_data = {
+        "success": len(result.errors) == 0,
+        "request_id": result.request_id,
+        "sample_id": result.sample_id,
+        "timestamp": result.timestamp,
+        "overall_quality_score": result.overall_quality_score,
+        "processing_time": result.processing_time,
+        "privacy_level": result.privacy_level.value,
+        "summary": summary,
+        "recommendations": result.recommendations,
+        "warnings": result.warnings,
+        "errors": result.errors,
+        "reports": [
+            {
+                "report_id": report.report_id,
+                "report_type": report.report_type.value,
+                "format": report.format.value,
+                "status": report.status.value,
+                "file_path": report.file_path,
+                "file_size": report.file_size,
+                "preview_available": report.preview_available
+            }
+            for report in result.generated_reports
+        ]
+    }
+    
+    # Add spectral analysis details if available
+    if result.spectral_analysis:
+        response_data["spectral_analysis"] = {
+            "quality_score": result.spectral_analysis.quality_score,
+            "quality_grade": result.spectral_analysis.quality_grade.value,
+            "wavelength_range": list(result.spectral_analysis.wavelength_range),
+            "data_points": result.spectral_analysis.data_points,
+            "issues_detected": [issue.value for issue in result.spectral_analysis.issues_detected],
+            "noise_level": result.spectral_analysis.noise_level,
+            "signal_to_noise_ratio": result.spectral_analysis.signal_to_noise_ratio,
+            "shift_detected": result.spectral_analysis.shift_detected,
+            "recommendations": result.spectral_analysis.recommendations
+        }
+    
+    # Add metadata quality details if available
+    if result.metadata_quality:
+        response_data["metadata_quality"] = {
+            "overall_score": result.metadata_quality.overall_quality_score,
+            "grade": result.metadata_quality.overall_quality_grade.value,
+            "completeness_score": result.metadata_quality.completeness_score,
+            "accuracy_score": result.metadata_quality.accuracy_score,
+            "consistency_score": result.metadata_quality.consistency_score,
+            "missing_required_fields": result.metadata_quality.missing_required_fields,
+            "recommendations": result.metadata_quality.recommendations,
+            "enhancements": result.metadata_quality.enhancements
+        }
+    
+    # Add agent analysis results (OP6 agents, now executed by the crew)
+    response_data["sensor_quality"] = result.sensor_quality_results or {}
+    response_data["statistical_analysis"] = result.statistical_analysis_results or {}
+    response_data["neural_network"] = result.neural_network_results or {}
+    response_data["spectral_data"] = {
+        "wavelengths": (analysis_request.spectral_data or {}).get("wavelengths", []),
+        "intensities": (analysis_request.spectral_data or {}).get("intensities", []),
+    }
+    
+    
+    return response_data
 
 
 @api_view(['POST'])
@@ -177,6 +252,39 @@ def start_analysis(request):
             user_id=payload.get('user_id', None)
         )
         
+        # S8: asynchronous quick check (OP57 pattern) - returns immediately
+        # with 202; the browser polls /api/crewai/analysis/quick-status/.
+        if payload.get('async'):
+            import uuid as _uuid
+            request_id = f"nir_quick_{_uuid.uuid4().hex[:12]}"
+            with QUICK_JOBS_LOCK:
+                QUICK_JOBS[request_id] = {
+                    'status': 'running',
+                    'started_at': time.time(),
+                    'response': None,
+                    'error': None,
+                }
+
+            def _run_quick(job_id, req):
+                try:
+                    crew = get_crew_instance()
+                    result = crew.analyze_sample(req)
+                    summary = crew.get_analysis_summary(result)
+                    data = _build_analysis_response(result, summary, req)
+                    with QUICK_JOBS_LOCK:
+                        QUICK_JOBS[job_id]['status'] = 'completed'
+                        QUICK_JOBS[job_id]['response'] = data
+                except Exception as exc:  # never die silently
+                    with QUICK_JOBS_LOCK:
+                        QUICK_JOBS[job_id]['status'] = 'error'
+                        QUICK_JOBS[job_id]['error'] = str(exc)
+
+            threading.Thread(target=_run_quick, args=(request_id, analysis_request),
+                             daemon=True).start()
+            return Response(
+                {"success": True, "async": True, "request_id": request_id},
+                status=status.HTTP_202_ACCEPTED)
+
         # Get crew instance
         crew = get_crew_instance()
         
@@ -186,69 +294,8 @@ def start_analysis(request):
         # Generate summary
         summary = crew.get_analysis_summary(result)
         
-        # Prepare response
-        response_data = {
-            "success": len(result.errors) == 0,
-            "request_id": result.request_id,
-            "sample_id": result.sample_id,
-            "timestamp": result.timestamp,
-            "overall_quality_score": result.overall_quality_score,
-            "processing_time": result.processing_time,
-            "privacy_level": result.privacy_level.value,
-            "summary": summary,
-            "recommendations": result.recommendations,
-            "warnings": result.warnings,
-            "errors": result.errors,
-            "reports": [
-                {
-                    "report_id": report.report_id,
-                    "report_type": report.report_type.value,
-                    "format": report.format.value,
-                    "status": report.status.value,
-                    "file_path": report.file_path,
-                    "file_size": report.file_size,
-                    "preview_available": report.preview_available
-                }
-                for report in result.generated_reports
-            ]
-        }
-        
-        # Add spectral analysis details if available
-        if result.spectral_analysis:
-            response_data["spectral_analysis"] = {
-                "quality_score": result.spectral_analysis.quality_score,
-                "quality_grade": result.spectral_analysis.quality_grade.value,
-                "wavelength_range": list(result.spectral_analysis.wavelength_range),
-                "data_points": result.spectral_analysis.data_points,
-                "issues_detected": [issue.value for issue in result.spectral_analysis.issues_detected],
-                "noise_level": result.spectral_analysis.noise_level,
-                "signal_to_noise_ratio": result.spectral_analysis.signal_to_noise_ratio,
-                "shift_detected": result.spectral_analysis.shift_detected,
-                "recommendations": result.spectral_analysis.recommendations
-            }
-        
-        # Add metadata quality details if available
-        if result.metadata_quality:
-            response_data["metadata_quality"] = {
-                "overall_score": result.metadata_quality.overall_quality_score,
-                "grade": result.metadata_quality.overall_quality_grade.value,
-                "completeness_score": result.metadata_quality.completeness_score,
-                "accuracy_score": result.metadata_quality.accuracy_score,
-                "consistency_score": result.metadata_quality.consistency_score,
-                "missing_required_fields": result.metadata_quality.missing_required_fields,
-                "recommendations": result.metadata_quality.recommendations,
-                "enhancements": result.metadata_quality.enhancements
-            }
-        
-        # Add agent analysis results (OP6 agents, now executed by the crew)
-        response_data["sensor_quality"] = result.sensor_quality_results or {}
-        response_data["statistical_analysis"] = result.statistical_analysis_results or {}
-        response_data["neural_network"] = result.neural_network_results or {}
-        response_data["spectral_data"] = {
-            "wavelengths": (analysis_request.spectral_data or {}).get("wavelengths", []),
-            "intensities": (analysis_request.spectral_data or {}).get("intensities", []),
-        }
-        
+        # Prepare response (S8: shared helper, identical shape for sync+async)
+        response_data = _build_analysis_response(result, summary, analysis_request)
         return Response(response_data, status=status.HTTP_200_OK)
         
     except json.JSONDecodeError:
@@ -261,6 +308,46 @@ def start_analysis(request):
             {"error": f"Analysis failed: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@csrf_exempt
+def get_quick_check_status(request):
+    """S8: status of an asynchronous quick-check analysis.
+
+    Query parameters:
+    - request_id: the id returned by start_analysis with async=true
+    """
+    request_id = request.GET.get('request_id')
+    if not request_id:
+        return Response(
+            {"error": gettext("request_id parameter is required")},
+            status=status.HTTP_400_BAD_REQUEST)
+
+    with QUICK_JOBS_LOCK:
+        job = QUICK_JOBS.get(request_id)
+
+    if job is None:
+        return Response(
+            {"found": False, "error": f"Unknown request_id {request_id}"},
+            status=status.HTTP_404_NOT_FOUND)
+
+    elapsed = round(time.time() - job['started_at'], 1)
+    if job['status'] == 'completed':
+        data = dict(job['response'] or {})
+        data['async'] = True
+        data['status'] = 'completed'
+        data['elapsed'] = elapsed
+        return Response(data, status=status.HTTP_200_OK)
+    if job['status'] == 'error':
+        return Response(
+            {"async": True, "status": "error", "error": job['error'],
+             "elapsed": elapsed},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return Response(
+        {"async": True, "status": "running", "elapsed": elapsed},
+        status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

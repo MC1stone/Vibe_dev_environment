@@ -126,11 +126,14 @@ def main():
     check("T6c projects workflow linked in the navigation (OP25)",
           "/projects/" in base_src and "Projects" in base_src)
 
-    # ---------- T7: upload view redirect ----------
-    wf_path = os.path.join(os.path.dirname(__file__), "..", "django_project", "api", "workflow_display_views.py")
-    with open(wf_path, encoding="utf-8") as f:
-        wf_src = f.read()
-    check("T7a upload_view redirects to files page", "HttpResponseRedirect('/files/')" in wf_src)
+    # ---------- T7: dead workflow display layer removed (S7) ----------
+    wf_dir = os.path.join(os.path.dirname(__file__), "..", "django_project", "api")
+    tpl_dir = os.path.join(os.path.dirname(__file__), "..", "django_project", "templates")
+    check("T7a unreachd workflow display layer removed (S7)",
+          not os.path.exists(os.path.join(wf_dir, "workflow_display_views.py")) and
+          not os.path.exists(os.path.join(wf_dir, "workflow_display_urls.py")) and
+          not os.path.exists(os.path.join(tpl_dir, "workflow_list.html")) and
+          not os.path.exists(os.path.join(tpl_dir, "workflow_results.html")))
 
     # ---------- T8: backend view contracts unchanged ----------
     fv_path = os.path.join(os.path.dirname(__file__), "..", "django_project", "api", "file_views.py")
