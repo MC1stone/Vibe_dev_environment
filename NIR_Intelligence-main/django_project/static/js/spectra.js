@@ -929,12 +929,9 @@ function analyzeSpectrum(spectrumId) {
             const result = response.data;
             
             if (result.success) {
-                showSuccess(nirGettext('Analyse gestartet - Ergebnis erscheint auf der Analyse-Seite.'));
-                
-                // Redirect to analysis page or jobs page
-                setTimeout(() => {
-                    window.location.href = '/analysis/';
-                }, 1000);
+                // S3: show the result on this page instead of redirecting
+                // to the unlinked /analysis/ page.
+                showQuickCheckResult(spectrum, response.data);
             } else {
                 showError(nirGettext('Analyse fehlgeschlagen: ') + (result.error || nirGettext('Unknown error')));
             }
@@ -1011,16 +1008,14 @@ function quickAnalyzeSelected() {
             const successful = responses.filter(r => r && r.data && r.data.success).length;
             
             if (successful > 0) {
-                showSuccess(`${successful} analysis/analyses started successfully!`);
+                showSuccess(nirGettext('Analyse gestartet - Ergebnisse sammeln sich auf der Analyse-Seite (Menü Diagnose).'));
                 
                 // Clear selection
                 selectedSpectra = [];
                 document.getElementById('selectAllSpectra').checked = false;
                 
-                // Refresh page
-                setTimeout(() => {
-                    window.location.href = '/analysis/';
-                }, 1000);
+                // S3: stay on this page; batch results remain reachable via
+                // the Diagnose menu instead of a hard redirect.
             }
         })
         .catch(error => {
@@ -1288,5 +1283,73 @@ function formatDate(dateString) {
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch (e) {
         return dateString;
+    }
+}
+// S3: Quick-Check result panel — render the synchronous CrewAI analysis
+// response inline on the spectra page instead of redirecting to /analysis/.
+function showQuickCheckResult(spectrum, data) {
+    const section = document.getElementById('quickCheckResultSection');
+    const body = document.getElementById('quickCheckResultBody');
+    const sample = document.getElementById('quickCheckResultSample');
+    if (!section || !body) {
+        return;
+    }
+
+    sample.textContent = spectrum.name || spectrum.sample_name || spectrum.sample_id || spectrum.id;
+
+    const sa = data.spectral_analysis || {};
+    const mq = data.metadata_quality || {};
+    const rows = [];
+
+    if (Object.keys(sa).length) {
+        rows.push(`
+            <h6 class="mt-0">${nirGettext('Datenqualität')}</h6>
+            <dl class="row mb-3">
+                <dt class="col-sm-4">${nirGettext('Qualitätsnote')}</dt>
+                <dd class="col-sm-8">${sa.quality_grade || '—'} (${sa.quality_score ?? '—'})</dd>
+                <dt class="col-sm-4">${nirGettext('Wellenlängenbereich')}</dt>
+                <dd class="col-sm-8">${(sa.wavelength_range || []).join(' – ') || '—'} nm</dd>
+                <dt class="col-sm-4">${nirGettext('Datenpunkte')}</dt>
+                <dd class="col-sm-8">${sa.data_points ?? '—'}</dd>
+                <dt class="col-sm-4">${nirGettext('Signal-Rausch-Verhältnis')}</dt>
+                <dd class="col-sm-8">${sa.signal_to_noise_ratio ?? '—'}</dd>
+                <dt class="col-sm-4">${nirGettext('Auffälligkeiten')}</dt>
+                <dd class="col-sm-8">${(sa.issues_detected && sa.issues_detected.length) ? sa.issues_detected.join(', ') : nirGettext('Keine')}</dd>
+            </dl>`);
+    }
+
+    if (Object.keys(mq).length) {
+        rows.push(`
+            <h6>${nirGettext('Metadaten-Qualität')}</h6>
+            <dl class="row mb-3">
+                <dt class="col-sm-4">${nirGettext('Gesamtnote')}</dt>
+                <dd class="col-sm-8">${mq.grade || '—'} (${mq.overall_score ?? '—'})</dd>
+                <dt class="col-sm-4">${nirGettext('Vollständigkeit')}</dt>
+                <dd class="col-sm-8">${mq.completeness_score ?? '—'}</dd>
+                <dt class="col-sm-4">${nirGettext('Fehlende Pflichtfelder')}</dt>
+                <dd class="col-sm-8">${(mq.missing_required_fields && mq.missing_required_fields.length) ? mq.missing_required_fields.join(', ') : nirGettext('Keine')}</dd>
+            </dl>`);
+    }
+
+    if (data.warnings && data.warnings.length) {
+        rows.push(`<div class="alert alert-warning py-2">${data.warnings.join('<br>')}</div>`);
+    }
+    if (data.errors && data.errors.length) {
+        rows.push(`<div class="alert alert-danger py-2">${data.errors.join('<br>')}</div>`);
+    }
+    if (data.recommendations && data.recommendations.length) {
+        rows.push(`<h6>${nirGettext('Empfehlungen')}</h6><ul class="mb-0"><li>${data.recommendations.join('</li><li>')}</li></ul>`);
+    }
+
+    body.innerHTML = rows.join('') || `<p class="mb-0">${nirGettext('Analyse abgeschlossen. Keine Detaildaten verfügbar.')}</p>`;
+    section.hidden = false;
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeQuickCheckResult() {
+    const section = document.getElementById('quickCheckResultSection');
+    if (section) {
+        section.hidden = true;
+        document.getElementById('quickCheckResultBody').innerHTML = '';
     }
 }

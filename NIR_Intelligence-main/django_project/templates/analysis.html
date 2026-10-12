@@ -261,6 +261,9 @@
 <div class="d-none" id="resultSummary"></div>
 <div class="d-none" id="resultData"></div>
 
+<!-- S6: contextual chatbot panel (MO 10) -->
+{% include 'chatbot_panel.html' %}
+
 <!-- recent results keep their grid for the history view -->
 <section class="o-section o-section--light">
     <div class="o-container">
@@ -281,7 +284,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/analysis.js' %}?v=3"></script>
+<script src="{% static 'js/chatbot_panel.js' %}?v=1"></script>
+<script src="{% static 'js/analysis.js' %}?v=4"></script>
 <script>
 // Self-contained workflow wiring. No dependency on external files or CDNs so
 // the upload always works and always gives visible feedback.

@@ -1,0 +1,86 @@
+// S6: contextual chatbot panel (MO 10) — shared by analysis results and
+// project report pages. Reads window.nirChatbotContext set by the embedding
+// page and posts to /api/chatbot/message/ (existing endpoint, unchanged).
+(function () {
+    const state = { history: [] };
+
+    function esc(text) {
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
+
+    function render(role, content) {
+        const box = document.getElementById('chatbotPanelMessages');
+        if (!box) return;
+        const wrapper = document.createElement('div');
+        const isUser = role === 'user';
+        wrapper.className = 'd-flex mb-2 ' + (isUser ? 'justify-content-end' : 'justify-content-start');
+        const bubble = document.createElement('div');
+        bubble.className = isUser ? 'bg-primary text-white rounded p-2' : 'bg-light rounded p-2';
+        bubble.style.maxWidth = '85%';
+        bubble.innerHTML = isUser ? esc(content) : content;
+        wrapper.appendChild(bubble);
+        box.appendChild(wrapper);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    window.nirChatbotPanelSend = function () {
+        const input = document.getElementById('chatbotPanelInput');
+        const typing = document.getElementById('chatbotPanelTyping');
+        const sources = document.getElementById('chatbotPanelSources');
+        const question = (input.value || '').trim();
+        if (!question) return;
+        input.value = '';
+        render('user', question);
+        typing.hidden = false;
+
+        const ctx = window.nirChatbotContext || {};
+        const payload = {
+            question: question,
+            analysis_results: ctx.analysis_results || [],
+            documents: ctx.documents || [],
+            history: state.history.slice(-6)
+        };
+
+        fetch('/api/chatbot/message/', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'X-CSRFToken': (function () {
+                    const el = document.querySelector('[name=csrfmiddlewaretoken]');
+                    return el ? el.value : '';
+                })(),
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(r => r.json().catch(() => ({})))
+            .then(data => {
+                typing.hidden = true;
+                if (data.degraded) {
+                    render('assistant', '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> ' +
+                        esc(data.error || 'Chatbot nicht verfügbar (Ollama nicht erreichbar).') + '</span>');
+                    return;
+                }
+                if (data.answer) {
+                    render('assistant', esc(data.answer).replace(/\n/g, '<br>'));
+                    state.history.push({ role: 'user', content: question });
+                    state.history.push({ role: 'assistant', content: data.answer });
+                    const rag = data.rag_sources || [];
+                    sources.textContent = rag.length
+                        ? 'RAG: ' + rag.join(', ')
+                        : '';
+                } else {
+                    render('assistant', '<span class="text-danger">Unerwartete Antwort: ' +
+                        esc(JSON.stringify(data)) + '</span>');
+                }
+            })
+            .catch(err => {
+                typing.hidden = true;
+                render('assistant', '<span class="text-danger">Anfrage fehlgeschlagen: ' +
+                    esc(err.message) + '</span>');
+            });
+    };
+})();

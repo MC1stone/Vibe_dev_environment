@@ -44,6 +44,38 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## Current Task: OP60 - Workflow-/UI-Redesign S3+S4+S6 (Entwurf PR #125)
+
+### Ziel
+Umsetzung der offenen Schritte des Expertengruppen-Entwurfs
+(docs/WORKFLOW_UI_REDESIGN.md, PR #125). S1+S2+S5 waren bereits gemerged
+(Commit 7569405, Matrix test_s1_s2_s5_redesign.py 6/6).
+
+### Umsetzung
+- S3 (Schnell-Check): Spektren-Seite zeigt das Analyse-Ergebnis jetzt
+  inline im neuen Ergebnis-Panel (spectra.html quickCheckResultSection +
+  showQuickCheckResult/closeQuickCheckResult in spectra.js) statt auf
+  die ungelinkte /analysis/-Seite umzuleiten. Batch-Analyse bleibt auf
+  der Seite, Ergebnisse dort via Diagnose-Menue erreichbar.
+- S4 (Phasen-Zeitachse): workflow_context.py ergaenzt next_hint
+  (Klartext 'Naechster Schritt: ...' fuer die erste offene Station,
+  Abschluss-Hint bei completed); workflow_stepper.html rendert den Hint.
+- S6 (Chatbot kontextuell, MO 10): wiederverwendbares Panel
+  chatbot_panel.html + chatbot_panel.js, eingebettet in analysis.html
+  (Kontext: letztes Analyse-Ergebnis via window.nirChatbotContext) und
+  project_report.html (Kontext: crew_analysis via json_script); nutzt den
+  bestehenden /api/chatbot/message/-Endpoint; Solo-Seite /chatbot/ bleibt.
+- S7 (Rueckbau /files/ + Workflow-Leichen): NICHT durchgefuehrt -
+  offene PO-Frage im Entwurf (#2, Direkt-Links); workflow_display_views
+  enthaelt den von OP3 getesteten upload-Redirect. Kein Rueckbau ohne
+  PO-Freigabe (Anti-Code-Creep-Regel 5).
+
+### Verifikation
+- Neue Matrix tests/test_s3_s4_s6_redesign.py: 17/17 gruen.
+- Regressionen: S1/S2/S5 6/6, OP52 56/56, OP3 45/45 gruen.
+- node --check auf spectra.js/analysis.js/chatbot_panel.js; Django-
+  Template-Kompilierbarkeit aller geaenderten Templates verifiziert.
+
 ## Current Task: OP59 - Release: Perfekte Ansible-Installationsroutine mit Anleitung
 
 ### Ziel
