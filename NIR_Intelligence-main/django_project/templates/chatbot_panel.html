@@ -1,0 +1,33 @@
+{% load i18n %}
+{% comment %}
+  S6: contextual chatbot panel (MO 10). Reusable include for analysis results
+  and project report pages. The embedding page sets
+  `window.nirChatbotContext = {analysis_results: [...], documents: [...]}`
+  so the latest results are sent along with the question. The solo
+  /chatbot/ page remains as fallback.
+{% endcomment %}
+<div class="c-card" id="chatbotPanel" data-endpoint="/api/chatbot/message/">
+    <div class="c-card__header d-flex justify-content-between align-items-center">
+        <h2 class="c-card__title mb-0">
+            <i class="bi bi-robot"></i>
+            {% trans "Ergebnisse mit dem Assistenten diskutieren" %}
+        </h2>
+    </div>
+    <div class="c-card__body">
+        <div id="chatbotPanelMessages" class="mb-3" style="max-height: 320px; overflow-y: auto;">
+            <p class="text-muted mb-0">{% trans "Stellen Sie Fragen zu den Analyse-Ergebnissen - der neueste Kontext wird automatisch mitgesendet." %}</p>
+        </div>
+        <div id="chatbotPanelTyping" class="text-muted small mb-2" hidden>
+            <span class="spinner-border spinner-border-sm me-1"></span>{% trans "Assistent denkt..." %}
+        </div>
+        <div class="d-flex gap-2">
+            <input type="text" class="c-form-control" id="chatbotPanelInput"
+                   placeholder="{% trans 'Ihre Frage zu den Ergebnissen...' %}"
+                   onkeydown="if(event.key==='Enter'){nirChatbotPanelSend();}">
+            <button type="button" class="c-btn c-btn--primary" onclick="nirChatbotPanelSend()">
+                {% trans "Senden" %}
+            </button>
+        </div>
+        <div id="chatbotPanelSources" class="small text-muted mt-2"></div>
+    </div>
+</div>

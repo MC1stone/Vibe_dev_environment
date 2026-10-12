@@ -509,6 +509,9 @@ function displayAnalysisResults(result) {
     
     // The consolidated workflow page shows the results inline instead of a modal
     showWorkflowReport(result);
+
+    // S6: provide the latest results as chatbot context (MO 10)
+    window.nirChatbotContext = { analysis_results: [result] };
 }
 
 function formatSummaryText(summary, result) {

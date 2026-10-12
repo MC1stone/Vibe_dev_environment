@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load static %}
 {% block title %}{{ project.name }} - Projektbericht{% endblock %}
 {% block content %}
 {% include 'workflow_stepper.html' %}
@@ -489,8 +490,21 @@
     {% endif %}
 
 </div>
+<!-- S6: contextual chatbot panel (MO 10) -->
+    {% if project.phase != 'drafted' %}
+    {% include 'chatbot_panel.html' %}
+    {{ crew_analysis|json_script:'crewAnalysisJson' }}
+    <script>
+        (function () {
+            var crew = JSON.parse(document.getElementById('crewAnalysisJson').textContent);
+            window.nirChatbotContext = { analysis_results: [crew] };
+        })();
+    </script>
+    {% endif %}
+
 {% endblock %}
 {% block extra_js %}
+<script src="{% static 'js/chatbot_panel.js' %}?v=1"></script>
 <script>
 document.addEventListener('click', function (ev) {
   var btn = ev.target.closest('.js-workflow-decision-option');

@@ -71,7 +71,28 @@ def project_workflow_context(project):
         'stations': stations,
         'open_decisions': open_decisions,
         'open_decision_count': len(open_decisions),
+        'next_hint': _next_step_hint(project, stations),
     }
+
+
+NEXT_STEP_HINTS = {
+    1: 'Projekt anlegen und Dateien hochladen',
+    2: 'Datenaufbereitung abschliessen - Dateien werden zu Datensaetzen',
+    3: 'Sensor zuordnen und Datenqualitaet pruefen',
+    4: 'Spektren vergleichen (Referenz-/Bibliotheksspektren)',
+    5: 'Analyse starten - Statistik und NN laufen parallel',
+    6: 'Projekt freigeben und Report erzeugen',
+}
+
+
+def _next_step_hint(project, stations):
+    """S4: plain-text hint for the first pending station (no dead ends)."""
+    if project.phase == 'completed':
+        return 'Alle Schritte abgeschlossen - der Report steht zum Download bereit'
+    for s in stations:
+        if s.derived_state != 'done':
+            return NEXT_STEP_HINTS.get(s.station, '')
+    return ''
 
 
 def create_decision(project, station_number, question, options, ki_basis=''):

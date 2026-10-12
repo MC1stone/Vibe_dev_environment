@@ -244,6 +244,28 @@
     </div>
 </section>
 
+<!-- Quick-Check Result Panel (S3): analysis result stays on this page
+     instead of redirecting to the orphaned /analysis/ page. -->
+<section class="o-section" id="quickCheckResultSection" hidden>
+    <div class="o-container">
+        <div class="c-card">
+            <div class="c-card__header d-flex justify-content-between align-items-center">
+                <h2 class="c-card__title mb-0">
+                    <i class="bi bi-clipboard-data"></i>
+                    {% trans "Schnell-Check-Ergebnis" %}
+                    <span class="badge text-bg-secondary" id="quickCheckResultSample"></span>
+                </h2>
+                <button type="button" class="c-btn c-btn--outline c-btn--sm" onclick="closeQuickCheckResult()" aria-label="{% trans 'Schließen' %}">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="c-card__body">
+                <div id="quickCheckResultBody"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- Spectra Table Section -->
 <section class="o-section o-section--light">
     <div class="o-container">
