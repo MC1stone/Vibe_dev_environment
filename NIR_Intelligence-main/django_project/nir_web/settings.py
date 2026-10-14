@@ -155,7 +155,10 @@ if os.getenv('DJANGO_DB_ENGINE') == 'postgresql':
             socket.gethostbyname(host)
         except socket.gaierror:
             # Host cannot be resolved, fall back to SQLite
-            pass
+            import logging as _logging
+            _logging.getLogger('nir_web.settings').error(
+                'DJANGO_DB_ENGINE=postgresql, aber Host %r ist nicht '
+                'aufloesbar - Fallback auf SQLite!', host)
         else:
             # Host is resolvable, try to connect
             try:
@@ -176,12 +179,23 @@ if os.getenv('DJANGO_DB_ENGINE') == 'postgresql':
                         'PORT': port,
                     }
                 }
-            except:
-                # Connection failed, fall back to SQLite
-                pass
+            except Exception as db_exc:
+                # Connection failed, fall back to SQLite - loudly: stille
+                # Fallbacks haben einen Vorfall verursacht (2026-10-14:
+                # App lief tagelang unbemerkt auf SQLite statt Postgres).
+                import logging as _logging
+                _logging.getLogger('nir_web.settings').error(
+                    'DJANGO_DB_ENGINE=postgresql, aber die Verbindung zu '
+                    'PostgreSQL %s:%s (DB %r, User %r) schlug fehl: %s - '
+                    'Fallback auf SQLite!', host, port,
+                    os.getenv('DJANGO_DB_NAME', 'nir_mistral'),
+                    os.getenv('DJANGO_DB_USER', 'nir_user'), db_exc)
     except ImportError:
         # psycopg2 is not installed, fall back to SQLite
-        pass
+        import logging as _logging
+        _logging.getLogger('nir_web.settings').error(
+            'DJANGO_DB_ENGINE=postgresql, aber psycopg2 ist nicht '
+            'installiert - Fallback auf SQLite!')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
