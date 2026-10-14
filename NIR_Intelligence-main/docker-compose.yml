@@ -15,6 +15,11 @@ services:
   postgresql:
     image: postgres:15-alpine
     restart: unless-stopped
+    # Passwort-Sync bei JEDEM Start (Vorfall 2026-10-14): das offizielle
+    # Image uebernimmt POSTGRES_PASSWORD nur bei der Erstinitialisierung
+    # des Volumes - ohne Sync lief die DB mit einem veralteten Passwort
+    # weiter und Django fiel still auf SQLite zurueck.
+    entrypoint: ["/usr/local/bin/postgres-entrypoint.sh"]
     ports:
       - "5432:5432"
     environment:
@@ -24,6 +29,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./docker/postgres-entrypoint.sh:/usr/local/bin/postgres-entrypoint.sh:ro
     networks:
       - nir_network
     healthcheck:
