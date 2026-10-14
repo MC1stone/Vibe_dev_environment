@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
+{% load chart_explanations %}
 {% block title %}{{ project.name }} - Projektbericht{% endblock %}
 {% block content %}
 {% include 'workflow_stepper.html' %}
@@ -456,7 +457,24 @@
                         <div class="row g-3">
                             {% for key, url in section.charts.items %}
                             <div class="col-md-6">
-                                <img src="{{ url }}" alt="PCA {{ key }}" class="img-fluid border rounded">
+                                <img src="{{ url }}" alt="Diagramm {{ key }}" class="img-fluid border rounded">
+                                <div class="accordion accordion-flush mt-1" id="chartExpl-{{ forloop.counter }}">
+                                    <div class="accordion-item border-0">
+                                        <h3 class="accordion-header">
+                                            <button class="accordion-button collapsed py-1 small" type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#chartExplBody-{{ forloop.counter }}">
+                                                <i class="bi bi-info-circle me-1"></i>{% trans "Was zeigt dieses Diagramm?" %}
+                                            </button>
+                                        </h3>
+                                        <div id="chartExplBody-{{ forloop.counter }}" class="accordion-collapse collapse"
+                                             data-bs-parent="#chartExpl-{{ forloop.counter }}">
+                                            <div class="accordion-body small text-muted">
+                                                {{ key|chart_explanation }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             {% endfor %}
                         </div>
@@ -504,16 +522,12 @@
 
 {% endblock %}
 {% block extra_js %}
-<script src="{% static 'js/chatbot_panel.js' %}?v=1"></script>
-<script>
-document.addEventListener('click', function (ev) {
-  var btn = ev.target.closest('.js-workflow-decision-option');
-  if (!btn) return;
-  var wrap = btn.closest('[data-decision]');
-  var decisionId = wrap.getAttribute('data-decision');
-  var projectId = wrap.getAttribute('data-project');
+<script src="{% static 'js/chatbot_panel.js' %}?v=1"></script><script>
+// OP60-Fix: KI-Vorschlags-Verdrahtung laeuft beim Seitenladen - zuvor war sie
+// im Workflow-Entscheidungs-Click-Handler verschachtelt und reagierte nicht.
+(function () {
+  var projectId = '{{ project.id }}';
   var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
   // KI-Vorschlaege: Accept (1 Klick) / Wert anpassen + Accept / Dismiss
   document.querySelectorAll('.ki-proposals').forEach(function (card) {
     var fileId = card.getAttribute('data-file-id');
@@ -551,6 +565,16 @@ document.addEventListener('click', function (ev) {
       });
     });
   });
+})();
+</script>
+<script>
+document.addEventListener('click', function (ev) {
+  var btn = ev.target.closest('.js-workflow-decision-option');
+  if (!btn) return;
+  var wrap = btn.closest('[data-decision]');
+  var decisionId = wrap.getAttribute('data-decision');
+  var projectId = wrap.getAttribute('data-project');
+  var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
   btn.disabled = true;
   fetch('/projects/' + projectId + '/decisions/' + decisionId + '/resolve/', {
     method: 'POST',

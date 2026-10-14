@@ -5,6 +5,7 @@ from django.urls import path
 from .crewai_views import (
     start_analysis,
     get_analysis_status,
+    get_quick_check_status,
     get_analysis_history,
     get_report_preview,
     batch_analysis,
@@ -22,6 +23,7 @@ urlpatterns = [
     # Main Crew AI endpoints
     path('analysis/start/', start_analysis, name='crewai_start_analysis'),
     path('analysis/status/', get_analysis_status, name='crewai_analysis_status'),
+    path('analysis/quick-status/', get_quick_check_status, name='crewai_quick_check_status'),
     path('analysis/history/', get_analysis_history, name='crewai_analysis_history'),
     path('analysis/batch/', batch_analysis, name='crewai_batch_analysis'),
     
