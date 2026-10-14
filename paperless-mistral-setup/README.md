@@ -1,5 +1,14 @@
 # Paperless-ngx + Mistral (lokal via Ollama) — Home-Server Setup (Linux Mint, LAN-only)
 
+> **⚠️ ARCHIVIERT / EINGEFROREN (2026-10-14):** Dieses Setup wird im Kontext dieses
+> Repositories **nicht weiterentwickelt und nicht gepflegt**. Es ist bewusst als
+> Referenz/Vorlage erhalten (Weiterverwendung in anderem Kontext ausdrücklich
+> erlaubt: Verzeichnis kopieren oder exportieren). Es kollidiert im laufenden
+> Betrieb mit dem NIR-Stack um Port 8000 (Paperless mapped ebenfalls 8000) — auf
+> dem Entwicklungsrechner nicht betreiben (Entscheidung 2026-10-14). Für dieses
+> Repository gilt: **keine Commits, keine Fixes, keine Feature-Entwicklung** in
+> diesem Verzeichnis mehr (siehe AGENTS.md, Abschnitt Archiv-Regeln).
+
 Automatische Dokumentenverwaltung mit **vollständig lokaler** KI-Verschlagwortung:
 - **Paperless-ngx** — Dokumentenmanagement (DMS) mit OCR (deutsch)
 - **paperless-ai** — verschlagwortet Dokumente automatisch (Titel, Tags, Korrespondent, Datum, Sprache)

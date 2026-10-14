@@ -23,6 +23,7 @@
 - **Alle Dateiformate und alle Spektrometer unterstützen** — kein Hard-Coding von
   Formaten oder Geräten (Grundregeln im Init-Prompt, §1).
 - **Weaviate ist out of scope** — Qdrant ist der Ersatz für Vektor-/Embedding-Speicherung.
+- **`paperless-mistral-setup/` ist archiviert und eingefroren** (2026-10-14): dort  finden keine Commits, Fixes oder Feature-Entwicklung mehr statt. Der Code bleibt  als Referenz/Vorlage erhalten (Weiterverwendung in anderem Kontext erlaubt).  Das Setup ist nicht Teil der NIR-Plattform und wird auf dem Entwicklungsrechner  nicht betrieben (Port-8000-Konflikt mit dem NIR-Stack). Anfragen, die Paperless  betreffen, sind mit Verweis auf diesen Abschnitt abzulehnen.
 - **Anti-Code-Creep:** Kleinste korrekte Lösung, Anforderungsbezug für jede Änderung,
   keine neuen Abhängigkeiten ohne zwingende Notwendigkeit, fokussierte Commits.
 - **Lizenz-Compliance bei Third-Party-Software:** Vor jeder Nutzung, Anleihe oder
