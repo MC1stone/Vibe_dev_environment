@@ -218,11 +218,16 @@ if not settings.configured:
         TEMPLATES=[{
             'BACKEND': 'django.template.backends.django.DjangoTemplates',
             'DIRS': [str(PROJECT / 'django_project' / 'templates')],
-            'APP_DIRS': False,
-            'OPTIONS': {},
+            'APP_DIRS': True,
+            'OPTIONS': {
+                'libraries': {
+                    'chart_explanations': 'core.templatetags.chart_explanations',
+                },
+            },
         }],
         INSTALLED_APPS=['django.contrib.contenttypes', 'django.contrib.auth'],
     )
+    sys.path.insert(0, str(PROJECT / 'django_project'))
 django.setup()
 from django.template.loader import get_template  # noqa: E402
 for template in ('projects.html', 'project_report.html'):
