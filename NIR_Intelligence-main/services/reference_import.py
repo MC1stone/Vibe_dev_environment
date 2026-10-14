@@ -75,7 +75,7 @@ def import_reference_dataset(entries: List[Dict[str, Any]],
     counted, never abort the whole import. Returns a summary dict.
     """
     summary: Dict[str, Any] = {"imported": 0, "rejected": 0, "errors": 0,
-                                "rejections": []}
+                                "rejections": [], "record_ids": []}
     from core.models import SpectrumRecord
 
     for entry in entries:
@@ -95,7 +95,7 @@ def import_reference_dataset(entries: List[Dict[str, Any]],
                 continue
             metadata["x_unit"] = normalized["x_unit"]
             metadata["reference_import"] = True
-            SpectrumRecord.objects.create(
+            record = SpectrumRecord.objects.create(
                 user=user,
                 project=project,
                 file_name=entry.get("file_name", "reference"),
@@ -108,6 +108,7 @@ def import_reference_dataset(entries: List[Dict[str, Any]],
                 sample_type=metadata.get("sample_type", ""),
             )
             summary["imported"] += 1
+            summary["record_ids"].append(str(record.id))
         except LicenseViolationError as e:
             summary["rejected"] += 1
             summary["rejections"].append(str(e))

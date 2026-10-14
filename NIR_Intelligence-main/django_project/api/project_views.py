@@ -48,16 +48,44 @@ class SpectrumDatabaseView(TemplateView):
             return redirect('/login/?next=' + request.get_full_path())
         from services.spectrum_database import visible_records
         records = visible_records(request.user)
+        similar_to = request.GET.get('similar_to')
+        query_record = None
+        similar_ids = None
+        if similar_to:
+            try:
+                query_record = records.get(id=similar_to)
+            except Exception:
+                query_record = None
+            if query_record is not None:
+                from services.similarity_search import find_similar_records
+                similar_ids = {m['record_id']
+                               for m in find_similar_records(
+                                   request.user, query_record, top_k=10)
+                               if m.get('record_id')}
         spectra = []
         for record in records:
             summary = record.get_summary()
             summary['is_own'] = record.user_id == request.user.id
             summary['is_shared'] = record.visibility == 'lab_shared'
+            if similar_ids is not None and str(record.id) in similar_ids:
+                summary['is_similar_match'] = True
+            try:
+                from services.project_report import single_spectrum_chart_data_url
+                summary['spectrum_chart'] = single_spectrum_chart_data_url(
+                    record.wavelengths, record.intensities,
+                    title=f'Spektrum: {record.file_name}')
+            except Exception:
+                summary['spectrum_chart'] = None
+                logger.exception('Spectrum chart rendering failed (non-fatal)')
             spectra.append(summary)
+        if similar_ids is not None:
+            spectra = [s for s in spectra if s.get('is_similar_match')]
         context = {
             'page_title': 'Spektrendatenbank',
             'spectra': spectra,
             'total_count': len(spectra),
+            'similar_to': (query_record.get_summary()
+                           if query_record is not None else None),
         }
         return render(request, self.template_name, context)
 
@@ -138,6 +166,22 @@ class ReferenceImportView(View):
                     ' (' + curve['x_unit'] + ', ' +
                     str(len(curve['wavelengths'])) + ' Punkte). Quelle: ' +
                     source + ' · ' + license_name)
+                record_ids = summary.get('record_ids') or []
+                if record_ids:
+                    from services.similarity_search import find_similar_records
+                    from core.models import SpectrumRecord
+                    record = SpectrumRecord.objects.get(id=record_ids[0])
+                    similar = find_similar_records(
+                        request.user, record, top_k=10)
+                    if similar:
+                        messages.info(request, gettext(
+                            'Ähnliche Referenzspektren in der Datenbank: ') +
+                            str(len(similar)) + ' · ' + gettext(
+                            'Treffer unter') + ' ' +
+                            '/projects/database/?similar_to=' +
+                            record_ids[0])
+                    return redirect(
+                        '/projects/database/?similar_to=' + record_ids[0])
             else:
                 reasons = '; '.join(summary.get('rejections') or
                                      ['unbekannter Fehler'])
@@ -1287,6 +1331,22 @@ class CalibrationOverviewView(TemplateView):
                         .get('per_agent_reports') or [])
             cal_sections = [s for s in sections
                             if s.get('agent') == 'calibration']
+            project_record_id = None
+            similar_count = None
+            try:
+                from core.models import SpectrumRecord
+                record = (SpectrumRecord.objects
+                          .filter(user=request.user, project_id=project.id)
+                          .order_by('-created_at').first())
+                if record is not None:
+                    project_record_id = str(record.id)
+                    from services.similarity_search import find_similar_records
+                    similar_count = len(find_similar_records(
+                        request.user, record, top_k=10))
+            except Exception:
+                logger.exception(
+                    'Similarity lookup for calibration entry failed '
+                    '(non-fatal)')
             for section in cal_sections:
                 data = section.get('data') or {}
                 models = []
@@ -1325,11 +1385,11 @@ class CalibrationOverviewView(TemplateView):
                         break
                 equation = data.get('calibration_equation') or {}
                 charts = section.get('charts') or {}
-                ordered_charts = []
+                ordered_charts = dict(charts)
                 if spectrum_chart:
-                    ordered_charts.append(('spectrum', spectrum_chart,
-                                           'Kalibriertes Spektrum (Messdaten)'))
-                ordered_charts += [(k, v, None) for k, v in charts.items()]
+                    ordered = {'spectrum': spectrum_chart}
+                    ordered.update(ordered_charts)
+                    ordered_charts = ordered
                 entries.append({
                     'project_id': str(project.id),
                     'project_name': project.name,
@@ -1338,12 +1398,16 @@ class CalibrationOverviewView(TemplateView):
                     'best_model': data.get('best_model'),
                     'target_name': data.get('target_name'),
                     'models': models,
-                    'charts': dict(ordered_charts),
-                    'chart_keys': [k for k, _v, _t in ordered_charts],
+                    'charts': ordered_charts,
+                    'chart_keys': list(ordered_charts),
                     'notes': data.get('notes') or [],
                     'updated_at': project.updated_at,
                     'n_samples': n_samples,
                     'equation': equation,
+                    'similar_count': similar_count,
+                    'similar_link': (f'/projects/database/?similar_to='
+                                     f'{project_record_id}'
+                                     if project_record_id else None),
                 })
         context = {'entries': entries,
                    'has_entries': bool(entries)}
