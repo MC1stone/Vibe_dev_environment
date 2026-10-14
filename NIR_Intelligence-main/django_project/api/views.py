@@ -132,10 +132,10 @@ class HealthCheckView(APIView):
     
     permission_classes = [AllowAny]
     
-    def _check_service_health(self, service_url, service_name, timeout=5):
+    def _check_service_health(self, service_url, health_path='/health', timeout=5):
         """Check if a service is healthy"""
         try:
-            response = requests.get(f"{service_url}/health", timeout=timeout)
+            response = requests.get(f"{service_url}{health_path}", timeout=timeout)
             if response.status_code == 200:
                 return 'healthy'
             else:
@@ -178,17 +178,17 @@ class HealthCheckView(APIView):
         # Check Docker services (if running in Docker environment)
         docker_services = {}
         
-        # Check Qdrant
+        # Check Qdrant (exposes /healthz, nicht /health)
         qdrant_url = getattr(settings, 'QDRANT_URL', 'http://localhost:6333')
-        docker_services['qdrant'] = self._check_service_health(qdrant_url, 'Qdrant')
+        docker_services['qdrant'] = self._check_service_health(qdrant_url, '/healthz')
         
-        # Check Ollama
+        # Check Ollama (kennt kein /health, /api/tags ist der etablierte Endpunkt)
         ollama_url = getattr(settings, 'OLLAMA_URL', 'http://localhost:11434')
-        docker_services['ollama'] = self._check_service_health(ollama_url, 'Ollama')
+        docker_services['ollama'] = self._check_service_health(ollama_url, '/api/tags')
         
         # Check Faiss
         faiss_url = getattr(settings, 'FAISS_URL', 'http://faiss:8081')
-        docker_services['faiss'] = self._check_service_health(faiss_url, 'Faiss')
+        docker_services['faiss'] = self._check_service_health(faiss_url, '/health')
         
         # Check Redis
         redis_url = getattr(settings, 'REDIS_URL', 'redis://redis:6379')
