@@ -162,6 +162,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.django
+    restart: unless-stopped
     # Upload-Robustheit (Vorfall 2026-10-08): Media-Uploads landen im
     # Volume-Mount .:/app - der Container-Prozess als UID 1000 entspricht
     # dem Host-Owner (martin), damit FileField.save schreiben kann.
@@ -185,6 +186,7 @@ services:
       - DJANGO_DB_PORT=5432
       - NIR_FRAMEWORK_PATH=/app
       - OLLAMA_URL=http://ollama:11434
+      - FAISS_URL=http://faiss:8081
       - NIR_LLM_MODEL=${NIR_LLM_MODEL:-mistral}
       - ILIAS_URL=http://ilias:80
       - ILIAS_API_URL=http://ilias:80
