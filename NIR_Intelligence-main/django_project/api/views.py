@@ -793,10 +793,18 @@ class SpectrumListCreateView(generics.ListCreateAPIView):
             y_col = loaded.get('intensity_column') or 'intensity'
             if x_col not in df.columns or y_col not in df.columns:
                 return
-            wavelengths = [round(float(v), 6) for v in df[x_col].tolist()]
-            intensities = [round(float(v), 6) for v in df[y_col].tolist()]
-            if not wavelengths or len(wavelengths) != len(intensities):
+            # NaN/Inf-Paare rausfiltern (Vorfall 2026-10-14: 'nan' in
+            # wavelengths/intensities crashte die JSON-Antwort mit
+            # 'Out of range float values are not JSON compliant').
+            pairs = [
+                (round(float(w), 6), round(float(i), 6))
+                for w, i in zip(df[x_col].tolist(), df[y_col].tolist())
+                if self._is_finite_number(w) and self._is_finite_number(i)
+            ]
+            if not pairs:
                 return
+            wavelengths = [p[0] for p in pairs]
+            intensities = [p[1] for p in pairs]
             metadata = loaded.get('metadata') or {}
             spectrum.wavelengths = wavelengths
             spectrum.intensities = intensities

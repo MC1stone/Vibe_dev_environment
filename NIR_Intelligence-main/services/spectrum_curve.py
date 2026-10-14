@@ -10,6 +10,7 @@ persisted curve (wavelengths/intensities/x_unit/y_unit). Used by:
 """
 
 import logging
+import math
 import os
 import sys
 from typing import Any, Dict, Optional, Tuple
@@ -22,6 +23,14 @@ def _ensure_repo_on_path() -> Optional[str]:
     if repo_root not in sys.path:
         sys.path.insert(0, repo_root)
     return repo_root
+
+
+def _is_finite_number(value) -> bool:
+    """True wenn value zu einer endlichen float konvertierbar ist."""
+    try:
+        return math.isfinite(float(value))
+    except (TypeError, ValueError):
+        return False
 
 
 def extract_curve(file_path: str) -> Optional[Dict[str, Any]]:
@@ -47,10 +56,19 @@ def extract_curve(file_path: str) -> Optional[Dict[str, Any]]:
         y_col = loaded.get('intensity_column') or 'intensity'
         if x_col not in df.columns or y_col not in df.columns:
             return None
-        wavelengths = [round(float(v), 6) for v in df[x_col].tolist()]
-        intensities = [round(float(v), 6) for v in df[y_col].tolist()]
-        if not wavelengths or len(wavelengths) != len(intensities):
+        # NaN/Inf-Werte rausfiltern (CSVs mit Luecken/Textresten liefern
+        # sonst 'nan' in die DB und crashen die JSON-Serialisierung -
+        # Vorfall 2026-10-14: 'Out of range float values are not JSON
+        # compliant: nan' bei POST /api/spectra/).
+        pairs = [
+            (round(float(w), 6), round(float(i), 6))
+            for w, i in zip(df[x_col].tolist(), df[y_col].tolist())
+            if _is_finite_number(w) and _is_finite_number(i)
+        ]
+        if not pairs:
             return None
+        wavelengths = [p[0] for p in pairs]
+        intensities = [p[1] for p in pairs]
         metadata = loaded.get('metadata') or {}
         x_unit = canonical_xunit(
             metadata.get('x_unit') or metadata.get('x_units') or 'nm')
