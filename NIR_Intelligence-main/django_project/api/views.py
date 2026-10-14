@@ -757,10 +757,13 @@ class SpectrumListCreateView(generics.ListCreateAPIView):
             self._persist_curve_data(spectrum)
             self._process_text_file(spectrum)
         
-        # Update status to processed
+        # Update status to processed - nur die geaenderten Felder
+        # speichern (Vorfall 2026-10-14: das volle save() schrieb auch
+        # unberuehrte Metadaten-Felder zurueck und traf bei Legacy-Rows
+        # die NOT-NULL-Constraint von wavelength_range_start).
         spectrum.status = 'processed'
         spectrum.processed_at = datetime.now()
-        spectrum.save()
+        spectrum.save(update_fields=['status', 'processed_at'])
     
     def _persist_curve_data(self, spectrum):
         """Persist the measured curve (wavelengths/intensities/units) from
@@ -809,6 +812,17 @@ class SpectrumListCreateView(generics.ListCreateAPIView):
                 if len(wavelengths) > 1 else 1.0)
         except Exception as e:
             logger.error(f"Error persisting curve data for spectrum {spectrum.id}: {e}")
+        # Pflicht-Metadaten duerfen nie NULL bleiben (NOT-NULL-Felder):
+        # wurde keine Kurve extrahiert, neutrale Defaults setzen statt
+        # NULL in die DB zu schreiben (Vorfall 2026-10-14).
+        if spectrum.wavelength_range_start is None:
+            spectrum.wavelength_range_start = 700.0
+        if spectrum.wavelength_range_end is None:
+            spectrum.wavelength_range_end = 2500.0
+        if spectrum.resolution is None:
+            spectrum.resolution = 2.0
+        if spectrum.data_points is None:
+            spectrum.data_points = 0
 
     def _process_text_file(self, spectrum):
         """Process a text file to extract spectral data"""

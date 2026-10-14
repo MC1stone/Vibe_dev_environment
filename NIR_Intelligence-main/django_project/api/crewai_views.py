@@ -223,6 +223,8 @@ def start_analysis(request):
                                 'resolution'])
                             fallback = record
                 except Exception:
+                    logger.exception(
+                        'Curve fallback failed for spectrum %s', spectrum_id)
                     fallback = None
             if fallback is not None:
                 spectral_data['wavelengths'] = fallback.wavelengths
