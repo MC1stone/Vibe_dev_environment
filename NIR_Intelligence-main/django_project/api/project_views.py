@@ -1313,6 +1313,23 @@ class CalibrationOverviewView(TemplateView):
                         'rpd_class': rpd_class,
                         'cv_folds': res.get('cv_folds'),
                     })
+                spectrum_chart = None
+                for s in sections:
+                    if s.get('agent') == 'spectral_analysis':
+                        spectrum_chart = (s.get('charts') or {}).get('spectrum')
+                        break
+                n_samples = None
+                for key in ('n_measurements', 'num_samples', 'n_samples'):
+                    if isinstance(data.get(key), int):
+                        n_samples = data.get(key)
+                        break
+                equation = data.get('calibration_equation') or {}
+                charts = section.get('charts') or {}
+                ordered_charts = []
+                if spectrum_chart:
+                    ordered_charts.append(('spectrum', spectrum_chart,
+                                           'Kalibriertes Spektrum (Messdaten)'))
+                ordered_charts += [(k, v, None) for k, v in charts.items()]
                 entries.append({
                     'project_id': str(project.id),
                     'project_name': project.name,
@@ -1321,8 +1338,12 @@ class CalibrationOverviewView(TemplateView):
                     'best_model': data.get('best_model'),
                     'target_name': data.get('target_name'),
                     'models': models,
-                    'charts': section.get('charts') or {},
+                    'charts': dict(ordered_charts),
+                    'chart_keys': [k for k, _v, _t in ordered_charts],
                     'notes': data.get('notes') or [],
+                    'updated_at': project.updated_at,
+                    'n_samples': n_samples,
+                    'equation': equation,
                 })
         context = {'entries': entries,
                    'has_entries': bool(entries)}

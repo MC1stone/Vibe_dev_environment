@@ -12,7 +12,7 @@
             <a class="nav-link" href="/projects/database/">{% trans "Referenzspektren &amp; Datenbank" %}</a>
         </li>
     </ul>
-    <h1>{% trans "Kalibrierung - Übersicht" %}
+    <h1>{% trans "Kalibrierung - Übersicht" %}</h1>
     <p class="text-muted">
         {% trans "PLS/PCR-Kalibrationen Ihrer analysierten Projekte. Eine Kalibration entsteht automatisch im Rahmen der Crew-Analyse eines Projekts mit Referenzwerten." %}
     </p>
@@ -23,57 +23,102 @@
             <a href="/projects/">{% trans "Zu den Projekten" %}</a>
         </div>
     {% else %}
+    <div class="list-group">
         {% for entry in entries %}
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="list-group-item mb-3 border rounded shadow-sm">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 py-1">
                 <h5 class="mb-0">
                     <a href="/projects/{{ entry.project_id }}/">{{ entry.project_name }}</a>
                 </h5>
-                <span class="badge bg-{% if entry.status == 'completed' %}success{% else %}secondary{% endif %}">
-                    {{ entry.status }}
-                </span>
+                <div class="d-flex align-items-center gap-2">
+                    {% if entry.target_name %}
+                        <span class="badge bg-light text-dark">{% trans "Zielwert" %}: {{ entry.target_name }}</span>
+                    {% endif %}
+                    {% if entry.best_model %}
+                        <span class="badge bg-primary">{% trans "Bestes Modell" %}: {{ entry.best_model }}</span>
+                    {% endif %}
+                    <span class="badge bg-{% if entry.status == 'completed' %}success{% else %}secondary{% endif %}">
+                        {{ entry.status }}
+                    </span>
+                </div>
             </div>
-            <div class="card-body">
-                {% if entry.best_model %}
-                    <p><strong>{% trans "Bestes Modell" %}:</strong> {{ entry.best_model }}
-                       {% if entry.target_name %}({% trans "Zielwert" %}: {{ entry.target_name }}){% endif %}
-                    </p>
-                {% endif %}
-                {% if entry.models %}
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>{% trans "Modell" %}</th>
-                            <th>{% trans "Status" %}</th>
-                            <th>{% trans "R² (Cross-Validation)" %}</th>
-                            <th>{% trans "RMSECV" %}</th>
-                            <th>{% trans "RPD" %}</th>
-                            <th>{% trans "CV-Folds" %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for model in entry.models %}
-                        <tr>
-                            <td>{{ model.name }}</td>
-                            <td>{{ model.status }}</td>
-                            <td>{% if model.mean_r2 %}{{ model.mean_r2|floatformat:3 }}{% else %}-{% endif %}</td>
-                            <td>{% if model.rmse_cv %}{{ model.rmse_cv|floatformat:4 }}{% else %}-{% endif %}</td>
-                            <td>{% if model.rpd %}<span class="badge bg-{{ model.rpd_class }}" title="RPD &gt; 5 exzellent, &gt; 3 gut, &gt; 2 nutzbar">{{ model.rpd|floatformat:1 }}</span>{% else %}-{% endif %}</td>
-                            <td>{{ model.cv_folds|default:"-" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                {% endif %}
+
+            {% if entry.charts %}
+            <div class="row g-2 mb-2 mt-1">
                 {% for key, url in entry.charts.items %}
-                    <img src="{{ url }}" alt="{{ key }}" class="img-fluid mb-2" style="max-width:100%;">
+                <div class="col-md-3 col-6">
+                    <figure class="figure mb-0 text-center">
+                        <img src="{{ url }}" alt="{{ key }}"
+                             class="figure-img img-fluid rounded border"
+                             style="max-height:260px; object-fit:contain;">
+                        <figcaption class="figure-caption small text-muted">
+                            {% if key == 'spectrum' %}{% trans "Kalibriertes Spektrum (Messdaten)" %}
+                            {% elif key == 'ref_vs_pred' %}{% trans "Referenz vs. Vorhersage (Kreuzvalidierung)" %}
+                            {% elif key == 'reg_coefficients' %}{% trans "Regressionskoeffizienten je Wellenlänge" %}
+                            {% elif key == 'rmsecv_vs_n' %}{% trans "RMSECV vs. Anzahl Komponenten" %}
+                            {% else %}{{ key }}{% endif %}
+                        </figcaption>
+                    </figure>
+                </div>
                 {% endfor %}
-                {% for note in entry.notes %}
-                    <p class="text-muted">{{ note }}</p>
-                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-lg-7">
+                    {% if entry.models %}
+                    <table class="table table-sm table-striped mb-1">
+                        <thead>
+                            <tr>
+                                <th>{% trans "Modell" %}</th>
+                                <th>{% trans "R² (CV)" %}</th>
+                                <th>{% trans "RMSECV" %}</th>
+                                <th title="RPD &gt; 5 exzellent, &gt; 3 gut, &gt; 2 nutzbar">{% trans "RPD" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model in entry.models %}
+                            <tr>
+                                <td>{{ model.name }}</td>
+                                <td>{% if model.mean_r2 %}{{ model.mean_r2|floatformat:3 }}{% else %}-{% endif %}</td>
+                                <td>{% if model.rmse_cv %}{{ model.rmse_cv|floatformat:4 }}{% else %}-{% endif %}</td>
+                                <td>{% if model.rpd %}<span class="badge bg-{{ model.rpd_class }}">{{ model.rpd|floatformat:1 }}</span>{% else %}-{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% endif %}
+                </div>
+                <div class="col-lg-5">
+                    <ul class="list-unstyled small mb-0">
+                        {% if entry.updated_at %}
+                        <li><strong>{% trans "Letzte Aktualisierung" %}:</strong> {{ entry.updated_at|date:"d.m.Y H:i" }}</li>
+                        {% endif %}
+                        {% if entry.n_samples %}
+                        <li><strong>{% trans "Kalibrationsmessungen" %}:</strong> {{ entry.n_samples }}</li>
+                        {% endif %}
+                        {% if entry.models %}
+                        <li><strong>{% trans "Modelle verglichen" %}:</strong> {{ entry.models|length }}</li>
+                        {% endif %}
+                        {% if entry.equation %}
+                        <li><strong>{% trans "Kalibrierungsgleichung" %}:</strong>
+                            {% if entry.equation.status == 'ok' %}
+                                y = {{ entry.equation.intercept|floatformat:4 }} + Σ coefᵢ·x̂ᵢ
+                                ({{ entry.equation.n_channels }} {% trans "Kanäle" %})
+                            {% else %}
+                                {% trans "nicht verfügbar" %}
+                            {% endif %}
+                        </li>
+                        {% endif %}
+                        {% for note in entry.notes %}
+                        <li class="text-muted">{{ note }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
             </div>
         </div>
         {% endfor %}
+    </div>
     {% endif %}
 </div>
 {% endblock %}
