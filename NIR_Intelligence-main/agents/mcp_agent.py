@@ -28,7 +28,7 @@ DEFAULT_TOOLS = [
     {"name": "faiss", "url": _host_url("faiss", 8081), "health_path": "/"},
     {"name": "ollama", "url": _host_url("ollama", 11434), "health_path": "/api/tags"},
     {"name": "ilias", "url": _host_url("ilias", 80), "health_path": "/"},
-    {"name": "django_app", "url": _host_url("django_app", 8000), "health_path": "/api/health/"},
+    {"name": "django_app", "url": _host_url("django-app", 8000), "health_path": "/api/health/"},
 ]
 
 

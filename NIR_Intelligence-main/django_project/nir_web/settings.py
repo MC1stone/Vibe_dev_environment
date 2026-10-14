@@ -22,7 +22,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-nir-mistral-secret-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,::1').split(',')
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,::1')).split(',')
 
 # Analyse-Backend-Dienste (OP45): Im Docker-Stack sind die Container-Namen
 # gesetzt (Dockerfile.django/compose setzen OLLAMA_URL/QDRANT_URL explizit).
