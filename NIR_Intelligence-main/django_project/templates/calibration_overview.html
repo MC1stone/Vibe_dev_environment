@@ -97,6 +97,14 @@
                         {% if entry.n_samples %}
                         <li><strong>{% trans "Kalibrationsmessungen" %}:</strong> {{ entry.n_samples }}</li>
                         {% endif %}
+                        {% if entry.similar_link %}
+                        <li><strong>{% trans "Ähnliche Referenzspektren" %}:</strong>
+                            <a href="{{ entry.similar_link }}">
+                                {{ entry.similar_count|default:0 }}
+                                <i class="bi bi-diagram-3 ms-1"></i>
+                            </a>
+                        </li>
+                        {% endif %}
                         {% if entry.models %}
                         <li><strong>{% trans "Modelle verglichen" %}:</strong> {{ entry.models|length }}</li>
                         {% endif %}

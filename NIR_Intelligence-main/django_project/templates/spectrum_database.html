@@ -67,11 +67,22 @@
                 geteilte (laborweit) sind explizit freigegeben - Rohdaten verlassen
                 nie den lokalen Server (FL-Grundregel).
             </p>
+            {% if similar_to %}
+            <div class="alert alert-info d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi bi-diagram-3 me-1"></i>
+                    {% trans "Ähnliche Spektren zu" %}: <strong>{{ similar_to.file_name }}</strong>
+                    &middot; {{ spectra|length }} {% trans "Treffer (FAISS, gleiche Wellenlängenraster)" %}
+                </div>
+                <a href="/projects/database/" class="btn btn-sm btn-outline-secondary">{% trans "Filter zurücksetzen" %}</a>
+            </div>
+            {% endif %}
             {% if spectra %}
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
+                            <th>{% trans "Spektrum" %}</th>
                             <th>{% trans "Datei" %}</th>
                             <th>{% trans "Punkte" %}</th>
                             <th>{% trans "Bereich (nm)" %}</th>
@@ -85,6 +96,13 @@
                     <tbody>
                         {% for s in spectra %}
                         <tr>
+                            <td style="width:140px;">
+                                {% if s.spectrum_chart %}
+                                <a href="/projects/database/{{ s.id }}/" title="{% trans 'Spektrum vergrößern' %}">
+                                    <img src="{{ s.spectrum_chart }}" alt="{{ s.file_name }}" class="img-fluid rounded border" style="max-height:70px;">
+                                </a>
+                                {% else %}<span class="text-muted">&ndash;</span>{% endif %}
+                            </td>
                             <td><strong>{{ s.file_name }}</strong></td>
                             <td>{{ s.num_points }}</td>
                             <td>{{ s.wavelength_min|floatformat:0 }} &ndash; {{ s.wavelength_max|floatformat:0 }}</td>
@@ -109,6 +127,9 @@
                                 {% endif %}
                                 <a href="/projects/database/{{ s.id }}/" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-search me-1"></i>{% trans "Details" %}
+                                </a>
+                                <a href="/projects/database/?similar_to={{ s.id }}" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-diagram-3 me-1"></i>{% trans "Ähnliche" %}
                                 </a>
                             </td>
                         </tr>
