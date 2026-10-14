@@ -206,11 +206,15 @@ class HealthCheckView(APIView):
         flower_url = 'http://flower_server:5556'
         docker_services['flower'] = self._check_service_health(flower_url, 'Flower')
         
-        # Determine overall status
+        # Determine overall status (faiss/flower sind im Dev-Compose optionale Dienste)
+        critical_services = [
+            status for name, status in docker_services.items()
+            if name not in ('faiss', 'flower')
+        ]
         all_healthy = (
             database_status == 'healthy' and 
             storage_status == 'healthy' and
-            all(status == 'healthy' for status in docker_services.values())
+            all(status == 'healthy' for status in critical_services)
         )
         
         overall_status = 'healthy' if all_healthy else 'degraded'
