@@ -67,6 +67,7 @@ jobs:
           python tests/test_op9_mcp_data_agent.py
           python tests/test_op10_project_workflow.py
           python tests/test_fa1_password_change.py
+          python tests/test_fa1_settings_repair.py
           python tests/test_op11_rendered_final_report.py
           python tests/test_op12_project_upload_ui.py
           python tests/test_op13_online_metadata_editing.py

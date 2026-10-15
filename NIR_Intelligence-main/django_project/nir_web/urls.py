@@ -22,6 +22,7 @@ from api.views import (
     AnalysisJobListCreateView, AnalysisJobRetrieveView,
     UserRegistrationView, UserProfileView,
     ChangePasswordView,
+    UserPreferencesView,
     DashboardView, HealthCheckView,
     CustomLoginView, CustomRegisterView, CustomLogoutView,
     FlowerAIAuthView, ILIASAuthView, FederatedLearningView
@@ -72,6 +73,7 @@ urlpatterns = [
     path('api/users/register/', UserRegistrationView.as_view(), name='user-register'),
     path('api/users/profile/', UserProfileView.as_view(), name='user-profile'),
     path('api/users/change_password/', ChangePasswordView.as_view(), name='user-change-password'),
+    path('api/users/preferences/', UserPreferencesView.as_view(), name='user-preferences'),
     
     # Authentication Views (Traditional Django)
     
