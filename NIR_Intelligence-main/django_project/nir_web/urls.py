@@ -21,6 +21,7 @@ from api.views import (
     SpectrumListCreateView, SpectrumRetrieveView,
     AnalysisJobListCreateView, AnalysisJobRetrieveView,
     UserRegistrationView, UserProfileView,
+    ChangePasswordView,
     DashboardView, HealthCheckView,
     CustomLoginView, CustomRegisterView, CustomLogoutView,
     FlowerAIAuthView, ILIASAuthView, FederatedLearningView
@@ -70,6 +71,7 @@ urlpatterns = [
     # User Management
     path('api/users/register/', UserRegistrationView.as_view(), name='user-register'),
     path('api/users/profile/', UserProfileView.as_view(), name='user-profile'),
+    path('api/users/change_password/', ChangePasswordView.as_view(), name='user-change-password'),
     
     # Authentication Views (Traditional Django)
     

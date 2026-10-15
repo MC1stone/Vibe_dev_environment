@@ -93,6 +93,66 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
+class ChangePasswordView(APIView):
+    """FA1 (FEDERATED_SETUP_AUTH_IMPLEMENTATIONSPLAN.md): Passwort-Wechsel
+    fuer die bereits vorhandene Settings-UI (settings.html ruft
+    changePassword()/updatePassword() -> POST /api/users/change_password/
+    mit {current_password, new_password}). Der Endpoint fehlte bislang -
+    der Dialog schlug still mit 404 fehl. Prueft das aktuelle Passwort,
+    wendet die AUTH_PASSWORD_VALIDatoren an und invalidiert danach alle
+    ausstehenden Refresh-Tokens (simplejwt), damit andere Sessions
+    abgewoergt werden."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        current = (request.data.get('current_password') or '')
+        new = (request.data.get('new_password') or '')
+        if not current or not new:
+            return Response(
+                {'success': False,
+                 'error': gettext('Bitte altes und neues Passwort angeben.')},
+                status=status.HTTP_400_BAD_REQUEST)
+        if not request.user.check_password(current):
+            return Response(
+                {'success': False,
+                 'error': gettext('Das aktuelle Passwort ist falsch.')},
+                status=status.HTTP_400_BAD_REQUEST)
+        if current == new:
+            return Response(
+                {'success': False,
+                 'error': gettext('Das neue Passwort muss sich vom '
+                                  'aktuellen unterscheiden.')},
+                status=status.HTTP_400_BAD_REQUEST)
+        from django.contrib.auth.password_validation import validate_password
+        try:
+            validate_password(new, user=request.user)
+        except Exception as exc:
+            return Response(
+                {'success': False,
+                 'error': '; '.join(getattr(exc, 'messages', [str(exc)]))},
+                status=status.HTTP_400_BAD_REQUEST)
+        request.user.set_password(new)
+        request.user.save(update_fields=['password'])
+        # Alle Refresh-Tokens invalidieren (Force-Logout anderer
+        # Geraete); ohne aktiviertes token_blacklist-App ehrlich -1
+        revoked = 0
+        try:
+            from rest_framework_simplejwt.token_blacklist.models import (
+                OutstandingToken, BlacklistedToken)
+            for token in OutstandingToken.objects.filter(user=request.user):
+                BlacklistedToken.objects.get_or_create(token=token)
+                revoked += 1
+        except Exception:
+            revoked = -1
+        return Response({
+            'success': True,
+            'message': gettext('Passwort geaendert. Andere Sitzungen '
+                               'wurden abgemeldet.'),
+            'sessions_revoked': revoked,
+        })
+
+
 class DashboardView(APIView):
     """Dashboard endpoint with summary statistics"""
     
