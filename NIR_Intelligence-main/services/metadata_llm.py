@@ -94,8 +94,14 @@ class OllamaMetadataClient:
         self.base_url = (base_url or os.environ.get("OLLAMA_URL")
                          or OLLAMA_DEFAULT_URL).rstrip("/")
         self.model = model or os.environ.get("NIR_LLM_MODEL") or DEFAULT_LLM_MODEL
+        # CPU-only Ollama ist langsam: eine triviale Anfrage dauert
+        # ~60 s (Messung 2026-10-15), Metadaten-Prompts mit Dateitext
+        # deutlich laenger. 120 s liess den KI-Pass systematisch mit
+        # 'Read timed out' scheitern (Tomaten-Datensatz, Vorfall
+        # 2026-10-15). Default daher 300 s, via NIR_LLM_TIMEOUT
+        # ueberschreibbar.
         self.timeout = (timeout if timeout is not None
-                        else int(os.environ.get("NIR_LLM_TIMEOUT", "120")))
+                        else int(os.environ.get("NIR_LLM_TIMEOUT", "300")))
 
     def chat(self, prompt: str) -> Optional[str]:
         import requests
