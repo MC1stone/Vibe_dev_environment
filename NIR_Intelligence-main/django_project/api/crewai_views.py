@@ -104,6 +104,51 @@ def _persist_quality_scores(analysis_request, result):
             spectrum_id)
 
 
+def _attach_similarity_section(response_data, analysis_request, result):
+    """Quick-Check-Bericht: aehnliche Spektren aus der Datenbank in die
+    Antwort haengen - mit Detail- und Projekt-Links. Nie fatal. Der Aufruf
+    existierte seit dem OP57-Nachtrag, die Funktion fehlte im Merge 6f63a87
+    (NameError beim Neu-Analysieren - Vorfall 2026-10-15)."""
+    spectrum_id = ((getattr(analysis_request, 'metadata', None) or {})
+                   .get('spectrum_id')) if analysis_request else None
+    if not spectrum_id:
+        return
+    try:
+        from core.models import NIRSpectrum, SpectrumRecord
+        from services.similarity_search import find_similar_records
+        spectrum = NIRSpectrum.objects.filter(id=spectrum_id).first()
+        if spectrum is None or not spectrum.wavelengths:
+            return
+        probe = SpectrumRecord(
+            id=spectrum.id,
+            wavelengths=spectrum.wavelengths,
+            intensities=spectrum.intensities,
+            wavelength_grid=SpectrumRecord.grid_key(spectrum.wavelengths),
+            file_name=spectrum.name or spectrum.sample_id or 'spectrum')
+        similar = find_similar_records(spectrum.user, probe, top_k=5)
+        entries = []
+        for m in similar:
+            rec = SpectrumRecord.objects.filter(id=m['record_id']).first()
+            entries.append({
+                'record_id': m['record_id'],
+                'file_name': (rec.file_name if rec else m['reference_id']),
+                'similarity': m.get('similarity'),
+                'project_id': (str(rec.project_id) if rec and rec.project_id
+                               else None),
+                'project_name': (rec.project.name
+                                  if rec and rec.project_id else None),
+                'detail_url': f"/projects/database/{m['record_id']}/",
+            })
+        response_data['similarity'] = {
+            'found': len(entries),
+            'entries': entries,
+            'database_url': '/projects/database/',
+        }
+    except Exception:
+        logger.exception(
+            'Similarity section for quick check failed (non-fatal)')
+
+
 def _build_analysis_response(result, summary, analysis_request):
     """S8: shared response builder for sync and async quick-check path."""
     response_data = {
