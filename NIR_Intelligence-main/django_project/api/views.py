@@ -93,6 +93,40 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
+class UserPreferencesView(APIView):
+    """FA1-Umfeld (Settings-Seite reparieren, Vorfall 2026-10-15): Die
+    Einstellungsseite ruft GET/PUT /api/users/preferences/ - der Endpoint
+    fehlte komplett (404), Model UserPreference und Serializer existieren
+    aber schon. get_or_create: Der erste Aufruf legt die Preferences an,
+    danach normales Lesen/Schreiben. Nur die serialisierten Felder
+    werden akzeptiert."""
+
+    permission_classes = [IsAuthenticated]
+
+    def _get_or_create(self, request):
+        from core.models import UserPreference
+        prefs, _created = UserPreference.objects.get_or_create(
+            user=request.user)
+        return prefs
+
+    def get(self, request):
+        from .serializers import UserPreferenceSerializer
+        return Response(UserPreferenceSerializer(
+            self._get_or_create(request)).data)
+
+    def put(self, request):
+        from .serializers import UserPreferenceSerializer
+        prefs = self._get_or_create(request)
+        serializer = UserPreferenceSerializer(
+            prefs, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response({'success': False,
+                             'error': str(serializer.errors)},
+                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
+        return Response(serializer.data)
+
+
 class ChangePasswordView(APIView):
     """FA1 (FEDERATED_SETUP_AUTH_IMPLEMENTATIONSPLAN.md): Passwort-Wechsel
     fuer die bereits vorhandene Settings-UI (settings.html ruft
