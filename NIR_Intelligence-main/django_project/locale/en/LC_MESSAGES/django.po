@@ -3682,3 +3682,6 @@ msgstr "Alle 15 Agenten werden ausgefuehrt (inkl. KI-Auswertung). Diese Seite ak
 
 msgid "Agenten-Berichte bisher"
 msgstr "Agenten-Berichte bisher"
+
+msgid "ausstehend"
+msgstr "pending"
