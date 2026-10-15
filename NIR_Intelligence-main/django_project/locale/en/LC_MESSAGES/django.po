@@ -3685,3 +3685,6 @@ msgstr "Agenten-Berichte bisher"
 
 msgid "ausstehend"
 msgstr "pending"
+
+msgid "Einstellungen"
+msgstr "Settings"
