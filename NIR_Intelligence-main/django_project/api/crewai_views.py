@@ -72,6 +72,38 @@ def get_crew_instance():
     return api_crew
 
 
+def _persist_quality_scores(analysis_request, result):
+    """S8: nach erfolgreicher Analyse die berechneten Qualitaets-Scores
+    auf das zugehoerige NIRSpectrum zurueckschreiben (spectrum_id im
+    metadata-Block des Requests). Bis Vorfall 2026-10-15 blieb
+    quality_score beim Upload-Default 0.0 stehen und die UI zeigte fuer
+    jede Analyse 'Poor', obwohl die Crew z.B. 86/100 errechnet hatte.
+    Nie fatal: ein Fehler beim Zurueckschreiben duerfen die Ergebnisse
+    nicht gefaehrden."""
+    spectrum_id = (getattr(analysis_request, 'metadata', None) or {}).get('spectrum_id')
+    if not spectrum_id:
+        return
+    try:
+        from core.models import NIRSpectrum
+        record = NIRSpectrum.objects.filter(id=spectrum_id).first()
+        if record is None:
+            return
+        spectral_qs = getattr(
+            getattr(result, 'spectral_analysis', None), 'quality_score', None)
+        record.quality_score = float(result.overall_quality_score
+                                     if getattr(result, 'overall_quality_score', None) is not None
+                                     else (spectral_qs or 0.0))
+        if spectral_qs is not None:
+            record.signal_to_noise_ratio = getattr(
+                result.spectral_analysis, 'signal_to_noise_ratio', None)
+        record.save(update_fields=['quality_score',
+                                   'signal_to_noise_ratio'])
+    except Exception:
+        logger.exception(
+            'Persisting quality scores to spectrum %s failed (non-fatal)',
+            spectrum_id)
+
+
 def _build_analysis_response(result, summary, analysis_request):
     """S8: shared response builder for sync and async quick-check path."""
     response_data = {
@@ -273,6 +305,7 @@ def start_analysis(request):
                     result = crew.analyze_sample(req)
                     summary = crew.get_analysis_summary(result)
                     data = _build_analysis_response(result, summary, req)
+                    _persist_quality_scores(req, result)
                     with QUICK_JOBS_LOCK:
                         QUICK_JOBS[job_id]['status'] = 'completed'
                         QUICK_JOBS[job_id]['response'] = data
@@ -298,6 +331,7 @@ def start_analysis(request):
         
         # Prepare response (S8: shared helper, identical shape for sync+async)
         response_data = _build_analysis_response(result, summary, analysis_request)
+        _persist_quality_scores(analysis_request, result)
         return Response(response_data, status=status.HTTP_200_OK)
         
     except json.JSONDecodeError:
