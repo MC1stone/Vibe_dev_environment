@@ -3783,3 +3783,6 @@ msgstr "Agenten-Berichte bisher"
 
 msgid "ausstehend"
 msgstr "ausstehend"
+
+msgid "Einstellungen"
+msgstr "Einstellungen"
