@@ -128,9 +128,11 @@ class ChangePasswordView(APIView):
         try:
             validate_password(new, user=request.user)
         except Exception as exc:
+            messages = getattr(exc, 'messages', None) or [str(exc)]
             return Response(
                 {'success': False,
-                 'error': '; '.join(getattr(exc, 'messages', [str(exc)]))},
+                 'error': gettext('Neues Passwort ungueltig: ') +
+                          ' | '.join(str(m) for m in messages)},
                 status=status.HTTP_400_BAD_REQUEST)
         request.user.set_password(new)
         request.user.save(update_fields=['password'])
