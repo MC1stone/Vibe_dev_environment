@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from django.conf import settings
+from django.core import files as django_files
 from django.http import HttpResponse, Http404
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -1080,6 +1081,73 @@ class ProjectFilesAddView(APIView if DRF_AVAILABLE else object):
             'total_dataset_count': report.get('total_dataset_count'),
             'report_url': f'/projects/{project.id}/',
         })
+
+
+class ProjectAddSpectrumView(APIView if DRF_AVAILABLE else object):
+    """Quick-Check-Anschluss (Vorfall 2026-10-15): ein analysiertes
+    NIRSpectrum als Datei zu einem bestehenden Projekt hinzufuegen und
+    die Vorbereitung neu berechnen. Nutzt die Originaldatei des
+    Spektrums; die Projekt-Semantik ist die von ProjectFilesAddView
+    (Projekt kehrt in die Vorbereitung zurueck, Review und erneute
+    Freigabe durch den Nutzer)."""
+
+    def post(self, request, project_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False,
+                             'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        project = _get_project(project_id, request.user)
+        spectrum_id = request.data.get('spectrum_id')
+        if not spectrum_id:
+            return Response({'success': False,
+                             'error': gettext('spectrum_id required')},
+                            status=status.HTTP_400_BAD_REQUEST)
+        from core.models import NIRSpectrum
+        spectrum = NIRSpectrum.objects.filter(
+            id=spectrum_id, user=request.user).first()
+        if spectrum is None:
+            return Response({'success': False,
+                             'error': gettext('Spectrum not found')},
+                            status=status.HTTP_404_NOT_FOUND)
+        file_path = spectrum.get_file_path()
+        if not file_path or not os.path.exists(file_path):
+            return Response({'success': False,
+                             'error': gettext(
+                                 'Original file of the spectrum not found - '
+                                 'please re-upload the source file.')},
+                            status=status.HTTP_400_BAD_REQUEST)
+        existing = GenericFile.objects.filter(
+            user=request.user, name=spectrum.name or spectrum.sample_id,
+            project=project).exists()
+        if existing:
+            return Response({
+                'success': True,
+                'already_present': True,
+                'message': gettext(
+                    'Spektrum ist bereits Teil des Projekts.'),
+                'report_url': f'/projects/{project.id}/'})
+        import mimetypes
+        mime, _ = mimetypes.guess_type(file_path)
+        with open(file_path, 'rb') as f:
+            generic = GenericFile(
+                user=request.user,
+                name=spectrum.name or spectrum.sample_id or 'spectrum',
+                content_type=mime or 'application/octet-stream',
+                description=spectrum.description or '')
+            generic.file.save(os.path.basename(file_path),
+                              django_files.File(f), save=True)
+        project.files.add(generic)
+        if project.phase != 'drafted':
+            project.phase = 'drafted'
+            project.save(update_fields=['phase', 'updated_at'])
+        from services.project_ingest import build_preparation_report
+        report = build_preparation_report(project)
+        return Response({
+            'success': True,
+            'file_id': str(generic.id),
+            'usable_dataset_count': report.get('usable_dataset_count'),
+            'total_dataset_count': report.get('total_dataset_count'),
+            'report_url': f'/projects/{project.id}/'})
 
 
 class ProjectReingestView(APIView if DRF_AVAILABLE else object):
