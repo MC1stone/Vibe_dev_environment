@@ -1398,9 +1398,96 @@ function showQuickCheckResult(spectrum, data) {
         rows.push(`<h6>${nirGettext('Empfehlungen')}</h6><ul class="mb-0"><li>${data.recommendations.join('</li><li>')}</li></ul>`);
     }
 
+    if (data.similarity) {
+        const sim = data.similarity;
+        let simHtml = `<h6>${nirGettext('Ähnliche Spektren in der Datenbank')}</h6>`;
+        if (sim.found > 0 && sim.entries && sim.entries.length) {
+            simHtml += '<table class="table table-sm mb-2"><thead><tr>' +
+                `<th>${nirGettext('Spektrum')}</th><th>${nirGettext('Ähnlichkeit')}</th><th>${nirGettext('Projekt')}</th></tr></thead><tbody>`;
+            sim.entries.forEach(e => {
+                simHtml += '<tr>' +
+                    `<td><a href="${e.detail_url}">${e.file_name}</a></td>` +
+                    `<td>${e.similarity !== null && e.similarity !== undefined ? (100 * e.similarity).toFixed(1) + ' %' : '—'}</td>` +
+                    '<td>' + (e.project_id
+                        ? `<a href="/projects/${e.project_id}/">${e.project_name || nirGettext('Projekt öffnen')}</a>`
+                        : nirGettext('kein Projekt')) + '</td></tr>';
+            });
+            simHtml += '</tbody></table>' +
+                `<a href="/projects/database/?similar_to=${encodeURIComponent(sim.entries[0].record_id)}" class="btn btn-sm btn-outline-success me-2">` +
+                `<i class="bi bi-diagram-3 me-1"></i>${nirGettext('Alle ähnlichen in der Datenbank zeigen')}</a>`;
+        } else {
+            simHtml += `<p class="mb-2 text-muted">${nirGettext('Keine ähnlichen Spektren in der Datenbank gefunden (gleiche Wellenlängenraster erforderlich).')}</p>`;
+        }
+        rows.push(`<div class="border rounded p-2 bg-light">${simHtml}</div>`);
+    }
+
+    rows.push(`<h6 class="mt-3">${nirGettext('Weiter im Workflow')}</h6>` +
+        `<div class="d-flex flex-wrap gap-2">` +
+        `<a href="/projects/?create=1&sample=${encodeURIComponent(spectrum.sample_id || spectrum.name || spectrum.id)}" class="btn btn-sm btn-primary">` +
+        `<i class="bi bi-folder-plus me-1"></i>${nirGettext('Neues Projekt anlegen')}</a>` +
+        `<button type="button" class="btn btn-sm btn-outline-primary" onclick="assignSpectrumToProject('${spectrum.id}')">` +
+        `<i class="bi bi-collection me-1"></i>${nirGettext('Zu vorhandenem Projekt hinzufügen &amp; neu berechnen')}</button>` +
+        `<a href="/projects/" class="btn btn-sm btn-outline-secondary">${nirGettext('Projektübersicht')}</a>` +
+        `</div>`);
+
     body.innerHTML = rows.join('') || `<p class="mb-0">${nirGettext('Analyse abgeschlossen. Keine Detaildaten verfügbar.')}</p>`;
     section.hidden = false;
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Quick-Check-Bericht (Vorfall 2026-10-15): Sackgasse aufbrechen - das
+// Spektrum kann direkt zu einem bestehenden Projekt hinzugefuegt und
+// das Projekt neu berechnet (reingest) werden.
+function assignSpectrumToProject(spectrumId) {
+    const container = document.getElementById('quickCheckAssignSelect');
+    if (container) {
+        container.closest('.border').remove();
+        return;
+    }
+    const target = document.getElementById('quickCheckResultBody');
+    if (!target) return;
+    const box = document.createElement('div');
+    box.className = 'border rounded p-2 mt-2 bg-white';
+    box.innerHTML = '<h6>' + nirGettext('Projekt wählen') + '</h6>' +
+        '<div class="d-flex gap-2 align-items-center">' +
+        '<select id="quickCheckAssignSelect" class="form-select form-select-sm" style="max-width:340px"><option>' +
+        nirGettext('Projekte werden geladen ...') + '</option></select>' +
+        '<button type="button" class="btn btn-sm btn-primary" id="quickCheckAssignGo" disabled>' +
+        nirGettext('Hinzufügen &amp; Projekt neu berechnen') + '</button></div>';
+    target.appendChild(box);
+    const select = box.querySelector('select');
+    const goBtn = box.querySelector('#quickCheckAssignGo');
+    axios.get('/api/projects/')
+        .then(function (resp) {
+            const projects = (resp.data && (resp.data.results || resp.data)) || [];
+            if (!projects.length) {
+                select.innerHTML = '<option>' + nirGettext('Keine Projekte vorhanden - bitte zuerst ein Projekt anlegen.') + '</option>';
+                return;
+            }
+            select.innerHTML = projects.map(pr =>
+                `<option value="${pr.id}">${pr.name} (${pr.phase || ''})</option>`).join('');
+            goBtn.disabled = false;
+        })
+        .catch(function () {
+            select.innerHTML = '<option>' + nirGettext('Projekte konnten nicht geladen werden.') + '</option>';
+        });
+    goBtn.addEventListener('click', function () {
+        const projectId = select.value;
+        if (!projectId) return;
+        goBtn.disabled = true;
+        goBtn.textContent = nirGettext('Wird hinzugefügt ...');
+        axios.post('/api/projects/' + projectId + '/add-spectrum/', { spectrum_id: spectrumId })
+            .then(function (resp) {
+                showSuccess(nirGettext('Spektrum zum Projekt hinzugefügt - Projekt wird neu berechnet.'));
+                window.location.href = '/projects/' + projectId + '/';
+            })
+            .catch(function (err) {
+                goBtn.disabled = false;
+                goBtn.textContent = nirGettext('Hinzufügen &amp; Projekt neu berechnen');
+                showError(nirGettext('Hinzufügen fehlgeschlagen: ') +
+                    ((err.response && err.response.data && (err.response.data.error || err.response.data.detail)) || err.message));
+            });
+    });
 }
 
 function closeQuickCheckResult() {

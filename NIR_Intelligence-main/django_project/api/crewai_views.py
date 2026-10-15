@@ -169,6 +169,7 @@ def _build_analysis_response(result, summary, analysis_request):
     }
     
     
+    _attach_similarity_section(response_data, analysis_request, result)
     return response_data
 
 
