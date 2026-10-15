@@ -121,6 +121,14 @@ resp = view.put(_req('put', {'theme': None}))
 check('T5a PUT mit ungueltigen Daten -> 400',
       resp.status_code == 400, f'status={resp.status_code}')
 
+# --- T6: CSRF-Cookie wird auf der Settings-Route erzwungen ---------
+import re as _re
+decorated = _re.search(
+    r"path\('settings/',\s*method_decorator\(ensure_csrf_cookie\)",
+    urls_src) is not None
+check('T6a settings-Route erzwingt CSRF-Cookie (ensure_csrf_cookie)',
+      decorated, 'Route nicht dekoriert')
+
 print(f'\nSettings-Repair-Matrix: {PASS} passed, {FAIL} failed')
 if FAILED:
     print('FAILED checks:', FAILED)
