@@ -276,12 +276,26 @@ class SensorListView(TemplateView):
             'user_id': request.user.id,
         })
         data = output.data or {}
+        # KI-gestuetzte Zuordnungsvorschlaege fuer ungematchte Sensoren
+        # (User-Anforderung 2026-10-15): Rueckfrage statt stiller
+        # Redundanz - 'SparkFun Triad' vs. 'Triad' soll die KI erkennen
+        # bzw. nachfragen, nie still zuordnen.
+        sensor_match_suggestions = []
+        try:
+            from services.sensor_catalog import suggest_sensor_matches
+            unmatched_names = [u.get('instrument_type', '')
+                               for u in data.get('unmatched_usage', [])]
+            sensor_match_suggestions = list(
+                suggest_sensor_matches(unmatched_names).values())
+        except Exception:
+            logger.exception('Sensor match suggestions failed (non-fatal)')
         context = {
             'page_title': 'Sensoren',
             'registered_sensors': data.get('registered_sensors', []),
             'setting_options': data.get('setting_options', []),
             'usage': data.get('usage', []),
             'unmatched_usage': data.get('unmatched_usage', []),
+            'sensor_match_suggestions': sensor_match_suggestions,
             'suggestions': data.get('optimization_suggestions', []),
         }
         return render(request, self.template_name, context)

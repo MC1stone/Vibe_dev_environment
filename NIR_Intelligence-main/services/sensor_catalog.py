@@ -8,6 +8,7 @@
 # parameter catalogue and the OP28 canonical metadata fields.
 
 import logging
+import re
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("Service.SensorCatalog")
@@ -181,6 +182,96 @@ def match_model_id(instrument_type: str) -> Optional[str]:
         if any(keyword in normalized for keyword in alias["keywords"]):
             return alias["model_id"]
     return None
+
+
+def suggest_sensor_matches(unmatched_names: List[str]) -> Dict[str, Any]:
+    """KI-gestuetzte Zuordnungshilfe fuer nicht erkannte instrument_type-
+    Strings (User-Anforderung 2026-10-15, Tomaten-Datensatz): Die KI
+    vergleicht jeden ungematchten Namen mit den registrierten Adaptern
+    und schlaegt die plausibelste Zuordnung mit Begruendung vor - als
+    RUECKFRAGE an den Nutzer (open_questions-Prinzip des KI-Metadaten-
+    Passes), nie als stille Umbenennung. Ohne Ollama: heuristische
+    Hinweise (Substring-Aehnlichkeit), klar als Voranschlag markiert.
+    Never raises."""
+    suggestions: Dict[str, Any] = {}
+    if not unmatched_names:
+        return suggestions
+    _ensure_adapters_registered()
+    try:
+        from devices import get_registry
+        models = get_registry().list_models()
+    except Exception:
+        models = []
+    catalog_lines = []
+    for model_id in models:
+        alias = next((a for a in _INSTRUMENT_ALIASES
+                       if a["model_id"] == model_id), None)
+        keywords = ", ".join(alias["keywords"]) if alias else ""
+        catalog_lines.append(f"- {model_id} (Keywords: {keywords})")
+    catalog_block = "\n".join(catalog_lines) or "(keine Adapter registriert)"
+    service = None
+    try:
+        from services.metadata_llm import OllamaMetadataClient
+        client = OllamaMetadataClient()
+        service = client if client.is_available() else None
+    except Exception:
+        service = None
+    for name in unmatched_names:
+        if not name or name == "unbekannt":
+            continue
+        normalized = name.strip().lower()
+        # Heuristik zuerst (deterministisch, immer verfuegbar):
+        # gemeinsame Substrings/Token mit MODEL_IDs oder Alias-Keywords
+        tokens = set(re.split(r"[^a-z0-9]+", normalized)) - {"", "sensor", "spektrometer", "nir"}
+        best, best_score = None, 0
+        for model_id in models:
+            alias = next((a for a in _INSTRUMENT_ALIASES
+                          if a["model_id"] == model_id), None)
+            target_tokens = set(re.split(r"[^a-z0-9]+", model_id.lower()))
+            if alias:
+                target_tokens |= set(alias["keywords"])
+            score = len(tokens & target_tokens)
+            if score > best_score:
+                best, best_score = model_id, score
+        entry: Dict[str, Any] = {
+            "instrument_type": name,
+            "model_id": None,
+            "source": "heuristisch",
+            "question": None,
+        }
+        if best and best_score >= 1:
+            entry["model_id"] = best
+            entry["question"] = (
+                f"Sensor-Zuordnung: Ist '{name}' der registrierte Sensor "
+                f"'{best}'? (Automatischer Vorschlag - bitte bestaetigen, "
+                "um doppelte Sensor-Eintraege zu vermeiden.)")
+        elif service is not None:
+            # KI-Rueckfrage ohne Heuristik-Treffer
+            try:
+                prompt = (
+                    "Ein NIR-Spektrum-Datensatz nennt als Instrument "
+                    f"'{name}'. Registrierte Sensoren der Plattform:\n"
+                    f"{catalog_block}\n"
+                    "Gib JSON zurueck: {\"model_id\": \"<id oder null>\", "
+                    "\"reason\": \"<1 Satz Begruendung>\"}. "
+                    "Nur zuordnen wenn es sich um dasselbe Geraet handelt.")
+                import json as _json
+                raw = service.chat(prompt)
+                data = _json.loads(raw or "{}")
+                mid = str(data.get("model_id") or "").strip()
+                if mid in models:
+                    entry["model_id"] = mid
+                    entry["source"] = "ki"
+                    entry["question"] = (
+                        f"Sensor-Zuordnung: Die KI haelt '{name}' fuer den "
+                        f"registrierten Sensor '{mid}' "
+                        f"({data.get('reason', '')}). Zustimmen?")
+            except Exception:
+                logger.info(
+                    "Sensor-Zuordnung per KI fuer %r nicht verfuegbar", name)
+        if entry.get("model_id"):
+            suggestions[name] = entry
+    return suggestions
 
 
 def _canonicalize_parameters(parameters: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

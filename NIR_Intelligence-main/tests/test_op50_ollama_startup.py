@@ -136,8 +136,8 @@ check("T4a project_crew gate uses ollama_reachable",
 import requests as _requests
 from services.metadata_llm import OllamaMetadataClient
 
-check("T4b metadata client timeout configurable (NIR_LLM_TIMEOUT, default 120)",
-      OllamaMetadataClient(timeout=None).timeout == 120
+check("T4b metadata client timeout configurable (NIR_LLM_TIMEOUT, default 300)",
+      OllamaMetadataClient(timeout=None).timeout == 300
       if "NIR_LLM_TIMEOUT" not in os.environ
       else OllamaMetadataClient(timeout=None).timeout == int(os.environ["NIR_LLM_TIMEOUT"]))
 
