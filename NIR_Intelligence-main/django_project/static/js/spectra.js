@@ -474,6 +474,9 @@ function getQualityClass(spectrum) {
     if (spectrum.quality_status === 'invalid') return 'c-badge--danger';
     
     const score = spectrum.quality_score || 0;
+    if (score === 0 && (!spectrum.status || spectrum.status === 'uploaded')) {
+        return 'c-badge--secondary';
+    }
     if (score >= qualityThresholds.excellent) return 'c-badge--success';
     if (score >= qualityThresholds.good) return 'c-badge--success';
     if (score >= qualityThresholds.fair) return 'c-badge--warning';
@@ -485,6 +488,11 @@ function getQualityText(spectrum) {
     if (spectrum.quality_status === 'invalid') return 'Invalid';
     
     const score = spectrum.quality_score || 0;
+    // Ohne Analyse (Score 0 + Status uploaded) ist 'Poor' irrefuehrend -
+    // die Bewertung steht noch aus (Vorfall 2026-10-15).
+    if (score === 0 && (!spectrum.status || spectrum.status === 'uploaded')) {
+        return nirGettext('ausstehend');
+    }
     if (score >= qualityThresholds.excellent) return 'Excellent';
     if (score >= qualityThresholds.good) return 'Good';
     if (score >= qualityThresholds.fair) return 'Fair';
