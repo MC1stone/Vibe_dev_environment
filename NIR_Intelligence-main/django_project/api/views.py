@@ -3,6 +3,15 @@ Views for NIR_Mistral API
 """
 
 import math
+
+
+def _is_finite_number(value):
+    """True wenn value zu einer endlichen float konvertierbar ist
+    (NaN/Inf-Filter, Vorfall 2026-10-14)."""
+    try:
+        return math.isfinite(float(value))
+    except (TypeError, ValueError):
+        return False
 import os
 import sys
 import json
@@ -799,7 +808,7 @@ class SpectrumListCreateView(generics.ListCreateAPIView):
             pairs = [
                 (round(float(w), 6), round(float(i), 6))
                 for w, i in zip(df[x_col].tolist(), df[y_col].tolist())
-                if self._is_finite_number(w) and self._is_finite_number(i)
+                if _is_finite_number(w) and _is_finite_number(i)
             ]
             if not pairs:
                 return
@@ -1046,7 +1055,7 @@ class FileUploadView(APIView):
                     pairs = [
                         (float(w), float(i))
                         for w, i in zip(df[wl_col].tolist(), df[it_col].tolist())
-                        if self._is_finite_number(w) and self._is_finite_number(i)
+                        if _is_finite_number(w) and _is_finite_number(i)
                     ]
                     if pairs:
                         metadata['data_points'] = len(pairs)
@@ -1061,10 +1070,3 @@ class FileUploadView(APIView):
             logger.error(f"Error parsing spectrum file: {e}")
 
         return metadata
-
-    @staticmethod
-    def _is_finite_number(value):
-        try:
-            return math.isfinite(float(value))
-        except (TypeError, ValueError):
-            return False
