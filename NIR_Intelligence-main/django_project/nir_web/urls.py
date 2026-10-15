@@ -8,6 +8,8 @@ from django.conf import settings
 from django.conf.urls.i18n import i18n_patterns
 from django.views.i18n import set_language
 from django.conf.urls.static import static
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import TemplateView
 from django.http import JsonResponse
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -85,7 +87,9 @@ urlpatterns = [
     path('', DashboardStartView.as_view(), name='home'),
     path('dashboard/', TemplateView.as_view(template_name='dashboard_colorful.html'), name='dashboard'),
     path('agents/', TemplateView.as_view(template_name='agents.html'), name='agents-page'),
-    path('spectra/', TemplateView.as_view(template_name='spectra.html'), name='spectra-page'),
+    path('spectra/', method_decorator(ensure_csrf_cookie)(
+        TemplateView.as_view(template_name='spectra.html')),
+        name='spectra-page'),
     path('files/', TemplateView.as_view(template_name='files.html'), name='files-page'),
     path('analysis/report/<uuid:file_id>/', FileCrewReportView.as_view(), name='file-crew-report'),    path('chatbot/', TemplateView.as_view(template_name='chatbot.html'), name='chatbot-page'),    path('ilias/', TemplateView.as_view(template_name='ilias.html'), name='ilias-page'),
     path('federated/', TemplateView.as_view(template_name='federated.html'), name='federated-page'),
