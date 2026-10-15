@@ -831,6 +831,19 @@ class SpectrumListCreateView(generics.ListCreateAPIView):
             spectrum.resolution = 2.0
         if spectrum.data_points is None:
             spectrum.data_points = 0
+        # Kurve persistieren: bis Vorfall 2026-10-15 uebernahm das finale
+        # volle save() in perform_create auch diese Felder - seit es auf
+        # status/processed_at beschraenkt ist (NULL-Schutz, Vorfall
+        # 2026-10-14), muss dieser Pfad seine Felder selbst speichern,
+        # sonst bleibt der Spectrum-Details-Graph leer.
+        try:
+            spectrum.save(update_fields=[
+                'wavelengths', 'intensities', 'x_unit', 'y_unit',
+                'data_points', 'wavelength_range_start',
+                'wavelength_range_end', 'resolution'])
+        except Exception as e:
+            logger.error(
+                f"Failed to persist curve for spectrum {spectrum.id}: {e}")
 
     def _process_text_file(self, spectrum):
         """Process a text file to extract spectral data"""
