@@ -44,6 +44,32 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## Current Task: OP65b - Metadaten-Abgleich generalisiert
+### Ziel
+PO-Entscheidung (2026-10-16): 'fuer den Artikel bleibt der Tomaten-
+Kontext, fuer die Software muss es generisch sein, um alle
+Anwendungsfaelle abzudecken'. Der Metadaten-Abgleich des Fusion-Zweigs
+darf kein Fachkontext-Hardcoding enthalten (Software-Grundregel:
+alle Formate, alle Spektrometer, alle Proben).
+
+### Umsetzung
+- project_fusion.py: COMPARISON_FIELDS (mit 'tomato_variety') ersetzt
+  durch GENERIC_COMPARISON_FIELDS (nur messbedingungsbezogene Felder:
+  Operator, Sensor, Seriennummer, Probenart, Messdatum, Integrationszeit,
+  Aufloesung, Wellenlaengenbereich).
+- _comparison_fields(): der Abgleich nimmt automatisch ALLE in den
+  Daten vorhandenen Metadatenfelder auf - tomato_variety im Tomaten-
+  Kontext, coffee_origin/soil_type in anderen Kontexten, ohne
+  Code-Aenderung.
+- _record_metadata/_dataset_metadata: uebernehmen zusaetzlich alle
+  vorhandenen Metadaten-Schluessel (generisch).
+
+### Verifikation
+- tests/test_op65_fusion_ux.py um T1b erweitert (30/30): unbekannte
+  Kontextfelder (coffee_origin, soil_type) nehmen am Abgleich teil,
+  Tomaten-Kontext unveraendert funktionsfaehig.
+- OP63 St1+2 45/45 (Import angepasst), OP63 St3 37/37, OP64 19/19.
+
 ## Current Task: OP65 - Fusion UX (Livetest-Feedback Runde 2)
 ### Ziel
 Vier Befunde aus dem zweiten Fusion-Livetest (2026-10-16):

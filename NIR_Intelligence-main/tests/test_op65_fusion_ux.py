@@ -65,6 +65,34 @@ check("T1d degenerate input -> default",
       _tolerance_levels_from_targets([]) == (0.5, 1.0))
 
 # ---------------------------------------------------------------------------
+# T1b: Generalisierung (OP65-Nachtrag): unbekannte Kontextfelder nehmen
+# automatisch am Metadaten-Abgleich teil - Kaffee/Boden-Kontext funktioniert
+# ohne Code-Aenderung genauso wie Tomaten.
+# ---------------------------------------------------------------------------
+from services.project_fusion import metadata_diff  # noqa: E402
+
+ka = {'operator_name': 'Alice', 'coffee_origin': 'Aethiopien',
+      'soil_type': 'Lehm'}
+kb = {'operator_name': 'Bob', 'coffee_origin': 'Kolumbien',
+      'soil_type': 'Lehm'}
+kd = metadata_diff(ka, kb)
+kkeys = {f['key']: f for f in kd['fields']}
+check("T1b-a unknown context fields join the comparison",
+      'coffee_origin' in kkeys and 'soil_type' in kkeys,
+      str(kkeys.keys()))
+check("T1b-b differing context field detected",
+      kkeys['coffee_origin']['equal'] is False)
+check("T1b-c equal context field detected",
+      kkeys['soil_type']['equal'] is True)
+ta = {'operator_name': 'A', 'tomato_variety': 'Roma'}
+tb = {'operator_name': 'B', 'tomato_variety': 'San Marzano'}
+td = metadata_diff(ta, tb)
+tkeys = {f['key']: f for f in td['fields']}
+check("T1b-d tomato context still works (article case)",
+      'tomato_variety' in tkeys
+      and tkeys['tomato_variety']['equal'] is False)
+
+# ---------------------------------------------------------------------------
 # T2: Doppel-Fusionsschutz
 # ---------------------------------------------------------------------------
 from core.models import AnalysisProject, GenericFile  # noqa: E402
