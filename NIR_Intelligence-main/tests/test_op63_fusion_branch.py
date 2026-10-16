@@ -84,6 +84,52 @@ check("T2g case-insensitive metadata lookup",
       _meta_get({'Operator-Name': 'Alice'}, 'operator_name') == 'Alice')
 
 # ---------------------------------------------------------------------------
+# T2b: Regression Livetest 2026-10-16 - build_fusion_offer muss Treffer
+# auf echte SpectrumRecord-IDs mappen (vorher: Dateinamen aus
+# references_for_dataset -> Mapping ins Leere, offer blieb immer False)
+# ---------------------------------------------------------------------------
+import numpy as np  # noqa: E402
+from core.models import AnalysisProject, SpectrumRecord  # noqa: E402
+from django.contrib.auth import get_user_model  # noqa: E402
+user = (get_user_model().objects.filter(username="op63reg").first()
+        or get_user_model().objects.create_user(
+            "op63reg", password="pw", email="op63reg@example.com"))
+rng_t2b = np.random.default_rng(7)
+wl_t2b = [float(w) for w in range(900, 1700, 10)]
+
+
+def _spectrum_t2b(base):
+    return [float(v) for v in base + rng_t2b.normal(0, 0.01, len(wl_t2b))]
+
+
+pa_t2b = AnalysisProject.objects.create(user=user, name="RegQuelleA")
+pa_t2b.preparation_report = {'datasets': [
+    {'file_id': 'a.csv', 'usable': True, 'file_name': 'a.csv',
+     'metadata': {'operator_name': 'Alice'}}]}
+pa_t2b.save(update_fields=['preparation_report'])
+SpectrumRecord.objects.create(
+    user=user, project=pa_t2b, file_name='a.csv',
+    wavelengths=wl_t2b, intensities=_spectrum_t2b(0.5),
+    wavelength_grid=SpectrumRecord.grid_key(wl_t2b))
+pb_t2b = AnalysisProject.objects.create(user=user, name="RegProjektB")
+pb_t2b.preparation_report = {'datasets': [
+    {'file_id': 'b.csv', 'usable': True, 'file_name': 'b.csv',
+     'metadata': {'operator_name': 'Bob'},
+     'preview': {'wavelengths': wl_t2b,
+                 'intensities': _spectrum_t2b(0.5)}}]}
+pb_t2b.save(update_fields=['preparation_report'])
+from services.project_fusion import build_fusion_offer  # noqa: E402
+offer_t2b = build_fusion_offer(user, pb_t2b,
+                               pb_t2b.preparation_report['datasets'][0])
+check("T2b-a fusion offer built for cross-project match",
+      offer_t2b is not None and offer_t2b.get('available') is True,
+      str(offer_t2b))
+check("T2b-b candidate maps to the source project",
+      offer_t2b is not None
+      and offer_t2b['candidates'][0]['project_name'] == 'RegQuelleA',
+      str((offer_t2b or {}).get('candidates')))
+
+# ---------------------------------------------------------------------------
 # T3: API-Endpoints registriert (URL wiring)
 # ---------------------------------------------------------------------------
 from django.urls import reverse  # noqa: E402

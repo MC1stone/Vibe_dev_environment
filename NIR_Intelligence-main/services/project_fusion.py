@@ -90,10 +90,14 @@ def build_fusion_offer(user, project, dataset: Dict[str, Any]) -> Optional[Dict[
     """
     try:
         from core.models import SpectrumRecord
-        from services.spectrum_database import references_for_dataset
-        db = references_for_dataset(user.id, dataset,
-                                    exclude_project_id=project.id)
-        if not db['references']:
+        from services.spectrum_database import visible_records, _dataset_grid
+        grid = _dataset_grid(dataset)
+        if grid is None:
+            return None
+        records = list(visible_records(user, grid=grid)
+                        .exclude(project_id=project.id)
+                        .exclude(project_id=None))
+        if not records:
             return None
         from agents.faiss_agent import FaissAgent
         wavelengths = dataset.get('preview', {}).get('wavelengths', [])
@@ -101,8 +105,14 @@ def build_fusion_offer(user, project, dataset: Dict[str, Any]) -> Optional[Dict[
         if not wavelengths or not intensities:
             return None
         output = FaissAgent().execute({
-            'reference_spectra': db['references'],
-            'reference_ids': db['ids'],
+            'reference_spectra': [
+                {'data': {'wavelength': o.wavelengths,
+                          'intensity': o.intensities},
+                 'wavelength_column': 'wavelength',
+                 'intensity_column': 'intensity'}
+                for o in records
+            ],
+            'reference_ids': [str(o.id) for o in records],
             'query_spectrum': {
                 'data': {'wavelength': wavelengths,
                          'intensity': intensities},
@@ -114,18 +124,13 @@ def build_fusion_offer(user, project, dataset: Dict[str, Any]) -> Optional[Dict[
         matches = output.data.get('matches', []) if output else []
         if not matches:
             return None
-        by_id = {str(o.id): o for o in
-                 SpectrumRecord.objects.filter(
-                     id__in=[m.get('reference_id') for m in matches
-                             if m.get('reference_id')])}
+        by_id = {str(o.id): o for o in records}
         dataset_meta = _dataset_metadata(dataset)
         candidates = []
         seen_projects = set()
         for m in matches:
             rec = by_id.get(str(m.get('reference_id', '')))
             if rec is None:
-                continue
-            if rec.project_id is None or str(rec.project_id) == str(project.id):
                 continue
             diff = metadata_diff(dataset_meta, _record_metadata(rec))
             candidates.append({
