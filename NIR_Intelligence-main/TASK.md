@@ -44,6 +44,32 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## Current Task: OP62 - Diagnose an Staff binden (Admin-Login)
+### Ziel
+PO-Entscheidung (2026-10-16): Der Diagnose-Reiter ist im Menue zwar
+nur fuer Staff sichtbar, die Seiten dahinter waren aber ungeschuetzt.
+Diagnose muss wirklich an den Admin-Login geknuepft sein; der
+'Einstellungen'-Link im Diagnose-Untermenue ist redundant zum
+Nutzer-Dropdown und entfaellt.
+
+### Umsetzung
+- base.html: /settings/-Link aus dem Diagnose-Untermenue entfernt
+  (Einstellungen bleiben fuer alle angemeldeten User im Nutzer-Dropdown
+  erreichbar); Active-State-Pfad um /settings/ reduziert.
+- nir_web/urls.py: /jobs/, /agents/, /analysis/ (de- und i18n-Block,
+  je 2x) via user_passes_test(is_staff, login_url='/login/') an Staff
+  gebunden; anonymous/nicht-Staff werden zum Login umgeleitet.
+  /settings/ bleibt bewusst uneingeschraenkt (User-Feature, FA1).
+- Keine Einschraenkung der APIs (nur die Diagnose-UI-Seiten sind
+  Gegenstand der PO-Entscheidung).
+
+### Verifikation
+- Neue Matrix tests/test_op62_diagnose_staff.py: 19/19 gruen
+  (Nav-Struktur, URLs, Runtime: anonymous/non-staff -> Redirect,
+  staff -> 200, /settings/ fuer non-staff bleibt 200).
+- Regressionen: OP25 55/55, OP52 56/56, S1/S2/S5 6/6, S3/S4/S6 32/32
+  gruen. py_compile OK. CI-Matrix um OP62 erweitert.
+
 ## Current Task: OP60 - Workflow-/UI-Redesign S3+S4+S6 (Entwurf PR #125)
 
 ### Ziel
