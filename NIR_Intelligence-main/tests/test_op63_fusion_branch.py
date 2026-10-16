@@ -59,7 +59,7 @@ except Exception as exc:
     check("T1b project_fusion compiles", False, str(exc))
 
 from services.project_fusion import (  # noqa: E402
-    metadata_diff, _meta_get, COMPARISON_FIELDS,
+    metadata_diff, _meta_get, GENERIC_COMPARISON_FIELDS,
 )
 
 # ---------------------------------------------------------------------------
@@ -70,7 +70,8 @@ meta_a = {'operator_name': 'Alice', 'sensor_model': 'ESP32-S3',
 meta_b = {'operator_name': 'Bob', 'sensor_model': 'ESP32-S3',
           'tomato_variety': 'San Marzano'}
 diff = metadata_diff(meta_a, meta_b)
-check("T2a diff returns fields list", len(diff['fields']) == len(COMPARISON_FIELDS))
+check("T2a diff returns fields list (generic + context)",
+      len(diff['fields']) >= len(GENERIC_COMPARISON_FIELDS))
 check("T2b differences counted", diff['differences'] == 2,
       f"got {diff['differences']}")
 by_key = {f['key']: f for f in diff['fields']}

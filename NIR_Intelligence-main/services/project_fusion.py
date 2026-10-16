@@ -36,17 +36,49 @@ def _valid_project_ids(project_ids: List[Any]) -> List[str]:
 
 # Metadaten-Felder fuer den Abgleich (nur Information, keine Blockade).
 # Reihenfolge = Anzeigereihenfolge im Differenz-Bericht.
-COMPARISON_FIELDS = [
+# Generische Metadaten-Vergleichsfelder (Software-Grundregel: alle
+# Anwendungsfaelle, kein Fachkontext-Hardcoding). Die Felder beschreiben
+# Messbedinungen, die fuer JEDE spektroskopische Anwendung relevant sind -
+# unabhaengig von Probe (Tomate, Kaffee, Boden) oder Messgroesse (Brix,
+# Feuchte, Protein).
+GENERIC_COMPARISON_FIELDS = [
     ('operator_name', 'Operator'),
     ('sensor_model', 'Sensor/Modell'),
     ('sensor_serial', 'Sensor/Seriennummer'),
     ('sample_type', 'Probenart'),
-    ('tomato_variety', 'Tomatensorte'),
     ('measurement_date', 'Messdatum'),
     ('integration_time', 'Integrationszeit'),
     ('resolution', 'Aufloesung'),
     ('wavelength_range', 'Wellenlaengenbereich'),
 ]
+
+# Kontextfelder: alle weiteren vorhandenen Metadatenfelder werden ZUSAETZLICH
+# in den Abgleich aufgenommen (z. B. tomato_variety, coffee_origin, soil_type)
+# - automatisch erkannt aus den Daten, ohne feste Verdrahtung.
+APPLICATION_CONTEXT_FIELD_HINTS = [
+    'variety', 'sorte', 'origin', 'herkunft', 'species', 'art',
+    'cultivar', 'type', 'sample_name',
+]
+
+
+def _comparison_fields(available_metadata) -> list:
+    """Vergleichsfelder = generische Messbedingungsfelder + alle im
+    Datenbestand vorgefundenen Kontextfelder (generalisiert, OP65:
+    'fuer die Software generisch, fuer den Artikel Tomaten')."""
+    fields = list(GENERIC_COMPARISON_FIELDS)
+    seen = {key for key, _label in fields}
+    try:
+        keys = set()
+        for meta in available_metadata or []:
+            if isinstance(meta, dict):
+                keys.update(str(k) for k in meta.keys())
+        for k in sorted(keys):
+            if k in seen or k in ('file_name', 'file_id'):
+                continue
+            fields.append((k, k.replace('_', ' ').title()))
+    except Exception:
+        pass
+    return fields
 
 
 def _meta_get(metadata: Optional[dict], key: str) -> str:
@@ -62,16 +94,28 @@ def _meta_get(metadata: Optional[dict], key: str) -> str:
 
 
 def _record_metadata(record) -> Dict[str, str]:
-    """Normalisierte Metadaten eines SpectrumRecord fuer den Abgleich."""
-    return {key: _meta_get(record.metadata or {}, key)
-            for key, _label in COMPARISON_FIELDS}
+    """Normalisierte Metadaten eines SpectrumRecord fuer den Abgleich.
+
+    Generisch: UEBER die bekannten Felder hinaus werden alle vorhandenen
+    Metadaten-Schluessel uebernommen (OP65-Generalisierung)."""
+    meta = dict(record.metadata or {})
+    result = {key: _meta_get(meta, key)
+              for key, _label in GENERIC_COMPARISON_FIELDS}
+    for k in meta:
+        if k not in result and k not in ('file_name', 'file_id'):
+            result[k] = str(meta.get(k) or '')
+    return result
 
 
 def _dataset_metadata(dataset: Dict[str, Any]) -> Dict[str, str]:
     """Normalisierte Metadaten eines Vorbereitungs-Datensatzes."""
-    meta = dataset.get('metadata') or {}
-    return {key: _meta_get(meta, key)
-            for key, _label in COMPARISON_FIELDS}
+    meta = dict(dataset.get('metadata') or {})
+    result = {key: _meta_get(meta, key)
+              for key, _label in GENERIC_COMPARISON_FIELDS}
+    for k in meta:
+        if k not in result and k not in ('file_name', 'file_id'):
+            result[k] = str(meta.get(k) or '')
+    return result
 
 
 def metadata_diff(meta_a: Dict[str, str],
@@ -81,10 +125,12 @@ def metadata_diff(meta_a: Dict[str, str],
     Liefert {'fields': [{key, label, a, b, equal}], 'differences': int,
     'equal_fields': int}. Niemals blockierend - der PO hat entschieden,
     dass Metadaten-Differenzen angezeigt, nicht bewertet werden.
+    OP65: Die Feldliste ist generisch - alle in den Daten vorhandenen
+    Metadatenfelder nehmen am Abgleich teil, nicht nur die bekannten.
     """
     fields = []
     differences = 0
-    for key, label in COMPARISON_FIELDS:
+    for key, label in _comparison_fields([meta_a, meta_b]):
         va, vb = (meta_a or {}).get(key, ''), (meta_b or {}).get(key, '')
         equal = (va == vb) and bool(va or vb)
         missing = not va and not vb
