@@ -681,7 +681,7 @@ window.nirBuildFusionOfferHtml = function (offer, context) {
         html += '</tbody></table>';
     }
     const pids = offer.project_ids || [];
-    html += `<button type="button" class="btn btn-sm btn-primary me-2" id="fusionPreviewBtn" onclick="nirFusionPreview(${JSON.stringify(pids).replace(/"/g, '&quot;')})">` +
+    html += `<button type="button" class="btn btn-sm btn-primary me-2" id="fusionPreviewBtn" onclick="nirFusionPreview(this.dataset.pids)" data-pids='${JSON.stringify(pids)}'>` +
         `<i class="bi bi-eye me-1"></i>${nirGettext('Zweig öffnen: Metadaten-Abgleich ansehen')}</button>`;
     html += `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('fusionOfferBox').style.display='none'">` +
         `${nirGettext('Nein, nicht öffnen')}</button>`;
@@ -692,6 +692,13 @@ window.nirBuildFusionOfferHtml = function (offer, context) {
 window.nirFusionPreview = function (projectIds) {
     const box = document.getElementById('fusionPreviewResult');
     if (!box) return;
+    if (typeof projectIds === 'string') {
+        try { projectIds = JSON.parse(projectIds); } catch (e) { projectIds = []; }
+    }
+    if (!Array.isArray(projectIds) || projectIds.length < 2) {
+        box.innerHTML = `<div class="alert alert-warning py-2 mb-0">${nirGettext('Es konnten nicht beide Projekte identifiziert werden - bitte Seite neu laden.')}</div>`;
+        return;
+    }
     box.innerHTML = `<p class="mb-0 text-muted small">${nirGettext('Metadaten-Abgleich wird geladen …')}</p>`;
     axios.post('/projects/fusion/preview/', { project_ids: projectIds })
         .then(resp => {
@@ -714,7 +721,7 @@ window.nirFusionPreview = function (projectIds) {
                 }
             });
             html += `<div class="d-flex gap-2 flex-wrap mt-2">` +
-                `<button type="button" class="btn btn-sm btn-success" onclick="nirFusionExecute(${JSON.stringify(projectIds).replace(/"/g, '&quot;')})">` +
+                `<button type="button" class="btn btn-sm btn-success" onclick="nirFusionExecute(this.dataset.pids)" data-pids='${JSON.stringify(projectIds)}'>` +
                 `<i class="bi bi-boxes me-1"></i>${nirGettext('Zusammenführung durchführen (neues Projekt)')}</button>` +
                 `<span class="small text-muted align-self-center">${nirGettext('Die Original-Projekte bleiben unangetastet.')}</span></div>`;
             box.innerHTML = html;
@@ -727,6 +734,13 @@ window.nirFusionPreview = function (projectIds) {
 window.nirFusionExecute = function (projectIds) {
     const box = document.getElementById('fusionPreviewResult');
     if (!box) return;
+    if (typeof projectIds === 'string') {
+        try { projectIds = JSON.parse(projectIds); } catch (e) { projectIds = []; }
+    }
+    if (!Array.isArray(projectIds) || projectIds.length < 2) {
+        box.innerHTML = `<div class="alert alert-warning py-2 mb-0">${nirGettext('Es konnten nicht beide Projekte identifiziert werden - bitte Seite neu laden.')}</div>`;
+        return;
+    }
     if (!window.confirm(nirGettext('Zusammenführung in ein neues Fusionsprojekt durchführen? Die Original-Projekte bleiben unangetastet.'))) return;
     axios.post('/projects/fusion/execute/', { project_ids: projectIds })
         .then(resp => {

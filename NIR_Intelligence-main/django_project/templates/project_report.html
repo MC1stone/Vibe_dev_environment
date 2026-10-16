@@ -530,7 +530,8 @@
             </table>
             <div class="d-flex flex-wrap gap-2">
                 <button type="button" class="btn btn-sm btn-primary"
-                        onclick="nirFusionPreview({% for pid in offer.project_ids %}'{{ pid }}'{% if not forloop.last %}, {% endif %}{% endfor %})">
+                        onclick="nirFusionPreview(this.dataset.pids)"
+                        data-pids='[{% for pid in offer.project_ids %}&quot;{{ pid }}&quot;{% if not forloop.last %},{% endif %}{% endfor %}]'>
                     <i class="bi bi-eye me-1"></i>{% trans "Zweig öffnen: Metadaten-Abgleich ansehen" %}
                 </button>
                 <button type="button" class="btn btn-sm btn-outline-secondary"
