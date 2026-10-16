@@ -44,6 +44,41 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## Current Task: OP63 Stufe 3 - Vergleichende Kalibration (Fusion)
+### Ziel
+Abschluss des Fusion-Analyse-Zweigs: Drei PLS-Kalibrationen im Vergleich
+(Quelle A einzeln, Quelle B einzeln, kombiniertes Fusionsprojekt) plus
+statistischer Signifikanz-Test, ob die Operator-/Proben-Differenz die
+Kalibration signifikant beeinflusst (PO-Entscheidung 2026-10-16:
+'Wissenschaftl. Test').
+
+### Umsetzung
+- services/fusion_calibration.py: comparative_calibration() rechnet die
+  drei Kalibrationen WIEDERVERWENDEND ueber den CalibrationAgent
+  (PLS-Pipeline StandardScaler+PLSRegression, 5-fold CV; keine Kopie
+  der Kalibrationslogik). Residuen-Analyse pro Herkunftsgruppe +
+  Signifikanz-Test: Levene (Varianzgleichheit) und Welch-t (Mittelwert-
+  Differenz), scipy (bereits im Stack). Klartext-Interpretation und
+  Fazit (kombiniert vs. beste Einzel-Kalibration) fuer den Bericht.
+  Nicht kalibrierbare Daten werden ehrlich gemeldet, nie gefaked.
+- API: GET/POST /api/projects/<id>/fusion/calibration/ - nur fuer
+  Fusionsprojekte (fusion.source_projects im preparation_report),
+  Auth noetig, Quellen muessen dem Nutzer gehoeren.
+- UI: Panel 'Vergleichende Kalibration (Fusion)' im Projekt-Report,
+  nur fuer Fusionsprojekte (Template-Guard auf preparation.fusion);
+  Button laedt die Vergleichstabelle (R2/RMSECV/RPD je Datensatz),
+  Signifikanz-Test mit p-Werten und Fazit per AJAX (main.js
+  nirFusionCalibration).
+- Keine neuen Abhaengigkeiten (sklearn/scipy vorhanden).
+
+### Verifikation
+- Neue Matrix tests/test_op63_st3_calibration.py: 37/37 gruen
+  (Test-Logik homogen/heteroskedastisch/verschoben, Fit via
+  CalibrationAgent, drei-Kalibrationen-Vergleich, ehrliche
+  Nicht-Kalibrierbarkeit, Endpoint-Runtime inkl. Guards, UI).
+- Regressionen: OP63 Stufe 1+2 37/37, OP25 55/55, OP62 19/19 gruen.
+  node --check OK, Template-Kompilierung OK.
+
 ## Current Task: OP63 - Fusion-Analyse-Zweig (Stufe 1+2)
 ### Ziel
 Fachfall: zwei Projekte mit vergleichbaren Spektren (unterschiedliche

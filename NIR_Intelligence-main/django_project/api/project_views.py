@@ -1551,3 +1551,51 @@ class ProjectFusionExecuteView(APIView if DRF_AVAILABLE else object):
             logger.exception('Fusion execute failed')
             return Response({'success': False, 'error': str(exc)},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ProjectFusionCalibrationView(APIView if DRF_AVAILABLE else object):
+    """OP63 Stufe 3: vergleichende Kalibration des Fusion-Zweigs.
+
+    GET/POST /api/projects/<id>/fusion/calibration/ - nur fuer
+    Fusionsprojekte (OP63). Rechnet die drei Kalibrationen (Quelle A,
+    Quelle B, kombiniert) via CalibrationAgent (PLS) und den
+    Signifikanz-Test der Residuen pro Herkunftsgruppe (Levene + Welch).
+    Liefert den vollstaendigen Vergleich als JSON fuer das Berichts-Panel.
+    """
+    def get(self, request, project_id):
+        return self._compare(request, project_id)
+
+    def post(self, request, project_id):
+        return self._compare(request, project_id)
+
+    def _compare(self, request, project_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        project = _get_project(project_id, request.user)
+        fusion = (project.preparation_report or {}).get('fusion') or {}
+        if not fusion.get('source_projects'):
+            return Response({'success': False,
+                             'error': gettext('Not a fusion project')},
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        try:
+            from core.models import AnalysisProject
+            from services.fusion_calibration import comparative_calibration
+            source_ids = [s['project_id'] for s in fusion['source_projects']
+                          if s.get('project_id')]
+            sources = AnalysisProject.objects.filter(
+                id__in=source_ids, user=request.user)
+            if sources.count() < 2:
+                return Response({'success': False,
+                                 'error': gettext('Source projects not accessible')},
+                                status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            comparison = comparative_calibration(project, list(sources))
+            comparison['success'] = True
+            comparison['source_projects'] = [
+                {'project_id': str(p.id), 'project_name': p.name}
+                for p in sources]
+            return Response(comparison)
+        except Exception as exc:
+            logger.exception('Fusion calibration comparison failed')
+            return Response({'success': False, 'error': str(exc)},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
