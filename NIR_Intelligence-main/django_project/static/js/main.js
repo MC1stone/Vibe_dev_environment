@@ -739,3 +739,49 @@ window.nirFusionExecute = function (projectIds) {
             box.innerHTML = `<div class="alert alert-danger py-2 mb-0">${nirGettext('Zusammenführung fehlgeschlagen:')} ${err.message || err}</div>`;
         });
 };
+
+// OP63 Stufe 3: vergleichende Kalibration des Fusion-Zweigs - Button im
+// Fusionsprojekt-Report laedt die drei Kalibrationen + Signifikanz-Test.
+window.nirFusionCalibration = function (projectId) {
+    const box = document.getElementById('fusionCalibrationResult');
+    if (!box) return;
+    box.innerHTML = `<p class="mb-0 text-muted small">${nirGettext('Kalibrationsvergleich wird gerechnet (PLS, je 5-fold CV) …')}</p>`;
+    axios.get(`/api/projects/${projectId}/fusion/calibration/`)
+        .then(resp => {
+            const data = resp.data || {};
+            if (!data.success) { throw new Error(data.error || 'comparison failed'); }
+            let html = '';
+            const cals = data.calibrations || {};
+            const labels = Object.keys(cals);
+            if (labels.length) {
+                html += '<table class="table table-sm mb-2"><thead><tr>' +
+                    `<th>${nirGettext('Datensatz')}</th><th>n</th><th>R² (CV)</th><th>RMSECV</th><th>RPD</th><th>${nirGettext('Status')}</th></tr></thead><tbody>`;
+                labels.forEach(label => {
+                    const c = cals[label];
+                    html += '<tr>' +
+                        `<td>${label}</td>` +
+                        `<td>${c.n_samples ?? '—'}</td>` +
+                        `<td>${c.mean_r2 !== undefined && c.mean_r2 !== null ? (100 * c.mean_r2).toFixed(1) + ' %' : '—'}</td>` +
+                        `<td>${c.rmse_cv !== undefined && c.rmse_cv !== null ? Number(c.rmse_cv).toFixed(3) : '—'}</td>` +
+                        `<td>${c.rpd !== undefined && c.rpd !== null ? Number(c.rpd).toFixed(1) : '—'}</td>` +
+                        `<td>${c.status === 'ok' ? '<i class="bi bi-check-lg text-success"></i>' : `<span class="text-muted small">${nirGettext('nicht kalibrierbar')}</span>`}</td></tr>`;
+                });
+                html += '</tbody></table>';
+            }
+            const sig = data.significance || {};
+            if (sig.performed) {
+                html += `<h6>${nirGettext('Signifikanz-Test (Residuen je Herkunftsgruppe)')}</h6>` +
+                    `<p class="small mb-1">Levene p=${Number(sig.levene.p_value).toFixed(3)} · Welch p=${Number(sig.welch_t.p_value).toFixed(3)}</p>`;
+            }
+            if (sig.interpretation) {
+                html += `<div class="alert alert-secondary py-2 small mb-2">${nirGettext(sig.interpretation)}</div>`;
+            }
+            if (data.conclusion) {
+                html += `<div class="alert alert-info py-2 mb-0 small"><strong>${nirGettext('Fazit:')}</strong> ${nirGettext(data.conclusion)}</div>`;
+            }
+            box.innerHTML = html;
+        })
+        .catch(err => {
+            box.innerHTML = `<div class="alert alert-danger py-2 mb-0">${nirGettext('Kalibrationsvergleich fehlgeschlagen:')} ${err.message || err}</div>`;
+        });
+};

@@ -30,6 +30,7 @@ from .project_views import (
     ProjectKIAcceptView,
     ProjectFusionPreviewView,
     ProjectFusionExecuteView,
+    ProjectFusionCalibrationView,
 )
 
 urlpatterns = [
@@ -50,6 +51,7 @@ urlpatterns = [
     path('<uuid:project_id>/decisions/', ProjectDecisionCreateView.as_view(), name='project-decision-create'),
     path('fusion/preview/', ProjectFusionPreviewView.as_view(), name='project-fusion-preview'),
     path('fusion/execute/', ProjectFusionExecuteView.as_view(), name='project-fusion-execute'),
+    path('<uuid:project_id>/fusion/calibration/', ProjectFusionCalibrationView.as_view(), name='project-fusion-calibration'),
     path('<uuid:project_id>/decisions/<uuid:decision_id>/resolve/', ProjectDecisionResolveView.as_view(), name='project-decision-resolve'),
     path('database/', SpectrumDatabaseView.as_view(), name='spectrum-database'),
     path('database/import-reference/', ReferenceImportView.as_view(), name='reference-import'),

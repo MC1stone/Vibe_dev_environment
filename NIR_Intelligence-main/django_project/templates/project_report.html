@@ -489,6 +489,23 @@
         </div>
     </div>
 
+    <!-- OP63 Stufe 3: vergleichende Kalibration (nur Fusionsprojekte) -->
+    {% if preparation.fusion and preparation.fusion.source_projects %}
+    <div class="card shadow-sm border-info" id="fusionCalibrationBox">
+        <div class="card-header bg-info-subtle">
+            <h5 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>{% trans "Vergleichende Kalibration (Fusion)" %}</h5>
+        </div>
+        <div class="card-body">
+            <p class="small">{% trans "Drei PLS-Kalibrationen im Vergleich: beide Quell-Projekte einzeln gegen die zusammengeführten Daten — plus Signifikanz-Test, ob die Operator-/Proben-Differenz die Kalibration beeinflusst." %}</p>
+            <button type="button" class="btn btn-sm btn-info" id="fusionCalibrationBtn"
+                    onclick="nirFusionCalibration('{{ project.id }}')">
+                <i class="bi bi-play-fill me-1"></i>{% trans "Kalibrationsvergleich berechnen" %}
+            </button>
+            <div id="fusionCalibrationResult" class="mt-2"></div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- OP63: Fusion-Analyse-Zweig (comparable Spektren aus anderen Projekten) -->
     {% for section in per_agent_reports %}
     {% if section.agent == 'faiss_similarity' and section.data.fusion_offer %}
