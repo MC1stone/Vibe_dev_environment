@@ -313,6 +313,27 @@ def execute_fusion(user, project_ids: List[str], name: str = '',
     if sources.count() < 2:
         return {'success': False,
                 'error': 'Mindestens zwei Projekte des Nutzers erforderlich.'}
+    # OP65 (Livetest-Feedback): versehentliches DOPPEL-Zusammenschieben
+    # verhindern - existiert bereits ein Fusionsprojekt mit derselben
+    # Quell-Kombination, wird abgelehnt (klarer Hinweis statt ewigem
+    # erneuten Ingest desselben Datenmaterials).
+    wanted = set(project_ids)
+    for existing in AnalysisProject.objects.filter(
+            user=user, preparation_report__fusion__created_by='op63_fusion'):
+        efusion = (existing.preparation_report or {}).get('fusion') or {}
+        existing_sources = {s.get('project_id')
+                            for s in efusion.get('source_projects', [])
+                            if s.get('project_id')}
+        if existing_sources == wanted:
+            return {
+                'success': False,
+                'error': ('Diese Projekte sind bereits zusammengefuehrt: '
+                          + existing.name
+                          + '. Bitte das bestehende Fusionsprojekt '
+                          'verwenden statt erneut zusammenzufuehren.'),
+                'existing_project_id': str(existing.id),
+                'existing_project_url': f'/projects/{existing.id}/',
+            }
     source_files = []
     source_names = []
     for p in sources:
@@ -366,3 +387,74 @@ def execute_fusion(user, project_ids: List[str], name: str = '',
         'note': ('Fusionsprojekt angelegt; Aufbereitung laeuft im Hintergrund '
                  '(OP55-Muster).'),
     }
+
+
+def metadata_suggestions(fused_project) -> Dict[str, Any]:
+    """OP65 (Livetest-Feedback): KI-Metadaten-Vorschlaege im Fusionsprojekt.
+
+    Fachfall: ein Quelldatensatz traegt Metadaten (Operator, Sensor,
+    Tomatensorte, Datum), der andere nicht. Der Nutzer vermisst beim
+    Fusionsprojekt die Vorschlaege. Hier werden pro Datensatz ohne
+    Metadaten die Werte der ANDEREN Quelldatensaetze als Uebernahme-
+    Vorschlag aufbereitet - als Angebot, nicht als stiller Import
+    (Metadaten-Overrides entscheidet der Nutzer, OP13/OP30 unveraendert).
+    """
+    from core.models import AnalysisProject
+    result: Dict[str, Any] = {'available': False, 'suggestions': []}
+    try:
+        fusion = (fused_project.preparation_report or {}).get('fusion') or {}
+        source_ids = [s.get('project_id') for s in
+                      fusion.get('source_projects', []) if s.get('project_id')]
+        sources = list(AnalysisProject.objects.filter(id__in=source_ids))
+        own_datasets = (fused_project.preparation_report or {}).get(
+            'datasets', [])
+        source_datasets = []
+        for sp in sources:
+            source_datasets.extend(
+                (sp.preparation_report or {}).get('datasets', []))
+        donors = [d for d in source_datasets
+                  if d.get('usable') and (d.get('metadata') or {})]
+        if not donors or not own_datasets:
+            return result
+        for ds in own_datasets:
+            if not ds.get('usable'):
+                continue
+            meta = ds.get('metadata') or {}
+            filled = {k: v for k, v in meta.items()
+                      if str(v or '').strip() and k not in
+                      ('file_name', 'file_id')}
+            if len(filled) >= 4:
+                continue  # Datensatz hat eigene Metadaten - kein Vorschlag
+            proposals = []
+            for donor in donors:
+                dmeta = donor.get('metadata') or {}
+                for field, value in dmeta.items():
+                    if field in ('file_name', 'file_id'):
+                        continue
+                    if not str(value or '').strip():
+                        continue
+                    if field in filled:
+                        continue
+                    proposals.append({
+                        'field': field,
+                        'value': value,
+                        'source_file': donor.get('file_name', ''),
+                        'source_project': (
+                            donor.get('project_name')
+                            or 'Quellprojekt'),
+                    })
+            if proposals:
+                # deduplizieren (Feld -> erster Vorschlag)
+                seen = {}
+                for p in proposals:
+                    seen.setdefault(p['field'], p)
+                result['suggestions'].append({
+                    'file_id': ds.get('file_id'),
+                    'file_name': ds.get('file_name', ''),
+                    'proposals': list(seen.values()),
+                })
+        result['available'] = bool(result['suggestions'])
+        return result
+    except Exception:
+        logger.exception('Metadata suggestions failed (non-fatal)')
+        return result

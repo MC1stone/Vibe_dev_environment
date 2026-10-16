@@ -278,10 +278,15 @@ check("T5m fusion provenance recorded",
       (fused.preparation_report or {}).get('fusion', {}).get('source_projects')
       is not None)
 
+# OP65: zweiter Execute derselben Quellen wird vom Doppel-Fusionsschutz
+# abgelehnt (422 + Hinweis aufs bestehende Fusionsprojekt).
 r = _post_json('/api/projects/fusion/execute/',
                {'project_ids': [str(pa.id), str(pb.id)], 'name': 'Fusion A+B'})
-check("T5n execute endpoint creates project", r.status_code == 200
-      and r.json().get('success') is True, f"status {r.status_code}")
+check("T5n second execute rejected by double-fusion guard",
+      r.status_code == 422, f"status {r.status_code}")
+check("T5n2 rejection names existing fusion project",
+      'bereits zusammengefuehrt' in (r.json().get('error') or ''),
+      str(r.json()))
 
 # Auth-Guards
 client.logout()

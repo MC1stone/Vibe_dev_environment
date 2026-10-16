@@ -117,6 +117,7 @@ jobs:
           python tests/test_op63_fusion_branch.py
           python tests/test_op63_st3_calibration.py
           python tests/test_op64_fusion_release_feedback.py
+          python tests/test_op65_fusion_ux.py
 
       - name: Django system check
         run: python django_project/manage.py check

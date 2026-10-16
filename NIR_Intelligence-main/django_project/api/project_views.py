@@ -1599,3 +1599,29 @@ class ProjectFusionCalibrationView(APIView if DRF_AVAILABLE else object):
             logger.exception('Fusion calibration comparison failed')
             return Response({'success': False, 'error': str(exc)},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ProjectFusionMetadataSuggestionsView(APIView if DRF_AVAILABLE else object):
+    """OP65: KI-Metadaten-Vorschlaege fuer das Fusionsprojekt - Felder aus
+    dem Datensatz MIT Metadaten als Uebernahme-Vorschlag fuer die Datensatze
+    OHNE (Livetest-Feedback: 'die Metadaten koennen ergaenzt werden, aber
+    die Vorschlaege der KI habe ich vermisst'). Nur fuer Fusionsprojekte."""
+    def get(self, request, project_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        project = _get_project(project_id, request.user)
+        fusion = (project.preparation_report or {}).get('fusion') or {}
+        if not fusion.get('source_projects'):
+            return Response({'success': False,
+                             'error': gettext('Not a fusion project')},
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        try:
+            from services.project_fusion import metadata_suggestions
+            result = metadata_suggestions(project)
+            result['success'] = True
+            return Response(result)
+        except Exception as exc:
+            logger.exception('Fusion metadata suggestions failed')
+            return Response({'success': False, 'error': str(exc)},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)

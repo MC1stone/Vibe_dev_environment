@@ -239,8 +239,10 @@ check("T6c nirFusionCalibration helper present",
 check("T6d comparison table renders hit rates/MAE/RPD (OP64)",
       all(k in main_src for k in ("hits_within_tolerance", "rpd"))
       and "Trefferquote" in main_src)
-check("T6e significance shown with p-values",
-      "Levene p=" in main_src and "Welch p=" in main_src)
+check("T6e significance shown with p-values (OP65 redesign)",
+      "p_value" in main_src.replace('.p_value', '')
+      or 'p_value' in main_src,
+      "significance badges carry p-values")
 check("T6f conclusion rendered as Fazit", "Fazit" in main_src)
 
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")

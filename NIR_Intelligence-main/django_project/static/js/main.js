@@ -759,49 +759,71 @@ window.nirFusionExecute = function (projectIds) {
 window.nirFusionCalibration = function (projectId) {
     const box = document.getElementById('fusionCalibrationResult');
     if (!box) return;
-    box.innerHTML = `<p class="mb-0 text-muted small">${nirGettext('Kalibrationsvergleich wird gerechnet (PLS, je 5-fold CV) …')}</p>`;
+    box.innerHTML = `<p class="mb-0 text-muted small">${nirGettext('Kalibrationsvergleich wird gerechnet (PLS, Kreuzvalidierung) …')}</p>`;
     axios.get(`/api/projects/${projectId}/fusion/calibration/`)
         .then(resp => {
             const data = resp.data || {};
             if (!data.success) { throw new Error(data.error || 'comparison failed'); }
-            let html = '';
             const cals = data.calibrations || {};
             const labels = Object.keys(cals);
-            if (labels.length) {
-                html += '<table class="table table-sm mb-2"><thead><tr>' +
-                    `<th>${nirGettext('Datensatz')}</th><th>n</th><th>${nirGettext('Trefferquote (vorhergesagt vs. tatsächl. Brix)')}</th><th>MAE</th><th>RPD</th><th>${nirGettext('Status')}</th></tr></thead><tbody>`;
-                labels.forEach(label => {
-                    const c = cals[label];
-                    const pvr = c.predicted_vs_reference;
-                    let hitInfo = '—';
-                    if (pvr && pvr.hits_within_tolerance) {
-                        const tolKeys = Object.keys(pvr.hits_within_tolerance);
-                        hitInfo = tolKeys.map(k => {
-                            const h = pvr.hits_within_tolerance[k];
-                            return `±${h.tolerance}: ${h.n_within}/${pvr.n} (${(100 * h.ratio).toFixed(0)} %)`;
-                        }).join('<br>');
-                    }
-                    html += '<tr>' +
-                        `<td>${label}</td>` +
-                        `<td>${c.n_samples ?? '—'}</td>` +
-                        `<td>${hitInfo}</td>` +
-                        `<td>${pvr && pvr.mae !== undefined ? Number(pvr.mae).toFixed(3) : (c.rmse_cv !== undefined && c.rmse_cv !== null ? Number(c.rmse_cv).toFixed(3) : '—')}</td>` +
-                        `<td>${c.rpd !== undefined && c.rpd !== null ? Number(c.rpd).toFixed(1) : '—'}</td>` +
-                        `<td>${c.status === 'ok' ? '<i class="bi bi-check-lg text-success"></i>' : `<span class="text-muted small">${nirGettext('nicht kalibrierbar')}</span>`}</td></tr>`;
-                });
-                html += '</tbody></table>';
-                const anyPvr = labels.some(l => cals[l].predicted_vs_reference);
-                if (anyPvr) {
-                    html += `<p class="small text-muted mb-2">${nirGettext('Trefferquote: Anteil der Messungen, bei denen die vorhergesagte Brix der tatsächlichen innerhalb der Toleranz entspricht (Kreuzvalidierung, gruppenunabhängig).')}</p>`;
-                }
+            if (!labels.length) {
+                box.innerHTML = `<p class="mb-0 small text-muted">${nirGettext('Keine kalibrierbaren Datensätze (Referenzwerte fehlen).')}</p>`;
+                return;
             }
+            // OP65 UI-Redesign: eine Zeile je Datensatz, alle Kennzahlen
+            // nebeneinander - vorhergesagte vs. tatsächliche Brix je
+            // Messung (Trefferquote), MAE, RPD, R2/CV.
+            let html = '<div class="table-responsive"><table class="table table-sm table-striped mb-2 align-middle"><thead><tr>' +
+                `<th rowspan="2">${nirGettext('Datensatz')}</th><th rowspan="2">n</th>` +
+                `<th colspan="2">${nirGettext('Trefferquote: |vorhergesagt − tatsächl. Brix| ≤ Toleranz')}</th>` +
+                `<th rowspan="2">MAE</th><th rowspan="2">RMSE</th><th rowspan="2">R² (CV)</th><th rowspan="2">RPD</th><th rowspan="2">${nirGettext('Status')}</th></tr><tr>`;
+            const anyPvr = labels.some(l => cals[l].predicted_vs_reference);
+            if (anyPvr) {
+                const firstPvr = cals[labels.find(l => cals[l].predicted_vs_reference)].predicted_vs_reference;
+                Object.keys(firstPvr.hits_within_tolerance).forEach(k => {
+                    html += `<th>±${firstPvr.hits_within_tolerance[k].tolerance}</th>`;
+                });
+            } else {
+                html += '<th>—</th>';
+            }
+            html += '</tr></thead><tbody>';
+            labels.forEach(label => {
+                const c = cals[label];
+                const pvr = c.predicted_vs_reference;
+                const tolCells = pvr
+                    ? Object.keys(pvr.hits_within_tolerance).map(k => {
+                        const h = pvr.hits_within_tolerance[k];
+                        const pct = (100 * h.ratio).toFixed(0);
+                        const cls = h.ratio >= 0.8 ? 'text-success' : (h.ratio >= 0.5 ? 'text-warning' : 'text-danger');
+                        return `<td class="${cls}"><strong>${h.n_within}/${pvr.n}</strong> (${pct} %)</td>`;
+                    }).join('')
+                    : '<td class="text-muted">—</td>';
+                const status = c.status === 'ok'
+                    ? '<span class="badge bg-success"><i class="bi bi-check-lg"></i></span>'
+                    : `<span class="badge bg-secondary">${nirGettext('nicht kalibrierbar')}</span>`;
+                html += '<tr>' +
+                    `<td><strong>${label}</strong></td>` +
+                    `<td>${c.n_samples ?? '—'}</td>` +
+                    tolCells +
+                    `<td>${pvr ? Number(pvr.mae).toFixed(3) : (c.rmse_cv != null ? Number(c.rmse_cv).toFixed(3) : '—')}</td>` +
+                    `<td>${pvr ? Number(pvr.rmse).toFixed(3) : '—'}</td>` +
+                    `<td>${c.mean_r2 != null ? (100 * c.mean_r2).toFixed(1) + ' %' : '—'}</td>` +
+                    `<td>${c.rpd != null ? Number(c.rpd).toFixed(1) : '—'}</td>` +
+                    `<td>${status}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
             const sig = data.significance || {};
             if (sig.performed) {
-                html += `<h6>${nirGettext('Signifikanz-Test (Residuen je Herkunftsgruppe)')}</h6>` +
-                    `<p class="small mb-1">Levene p=${Number(sig.levene.p_value).toFixed(3)} · Welch p=${Number(sig.welch_t.p_value).toFixed(3)}</p>`;
-            }
-            if (sig.interpretation) {
-                html += `<div class="alert alert-secondary py-2 small mb-2">${nirGettext(sig.interpretation)}</div>`;
+                const sigBadge = (ok, textOk, textBad) =>
+                    `<span class="badge ${ok ? 'bg-success' : 'bg-warning text-dark'}">${ok ? textOk : textBad}</span>`;
+                html += `<div class="border rounded p-2 bg-light mb-2 small">` +
+                    `<strong>${nirGettext('Signifikanz-Test')}</strong> ` +
+                    `${nirGettext('Varianz gleich')} ${sigBadge(sig.levene.variance_equal, 'p=' + Number(sig.levene.p_value).toFixed(3), 'p=' + Number(sig.levene.p_value).toFixed(3))}` +
+                    ` · ${nirGettext('Mittelwert gleich')} ${sigBadge(sig.welch_t.means_equal, 'p=' + Number(sig.welch_t.p_value).toFixed(3), 'p=' + Number(sig.welch_t.p_value).toFixed(3))}` +
+                    `</div>`;
+                if (sig.interpretation) {
+                    html += `<p class="small mb-2">${nirGettext(sig.interpretation)}</p>`;
+                }
             }
             if (data.conclusion) {
                 html += `<div class="alert alert-info py-2 mb-0 small"><strong>${nirGettext('Fazit:')}</strong> ${nirGettext(data.conclusion)}</div>`;
@@ -811,4 +833,49 @@ window.nirFusionCalibration = function (projectId) {
         .catch(err => {
             box.innerHTML = `<div class="alert alert-danger py-2 mb-0">${nirGettext('Kalibrationsvergleich fehlgeschlagen:')} ${err.message || err}</div>`;
         });
+};
+
+window.nirFusionMetadataSuggestions = function (projectId) {
+    const box = document.getElementById('fusionMetaSuggestionsResult');
+    if (!box) return;
+    box.innerHTML = `<p class="mb-0 text-muted small">${nirGettext('Vorschläge werden geladen …')}</p>`;
+    axios.get(`/api/projects/${projectId}/fusion/metadata-suggestions/`)
+        .then(resp => {
+            const data = resp.data || {};
+            if (!data.success) { throw new Error(data.error || 'suggestions failed'); }
+            if (!data.available || !data.suggestions || !data.suggestions.length) {
+                box.innerHTML = `<p class="mb-0 small text-muted">${nirGettext('Keine Übernahme-Vorschläge: entweder alle Datensätze tragen bereits Metadaten, oder die Quellen haben keine verwertbaren Felder.')}</p>`;
+                return;
+            }
+            let html = '';
+            data.suggestions.forEach(s => {
+                html += `<h6 class="mt-2 mb-1"><i class="bi bi-file-earmark-text me-1"></i>${s.file_name}</h6>`;
+                html += '<table class="table table-sm mb-2"><thead><tr>' +
+                    `<th>${nirGettext('Feld')}</th><th>${nirGettext('Vorgeschlagener Wert')}</th><th>${nirGettext('Aus Datensatz')}</th><th></th></tr></thead><tbody>`;
+                s.proposals.forEach(pr => {
+                    html += '<tr>' +
+                        `<td><code>${pr.field}</code></td>` +
+                        `<td>${pr.value}</td>` +
+                        `<td class="small text-muted">${pr.source_file}</td>` +
+                        `<td><button type="button" class="btn btn-sm btn-outline-primary py-0" onclick="nirApplyMetadataSuggestion('${projectId}', '${s.file_id || ''}', '${pr.field}', '${String(pr.value).replace(/'/g, "\\'")}')">` +
+                        `${nirGettext('Übernehmen')}</button></td></tr>`;
+                });
+                html += '</tbody></table>';
+            });
+            html += `<p class="small text-muted mb-0">${nirGettext('Übernommene Werte landen im Metadaten-Editor unten – endgültig speichern dort.')}</p>`;
+            box.innerHTML = html;
+        })
+        .catch(err => {
+            box.innerHTML = `<div class="alert alert-danger py-2 mb-0">${nirGettext('Vorschläge fehlgeschlagen:')} ${err.message || err}</div>`;
+        });
+};
+
+// Vorschlag in das Metadaten-Editor-Feld uebernehmen (Input fuellen,
+// Speichern bleibt Nutzer-Entscheidung im Editor).
+window.nirApplyMetadataSuggestion = function (projectId, fileId, field, value) {
+    document.querySelectorAll('[data-file-id]').forEach(container => {
+        if (container.dataset.fileId !== fileId) return;
+        const input = container.querySelector(`[name="meta_${field}"]`);
+        if (input) { input.value = value; input.classList.add('is-warning'); }
+    });
 };

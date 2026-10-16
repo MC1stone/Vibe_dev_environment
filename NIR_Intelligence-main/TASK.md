@@ -44,6 +44,45 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## Current Task: OP65 - Fusion UX (Livetest-Feedback Runde 2)
+### Ziel
+Vier Befunde aus dem zweiten Fusion-Livetest (2026-10-16):
+(A) Versehentliches doppeltes Zusammenschieben derselben Projekte muss
+verhindert werden (fuehrte zu endlosen erneuten Ingests),
+(B) Brix ist in 0,1-Schritten erfasst - die Toleranzstufen des
+Vorhersage/Ist-Vergleichs muessen zur Messaufloesung passen,
+(C) im Fusionsprojekt fehlten die KI-Vorschlaege zum Uebernehmen der
+Metadaten des anderen Datensatzes,
+(D) die anderen Werte sollen genauso einfach vergleichbar dargestellt
+werden wie der Kalibrationsvergleich (UI-Redesign durch UI/UX-Experten).
+
+### Umsetzung
+- project_fusion.execute_fusion: Doppel-Fusionsschutz - existiert bereits
+  ein Fusionsprojekt mit derselben Quell-Kombination, wird mit 422 und
+  Link auf das bestehende Projekt abgelehnt statt erneut zu mergen.
+- fusion_calibration._tolerance_levels_from_targets: Toleranzstufen
+  werden aus der Aufloesung der Referenzwerte abgeleitet (Brix 0,1 ->
+  +-0,5/+-1,0; feinere/grobere Werte proportional).
+- project_fusion.metadata_suggestions + Endpoint
+  /api/projects/<id>/fusion/metadata-suggestions/: Felder des
+  Datensatzes MIT Metadaten als Uebernahme-Vorschlag fuer Datensaetze
+  OHNE (nur Fusionsprojekte); UI-Panel mit 'Uebernehmen'-Buttons, die
+  das Metadaten-Editor-Feld fuellen (Speichern bleibt Nutzer-
+  Entscheidung, OP13/OP30 unveraendert).
+- UI-Redesign des Stufe-3-Vergleichs (main.js): eine Zeile je
+  Datensatz, ALLE Kennzahlen nebeneinander (Trefferquoten je Toleranz
+  farbcodiert, MAE, RMSE, R2/CV, RPD, Status), Signifikanz-Test als
+  kompakte Badge-Zeile, Fazit-Box.
+
+### Verifikation
+- Neue Matrix tests/test_op65_fusion_ux.py: 26/26 gruen (Doppel-Schutz,
+  Toleranzstufen 0,1/fein/grob, Vorschlaege inkl. Donor-Nachweis,
+  Endpoint-Guards, UI-Checks).
+- OP63 St1+2 45/45 (T5n auf Doppel-Schutz umgestellt), OP63 St3 37/37,
+  OP64 19/19, OP25 55/55, OP62 19/19 gruen.
+- manage.py check: einzige Meldung ist fehlendes Pillow in der
+  Sandbox-Umgebung (nicht im Container); unabh. von OP65.
+
 ## Current Task: OP64 - Fusion Release-Feedback (Livetest Tomaten)
 ### Ziel
 Drei Befunde aus dem ersten kompletten Fusion-Livetest (2026-10-16):

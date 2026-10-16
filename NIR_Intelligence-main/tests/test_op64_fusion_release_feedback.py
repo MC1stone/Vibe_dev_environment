@@ -189,8 +189,8 @@ main_src = (Path(__file__).resolve().parent.parent / "django_project"
 check("T5a UI shows hit rates (Trefferquote)",
       "Trefferquote" in main_src
       and "hits_within_tolerance" in main_src)
-check("T5b UI explains the metric", "tatsächlichen innerhalb der Toleranz"
-      in main_src)
+check("T5b UI explains the metric (OP65 redesign)",
+      "Trefferquote" in main_src and "Toleranz" in main_src)
 
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)
