@@ -653,3 +653,81 @@ if (typeof axios !== 'undefined') {
     
     log('Axios configured with CSRF token support');
 }
+// OP63 Stufe 1/2 (Fusion-Analyse-Zweig): Comparable Spektren aus anderen
+// Projekten -> Angebot rendern, Preview laden, Nutzer entscheidet ob der
+// Zweig geoeffnet und die Zusammenfuehrung ausgefuehrt wird (nie automatisch).
+window.nirBuildFusionOfferHtml = function (offer, context) {
+    if (!offer || !offer.available) return '';
+    let html = '<div class="border rounded p-2 bg-light mt-2" id="fusionOfferBox">';
+    html += `<h6><i class="bi bi-diagram-3 me-1"></i>${nirGettext('Analyse-Zweig: Datenfusion anderer Projekte')}</h6>`;
+    html += `<p class="mb-2 small">${nirGettext(offer.explanation || '')}</p>`;
+    if (offer.candidates && offer.candidates.length) {
+        html += '<table class="table table-sm mb-2"><thead><tr>' +
+            `<th>${nirGettext('Spektrum')}</th><th>${nirGettext('Ähnlichkeit')}</th><th>${nirGettext('Projekt')}</th></tr></thead><tbody>`;
+        offer.candidates.forEach(c => {
+            html += '<tr>' +
+                `<td>${c.file_name}</td>` +
+                `<td>${c.similarity !== null && c.similarity !== undefined ? (100 * c.similarity).toFixed(1) + ' %' : '—'}</td>` +
+                `<td>${c.project_id ? `<a href="/projects/${c.project_id}/">${c.project_name || nirGettext('Projekt öffnen')}</a>` : nirGettext('kein Projekt')}</td></tr>`;
+        });
+        html += '</tbody></table>';
+    }
+    const pids = offer.project_ids || [];
+    html += `<button type="button" class="btn btn-sm btn-primary me-2" id="fusionPreviewBtn" onclick="nirFusionPreview(${JSON.stringify(pids).replace(/"/g, '&quot;')})">` +
+        `<i class="bi bi-eye me-1"></i>${nirGettext('Zweig öffnen: Metadaten-Abgleich ansehen')}</button>`;
+    html += `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('fusionOfferBox').style.display='none'">` +
+        `${nirGettext('Nein, nicht öffnen')}</button>`;
+    html += '<div id="fusionPreviewResult" class="mt-2"></div></div>';
+    return html;
+};
+
+window.nirFusionPreview = function (projectIds) {
+    const box = document.getElementById('fusionPreviewResult');
+    if (!box) return;
+    box.innerHTML = `<p class="mb-0 text-muted small">${nirGettext('Metadaten-Abgleich wird geladen …')}</p>`;
+    axios.post('/projects/fusion/preview/', { project_ids: projectIds })
+        .then(resp => {
+            const data = resp.data || {};
+            if (!data.success) { throw new Error(data.error || 'preview failed'); }
+            let html = `<h6 class="mt-2">${nirGettext('Metadaten-Abgleich')}</h6>`;
+            (data.projects || []).forEach(p => {
+                html += `<p class="mb-1 small"><strong>${p.project_name}</strong> — ${p.usable_datasets} ${nirGettext('verwendbare Datensätze')}</p>`;
+                const diff = p.metadata_diff_vs_first;
+                if (diff && diff.fields && diff.fields.length) {
+                    html += '<table class="table table-sm mb-2"><thead><tr>' +
+                        `<th>${nirGettext('Feld')}</th><th>${nirGettext('Projekt A')}</th><th>${nirGettext('Projekt B')}</th><th>${nirGettext('Status')}</th></tr></thead><tbody>`;
+                    diff.fields.forEach(f => {
+                        html += '<tr>' +
+                            `<td>${f.label}</td>` +
+                            `<td>${f.a || '—'}</td><td>${f.b || '—'}</td>` +
+                            `<td>${f.missing ? '—' : (f.equal ? '<i class="bi bi-check-lg text-success"></i>' : `<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>${nirGettext('unterschiedlich')}</span>`)}</td></tr>`;
+                    });
+                    html += '</tbody></table>';
+                }
+            });
+            html += `<div class="d-flex gap-2 flex-wrap mt-2">` +
+                `<button type="button" class="btn btn-sm btn-success" onclick="nirFusionExecute(${JSON.stringify(projectIds).replace(/"/g, '&quot;')})">` +
+                `<i class="bi bi-boxes me-1"></i>${nirGettext('Zusammenführung durchführen (neues Projekt)')}</button>` +
+                `<span class="small text-muted align-self-center">${nirGettext('Die Original-Projekte bleiben unangetastet.')}</span></div>`;
+            box.innerHTML = html;
+        })
+        .catch(err => {
+            box.innerHTML = `<div class="alert alert-danger py-2 mb-0">${nirGettext('Metadaten-Abgleich fehlgeschlagen:')} ${err.message || err}</div>`;
+        });
+};
+
+window.nirFusionExecute = function (projectIds) {
+    const box = document.getElementById('fusionPreviewResult');
+    if (!box) return;
+    if (!window.confirm(nirGettext('Zusammenführung in ein neues Fusionsprojekt durchführen? Die Original-Projekte bleiben unangetastet.'))) return;
+    axios.post('/projects/fusion/execute/', { project_ids: projectIds })
+        .then(resp => {
+            const data = resp.data || {};
+            if (!data.success) { throw new Error(data.error || 'execute failed'); }
+            box.innerHTML = `<div class="alert alert-success py-2 mb-0">${nirGettext('Fusionsprojekt angelegt. Aufbereitung läuft im Hintergrund.')} ` +
+                `<a href="${data.detail_url}">${nirGettext('Zum Fusionsprojekt')}</a></div>`;
+        })
+        .catch(err => {
+            box.innerHTML = `<div class="alert alert-danger py-2 mb-0">${nirGettext('Zusammenführung fehlgeschlagen:')} ${err.message || err}</div>`;
+        });
+};

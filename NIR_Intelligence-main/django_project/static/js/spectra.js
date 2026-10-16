@@ -1428,6 +1428,9 @@ function showQuickCheckResult(spectrum, data) {
         }
         rows.push(`<div class="border rounded p-2 bg-light">${simHtml}</div>`);
     }
+    if (data.fusion_offer && data.fusion_offer.available) {
+        rows.push(window.nirBuildFusionOfferHtml(data.fusion_offer, 'quick'));
+    }
 
     rows.push(`<h6 class="mt-3">${nirGettext('Weiter im Workflow')}</h6>` +
         `<div class="d-flex flex-wrap gap-2">` +

@@ -1494,3 +1494,60 @@ class CalibrationOverviewView(TemplateView):
         context = {'entries': entries,
                    'has_entries': bool(entries)}
         return render(request, self.template_name, context)
+
+
+class ProjectFusionPreviewView(APIView if DRF_AVAILABLE else object):
+    """OP63 Stufe 2: Metadaten-Abgleich vor der Zusammenfuehrung (schreibfrei).
+
+    POST {project_ids: [id_a, id_b]} liefert die Differenzliste und die
+    Datenmengen aller beteiligten Projekte - der Nutzer entscheidet auf
+    dieser Basis, ob der Analyse-Zweig ausgefuehrt wird."""
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        project_ids = request.data.get('project_ids') or []
+        if len(project_ids) < 2:
+            return Response({'success': False,
+                             'error': gettext('project_ids (min. 2) required')},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            from services.project_fusion import preview_fusion
+            result = preview_fusion(request.user, project_ids)
+            result['success'] = True
+            return Response(result)
+        except Exception as exc:
+            logger.exception('Fusion preview failed')
+            return Response({'success': False, 'error': str(exc)},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ProjectFusionExecuteView(APIView if DRF_AVAILABLE else object):
+    """OP63 Stufe 2: Zusammenfuehrung in ein NEUES Projekt.
+
+    POST {project_ids: [id_a, id_b], name?, description?}. Die Quell-
+    Projekte bleiben unangetastet (PO-Entscheidung: neues Projekt statt
+    Merge-in-place); das Fusionsprojekt referenziert die Original-Dateien
+    und startet die Aufbereitung im Hintergrund (OP55-Muster)."""
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        project_ids = request.data.get('project_ids') or []
+        if len(project_ids) < 2:
+            return Response({'success': False,
+                             'error': gettext('project_ids (min. 2) required')},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            from services.project_fusion import execute_fusion
+            result = execute_fusion(
+                request.user, project_ids,
+                name=(request.data.get('name') or '').strip(),
+                description=(request.data.get('description') or '').strip())
+            status_code = (status.HTTP_200_OK if result.get('success')
+                          else status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return Response(result, status=status_code)
+        except Exception as exc:
+            logger.exception('Fusion execute failed')
+            return Response({'success': False, 'error': str(exc)},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)

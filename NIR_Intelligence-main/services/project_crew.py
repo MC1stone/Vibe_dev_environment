@@ -107,6 +107,16 @@ def _similarity_section(project, dataset: Dict[str, Any]) -> Dict[str, Any]:
     })
     section = _agent_report("faiss_similarity", "Spektren-Datenbankvergleich (FAISS)", output)
     section['data']['database_references'] = db_sources
+    # OP63 Stufe 1: vergleichbare Spektren aus anderen Projekten ->
+    # Fusion-Analyse-Zweig anbieten (Metadaten-Abgleich + Zusammenfuehrung
+    # in ein neues Projekt; Nutzer entscheidet, nie automatisch).
+    try:
+        from services.project_fusion import build_fusion_offer
+        offer = build_fusion_offer(project.user, project, dataset)
+        if offer:
+            section['data']['fusion_offer'] = offer
+    except Exception:
+        logger.exception('Fusion offer in crew section failed (non-fatal)')
 
     # OP22: overlay the three most similar spectra on the query curve
     try:
