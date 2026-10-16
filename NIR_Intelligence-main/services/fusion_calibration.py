@@ -175,14 +175,43 @@ def _significance_test(groups: Dict[str, List[float]]) -> Dict[str, Any]:
     return result
 
 
+def _tolerance_levels_from_targets(targets) -> tuple:
+    """OP65 (Livetest-Feedback): Toleranzstufen an die Messgroessen-
+    Aufloesung koppeln. Brix ist typischerweise in 0,1-Schritten erfasst
+    - dann sind +-0,5/+-1,0 sinnvolle Stufen; feinere Referenzwerte
+    bekommen feinere Stufen, grobere groebere. Nie leer."""
+    import numpy as np
+    try:
+        y = np.asarray([float(t) for t in targets], dtype=float)
+        finite = y[np.isfinite(y)]
+        if len(finite) < 2:
+            return (0.5, 1.0)
+        diffs = np.abs(np.diff(np.sort(np.unique(finite))))
+        diffs = diffs[diffs > 0]
+        if not len(diffs):
+            return (0.5, 1.0)
+        step = float(np.median(diffs))
+        if step < 0.05:
+            return (0.1, 0.5, 1.0)
+        if step < 0.5:
+            return (0.5, 1.0)
+        if step < 2.0:
+            return (1.0, 2.0)
+        return (max(1.0, step), max(2.0, 2.0 * step))
+    except Exception:
+        return (0.5, 1.0)
+
+
 def _predicted_vs_reference(samples, targets, cv_folds: int = 5,
-                             tolerance_levels=(0.5, 1.0)) -> Optional[Dict[str, Any]]:
+                             tolerance_levels=None) -> Optional[Dict[str, Any]]:
     """OP64 (PO-Feedback): Kreuzvalidierung so dargestellt, wie es fachlich
     zaehlt - pro Messung die vorhergesagte gegen die TATSAECHLICHE
     Referenzgröße (Brix), nicht nur abstrakte CV-Kennzahlen. Liefert
     cross_val_predict (sklearn, vorhanden), daraus Trefferquoten innerhalb
     definierter Toleranzen und die Messwert-Paare fuer einen
     Predicted-vs-Reference-Plot."""
+    if tolerance_levels is None:
+        tolerance_levels = _tolerance_levels_from_targets(targets)
     try:
         import numpy as np
         from sklearn.cross_decomposition import PLSRegression

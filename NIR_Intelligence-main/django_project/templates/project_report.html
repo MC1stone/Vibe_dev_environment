@@ -506,6 +506,22 @@
     </div>
     {% endif %}
 
+    <!-- OP65: Metadaten-Vorschlaege im Fusionsprojekt (KI) -->
+    {% if preparation.fusion and preparation.fusion.source_projects and project.phase == 'drafted' %}
+    <div class="card shadow-sm border-secondary" id="fusionMetaSuggestionsBox">
+        <div class="card-header bg-secondary-subtle">
+            <h5 class="mb-0"><i class="bi bi-stars me-2"></i>{% trans "Vorschläge: Metadaten aus dem anderen Datensatz übernehmen" %}</h5>
+        </div>
+        <div class="card-body">
+            <p class="small text-muted">{% trans "Ein Quelldatensatz trägt Metadaten, die für die Datensätze ohne Metadaten übernommen werden könnten. Prüfen Sie die Vorschläge und übernehmen Sie passende Werte in den Metadaten-Editor." %}</p>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="nirFusionMetadataSuggestions('{{ project.id }}')">
+                <i class="bi bi-magic me-1"></i>{% trans "Vorschläge anzeigen" %}
+            </button>
+            <div id="fusionMetaSuggestionsResult" class="mt-2"></div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- OP63: Fusion-Analyse-Zweig (comparable Spektren aus anderen Projekten) -->
     {% for section in per_agent_reports %}
     {% if section.agent == 'faiss_similarity' and section.data.fusion_offer %}
