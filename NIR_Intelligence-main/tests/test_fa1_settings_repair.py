@@ -122,12 +122,16 @@ check('T5a PUT mit ungueltigen Daten -> 400',
       resp.status_code == 400, f'status={resp.status_code}')
 
 # --- T6: CSRF-Cookie wird auf der Settings-Route erzwungen ---------
+# Korrektur 2026-10-16: ensure_csrf_cookie liegt DIREKT auf der
+# View-Funktion (method_decorator waere falsch - es erwartet self einer
+# Klassen-Methode und frisst das request-Argument, siehe PR #187).
 import re as _re
 decorated = _re.search(
-    r"path\('settings/',\s*method_decorator\(ensure_csrf_cookie\)",
-    urls_src) is not None
-check('T6a settings-Route erzwingt CSRF-Cookie (ensure_csrf_cookie)',
-      decorated, 'Route nicht dekoriert')
+    r"path\('settings/',\s*ensure_csrf_cookie\(", urls_src) is not None
+wrong = 'method_decorator(ensure_csrf_cookie)' in urls_src
+check('T6a settings-Route erzwingt CSRF-Cookie (direkt, nicht method_decorator)',
+      decorated and not wrong,
+      'decorated=' + str(decorated) + ' wrong=' + str(wrong))
 
 print(f'\nSettings-Repair-Matrix: {PASS} passed, {FAIL} failed')
 if FAILED:
