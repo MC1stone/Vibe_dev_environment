@@ -44,6 +44,46 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## Current Task: OP63 - Fusion-Analyse-Zweig (Stufe 1+2)
+### Ziel
+Fachfall: zwei Projekte mit vergleichbaren Spektren (unterschiedliche
+Operatoren, andere Tomaten, gleicher Sensor) - bei der Analyse fehlte
+bisher der Punkt, dass die Plattform die Zusammenschau anbietet. Wenn
+die Similarity-Suche Treffer aus einem ANDEREN Projekt liefert,
+entsteht ein weiterer Analyse-Pfad: Metadaten-Abgleich + Zusammenfuehrung
+der Messdaten in ein NEUES Projekt (Originale unangetastet); der Nutzer
+entscheidet, ob der Zweig geoeffnet wird. Stufe 3 (vergleichende
+Kalibration mit Signifikanz-Test) folgt als eigener Schritt.
+
+PO-Entscheidungen (2026-10-16): Trigger = Similarity reicht; Fusion =
+neues Projekt; Metadaten-Differenzen nur informieren, nie blockieren;
+Einbau an BEIDEN Stellen (Quick-Check + Projekt-Report).
+
+### Umsetzung
+- services/project_fusion.py (Stufe 2): metadata_diff (felderweise,
+  case-insensitive, nur Information), build_fusion_offer (Crew-Pfad) +
+  build_fusion_offer_for_spectrum (Quick-Check-Pfad), preview_fusion
+  (schreibfreier Abgleich), execute_fusion (neues Projekt, referenziert
+  die Original-Dateien, Provenienz im preparation_report, Aufbereitung
+  im Hintergrund nach OP55-Muster).
+- API: POST /api/projects/fusion/preview/ + /api/projects/fusion/execute/
+  (project_urls.py, Auth noetig, min. 2 Projekte).
+- Stufe 1: fusion_offer in der Quick-Check-Antwort (crewai_views) und
+  in der faiss_similarity-Sektion des Crew-Berichts (project_crew).
+- UI: geteilte Helfer in main.js (nirBuildFusionOfferHtml/nirFusionPreview/
+  nirFusionExecute, Nutzer-Entscheidung mit Nein-Button + Confirm),
+  Quick-Check-Panel in spectra.js, serverseitig gerendertes Panel in
+  project_report.html (Django-Template statt JS-Extraktion).
+- Keine neuen Abhaengigkeiten; FAISS/Similarity-Engine nur genutzt,
+  nicht veraendert.
+
+### Verifikation
+- Neue Matrix tests/test_op63_fusion_branch.py: 37/37 gruen (Diff-Logik,
+  URL-Wiring, Preview/Execute-Runtime inkl. 'Originale unangetastet',
+  Auth-Guards, Offer-Hooks, UI an beiden Stellen).
+- Regressionen: OP25 55/55, OP52 56/56, S1/S2/S5 6/6, S3/S4/S6 32/32,
+  OP62 19/19 gruen. manage.py check OK, node --check OK.
+
 ## Current Task: OP62 - Diagnose an Staff binden (Admin-Login)
 ### Ziel
 PO-Entscheidung (2026-10-16): Der Diagnose-Reiter ist im Menue zwar

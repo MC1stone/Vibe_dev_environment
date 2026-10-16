@@ -144,6 +144,16 @@ def _attach_similarity_section(response_data, analysis_request, result):
             'entries': entries,
             'database_url': '/projects/database/',
         }
+        # OP63 Stufe 1: wenn aehnliche Spektren aus ANDEREN Projekten
+        # stammen, bietet die Plattform den Fusion-Analyse-Zweig an
+        # (Nutzer entscheidet - nie automatisch ausgefuehrt).
+        try:
+            from services.project_fusion import build_fusion_offer_for_spectrum
+            offer = build_fusion_offer_for_spectrum(spectrum.user, spectrum)
+            if offer:
+                response_data['fusion_offer'] = offer
+        except Exception:
+            logger.exception('Fusion offer attach failed (non-fatal)')
     except Exception:
         logger.exception(
             'Similarity section for quick check failed (non-fatal)')

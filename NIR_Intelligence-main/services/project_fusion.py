@@ -1,0 +1,342 @@
+"""OP63: Fusion analysis branch - same-sensor / cross-project data fusion.
+
+Fachlicher Fall: zwei Projekte mit vergleichbaren Spektren (z. B.
+unterschiedliche Operatoren, andere Tomaten, gleicher Sensor). Wenn die
+Similarity-Suche Treffer aus einem anderen Projekt liefert, bietet die
+Plattform dem Nutzer einen weiteren Analyse-Zweig an: Metadaten-Abgleich,
+Zusammenfuehrung in ein NEUES Projekt (Originale bleiben unangetastet)
+und spaeter Stufe 3 der vergleichende Kalibrationsvergleich.
+
+PO-Entscheidungen (2026-10-16): Trigger = Similarity reicht; Fusion =
+neues Projekt; Metadaten-Konflikte werden nur informiert, nie geblockt.
+"""
+import logging
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
+
+# Metadaten-Felder fuer den Abgleich (nur Information, keine Blockade).
+# Reihenfolge = Anzeigereihenfolge im Differenz-Bericht.
+COMPARISON_FIELDS = [
+    ('operator_name', 'Operator'),
+    ('sensor_model', 'Sensor/Modell'),
+    ('sensor_serial', 'Sensor/Seriennummer'),
+    ('sample_type', 'Probenart'),
+    ('tomato_variety', 'Tomatensorte'),
+    ('measurement_date', 'Messdatum'),
+    ('integration_time', 'Integrationszeit'),
+    ('resolution', 'Aufloesung'),
+    ('wavelength_range', 'Wellenlaengenbereich'),
+]
+
+
+def _meta_get(metadata: Optional[dict], key: str) -> str:
+    """Case-insensitive Metadaten-Lookup mit Fallback auf aehnliche Keys."""
+    if not metadata:
+        return ''
+    if key in metadata:
+        return str(metadata.get(key) or '')
+    for mk, mv in metadata.items():
+        if str(mk).lower().replace('-', '_') == key:
+            return str(mv or '')
+    return ''
+
+
+def _record_metadata(record) -> Dict[str, str]:
+    """Normalisierte Metadaten eines SpectrumRecord fuer den Abgleich."""
+    return {key: _meta_get(record.metadata or {}, key)
+            for key, _label in COMPARISON_FIELDS}
+
+
+def _dataset_metadata(dataset: Dict[str, Any]) -> Dict[str, str]:
+    """Normalisierte Metadaten eines Vorbereitungs-Datensatzes."""
+    meta = dataset.get('metadata') or {}
+    return {key: _meta_get(meta, key)
+            for key, _label in COMPARISON_FIELDS}
+
+
+def metadata_diff(meta_a: Dict[str, str],
+                   meta_b: Dict[str, str]) -> Dict[str, Any]:
+    """Felderweise Abgleich zweier Metadaten-Mengen (nur Information).
+
+    Liefert {'fields': [{key, label, a, b, equal}], 'differences': int,
+    'equal_fields': int}. Niemals blockierend - der PO hat entschieden,
+    dass Metadaten-Differenzen angezeigt, nicht bewertet werden.
+    """
+    fields = []
+    differences = 0
+    for key, label in COMPARISON_FIELDS:
+        va, vb = (meta_a or {}).get(key, ''), (meta_b or {}).get(key, '')
+        equal = (va == vb) and bool(va or vb)
+        missing = not va and not vb
+        if not equal and not missing:
+            differences += 1
+        fields.append({'key': key, 'label': label, 'a': va, 'b': vb,
+                       'equal': equal, 'missing': missing})
+    return {
+        'fields': fields,
+        'differences': differences,
+        'equal_fields': sum(1 for f in fields if f['equal']),
+    }
+
+
+def build_fusion_offer(user, project, dataset: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Aehnliche Spektren aus ANDEREN Projekten als Fusion-Angebot aufbereiten.
+
+    Wird aus dem Projekt-Crew-Runner (Stufe 1) aufgerufen. Nutzt die
+    vorhandene Similarity-Suche (S5/FAISS) gegen die sichtbare
+    Spektrendatenbank - gleiche Engine, keine Kopie. Liefert None, wenn
+    keine Treffer aus anderen Projekten vorliegen (Normalfall: schweigen).
+    """
+    try:
+        from core.models import SpectrumRecord
+        from services.spectrum_database import references_for_dataset
+        db = references_for_dataset(user.id, dataset,
+                                    exclude_project_id=project.id)
+        if not db['references']:
+            return None
+        from agents.faiss_agent import FaissAgent
+        wavelengths = dataset.get('preview', {}).get('wavelengths', [])
+        intensities = dataset.get('preview', {}).get('intensities', [])
+        if not wavelengths or not intensities:
+            return None
+        output = FaissAgent().execute({
+            'reference_spectra': db['references'],
+            'reference_ids': db['ids'],
+            'query_spectrum': {
+                'data': {'wavelength': wavelengths,
+                         'intensity': intensities},
+                'wavelength_column': 'wavelength',
+                'intensity_column': 'intensity',
+            },
+            'top_k': 5,
+        })
+        matches = output.data.get('matches', []) if output else []
+        if not matches:
+            return None
+        by_id = {str(o.id): o for o in
+                 SpectrumRecord.objects.filter(
+                     id__in=[m.get('reference_id') for m in matches
+                             if m.get('reference_id')])}
+        dataset_meta = _dataset_metadata(dataset)
+        candidates = []
+        seen_projects = set()
+        for m in matches:
+            rec = by_id.get(str(m.get('reference_id', '')))
+            if rec is None:
+                continue
+            if rec.project_id is None or str(rec.project_id) == str(project.id):
+                continue
+            diff = metadata_diff(dataset_meta, _record_metadata(rec))
+            candidates.append({
+                'record_id': str(rec.id),
+                'file_name': rec.file_name,
+                'similarity': m.get('similarity'),
+                'project_id': str(rec.project_id),
+                'project_name': (rec.project.name if rec.project_id else None),
+                'metadata_diff': diff,
+            })
+            seen_projects.add(str(rec.project_id))
+        if not candidates:
+            return None
+        return {
+            'available': True,
+            'reason': 'comparable_spectra',
+            'candidates': candidates,
+            'project_count': len(seen_projects),
+            'project_ids': sorted(seen_projects),
+            'explanation': (
+                'Aehnliche Spektren aus anderen Projekten gefunden. '
+                'Analyse-Zweig Datenfusion oeffnen? Metadaten werden '
+                'abgeglichen, die Messdaten in einem neuen Projekt '
+                'zusammengefuehrt und mit den Einzeldatensaetzen '
+                'verglichen. Die Original-Projekte bleiben unangetastet.'),
+            'preview_url': '/projects/fusion/preview/',
+            'execute_url': '/projects/fusion/execute/',
+        }
+    except Exception:
+        logger.exception('Fusion offer build failed (non-fatal)')
+        return None
+
+
+def build_fusion_offer_for_spectrum(user, spectrum) -> Optional[Dict[str, Any]]:
+    """Quick-Check-Variante: Fusion-Angebot fuer ein Einzelspektrum.
+
+    Wird aus der Quick-Check-Analyse (crewai_views) aufgerufen, wenn die
+    Similarity-Sektion Treffer aus anderen Projekten liefert.
+    """
+    try:
+        if not spectrum or not getattr(spectrum, 'wavelengths', None):
+            return None
+        from core.models import SpectrumRecord
+        from services.similarity_search import find_similar_records
+        class _RecordAdapter:
+            """Minimal-Adapter: NIRSpectrum -> SpectrumRecord-Schema."""
+            def __init__(self, s):
+                self.id = s.id
+                self.wavelengths = s.wavelengths
+                self.intensities = s.intensities
+                self.wavelength_grid = (
+                    __import__('core.models', fromlist=['SpectrumRecord'])
+                    .SpectrumRecord.grid_key(s.wavelengths)
+                    if s.wavelengths else None)
+                self.file_name = s.name or s.sample_id or 'spectrum'
+        similar = find_similar_records(user, _RecordAdapter(spectrum), top_k=5)
+        if not similar:
+            return None
+        from core.models import SpectrumRecord
+        by_id = {str(o.id): o for o in
+                 SpectrumRecord.objects.filter(
+                     id__in=[m['record_id'] for m in similar
+                             if m.get('record_id')])}
+        candidates = []
+        seen_projects = set()
+        for m in similar:
+            rec = by_id.get(m['record_id'])
+            if rec is None or rec.project_id is None:
+                continue
+            candidates.append({
+                'record_id': str(rec.id),
+                'file_name': rec.file_name,
+                'similarity': m.get('similarity'),
+                'project_id': str(rec.project_id),
+                'project_name': (rec.project.name if rec.project_id else None),
+                'metadata_diff': metadata_diff(
+                    {}, _record_metadata(rec)),
+            })
+            seen_projects.add(str(rec.project_id))
+        if not candidates:
+            return None
+        return {
+            'available': True,
+            'reason': 'comparable_spectra',
+            'candidates': candidates,
+            'project_count': len(seen_projects),
+            'project_ids': sorted(seen_projects),
+            'explanation': (
+                'Aehnliche Spektren aus anderen Projekten gefunden. '
+                'Analyse-Zweig Datenfusion oeffnen? Metadaten werden '
+                'abgeglichen, die Messdaten in einem neuen Projekt '
+                'zusammengefuehrt und mit den Einzeldatensaetzen '
+                'verglichen. Die Original-Projekte bleiben unangetastet.'),
+            'preview_url': '/projects/fusion/preview/',
+            'execute_url': '/projects/fusion/execute/',
+        }
+    except Exception:
+        logger.exception('Fusion offer (spectrum) build failed (non-fatal)')
+        return None
+
+
+def preview_fusion(user, project_ids: List[str],
+                    dataset_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Metadaten-Abgleich vor der Zusammenfuehrung (Stufe 2, schreibfrei).
+
+    Liefert die vollstaendige Differenzliste aller beteiligten Projekte
+    plus die Datenmengen, die zusammengefuehrt wuerden. Der Nutzer sieht
+    genau, was passieren wuerde, bevor er entscheidet (nur Information,
+    keine Blockade - PO-Entscheidung).
+    """
+    from core.models import AnalysisProject
+    projects = AnalysisProject.objects.filter(id__in=project_ids, user=user)
+    result = {
+        'available': True,
+        'projects': [],
+        'total_datasets': 0,
+        'warnings': [],
+    }
+    project_meta = None
+    for p in projects:
+        prep = p.preparation_report or {}
+        datasets = prep.get('datasets', [])
+        usable = [d for d in datasets if d.get('usable')]
+        result['total_datasets'] += len(usable)
+        meta = {}
+        for d in usable:
+            dm = _dataset_metadata(d)
+            meta = meta or dm
+        result['projects'].append({
+            'project_id': str(p.id),
+            'project_name': p.name,
+            'phase': p.phase,
+            'usable_datasets': len(usable),
+            'dataset_names': [d.get('file_name') for d in usable],
+            'metadata': meta,
+        })
+    if len(result['projects']) >= 2:
+        a = result['projects'][0]['metadata']
+        for other in result['projects'][1:]:
+            b = other['metadata']
+            other['metadata_diff_vs_first'] = metadata_diff(a, b)
+    return result
+
+
+def execute_fusion(user, project_ids: List[str], name: str = '',
+                   description: str = '') -> Dict[str, Any]:
+    """Zusammenfuehrung in ein NEUES Projekt (Stufe 2, PO-Entscheidung).
+
+    Die Messdaten beider Quell-Projekte werden referenziert (Original-
+    Dateien bleiben in ihren Projekten unangetastet); das neue Projekt
+    traegt die Herkunft (source_projects) in seiner Beschreibung und im
+    Vorbereitungsbericht. Anschliessend kann der Nutzer das Projekt
+    wie gewohnt vorbereiten/pruefen/releasen - inkl. Stufe 3
+    (Kalibrationsvergleich) in einem Folgeschritt.
+    """
+    from core.models import AnalysisProject, GenericFile
+    from django.db import transaction
+    sources = AnalysisProject.objects.filter(id__in=project_ids, user=user)
+    if sources.count() < 2:
+        return {'success': False,
+                'error': 'Mindestens zwei Projekte des Nutzers erforderlich.'}
+    source_files = []
+    source_names = []
+    for p in sources:
+        source_names.append(p.name)
+        for f in p.files.all():
+            source_files.append(f)
+    if not source_files:
+        return {'success': False,
+                'error': 'Die Quell-Projekte enthalten keine Dateien.'}
+    if not name:
+        name = f"Fusionsprojekt: {' + '.join(source_names)}"
+    if not description:
+        description = (
+            'Automatisch zusammengefuehrtes Fusionsprojekt (OP63) aus den '
+            f'Projekten: {", ".join(source_names)}. '
+            'Analyse-Zweig: Metadaten-Abgleich + Vergleichende Kalibration '
+            'gegen die Einzeldatensaetze.')
+    with transaction.atomic():
+        fused = AnalysisProject.objects.create(
+            user=user, name=name[:255], description=description)
+        fused.files.set(source_files)
+        fused.preparation_report = {
+            'fusion': {
+                'source_projects': [
+                    {'project_id': str(p.id), 'project_name': p.name}
+                    for p in sources
+                ],
+                'created_by': 'op63_fusion',
+                'note': ('Messdaten stammen aus den Quell-Projekten und '
+                         'bleiben dort unangetastet; dieses Projekt '
+                         'referenziert die Dateien fuer den Analyse-Zweig.'),
+            },
+        }
+        fused.save()
+    from threading import Thread
+    from services.project_ingest import build_preparation_report
+
+    def _prepare(pid):
+        try:
+            from core.models import AnalysisProject as AP
+            proj = AP.objects.get(id=pid)
+            build_preparation_report(proj)
+        except Exception:
+            logger.exception('Fusion project preparation failed')
+    Thread(target=_prepare, args=(str(fused.id),), daemon=True).start()
+    return {
+        'success': True,
+        'project_id': str(fused.id),
+        'project_name': fused.name,
+        'detail_url': f'/projects/{fused.id}/',
+        'note': ('Fusionsprojekt angelegt; Aufbereitung laeuft im Hintergrund '
+                 '(OP55-Muster).'),
+    }

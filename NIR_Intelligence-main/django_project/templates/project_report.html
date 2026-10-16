@@ -489,6 +489,45 @@
         </div>
     </div>
 
+    <!-- OP63: Fusion-Analyse-Zweig (comparable Spektren aus anderen Projekten) -->
+    {% for section in per_agent_reports %}
+    {% if section.agent == 'faiss_similarity' and section.data.fusion_offer %}
+    {% with offer=section.data.fusion_offer %}
+    <div class="card shadow-sm border-warning" id="fusionOfferBox">
+        <div class="card-header bg-warning-subtle">
+            <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>{% trans "Analyse-Zweig: Datenfusion anderer Projekte" %}</h5>
+        </div>
+        <div class="card-body">
+            <p class="small">{{ offer.explanation }}</p>
+            <table class="table table-sm mb-2">
+                <thead><tr><th>{% trans "Spektrum" %}</th><th>{% trans "Ähnlichkeit" %}</th><th>{% trans "Projekt" %}</th></tr></thead>
+                <tbody>
+                {% for c in offer.candidates %}
+                <tr>
+                    <td>{{ c.file_name }}</td>
+                    <td>{% if c.similarity %}{{ c.similarity|floatformat:3 }}{% else %}&mdash;{% endif %}</td>
+                    <td>{% if c.project_id %}<a href="/projects/{{ c.project_id }}/">{{ c.project_name|default:"Projekt öffnen" }}</a>{% else %}{% trans "kein Projekt" %}{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-primary"
+                        onclick="nirFusionPreview({% for pid in offer.project_ids %}'{{ pid }}'{% if not forloop.last %}, {% endif %}{% endfor %})">
+                    <i class="bi bi-eye me-1"></i>{% trans "Zweig öffnen: Metadaten-Abgleich ansehen" %}
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        onclick="document.getElementById('fusionOfferBox').style.display='none'">
+                    {% trans "Nein, nicht öffnen" %}
+                </button>
+            </div>
+            <div id="fusionPreviewResult" class="mt-2"></div>
+        </div>
+    </div>
+    {% endwith %}
+    {% endif %}
+    {% endfor %}
+
     <!-- ===================== FINAL QUARTO REPORT ===================== -->
     <div class="card shadow-sm">
         <div class="card-header bg-light">
