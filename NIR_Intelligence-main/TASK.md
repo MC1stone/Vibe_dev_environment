@@ -44,6 +44,38 @@ DIY-Spektrometer), 3. Kalibrieren (neue Kalibrierungs-Uebersichtsseite
   mehr). dev/prod-compose + .env.example ergaenzt. OP52-Matrix um
   T10a-T10g erweitert (55/55 gruen); S8 26/26, FL6 35/35 gruen.
 
+## Current Task: OP64 - Fusion Release-Feedback (Livetest Tomaten)
+### Ziel
+Drei Befunde aus dem ersten kompletten Fusion-Livetest (2026-10-16):
+(1) Brix wurde beim 2. Datensatz nicht als Messgroe erkannt,
+(2) der Fusionsprojekt-Report zeigte keine Vergleichsuebersicht - beide
+Projekte nur nacheinander, (3) die Kreuzvalidierung war fachlich schlecht
+dargestellt: verglichen werden muss pro Messung die vorhergesagte gegen
+die TATSAECHLICHE Brix (Trefferquote), nicht der Tomatenname.
+
+### Umsetzung
+- project_ingest.py: Target-Heuristik korrigiert - monoton sortierte
+  Referenzreihen (nach Brix gemessen) und durchgehend verschiedene
+  Referenzwerte pro Messung sind jetzt ZULAESSIG (vorher abgelehnt);
+  ausgeschlossen bleiben nur Pseudo-ID-Spalten (ganzzahlig, Schrittweite 1).
+- project_ingest.py: Die Fusion-Provenienz (preparation_report.fusion)
+  ueberlebt build_preparation_report - der komplette Bericht-Rewrite hat
+  die Sektion bisher geloescht (Vergleichsuebersicht + Stufe-3-Panel weg).
+- fusion_calibration.py: _predicted_vs_reference() - cross_val_predict
+  (sklearn) liefert pro Messung vorhergesagt vs. Referenz, daraus
+  Trefferquoten innerhalb +-0.5 / +-1.0 Brix und MAE/RMSE; je Kalibration
+  (A, B, kombiniert) in comparative_calibration integriert.
+- main.js: Stufe-3-Tabelle zeigt statt abstrakter CV-Kennzahlen die
+  Trefferquote ('x von y Messungen innerhalb +-Toleranz') + MAE + RPD,
+  mit Klartext-Erklrung der Metrik.
+
+### Verifikation
+- Neue Matrix tests/test_op64_fusion_release_feedback.py: 19/19 gruen
+  (Heuristik: monoton ok / Pseudo-ID weiter ausgeschlossen, Fusion-Sektion
+  ueberlebt den Bericht, pvr: Paare je Messung, Toleranz-Quoten, MAE).
+- OP63 St1+2 44/44, OP63 St3 37/37 (T6d auf Trefferquote umgestellt),
+  OP25 55/55, OP62 19/19 gruen. manage.py check OK, node --check OK.
+
 ## Current Task: OP63 Stufe 3 - Vergleichende Kalibration (Fusion)
 ### Ziel
 Abschluss des Fusion-Analyse-Zweigs: Drei PLS-Kalibrationen im Vergleich

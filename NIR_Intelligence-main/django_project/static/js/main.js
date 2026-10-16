@@ -761,18 +761,31 @@ window.nirFusionCalibration = function (projectId) {
             const labels = Object.keys(cals);
             if (labels.length) {
                 html += '<table class="table table-sm mb-2"><thead><tr>' +
-                    `<th>${nirGettext('Datensatz')}</th><th>n</th><th>R² (CV)</th><th>RMSECV</th><th>RPD</th><th>${nirGettext('Status')}</th></tr></thead><tbody>`;
+                    `<th>${nirGettext('Datensatz')}</th><th>n</th><th>${nirGettext('Trefferquote (vorhergesagt vs. tatsächl. Brix)')}</th><th>MAE</th><th>RPD</th><th>${nirGettext('Status')}</th></tr></thead><tbody>`;
                 labels.forEach(label => {
                     const c = cals[label];
+                    const pvr = c.predicted_vs_reference;
+                    let hitInfo = '—';
+                    if (pvr && pvr.hits_within_tolerance) {
+                        const tolKeys = Object.keys(pvr.hits_within_tolerance);
+                        hitInfo = tolKeys.map(k => {
+                            const h = pvr.hits_within_tolerance[k];
+                            return `±${h.tolerance}: ${h.n_within}/${pvr.n} (${(100 * h.ratio).toFixed(0)} %)`;
+                        }).join('<br>');
+                    }
                     html += '<tr>' +
                         `<td>${label}</td>` +
                         `<td>${c.n_samples ?? '—'}</td>` +
-                        `<td>${c.mean_r2 !== undefined && c.mean_r2 !== null ? (100 * c.mean_r2).toFixed(1) + ' %' : '—'}</td>` +
-                        `<td>${c.rmse_cv !== undefined && c.rmse_cv !== null ? Number(c.rmse_cv).toFixed(3) : '—'}</td>` +
+                        `<td>${hitInfo}</td>` +
+                        `<td>${pvr && pvr.mae !== undefined ? Number(pvr.mae).toFixed(3) : (c.rmse_cv !== undefined && c.rmse_cv !== null ? Number(c.rmse_cv).toFixed(3) : '—')}</td>` +
                         `<td>${c.rpd !== undefined && c.rpd !== null ? Number(c.rpd).toFixed(1) : '—'}</td>` +
                         `<td>${c.status === 'ok' ? '<i class="bi bi-check-lg text-success"></i>' : `<span class="text-muted small">${nirGettext('nicht kalibrierbar')}</span>`}</td></tr>`;
                 });
                 html += '</tbody></table>';
+                const anyPvr = labels.some(l => cals[l].predicted_vs_reference);
+                if (anyPvr) {
+                    html += `<p class="small text-muted mb-2">${nirGettext('Trefferquote: Anteil der Messungen, bei denen die vorhergesagte Brix der tatsächlichen innerhalb der Toleranz entspricht (Kreuzvalidierung, gruppenunabhängig).')}</p>`;
+                }
             }
             const sig = data.significance || {};
             if (sig.performed) {

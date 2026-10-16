@@ -236,8 +236,9 @@ main_src = (REPO_ROOT / "django_project" / "static" / "js"
             / "main.js").read_text(encoding="utf-8")
 check("T6c nirFusionCalibration helper present",
       "nirFusionCalibration" in main_src)
-check("T6d comparison table renders R2/RMSECV/RPD",
-      all(k in main_src for k in ("mean_r2", "rmse_cv", "rpd")))
+check("T6d comparison table renders hit rates/MAE/RPD (OP64)",
+      all(k in main_src for k in ("hits_within_tolerance", "rpd"))
+      and "Trefferquote" in main_src)
 check("T6e significance shown with p-values",
       "Levene p=" in main_src and "Welch p=" in main_src)
 check("T6f conclusion rendered as Fazit", "Fazit" in main_src)
