@@ -11,9 +11,28 @@ PO-Entscheidungen (2026-10-16): Trigger = Similarity reicht; Fusion =
 neues Projekt; Metadaten-Konflikte werden nur informiert, nie geblockt.
 """
 import logging
+import uuid as _uuid
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
+
+def _valid_project_ids(project_ids: List[Any]) -> List[str]:
+    """Eingehende Projekt-IDs bereinigen: nur gueltige UUIDs, dedupliziert,
+    Reihenfolge stabil. Kaputte IDs werden ignoriert statt einen 500er
+    zu werfen (Vorfall 2026-10-16: String statt Array -> id__in iterierte
+    zeichenweise -> ValidationError 'a' ist keine UUID)."""
+    seen = set()
+    valid = []
+    for pid in (project_ids or []):
+        try:
+            text = str(_uuid.UUID(str(pid)))
+        except (ValueError, AttributeError, TypeError):
+            continue
+        if text not in seen:
+            seen.add(text)
+            valid.append(text)
+    return valid
 
 # Metadaten-Felder fuer den Abgleich (nur Information, keine Blockade).
 # Reihenfolge = Anzeigereihenfolge im Differenz-Bericht.
@@ -149,7 +168,7 @@ def build_fusion_offer(user, project, dataset: Dict[str, Any]) -> Optional[Dict[
             'reason': 'comparable_spectra',
             'candidates': candidates,
             'project_count': len(seen_projects),
-            'project_ids': sorted(seen_projects),
+            'project_ids': sorted(seen_projects | {str(project.id)}),
             'explanation': (
                 'Aehnliche Spektren aus anderen Projekten gefunden. '
                 'Analyse-Zweig Datenfusion oeffnen? Metadaten werden '
@@ -217,7 +236,7 @@ def build_fusion_offer_for_spectrum(user, spectrum) -> Optional[Dict[str, Any]]:
             'reason': 'comparable_spectra',
             'candidates': candidates,
             'project_count': len(seen_projects),
-            'project_ids': sorted(seen_projects),
+            'project_ids': sorted(seen_projects | {str(project.id)}),
             'explanation': (
                 'Aehnliche Spektren aus anderen Projekten gefunden. '
                 'Analyse-Zweig Datenfusion oeffnen? Metadaten werden '
@@ -242,6 +261,7 @@ def preview_fusion(user, project_ids: List[str],
     keine Blockade - PO-Entscheidung).
     """
     from core.models import AnalysisProject
+    project_ids = _valid_project_ids(project_ids)
     projects = AnalysisProject.objects.filter(id__in=project_ids, user=user)
     result = {
         'available': True,
@@ -288,6 +308,7 @@ def execute_fusion(user, project_ids: List[str], name: str = '',
     """
     from core.models import AnalysisProject, GenericFile
     from django.db import transaction
+    project_ids = _valid_project_ids(project_ids)
     sources = AnalysisProject.objects.filter(id__in=project_ids, user=user)
     if sources.count() < 2:
         return {'success': False,

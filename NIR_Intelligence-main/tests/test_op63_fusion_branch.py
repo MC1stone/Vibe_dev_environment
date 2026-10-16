@@ -129,6 +129,30 @@ check("T2b-b candidate maps to the source project",
       and offer_t2b['candidates'][0]['project_name'] == 'RegQuelleA',
       str((offer_t2b or {}).get('candidates')))
 
+# T2c: Regression Livetest 2026-10-16 (500er): kaputte Projekt-IDs
+# (String statt Array, Zeichenweise-Iteration) duerfen KEENEN 500er
+# werfen - preview/execute validieren UUIDs und ignorieren Muell.
+from services.project_fusion import _valid_project_ids, preview_fusion  # noqa: E402
+check("T2c-a garbage string ids are ignored (no exception)",
+      _valid_project_ids("eine-uuid-als-string") == [])
+check("T2c-b mixed list keeps only valid uuids",
+      _valid_project_ids(["nope", 5, None, str(pa_t2b.id)]) == [str(pa_t2b.id)])
+check("T2c-c duplicates deduplicated",
+      _valid_project_ids([str(pa_t2b.id), str(pa_t2b.id)])
+      == [str(pa_t2b.id)])
+check("T2c-d offer includes BOTH projects (own + matched)",
+      offer_t2b is not None
+      and str(pb_t2b.id) in offer_t2b['project_ids']
+      and str(pa_t2b.id) in offer_t2b['project_ids'],
+      str((offer_t2b or {}).get('project_ids')))
+try:
+    preview_garbage = preview_fusion(user, "kaputte-id")
+    check("T2c-e preview_fusion survives garbage input",
+          isinstance(preview_garbage, dict))
+except Exception as exc:
+    check("T2c-e preview_fusion survives garbage input", False, str(exc))
+
+
 # ---------------------------------------------------------------------------
 # T3: API-Endpoints registriert (URL wiring)
 # ---------------------------------------------------------------------------
