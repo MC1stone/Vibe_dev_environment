@@ -99,7 +99,9 @@ urlpatterns = [
     path('federated/', TemplateView.as_view(template_name='federated.html'), name='federated-page'),
     path('analysis/', TemplateView.as_view(template_name='analysis.html'), name='analysis-page'),
     path('jobs/', TemplateView.as_view(template_name='jobs.html'), name='jobs-page'),
-    path('settings/', TemplateView.as_view(template_name='settings.html'), name='settings-page'),
+    path('settings/', method_decorator(ensure_csrf_cookie)(
+        TemplateView.as_view(template_name='settings.html')),
+        name='settings-page'),
     path('documentation/', TemplateView.as_view(template_name='documentation.html'), name='documentation-page'),
     
     # Port Management API (must come before general api/ pattern)
@@ -142,7 +144,9 @@ urlpatterns += i18n_patterns(
     path('ilias/', TemplateView.as_view(template_name='ilias.html'), name='ilias-page'),
     path('federated/', TemplateView.as_view(template_name='federated.html'), name='federated-page'),
     path('jobs/', TemplateView.as_view(template_name='jobs.html'), name='jobs-page'),
-    path('settings/', TemplateView.as_view(template_name='settings.html'), name='settings-page'),
+    path('settings/', method_decorator(ensure_csrf_cookie)(
+        TemplateView.as_view(template_name='settings.html')),
+        name='settings-page'),
     path('documentation/', TemplateView.as_view(template_name='documentation.html'), name='documentation-page'),
     path('login/', CustomLoginView.as_view(), name='login'),
     path('register/', CustomRegisterView.as_view(), name='register'),
