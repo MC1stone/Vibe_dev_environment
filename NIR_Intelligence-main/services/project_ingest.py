@@ -278,10 +278,21 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
         target_name = None
         for ref in ordered_refs:
             target = pd.to_numeric(df[ref['name']], errors='coerce')
-            if target.is_monotonic_increasing or target.is_monotonic_decreasing:
-                continue
-            if target.nunique() >= len(target):
-                continue
+            # Livetest-Feedback OP64 (2026-10-16, Tomaten-Fusionsprojekt):
+            # echte Referenzmessungen sind haeufig monoton sortiert (nach
+            # Brix aufsteigend gemessen) und jede Messung traegt ihren
+            # eigenen kontinuierlichen Referenzwert - die alten
+            # Ablehnungs-Heuristiken haben genau diese Faelle verworfen
+            # (Brix beim 2. Datensatz nicht erkannt). Monotonie ist KEIN
+            # Ausschlusskriterium mehr; ausgeschlossen sind nur noch
+            # Pseudo-ID-Spalten: ganzzahlig, Schrittweite 1.
+            if (target.nunique() >= len(target)
+                    and target.nunique() > 2):
+                ints = target.dropna()
+                if len(ints) and (ints == ints.astype(int)).all():
+                    steps = ints.diff().dropna().unique()
+                    if len(steps) == 1 and steps[0] == 1.0:
+                        continue
             paired = numeric_all.join(target.rename('__target'), how='inner') \
                 .dropna(subset=['__target'])
             if len(paired) < 12:
@@ -1515,6 +1526,14 @@ def build_preparation_report(project) -> Dict[str, Any]:
         logger.warning("Sensor reference check failed (degraded): %s", exc)
         report["sensor_reference"] = {"checked": [], "unknown": [],
                                       "error": str(exc)}
+    # OP64 (Livetest-Feedback): execute_fusion (OP63) hinterlegt die
+    # Fusion-Provenienz im preparation_report - der komplette Bericht-
+    # Rewrite hier hat sie bisher GELOESCHT (Vergleichsuebersicht weg,
+    # Stufe-3-Panel weg). Die Sektion wird hier explizit erhalten.
+    fusion_section = (getattr(project, 'preparation_report', None)
+                      or {}).get('fusion')
+    if fusion_section:
+        report['fusion'] = fusion_section
     project.preparation_report = report
     if usable_count:
         project.save(update_fields=["preparation_report", "updated_at"])

@@ -175,6 +175,56 @@ def _significance_test(groups: Dict[str, List[float]]) -> Dict[str, Any]:
     return result
 
 
+def _predicted_vs_reference(samples, targets, cv_folds: int = 5,
+                             tolerance_levels=(0.5, 1.0)) -> Optional[Dict[str, Any]]:
+    """OP64 (PO-Feedback): Kreuzvalidierung so dargestellt, wie es fachlich
+    zaehlt - pro Messung die vorhergesagte gegen die TATSAECHLICHE
+    Referenzgröße (Brix), nicht nur abstrakte CV-Kennzahlen. Liefert
+    cross_val_predict (sklearn, vorhanden), daraus Trefferquoten innerhalb
+    definierter Toleranzen und die Messwert-Paare fuer einen
+    Predicted-vs-Reference-Plot."""
+    try:
+        import numpy as np
+        from sklearn.cross_decomposition import PLSRegression
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.pipeline import Pipeline
+        from sklearn.model_selection import KFold, cross_val_predict
+        X = np.asarray(samples, dtype=float)
+        y = np.asarray(targets, dtype=float)
+        if X.ndim != 2 or X.shape[0] < 12:
+            return None
+        n_components = max(1, min(10, X.shape[0] - 1, X.shape[1]))
+        model = Pipeline([
+            ('scaler', StandardScaler()),
+            ('pls', PLSRegression(n_components=n_components)),
+        ])
+        folds = max(2, min(cv_folds, X.shape[0]))
+        splitter = KFold(n_splits=folds, shuffle=True, random_state=42)
+        predicted = cross_val_predict(model, X, y, cv=splitter).ravel()
+        errors = np.abs(y - predicted)
+        hits = {}
+        for tol in tolerance_levels:
+            hits[f'{float(tol)}'] = {
+                'tolerance': float(tol),
+                'n_within': int((errors <= tol).sum()),
+                'ratio': float((errors <= tol).mean()),
+            }
+        return {
+            'n': int(X.shape[0]),
+            'cv_folds': folds,
+            'pairs': [
+                {'reference': float(r), 'predicted': float(p)}
+                for r, p in zip(y, predicted)
+            ],
+            'hits_within_tolerance': hits,
+            'mae': float(np.mean(errors)),
+            'rmse': float(np.sqrt(np.mean(errors ** 2))),
+        }
+    except Exception:
+        logger.exception('predicted-vs-reference failed (non-fatal)')
+        return None
+
+
 def comparative_calibration(fused_project, source_projects) -> Dict[str, Any]:
     """Stufe 3: drei Kalibrationen + Signifikanz-Test.
 
@@ -213,6 +263,8 @@ def comparative_calibration(fused_project, source_projects) -> Dict[str, Any]:
                 'n_samples': len(entry['data']['samples']),
             }
         else:
+            pvr = _predicted_vs_reference(entry['data']['samples'],
+                                           entry['data']['targets'])
             result['calibrations'][label] = {
                 'status': 'ok',
                 'n_samples': len(entry['data']['samples']),
@@ -220,6 +272,7 @@ def comparative_calibration(fused_project, source_projects) -> Dict[str, Any]:
                 'rmse_cv': fit.get('rmse_cv'),
                 'rpd': fit.get('rpd'),
                 'cv_folds': fit.get('cv_folds'),
+                'predicted_vs_reference': pvr,
             }
     # Residuen-Analyse + Signifikanz-Test auf den kombinierten Daten
     fused_data = _collect_samples(fused_project)
