@@ -49,6 +49,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get CSRF token
     NIR_MISTRAL.csrfToken = getCSRFToken();
     log('CSRF Token loaded: ' + (NIR_MISTRAL.csrfToken ? 'Yes' : 'No'));
+
+    // CSRF-Header jetzt nachziehen: das Axios-Default-Setup am Ende dieser
+    // Datei laeuft beim PARSEN - vor DOMContentLoaded und damit mit leerem
+    // Token ('' -> if schlug fehl, Header nie gesetzt, 403 'CSRF token
+    // missing' auf allen Default-basierten Requests, Vorfall 2026-10-16).
+    if (typeof axios !== 'undefined' && NIR_MISTRAL.csrfToken) {
+        axios.defaults.headers.common['X-CSRFToken'] = NIR_MISTRAL.csrfToken;
+    }
     
     // Initialize all components
     initComponents();
