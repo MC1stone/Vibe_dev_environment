@@ -43,6 +43,43 @@ Quellenpaar lautet die Antwort klar: **Fusion schadet messbar.**
   Z-Score (0.545) und pro-Quelle-Z-Score (0.456) verschlechtern sich beide
   gegenüber den Einzelnachweisen.
 
+## 2b. Korrekturvarianten (Nutzeranforderung: Brix bleibt Basis)
+
+Der Nutzer erwartet, dass die KI bei signifikanter Restheterogenität
+nicht abbricht, sondern spektrale Korrekturen anwendet und die
+Bewertung auf den korrigierten Zahlen erneut vornimmt (Bounded
+Autonomy, Artikel §5.4). Deshalb rechnet der Analysepfad zusätzlich
+drei Korrekturvarianten (jeweils identische Methodik: PLS 10 Komp.,
+5-fold CV, seed 42, Levene/Welch auf den korrigierten Residuen):
+
+| Variante | R²cv | RMSECV | Levene p | Welch p |
+|---|---|---|---|---|
+| V0 Baseline (global Z-Score) | 0.545 | 0.724 | 0.006 | <0.001 |
+| **V1 SNV (zeilenweise) + Z-Score** | **0.646** | **0.639** | <0.001 | <0.001 |
+| V2 MSC (pro Quelle) + Z-Score | 0.453 | 0.794 | 0.185 | <0.001 |
+| V3 MSC (gemeinsame Anchor-Kurve) + Z-Score | 0.472 | 0.780 | <0.001 | <0.001 |
+
+**Korrigiertes Verdict (automatisch formuliert):**
+- Die SNV-Korrektur verbessert die Fusion messbar (R²cv 0.545 → 0.646,
+  Trefferquote ±0,5: 51 % → 60 %) — die Bewertung auf Basis der
+  korrigierten Zahlen ist also besser als die Baseline-Aussage.
+- Sie bleibt aber unter der besten Einzelquelle (0.722). Und der
+  Signifikanztest auf den korrigierten Residuen wird nicht schwächer,
+  sondern stärker (Levene p < 0.001): die Heterogenität der beiden
+  Erfassungsläufe steckt nicht im spektralen Offset/Gain, den SNV
+  entfernt — sie sitzt tiefer (Beleuchtungsführung, Probenposition,
+  Referenz-Erfassung). Das kann keine Spektralkorrektur beheben,
+  nur die Anchor-Messung.
+- Ehrliches Fazit: Pro Quelle kalibrieren (B allein: 0.722) oder
+  gemeinsame Anchor-Messung nachholen und die Fusion wiederholen.
+
+Der ausführbare Referenz-Workflow inklusive aller Varianten liegt als
+KNIME-Import-Datei vor: `tomato_fusion_analysis.knwf` (in KNIME 5.x:
+File → Open). Die Variantenzahlen liefert
+`python3 scripts/knime_fusion_analysis.py <CSV-Quelle-B>`
+(Ausgabe: `output/knime_fusion/knime_fusion_results.json`, jetzt mit
+`korrekturvarianten` + `korrektur_verdict`).
+
 ## 3. Einordnung gegen die Artikel-Fusion (OP63, Tabelle 7/8)
 
 Die Artikel-Fusion (0.935/0.980 → 0.997, Levene p = 0.176) war eine

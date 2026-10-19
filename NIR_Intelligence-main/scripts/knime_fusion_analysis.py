@@ -53,6 +53,7 @@ def pls_cv(X, y, n_splits=5, seed=42):
         "hit_10": float(np.mean(np.abs(resid) <= 1.0)),
         "resid_var": float(np.var(resid, ddof=1)),
         "resid_mean": float(np.mean(resid)),
+        "resid": resid,
         "pred": pred,
     }
 
@@ -112,11 +113,11 @@ def main():
     print(f"Levene p={lev.pvalue:.3f}, Welch p={wel.pvalue:.3f}")
 
     results = {
-        "quelle_a": {k: v for k, v in res_a.items() if k != "pred"},
-        "quelle_b": {k: v for k, v in res_b.items() if k != "pred"},
-        "fusion": {k: v for k, v in res_f.items() if k != "pred"},
+        "quelle_a": {k: v for k, v in res_a.items() if k not in ("pred", "resid")},
+        "quelle_b": {k: v for k, v in res_b.items() if k not in ("pred", "resid")},
+        "fusion": {k: v for k, v in res_f.items() if k not in ("pred", "resid")},
         "fusion_pro_quelle_normalisiert": {
-            k: v for k, v in res_f_psn.items() if k != "pred"},
+            k: v for k, v in res_f_psn.items() if k not in ("pred", "resid")},
         "signifikanztest": {
             "levene_p": float(lev.pvalue),
             "welch_p": float(wel.pvalue),
@@ -124,6 +125,72 @@ def main():
         },
         "fusion_gewinn_r2": res_f["r2"] - max(res_a["r2"], res_b["r2"]),
     }
+
+    # Korrekturvarianten (Nutzeranforderung 2026-10-19): Brix bleibt Basis;
+    # bei signifikanter Restheterogenitaet werden spektrale Korrekturen
+    # angewendet und die Bewertung auf den korrigierten Zahlen erneut
+    # vorgenommen - die Fusion wird nicht verworfen, bevor die Korrektur
+    # gerechnet ist (Bounded Autonomy: vorschlagen, messen, ehrlich berichten).
+    def _snv(X):
+        mu = X.mean(axis=1, keepdims=True)
+        sd = X.std(axis=1, ddof=1, keepdims=True)
+        return (X - mu) / sd
+
+    def _msc(X, ref=None):
+        ref = ref if ref is not None else X.mean(axis=0)
+        out = np.empty_like(X, dtype=float)
+        for i in range(X.shape[0]):
+            slope, intercept = np.polyfit(ref, X[i], 1)
+            out[i] = (X[i] - intercept) / slope
+        return out
+
+    variants = {}
+    Xsnv = _snv(np.vstack([Xa, Xb]))
+    variants["snv"] = pls_cv((Xsnv - Xsnv.mean(0)) / Xsnv.std(0), yf)
+    Xmsc = np.vstack([_msc(Xa), _msc(Xb)])
+    variants["msc_pro_quelle"] = pls_cv(
+        (Xmsc - Xmsc.mean(0)) / Xmsc.std(0), yf)
+    ref_anchor = Xa.mean(axis=0)
+    Xmsc_j = np.vstack([_msc(Xa, ref_anchor), _msc(Xb, ref_anchor)])
+    variants["msc_anchor"] = pls_cv(
+        (Xmsc_j - Xmsc_j.mean(0)) / Xmsc_j.std(0), yf)
+    correction_variants = {}
+    for vname, vres in variants.items():
+        lev_v = stats.levene(vres["resid"][src == "A"],
+                             vres["resid"][src == "B"])
+        wel_v = stats.ttest_ind(vres["resid"][src == "A"],
+                                vres["resid"][src == "B"],
+                                equal_var=False)
+        correction_variants[vname] = {
+            k: v for k, v in vres.items()
+            if k not in ("pred", "resid", "resid_var", "resid_mean")}
+        correction_variants[vname].update({
+            "levene_p": float(lev_v.pvalue),
+            "welch_p": float(wel_v.pvalue),
+        })
+        print(f"Korrekturvariante {vname}: R2cv={vres['r2']:.3f} "
+              f"RMSECV={vres['rmsecv']:.3f} "
+              f"(Levene p={lev_v.pvalue:.3f}, Welch p={wel_v.pvalue:.3f})")
+    best_single = max(res_a["r2"], res_b["r2"])
+    best_variant = max(correction_variants.items(),
+                       key=lambda kv: kv[1]["r2"])
+    if best_variant[1]["r2"] > res_f["r2"]:
+        verdict = (
+            f"Die Korrektur ({best_variant[0]}) verbessert die Fusion "
+            f"messbar (R2cv {res_f['r2']:.3f} -> {best_variant[1]['r2']:.3f}), "
+            "bleibt aber " + ("unter der besten Einzelquelle "
+                              f"({best_single:.3f}) - Empfehlung: pro Quelle "
+                              "kalibrieren oder Anchor-Messung nachholen."
+                              if best_variant[1]["r2"] < best_single else
+                              "und erreicht die beste Einzelquelle "
+                              "- Fusion ist eine Option.")) 
+    else:
+        verdict = ("Keine Korrekturvariante verbessert die Fusion - "
+                   "Empfehlung unveraendert (pro Quelle kalibrieren, "
+                   "Anchor-Messung nachholen).")
+    results["korrekturvarianten"] = correction_variants
+    results["korrektur_verdict"] = verdict
+    print(f"Verdict: {verdict}")
     if (len(set(ga)) and len(set(gb))):
         overlap = set(map(str, set(ga))) & set(map(str, set(gb)))
         results["messobjekte"] = {
