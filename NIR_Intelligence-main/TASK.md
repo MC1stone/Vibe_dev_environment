@@ -3,6 +3,34 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
+## Current Task: OP67 - Artikel-Dokumentation Fusion + Foerderierte Session
+
+### Ziel
+Die Ergebnisse der OP66-Fusion und der ersten foerderierten Session
+(Zwei-Operator-Split) in den Manuskript-Entwurf dokumentieren und den
+Artikel in dieser Hinsicht finalisieren.
+
+### Umsetzung
+- ARTICLE_UPDATE_FUSION_FL.md (Repo-Wurzel): Arbeitdokument mit (1) den
+  neuen Ergebnissen (Fusion 0,997 vs. 0,935/0,980; FL: 0,989 global vs.
+  0,281/0,233 lokal; Consent-/Privacy-/Transportvertraege bestanden),
+  (2) fertigen Manuskript-Abschnitten zum direkten Uebernehmen
+  (§6.7 komplett neu: "From Readiness to First Exercise"; §7.3
+  Federated-path-Limitierung; §8 H5-Bewertung + Roadmap-Satz;
+  Abstract-Ergaenzung), (3) Verifikationsprotokollen (CI-Matrizen,
+  laufender Stack, offene Zielrechner-Punkte TP-1/TP-2/TP-4).
+- Ehrlichkeitsregel: Die Zahlen sind Methoden-/Vertrags-Nachweise am
+  kontrollierten Zwei-Operator-Split, KEINE echte Multi-Site-Kampagne -
+  in allen Manuskript-Formulierungen explizit so gesagt. Die echten
+  Tomaten-Zahlen (Tabelle 6) bleiben unberuehrt.
+
+### Verifikation
+- App-Neustart (git pull main e510c29, Django-Dev-Server Loopback):
+  Smoke 5/5 Seiten 200; End-to-End-Check 8/8 gruen (Fusion-Endpoint,
+  Brix-Chart PNG nur am Fusionsprojekt, discussion_summary, Report-Panels,
+  /calibration/, Consent-Gate 403, FL-Runde 201 mit 2 Operator-Shards,
+  Privacy-Vertrag im Payload).
+
 ## Current Task: OP66 - Fusion: Brix-Chart + Chart-Erklaerungen + KI-Diskussion
 
 ### Ziel
