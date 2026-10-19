@@ -825,6 +825,34 @@ window.nirFusionCalibration = function (projectId) {
                     html += `<p class="small mb-2">${nirGettext(sig.interpretation)}</p>`;
                 }
             }
+            // OP70: Brix-Band-Matrix (gemessen x geschaetzt) je Kalibration
+            // + am Fusions-Datensatz pro Quell-Datensatz getrennt
+            labels.forEach(label => {
+                const c = cals[label];
+                const pvr = c.predicted_vs_reference || {};
+                const bm = pvr.brix_band_matrix;
+                const chartUrl = c.band_matrix_chart;
+                if (!bm || !bm.matrix) return;
+                const renderMx = (m, title) => {
+                    let h = `<h6 class="mt-2 mb-1"><i class="bi bi-grid-3x3-gap me-1"></i>${nirGettext('Konfusionsmatrix (Brix-Bänder)')}: ${title}</h6>`;
+                    h += '<div class="table-responsive"><table class="table table-sm table-bordered mb-2 small text-center" style="width:auto;"><thead><tr><th>' +
+                        nirGettext('gemessen \ geschaetzt') + '</th>' + bm.labels.map(l => `<th class="small">${l}</th>`).join('') + '</tr></thead><tbody>';
+                    m.forEach((row, i) => {
+                        h += `<tr><th class="small">${bm.labels[i]}</th>` + row.map(v => {
+                            const cls = v === 0 ? 'table-light text-muted' : (bm.labels[i] === bm.labels[row.indexOf(v)] && false ? '' : '');
+                            return `<td class="${v > 0 ? 'table-primary' : 'table-light'}">${v}</td>`;
+                        }).join('') + '</tr>';
+                    });
+                    h += '</tbody></table></div>';
+                    if (chartUrl) h += `<img src="${chartUrl}" alt="${nirGettext('Brix-Band-Matrix')} ${title}" class="img-fluid border rounded mt-1" style="max-height:380px;">`;
+                    return h;
+                };
+                html += renderMx(bm.matrix, label);
+                const perSrc = c.band_matrix_charts_sources || {};
+                Object.keys(perSrc).forEach(src => {
+                    if (perSrc[src]) html += `<img src="${perSrc[src]}" alt="${nirGettext('Brix-Band-Matrix')} ${src}" class="img-fluid border rounded mt-1" style="max-height:380px;">`;
+                });
+            });
             // OP66: Brix-Vorhersage vs. gemessene Brix des Fusionsprojekts
             // als EIN kombinierter Datensatz - Streudiagramm (Base64-PNG)
             // inkl. aufklappbarer Erklaerung unter der Grafik.

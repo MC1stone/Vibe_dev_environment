@@ -206,6 +206,51 @@ def _attention_chart(attention: np.ndarray, wavelengths: np.ndarray) -> str:
     return _figure_to_data_url(fig)
 
 
+def _mlp_fallback_charts(matrix: np.ndarray, y: np.ndarray,
+                         wl: np.ndarray, epochs: int,
+                         target_name: str) -> Dict[str, str]:
+    """OP70: XAI-Grafiken ohne TensorFlow - immer statt nie (sklearn-
+    MLPRegressor, derselbe Vertrag wie im Neural Network Agent). Die
+    TF-exklusiven Keys (saliency/grad_cam/attention) werden ehrlich
+    nicht erfunden; prediction_vs_actual, loss_curves, shap_summary
+    und shap_waterfall entstehen identisch."""
+    charts: Dict[str, str] = {}
+    from sklearn.metrics import r2_score
+    from sklearn.model_selection import train_test_split
+    from sklearn.neural_network import MLPRegressor
+    from sklearn.preprocessing import StandardScaler
+    X_train, X_test, y_train, y_test = train_test_split(
+        matrix, y, test_size=0.25, random_state=42)
+    scaler = StandardScaler().fit(X_train)
+    mlp = MLPRegressor(hidden_layer_sizes=(64, 32),
+                       max_iter=max(100, epochs * 5), random_state=42)
+    mlp.fit(scaler.transform(X_train), y_train)
+    y_pred = mlp.predict(scaler.transform(X_test))
+    charts["prediction_vs_actual"] = _prediction_vs_actual(
+        y_pred, y_test, target_name)
+    history = {"loss": [float(v) for v in getattr(mlp, "loss_curve_", [])]}
+    charts["loss_curves"] = _loss_curves(history)
+    rng = np.random.default_rng(7)
+    base_r2 = r2_score(y_test, y_pred)
+    importance = np.zeros(matrix.shape[1])
+    Xs = scaler.transform(matrix)
+    for j in range(matrix.shape[1]):
+        shuffled = Xs.copy()
+        rng.shuffle(shuffled[:, j])
+        importance[j] = abs(base_r2 - r2_score(
+            y, mlp.predict(shuffled)))
+    charts["shap_summary"] = _shap_summary(importance, wl)
+    row = Xs[0]
+    base_pred = float(mlp.predict(row[None, :])[0])
+    deltas = np.zeros(matrix.shape[1])
+    for j in range(matrix.shape[1]):
+        occluded = row.copy()
+        occluded[j] = 0.0
+        deltas[j] = float(mlp.predict(occluded[None, :])[0]) - base_pred
+    charts["shap_waterfall"] = _shap_waterfall(deltas, wl, 0)
+    return charts
+
+
 def xai_chart_data_urls(calibration_samples: List[List[float]],
                         reference_values: List[float],
                         wavelengths: List[float],
@@ -223,9 +268,6 @@ def xai_chart_data_urls(calibration_samples: List[List[float]],
         return charts
     try:
         from agents.neural_network_agent import _tensor_flow_available
-
-        if not _tensor_flow_available():
-            return charts
         matrix = _as_matrix(calibration_samples)
         if matrix is None or reference_values is None:
             return charts
@@ -236,7 +278,12 @@ def xai_chart_data_urls(calibration_samples: List[List[float]],
             np.arange(matrix.shape[1], dtype=float)
         if wl.size != matrix.shape[1]:
             wl = np.arange(matrix.shape[1], dtype=float)
-
+        if not _tensor_flow_available():
+            # OP70: CNN/XAI-Graphen IMMER - ohne TensorFlow sklearn-MLP-
+            # Fallback (Vertrag des Neural Network Agent); die TF-
+            # exklusiven Keys (saliency, grad_cam, attention_weights)
+            # entfallen ehrlich, alle anderen bleiben identisch.
+            return _mlp_fallback_charts(matrix, y, wl, epochs, target_name)
         import tensorflow as tf
 
         ctx = _train_model(matrix, y, wl, epochs)

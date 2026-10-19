@@ -415,6 +415,89 @@ def corrected_verdict(baseline_r2: Optional[float],
     return ' '.join(parts)
 
 
+def _brix_band_matrix(pairs, n_bands: int = 6,
+                      src_labels: Optional[List[str]] = None) -> Dict[str, Any]:
+    """OP70: Brix-Band-Konfusionsmatrix - GEMESSENER Brix gegen
+    GESCHAETZTEN Brix (Bandintervalle aus dem Wertebereich der Referenz).
+    Zeile = gemessenes Band, Spalte = geschätztes Band; Diagonale =
+    korrekt zugeordnet. Bei src_labels zusaetzlich pro Quell-Datensatz
+    (darin lassen sich die Daten beider Datensaetze getrennt zeigen)."""
+    refs = [p['reference'] for p in pairs]
+    preds = [p['predicted'] for p in pairs]
+    if not refs:
+        return {}
+    lo = min(min(refs), min(preds))
+    hi = max(max(refs), max(preds))
+    if hi <= lo:
+        hi = lo + 1.0
+    width = (hi - lo) / n_bands
+
+    def band(v):
+        b = int((v - lo) / width)
+        return min(b, n_bands - 1)
+
+    labels = []
+    for i in range(n_bands):
+        a, b = lo + i * width, lo + (i + 1) * width
+        labels.append(f'{a:.1f}-{b:.1f}')
+
+    def _matrix(pairs_sub):
+        m = [[0] * n_bands for _ in range(n_bands)]
+        for p_ in pairs_sub:
+            m[band(p_['reference'])][band(p_['predicted'])] += 1
+        return m
+
+    result = {'labels': labels, 'n_bands': n_bands,
+              'matrix': _matrix(pairs), 'range': [float(lo), float(hi)]}
+    if src_labels:
+        per_src = {}
+        for src in sorted(set(src_labels)):
+            per_src[src] = _matrix([p_ for p_, l_ in zip(pairs, src_labels)
+                                    if l_ == src])
+        result['per_source'] = per_src
+    return result
+
+
+def _band_matrix_chart(matrix: List[List[int]], labels: List[str],
+                       title: str) -> Optional[str]:
+    """OP70: Heatmap der Brix-Band-Matrix als PNG-Data-URL (ehrliches
+    None ohne matplotlib)."""
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        import numpy as np
+        m = np.asarray(matrix, dtype=float)
+        fig, ax = plt.subplots(figsize=(6, 5))
+        im = ax.imshow(m, cmap='Blues')
+        ax.set_xticks(range(len(labels)))
+        ax.set_yticks(range(len(labels)))
+        ax.set_xticklabels(labels, rotation=45, ha='right', fontsize=8)
+        ax.set_yticklabels(labels, fontsize=8)
+        ax.set_xlabel('Geschätztes Brix-Band')
+        ax.set_ylabel('Gemessenes Brix-Band')
+        ax.set_title(title)
+        for i in range(m.shape[0]):
+            for j in range(m.shape[1]):
+                if m[i, j] > 0:
+                    ax.text(j, i, int(m[i, j]), ha='center', va='center',
+                            fontsize=7,
+                            color='white' if m[i, j] > m.max() * 0.6
+                            else 'black')
+        fig.colorbar(im, ax=ax, shrink=0.8, label='Messungen')
+        fig.tight_layout()
+        import base64
+        import io
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png', dpi=110, bbox_inches='tight')
+        plt.close(fig)
+        return ('data:image/png;base64,'
+                + base64.b64encode(buf.getvalue()).decode('ascii'))
+    except Exception:
+        logger.exception('band matrix chart failed (non-fatal)')
+        return None
+
+
 def comparative_calibration(fused_project, source_projects) -> Dict[str, Any]:
     """Stufe 3: drei Kalibrationen + Signifikanz-Test.
 
@@ -464,6 +547,22 @@ def comparative_calibration(fused_project, source_projects) -> Dict[str, Any]:
                 'cv_folds': fit.get('cv_folds'),
                 'predicted_vs_reference': pvr,
             }
+            # OP70: Brix-Band-Matrix (gemessen x geschaetzt) je
+            # Kalibration; am Fusions-Datensatz zusaetzlich pro
+            # Quell-Datensatz aufgeteilt - so lassen sich die Daten
+            # beider Datensaetze getrennt zeigen. Charts ehrlich ohne
+            # matplotlib unterdrueckt.
+            if pvr and pvr.get('pairs'):
+                srcs = entry['data'].get('file_names') or None
+                bm = _brix_band_matrix(pvr['pairs'], src_labels=srcs)
+                pvr['brix_band_matrix'] = bm
+                entry_result['band_matrix_chart'] = _band_matrix_chart(
+                    bm.get('matrix'), bm.get('labels'), label)
+                if bm.get('per_source'):
+                    entry_result['band_matrix_charts_sources'] = {
+                        src: _band_matrix_chart(m, bm.get('labels'),
+                                                f'{label} ({src})')
+                        for src, m in bm['per_source'].items()}
             # OP66: Brix-Chart nur fuer das Fusionsprojekt - der
             # kombinierte Datensatz als EIN Datensatz dargestellt.
             if pid == str(fused_project.id) and pvr:
