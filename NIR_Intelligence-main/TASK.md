@@ -3,6 +3,51 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
+## Current Task: OP66 - Fusion: Brix-Chart + Chart-Erklaerungen + KI-Diskussion
+
+### Ziel
+Drei Anforderungen aus der Nutzer-Diskussion vor dem Federated Learning
+(2026-10-19): (a) die Grafikbeschreibungen sollen unter DEN Grafiken
+diskutiert werden - auch in der Kalibrations-Uebersicht, (b) fuer das
+Fusionsprojekt (zwei zusammengefuehrte Tomaten-Datensaetze, Spektren +
+Brix) soll die Brix-Vorhersage gegen den GEMESSENEN Brix dargestellt
+werden - beide Datensaetze als EIN kombinierter Datensatz, (c) die
+Ergebnisse der Analyse muessen mit KI und Nutzer diskutierbar sein -
+die Fusionsergebnisse in den Chatbot-Kontext einspeisen. Reifeklassen
+waren nur ein Beispiel und sind NICHT Teil dieses Schritts.
+
+### Umsetzung
+- services/fusion_calibration.py: _pvr_chart() - Predicted-vs-Reference-
+  Streudiagramm des Fusionsprojekts als EIN kombinierter Datensatz,
+  WIEDERVERWENDEND ueber calibration_charts._ref_vs_pred (OP20-Vertrag,
+  Base64-PNG, ehrliches None ohne matplotlib - keine Chart-Logik-Kopie).
+  Nur das Fusionsprojekt erhaelt das Chart (Einzel-Datensaetze nicht).
+  comparative_calibration liefert zusaetzlich discussion_summary
+  (Klartext: Methode, Kennzahlen je Kalibration inkl. Trefferquote,
+  Fazit + Signifikanz-Interpretation) fuer die Chatbot-Diskussion.
+- api/project_views.py: Fusion-Endpoint liefert fusion_project_name
+  (kombinierter Datensatz identifizierbar) - kein neuer Endpoint.
+- main.js (nirFusionCalibration): rendert das Brix-Chart unter der
+  Vergleichstabelle inkl. aufklappbarer Erklaerung ('Was zeigt dieses
+  Diagramm?'); discussion_summary wird in window.nirChatbotContext
+  (fusion_discussion) gespeichert.
+- chatbot_panel.js: fusion_discussion wird als Dokument an /api/chatbot/
+  message/ gesendet - die KI-Nutzer-Diskussion bezieht sich damit auf
+  die tatsaechlich gerechnete kombinierte Analyse (MO 10).
+- OP66a: calibration_overview.html laedt den bestehenden chart_explanations
+  Filter; JEDE Grafik der Kalibrations-Uebersicht erhaelt das aufklappbare
+  Erklaerungs-Dropdown wie im Projekt-Report (OP60-Muster, keine duplizierte
+  Logik).
+
+### Verifikation
+- Neue Matrix tests/test_op66_fusion_pvr_charts.py: 28/28 gruen
+  (Chart-Wiederverwendung, ehrliches Degradation, nur-Fusionsprojekt-
+  Chart, Endpoint-Keys, UI-Checks, Chatbot-Kontext, OP66a-Template,
+  node --check, Template-Kompilierung).
+- Regressionen: OP63 St3 37/37, OP63 St1+2 45/45, OP64 19/19, OP65 30/30,
+  OP24 29/29, OP20 33/33, S3-S6 32/32 gruen. manage.py check OK.
+- CI-Matrix um test_op66_fusion_pvr_charts.py erweitert.
+
 ## Completed Task: OP52 - Menue-Umbau + Kalibrierungs-Uebersicht
 
 ### Objective

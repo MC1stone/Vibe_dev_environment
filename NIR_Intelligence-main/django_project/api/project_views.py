@@ -1591,6 +1591,7 @@ class ProjectFusionCalibrationView(APIView if DRF_AVAILABLE else object):
                                 status=status.HTTP_422_UNPROCESSABLE_ENTITY)
             comparison = comparative_calibration(project, list(sources))
             comparison['success'] = True
+            comparison['fusion_project_name'] = project.name
             comparison['source_projects'] = [
                 {'project_id': str(p.id), 'project_name': p.name}
                 for p in sources]
