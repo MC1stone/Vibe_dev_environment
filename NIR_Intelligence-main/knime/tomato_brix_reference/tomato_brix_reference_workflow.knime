@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow xmlns="http://www.knime.org/2008/09/XMLFormat" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.knime.org/2008/09/XMLFormat http://www.knime.org/XMLWorkflow_V4.3.xsd" version="1.0" exportedBy="nir-ip-reference" exportedByKNIMEVersion="5.4.x (generated, not authored in KNIME)" GeneratedBy="NIR-IP KNIME-Referenz-Generator">
+  <name>Tomato Brix Reference Validation (NIR-IP)</name>
+  <fullDisplayName>KNIME Referenz-Auswertung: Tomaten-Brix mit SparkFun Triad NIR (18 Kanaele 410-940 nm)</fullDisplayName>
+  <description>
+    Externer, unabhaengiger Referenz-Workflow (Section 2.1 / 6.6 des Artikels):
+    validiert die NIR-IP-Plattform-Auswertung des Tomaten-Brix-Datensatzes
+    (data/raw/T4-T5_ALLE_mit_Brix_2.txt bzw. CSV-Export) gegen eine zweite,
+    unabhaengige Implementierung.
+
+    Referenz-Referenz-Kennzahlen (Artikel, Tabelle 6):
+      PLS (10 Komp., 5-fold CV): Plattform R2cv = 0.626 / Orange R2cv = 0.622 / KNIME R2cv = 0.621
+      PCR (10 Komp.): R2cv = 0.613 (Plattform) / 0.607 (KNIME)
+      ADC-Saettigung: F_535, R_610 (beide Workflows identisch)
+      Dominanter Kanal: G_560 (beide Workflows identisch)
+
+    Knotenkette:
+      1. CSV Reader                      (Semikolon; Header-Zeile mit 'Brix')
+      2. Rule-based Row Filter (x2)      (ADC-Ueberlauf >= 2^31; Wert <= 0)
+      3. Normalizer (Z-score, 18 Kanaele)
+      4. GroupBy (Messobjekt)            (Replikatstruktur-Check)
+      5. Partitioning (5-fold, seed 42)
+      6. Linear Regression (OLS)         + Numeric Scorer
+      7. PCA (10 Komponenten)
+      8. Linear Regression (PCR)         + Numeric Scorer
+      9. (Benchmark: PLS via R/Python-Snippet, 10 Komp., cross_val_predict)
+     10. Bar Chart / Scatter Plot        (Vorhersage vs. Referenz)
+
+    Hinweis: Diese Datei beschreibt den Workflow im knime.org-XML-Austauschformat.
+    Das ausfuehrbare Aequivalent (identische Knotenlogik, deterministisch,
+    seed=42) liegt bei: scripts/knime_reference_validation.py
+  </description>
+  <nodes>
+    <node id="1" type="Source" name="CSV Reader">
+      <settings>
+        <separator>;</separator>
+        <headerDetection>auto (Zeile enthaelt 'Brix' und 'Messobjekt')</headerDetection>
+        <columns>Counter, Messobjekt, Brix, Temp0-2, A_410..L_940 (18 Kanaele)</columns>
+      </settings>
+      <outport index="0">Rohdaten (2049 Zeilen, T4-T5; alternativ CSV-Export 1675 Zeilen)</outport>
+    </node>
+    <node id="2" type="Manipulator" name="Rule-based Row Filter (ADC-Ueberlauf)">
+      <settings>
+        <rule>exclude $F_535$ &gt;= 2147483647 OR $R_610$ &gt;= 2147483647 OR [any channel] &gt;= 2^31</rule>
+        <expected>31 Zeilen entfernt (F_535: 7, R_610: 24)</expected>
+      </settings>
+    </node>
+    <node id="3" type="Manipulator" name="Rule-based Row Filter (Null-/Fehlwerte)">
+      <settings>
+        <rule>exclude [any channel] &lt;= 0</rule>
+        <expected>4 Zeilen entfernt</expected>
+      </settings>
+    </node>
+    <node id="4" type="Manipulator" name="Normalizer (Z-score)">
+      <settings>
+        <columns>A_410..L_940</columns>
+        <mode>Z-score (spaltenweise, mu=0, sigma=1)</mode>
+      </settings>
+    </node>
+    <node id="5" type="Manipulator" name="GroupBy (Replikatstruktur)">
+      <settings>
+        <group>Messobjekt</group>
+        <aggregates>Count(Brix), First(Brix)</aggregates>
+        <expected>40 Messobjekte / 35 eindeutige Brix-Werte auf 2014 Zeilen; Risiko replica_overlap_in_cv</expected>
+      </settings>
+    </node>
+    <node id="6" type="Manipulator" name="Partitioning / X-Partitioner (5-fold)">
+      <settings>
+        <folds>5</folds>
+        <seed>42</seed>
+        <shuffle>true</shuffle>
+      </settings>
+    </node>
+    <node id="7" type="Learner" name="Linear Regression (OLS)">
+      <settings>
+        <target>Brix</target>
+        <predictors>A_410..L_940 (normalisiert)</predictors>
+      </settings>
+    </node>
+    <node id="8" type="Predictor" name="Regression Predictor"/>
+    <node id="9" type="Misc" name="Numeric Scorer (OLS)">
+      <settings><expected>R2 = 0.624, RMSE = 0.621 (5-fold CV)</expected></settings>
+    </node>
+    <node id="10" type="Manipulator" name="PCA (10 Komponenten)">
+      <settings>
+        <components>10</components>
+        <input>normalisierte Kanaele</input>
+      </settings>
+    </node>
+    <node id="11" type="Learner" name="Linear Regression (PCR)">
+      <settings><target>Brix</target><predictors>PC1..PC10</predictors></settings>
+    </node>
+    <node id="12" type="Predictor" name="Regression Predictor (PCR)"/>
+    <node id="13" type="Misc" name="Numeric Scorer (PCR)">
+      <settings><expected>R2 = 0.607, RMSE = 0.635 (5-fold CV)</expected></settings>
+    </node>
+    <node id="14" type="Learner" name="PLS Regression (Benchmark, 10 Komp.)">
+      <settings>
+        <implementation>Python-Snippet: sklearn.cross_decomposition.PLSRegression, cross_val_predict, KFold(5, shuffle, seed=42)</implementation>
+        <expected>R2cv = 0.621, RMSECV = 0.623 (Deckung mit Orange 0.622 / Plattform 0.626 innerhalb 0.005)</expected>
+      </settings>
+    </node>
+    <node id="15" type="Visualizer" name="Scatter Plot (Vorhersage vs. Referenz)"/>
+    <node id="16" type="Sink" name="CSV Writer (Kennzahlen)">
+      <settings><file>output/knime_reference/knime_reference_results.json</file></settings>
+    </node>
+  </nodes>
+  <connections>
+    <connection from="1" out="0" to="2" in="0"/>
+    <connection from="2" out="0" to="3" in="0"/>
+    <connection from="3" out="0" to="4" in="0"/>
+    <connection from="4" out="0" to="5" in="0"/>
+    <connection from="4" out="0" to="6" in="0"/>
+    <connection from="6" out="0" to="7" in="0"/>
+    <connection from="7" out="0" to="8" in="0"/>
+    <connection from="8" out="0" to="9" in="0"/>
+    <connection from="6" out="0" to="10" in="0"/>
+    <connection from="10" out="0" to="11" in="0"/>
+    <connection from="11" out="0" to="12" in="0"/>
+    <connection from="12" out="0" to="13" in="0"/>
+    <connection from="4" out="0" to="14" in="0"/>
+    <connection from="14" out="0" to="15" in="0"/>
+    <connection from="9" out="0" to="16" in="0"/>
+    <connection from="13" out="0" to="16" in="0"/>
+    <connection from="14" out="0" to="16" in="0"/>
+  </connections>
+</workflow>
