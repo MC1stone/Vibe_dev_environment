@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n %}{% load chart_explanations %}
 {% block title %}{% trans "Kalibrierung" %} - NIR-IP{% endblock %}
 
 {% block content %}
@@ -58,6 +58,23 @@
                             {% elif key == 'rmsecv_vs_n' %}{% trans "RMSECV vs. Anzahl Komponenten" %}
                             {% else %}{{ key }}{% endif %}
                         </figcaption>
+                        <div class="accordion accordion-flush mt-1" id="calExpl-{{ entry.project_id }}-{{ forloop.counter }}">
+                            <div class="accordion-item border-0">
+                                <h3 class="accordion-header">
+                                    <button class="accordion-button collapsed py-1 small" type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#calExplBody-{{ entry.project_id }}-{{ forloop.counter }}">
+                                        <i class="bi bi-info-circle me-1"></i>{% trans "Was zeigt dieses Diagramm?" %}
+                                    </button>
+                                </h3>
+                                <div id="calExplBody-{{ entry.project_id }}-{{ forloop.counter }}" class="accordion-collapse collapse"
+                                     data-bs-parent="#calExpl-{{ entry.project_id }}-{{ forloop.counter }}">
+                                    <div class="accordion-body small text-muted">
+                                        {{ key|chart_explanation }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </figure>
                 </div>
                 {% endfor %}

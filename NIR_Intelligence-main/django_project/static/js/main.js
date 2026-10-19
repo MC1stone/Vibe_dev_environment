@@ -825,10 +825,27 @@ window.nirFusionCalibration = function (projectId) {
                     html += `<p class="small mb-2">${nirGettext(sig.interpretation)}</p>`;
                 }
             }
+            // OP66: Brix-Vorhersage vs. gemessene Brix des Fusionsprojekts
+            // als EIN kombinierter Datensatz - Streudiagramm (Base64-PNG)
+            // inkl. aufklappbarer Erklaerung unter der Grafik.
+            const fusedName = (data.fusion_project_name || '').trim();
+            const fusedCal = (fusedName && cals[fusedName]) || null;
+            const pvrChart = fusedCal && fusedCal.pvr_chart;
+            if (pvrChart) {
+                html += `<div class="mt-2"><h6 class="mb-1"><i class="bi bi-graph-up me-1"></i>` +
+                    nirGettext('Vorhersage vs. Messwert (kombinierter Datensatz)') + `</h6>` +
+                    `<img src="${pvrChart}" alt="${nirGettext('Vorhersage vs. Messwert')}" class="img-fluid border rounded" style="max-height:420px;">`;
+                const expl = (window.NIR_CHART_EXPLANATIONS && window.NIR_CHART_EXPLANATIONS.predicted_vs_measured) ||
+                    nirGettext('Vorhergesagte gegen gemessene Referenzwerte; Punkte auf der Diagonalen bedeuten perfekte Vorhersage.');
+                html += `<details class="small text-muted mt-1"><summary>${nirGettext('Was zeigt dieses Diagramm?')}</summary>${expl}</details></div>`;
+            }
             if (data.conclusion) {
                 html += `<div class="alert alert-info py-2 mb-0 small"><strong>${nirGettext('Fazit:')}</strong> ${nirGettext(data.conclusion)}</div>`;
             }
             box.innerHTML = html;
+            if (data.discussion_summary && window.nirChatbotContext) {
+                window.nirChatbotContext.fusion_discussion = data.discussion_summary;
+            }
         })
         .catch(err => {
             box.innerHTML = `<div class="alert alert-danger py-2 mb-0">${nirGettext('Kalibrationsvergleich fehlgeschlagen:')} ${err.message || err}</div>`;

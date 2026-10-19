@@ -202,6 +202,34 @@ def _tolerance_levels_from_targets(targets) -> tuple:
         return (0.5, 1.0)
 
 
+def _pvr_chart(pvr: Dict[str, Any], target_name: Optional[str],
+                dataset_label: str) -> Optional[str]:
+    """OP66: Predicted-vs-Reference-Streudiagramm des Fusionsprojekts
+    als EIN kombiniertem Datensatz - Wiederverwendung des produktiven
+    Chart-Builders (calibration_charts._ref_vs_pred, OP20-Vertrag:
+    Base64-PNG-Data-URL, ehrliches None wenn matplotlib fehlt) - keine
+    Kopie der Chart-Logik."""
+    try:
+        from services.calibration_charts import _ref_vs_pred
+        pairs = pvr.get('pairs') or []
+        if not pairs:
+            return None
+        import numpy as np
+        y_true = np.asarray([p['reference'] for p in pairs], dtype=float)
+        y_pred = np.asarray([p['predicted'] for p in pairs], dtype=float)
+        name = target_name or 'Zielwert'
+        note = (f'{dataset_label}: {pvr.get("n", len(pairs))} Messungen, '
+                f'{pvr.get("cv_folds", "?")}-fold CV')
+        return _ref_vs_pred(y_true, y_pred,
+                            r2=1.0 - (pvr.get('rmse') or 0.0) ** 2
+                            / (float(np.var(y_true)) or 1.0),
+                            rmse=float(pvr.get('rmse') or 0.0),
+                            method_note=note, target_name=name)
+    except Exception:
+        logger.exception('Fusion PVR chart failed (non-fatal)')
+        return None
+
+
 def _predicted_vs_reference(samples, targets, cv_folds: int = 5,
                              tolerance_levels=None) -> Optional[Dict[str, Any]]:
     """OP64 (PO-Feedback): Kreuzvalidierung so dargestellt, wie es fachlich
@@ -294,7 +322,7 @@ def comparative_calibration(fused_project, source_projects) -> Dict[str, Any]:
         else:
             pvr = _predicted_vs_reference(entry['data']['samples'],
                                            entry['data']['targets'])
-            result['calibrations'][label] = {
+            entry_result = {
                 'status': 'ok',
                 'n_samples': len(entry['data']['samples']),
                 'mean_r2': fit.get('mean_r2'),
@@ -303,6 +331,12 @@ def comparative_calibration(fused_project, source_projects) -> Dict[str, Any]:
                 'cv_folds': fit.get('cv_folds'),
                 'predicted_vs_reference': pvr,
             }
+            # OP66: Brix-Chart nur fuer das Fusionsprojekt - der
+            # kombinierte Datensatz als EIN Datensatz dargestellt.
+            if pid == str(fused_project.id) and pvr:
+                entry_result['pvr_chart'] = _pvr_chart(
+                    pvr, result.get('target_name'), label)
+            result['calibrations'][label] = entry_result
     # Residuen-Analyse + Signifikanz-Test auf den kombinierten Daten
     fused_data = _collect_samples(fused_project)
     source_data = [_collect_samples(p) for p in source_projects]
@@ -361,4 +395,29 @@ def comparative_calibration(fused_project, source_projects) -> Dict[str, Any]:
             'Kalibrationen.')
     if significance.get('interpretation'):
         result['conclusion'] += ' ' + significance['interpretation']
+    # OP66: Klartext-Diskussionszusammenfassung fuer den Chatbot (MO 10):
+    # eine kompakte, kontextfaehige Beschreibung des Fusionsergebnisses,
+    # die die Nutzer-KI-Diskussion ohne erneute Rechnung anreichert.
+    fused_cal = result['calibrations'].get(fused_label)
+    if fused_cal and fused_cal.get('status') == 'ok':
+        parts = [
+            f'Method: {COMPARISON_METHOD}; Zielwert: '
+            f'{result.get("target_name") or "Referenzgroesse"}.',
+        ]
+        for label, c in result['calibrations'].items():
+            if c.get('status') == 'ok':
+                pvr = c.get('predicted_vs_reference') or {}
+                hit = pvr.get('hits_within_tolerance') or {}
+                first_hit = next(iter(hit.values()), None)
+                parts.append(
+                    f'{label}: n={c.get("n_samples")}, '
+                    f'R2/CV={c.get("mean_r2")}, RMSECV={c.get("rmse_cv")}, '
+                    f'MAE={pvr.get("mae")}'
+                    + (f', Trefferquote +-{first_hit["tolerance"]}: '
+                       f'{first_hit["n_within"]}/{pvr.get("n")}'
+                       if first_hit else ''))
+            else:
+                parts.append(f'{label}: nicht kalibrierbar.')
+        parts.append('Fazit: ' + result['conclusion'])
+        result['discussion_summary'] = ' '.join(parts)
     return result

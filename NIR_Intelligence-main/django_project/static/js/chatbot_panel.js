@@ -36,10 +36,21 @@
         typing.hidden = false;
 
         const ctx = window.nirChatbotContext || {};
+        // OP66: Fusionsergebnisse (Kalibrationsvergleich, Signifikanz-Test,
+        // Fazit) als Dokument in die KI-Diskussion einspeisen - die
+        // Nutzer-KI-Diskussion bezieht sich damit auf die tatsaechlich
+        // gerechnete kombinierte Analyse.
+        const documents = (ctx.documents || []).slice();
+        if (ctx.fusion_discussion) {
+            documents.push({
+                source: 'fusion_calibration',
+                text: String(ctx.fusion_discussion)
+            });
+        }
         const payload = {
             question: question,
             analysis_results: ctx.analysis_results || [],
-            documents: ctx.documents || [],
+            documents: documents,
             history: state.history.slice(-6)
         };
 
