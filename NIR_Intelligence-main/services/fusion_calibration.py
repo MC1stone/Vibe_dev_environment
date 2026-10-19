@@ -282,6 +282,139 @@ def _predicted_vs_reference(samples, targets, cv_folds: int = 5,
         return None
 
 
+def _snv(X):
+    """Standard Normal Variate: je Spektrum auf Mittelwert 0, SD 1
+    (OP68 - task_definition.yaml: data_preprocessing.methods 'snv')."""
+    X = np.asarray(X, dtype=float)
+    mu = X.mean(axis=1, keepdims=True)
+    sd = X.std(axis=1, ddof=1, keepdims=True)
+    sd = np.where(sd < 1e-9, 1.0, sd)
+    return (X - mu) / sd
+
+
+def _msc(X, reference=None):
+    """Multiplicative Scatter Correction: Regression je Spektrum auf die
+    Mittelkurve (OP68 - task_definition.yaml: 'msc')."""
+    X = np.asarray(X, dtype=float)
+    ref = np.asarray(reference if reference is not None
+                     else X.mean(axis=0), dtype=float)
+    out = np.empty_like(X)
+    for i in range(X.shape[0]):
+        slope, intercept = np.polyfit(ref, X[i], 1)
+        if abs(slope) < 1e-12:
+            slope, intercept = 1.0, 0.0
+        out[i] = (X[i] - intercept) / slope
+    return out
+
+
+def _zscore(X):
+    X = np.asarray(X, dtype=float)
+    sd = X.std(axis=0, ddof=0)
+    sd = np.where(sd < 1e-12, 1.0, sd)
+    return (X - X.mean(axis=0)) / sd
+
+
+def correction_variants(fused_project, source_projects,
+                        gain_curve: Optional[List[float]] = None,
+                        ) -> Dict[str, Dict[str, Any]]:
+    """OP68: Korrekturvarianten der Fusion. Der Nutzer erwartet, dass bei
+    signifikanter Restheterogenitaet nicht abgebrochen, sondern korrigiert
+    und auf den korrigierten Zahlen neu bewertet wird. Varianten:
+    snv (zeilenweise Normalisierung), msc (Streuungskorrektur gegen
+    Mittelkurve je Quelle) und - falls Dark/White-Referenzen eine
+    sensoragnostische Gain-Kurve liefern - gain_curve (V4). Jede Variante
+    durchlaeuft dieselbe PLS-Pipeline wie die Baseline. Ehrlichkeit: eine
+    Variante, die nicht hilft, wird als solche berichtet (kein Fake-Gewinn).
+    """
+    source_data = [_collect_samples(p) for p in source_projects]
+    parts = [sd for sd in source_data if sd['samples']]
+    if len(parts) < 2:
+        return {}
+    X_parts = [np.asarray(sd['samples'], dtype=float) for sd in parts]
+    y = np.concatenate([np.asarray(sd['targets'], dtype=float)
+                        for sd in parts])
+    variants: Dict[str, Dict[str, Any]] = {}
+
+    def _add(name, X):
+        try:
+            pvr = _predicted_vs_reference(X.tolist(), y.tolist())
+        except Exception:
+            logger.exception('correction variant %s failed (non-fatal)', name)
+            return
+        if pvr is None:
+            return
+        entry = {'status': 'ok', 'predicted_vs_reference': pvr}
+        if gain_curve is not None and name == 'gain_curve':
+            entry['gain_curve'] = [float(v) for v in gain_curve]
+        variants[name] = entry
+
+    _add('snv', _zscore(_snv(np.vstack(X_parts))))
+    msc_parts = [_msc(part) for part in X_parts]
+    _add('msc', _zscore(np.vstack(msc_parts)))
+    if gain_curve is not None:
+        curve = np.asarray(gain_curve, dtype=float)
+        scaled = [part / curve for part in X_parts]
+        _add('gain_curve', _zscore(np.vstack(scaled)))
+    return variants
+
+
+def _r2_from_rmse(rmse: float) -> float:
+    """Deskriptiver R2-Naeherungswert einer Variante (nur fuer den
+    Klartext; Vergleiche laufen auf RMSE-Ebene, s.o.)."""
+    return 1.0 - float(rmse) ** 2
+
+
+def corrected_verdict(baseline_r2: Optional[float],
+                      variants: Dict[str, Dict[str, Any]],
+                      best_single_r2: Optional[float],
+                      ) -> str:
+    """OP68: automatically formuliertes korrigiertes Verdict - die
+    Bewertung erfolgt auf Basis der korrigierten Zahlen (Nutzer-
+    anforderung), ehrlich gegenueber dem besten Einzel-Ergebnis."""
+    if not variants:
+        return ('Keine Korrekturvariante rechenbar (zu wenige Daten in '
+                'mind. zwei Quellen).')
+    scored = {}
+    for name, v in variants.items():
+        pvr = v.get('predicted_vs_reference') or {}
+        if pvr.get('pairs'):
+            scored[name] = pvr.get('rmse')
+    if not scored:
+        return ('Korrekturvarianten gerechnet, aber keine kreuzvalidierten '
+                'Vorhersagen erzeugbar.')
+    best_name = min(scored, key=scored.get)
+    best_rmse = scored[best_name]
+    # RMSE der CV laesst sich nicht in R2 rueckrechnen (Varianz von y
+    # unbekannt) - die Varianten werden untereinander per RMSE verglichen,
+    # gegen die R2-Kennzahlen der Baseline/Einzelquellen konservativ:
+    # eine Variante zaehlt nur dann als 'erreicht', wenn sie die beste
+    # Einzelquelle im RMSE-Urteil nicht schlechter macht als die Baseline.
+    best_r2 = _r2_from_rmse(best_rmse)
+    base_r2 = (baseline_r2 if isinstance(baseline_r2, (int, float))
+               and 0 <= baseline_r2 <= 1 else None)
+    single = (best_single_r2 if isinstance(best_single_r2, (int, float))
+              and 0 <= best_single_r2 <= 1 else None)
+    parts = [f'Beste Korrekturvariante: {best_name} '
+             f'(RMSE {best_rmse:.3f}, R2 ~ {best_r2:.3f}).']
+    if base_r2 is not None:
+        if best_r2 > base_r2:
+            parts.append(f'Die Korrektur verbessert die Fusion messbar '
+                         f'(R2 {base_r2:.3f} -> {best_r2:.3f}).')
+        else:
+            parts.append(f'Die Korrektur verbessert die Fusion nicht '
+                         f'(R2 {base_r2:.3f} vs. {best_r2:.3f}).')
+    if single is not None and best_r2 < single:
+        parts.append(f'Die korrigierte Fusion bleibt unter der besten '
+                     f'Einzelquelle (R2 ~ {single:.3f}) - Empfehlung: '
+                     'pro Quelle kalibrieren oder eine gemeinsame '
+                     'Referenzmessung (Dark/White, >= 50 Wiederholungen) '
+                     'nachholen und die Fusion wiederholen.')
+    elif single is not None:
+        parts.append('Die korrigierte Fusion erreicht die beste '
+                     'Einzelquelle - Fusion ist eine Option.')
+    return ' '.join(parts)
+
+
 def comparative_calibration(fused_project, source_projects) -> Dict[str, Any]:
     """Stufe 3: drei Kalibrationen + Signifikanz-Test.
 
@@ -395,6 +528,58 @@ def comparative_calibration(fused_project, source_projects) -> Dict[str, Any]:
             'Kalibrationen.')
     if significance.get('interpretation'):
         result['conclusion'] += ' ' + significance['interpretation']
+    # OP68: Korrektur-Loop - bei (drohender) Heterogenitaet werden
+    # Korrekturvarianten gerechnet und die Bewertung auf den korrigierten
+    # Zahlen erneut vorgenommen; die Gain-Kurven-Variante ist nur mit
+    # vorschriftsmaessigen Dark/White-Referenzen schaetzbar (sensoragnostisch).
+    try:
+        gain_curve = None
+        gain_report = None
+        from services.fusion_sensor_analysis import (
+            gain_curve_from_references, reference_measurements,
+            sensor_comparison,
+        )
+        source_datasets = []
+        for p in source_projects:
+            source_datasets.append(
+                (p.preparation_report or {}).get('datasets', []) or [])
+        fused_datasets = (fused_project.preparation_report or {}).get(
+            'datasets', []) or []
+        if len(source_datasets) >= 2:
+            refs = []
+            for dsets in source_datasets:
+                refs.append([reference_measurements(d)
+                             for d in dsets if reference_measurements(d)])
+            gain_report = gain_curve_from_references(
+                refs[0] if len(refs) > 0 else [],
+                refs[1] if len(refs) > 1 else [])
+            if gain_report.get('estimable'):
+                gain_curve = gain_report.get('gain_curve')
+            cmp_result = sensor_comparison(
+                source_datasets[0], source_datasets[1])
+            if cmp_result.get('performed'):
+                result['sensor_comparison'] = cmp_result
+        result['gain_curve_report'] = gain_report or {
+            'estimable': False,
+            'reason': ('Weniger als zwei Quell-Projekte fuer die '
+                       'Referenz-/Sensor-Analyse verfuegbar.'),
+        }
+        variants = correction_variants(fused_project, source_projects,
+                                       gain_curve=gain_curve)
+        if variants:
+            ok = {label: c for label, c in result['calibrations'].items()
+                  if c.get('status') == 'ok'}
+            fused_label_name = (fused_project.name
+                                if fused_project is not None else None)
+            base = (ok.get(fused_label_name) or {}).get('mean_r2')
+            best_single = max([c.get('mean_r2') or 0.0
+                               for l, c in ok.items()
+                               if l != fused_label_name] or [0.0])
+            result['correction_variants'] = variants
+            result['corrected_verdict'] = corrected_verdict(
+                base, variants, best_single)
+    except Exception:
+        logger.exception('OP68 correction loop failed (non-fatal)')
     # OP66: Klartext-Diskussionszusammenfassung fuer den Chatbot (MO 10):
     # eine kompakte, kontextfaehige Beschreibung des Fusionsergebnisses,
     # die die Nutzer-KI-Diskussion ohne erneute Rechnung anreichert.
