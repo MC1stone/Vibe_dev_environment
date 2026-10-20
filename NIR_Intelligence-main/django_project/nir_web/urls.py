@@ -25,6 +25,7 @@ from api.views import (
     ChangePasswordView,
     UserPreferencesView,
     DashboardView, HealthCheckView,
+    OllamaStatusView, OllamaStartView,
     CustomLoginView, CustomRegisterView, CustomLogoutView,
     FlowerAIAuthView, ILIASAuthView, FederatedLearningView
 )
@@ -85,6 +86,8 @@ urlpatterns = [
     
     # System
     path('api/health/', HealthCheckView.as_view(), name='health-check'),
+    path('api/ollama/status/', OllamaStatusView.as_view(), name='ollama-status'),
+    path('api/ollama/start/', OllamaStartView.as_view(), name='ollama-start'),
     path('health/', HealthCheckView.as_view(), name='health-check-root'),
     
     
