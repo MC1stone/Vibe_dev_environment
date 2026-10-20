@@ -890,9 +890,45 @@ window.nirFusionMetadataSuggestions = function (projectId) {
 // Vorschlag in das Metadaten-Editor-Feld uebernehmen (Input fuellen,
 // Speichern bleibt Nutzer-Entscheidung im Editor).
 window.nirApplyMetadataSuggestion = function (projectId, fileId, field, value) {
-    document.querySelectorAll('[data-file-id]').forEach(container => {
+    // OP73-Fix: der Metadaten-Editor rendert Inputs mit name="<feld>"
+    // (OHNE meta_-Praefix, project_report.html) - der alte Selector
+    // [name="meta_<feld>"] traf nie ein Feld, der uebernommene Wert
+    // verschwand still (Nutzer-Befund 2026-10-20: Eingaben wirkungslos).
+    let applied = false;
+    document.querySelectorAll('.metadata-form').forEach(container => {
         if (container.dataset.fileId !== fileId) return;
-        const input = container.querySelector(`[name="meta_${field}"]`);
-        if (input) { input.value = value; input.classList.add('is-warning'); }
+        let input = container.querySelector(`[name="${field}"]`);
+        if (!input) {
+            // Feld existiert noch nicht im Editor (z. B. eigener Feldname
+            // aus dem Abgleich): dynamisch hinzufuegen, damit der
+            // Uebernehmen-Wert nicht verloren geht.
+            const row = container.querySelector('.row.g-2');
+            if (row) {
+                const col = document.createElement('div');
+                col.className = 'col-md-4';
+                const label = document.createElement('label');
+                label.className = 'form-label small';
+                label.textContent = field;
+                input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control form-control-sm';
+                input.name = field;
+                input.placeholder = field + ' ergänzen';
+                col.appendChild(label);
+                col.appendChild(input);
+                row.appendChild(col);
+            }
+        }
+        if (input) {
+            input.value = value;
+            input.classList.add('is-warning');
+            applied = true;
+            const status = container.querySelector('.metadata-status');
+            if (status) {
+                status.textContent = 'Übernommen: ' + field + ' — „Metadaten speichern" klicken, um endgültig zu speichern.';
+                status.classList.add('text-warning');
+            }
+        }
     });
+    return applied;
 };
