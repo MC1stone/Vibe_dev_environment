@@ -1189,8 +1189,8 @@ class OllamaStartView(APIView):
         if not request.user.is_staff:
             return Response({'success': False,
                               'reason': 'staff_required',
-                              'error': 'Nur Staff (Admin) darf Ollama '
-                                       'aus der App starten.'},
+                              'error': gettext('Nur Staff (Admin) darf Ollama '
+                                              'aus der App starten.')},
                             status=status.HTTP_403_FORBIDDEN)
         from services.ollama_status import start_ollama
         result = start_ollama(started_by_staff=True)
