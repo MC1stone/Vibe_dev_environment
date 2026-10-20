@@ -347,6 +347,21 @@
                                 <button type="submit" class="btn btn-sm btn-primary mt-3">
                                     <i class="bi bi-save me-1"></i>{% trans "Metadaten speichern" %}
                                 </button>
+                            <!-- OP77b: Versuchsfrage/Wuensche am bestehenden Projekt -->
+                            <div class="mt-3 p-2 border rounded bg-light-subtle">
+                                <label for="analysisWishesExisting" class="form-label small fw-bold">
+                                    <i class="bi bi-question-circle me-1"></i>{% trans "Versuchsfrage / Analyse-Wünsche" %}
+                                </label>
+                                <textarea class="form-control form-control-sm" id="analysisWishesExisting" rows="2"
+                                          placeholder="{% trans "z. B. '5 Reifeklassen der Tomaten bilden' – wird als Zusatz-Analyse ausgeführt" %}">{{ preparation.user_options.analysis_wishes|default:'' }}</textarea>
+                                {% if preparation.user_options.analysis_wishes %}
+                                <div class="small text-muted mt-1">{% trans "Aktiver Wunsch:" %} <code>{{ preparation.user_options.analysis_wishes }}</code></div>
+                                {% endif %}
+                                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="btnSaveWishes">
+                                    <i class="bi bi-stars me-1"></i>{% trans "Wunsch übernehmen & Aufbereitung neu ausführen" %}
+                                </button>
+                                <span id="wishesStatus" class="small ms-2"></span>
+                            </div>
                                 <span class="metadata-status text-muted small ms-2"></span>
                             </form>
                         </div>
@@ -812,6 +827,36 @@ document.addEventListener('click', function (ev) {
             }).then(function (r) { return r.json(); }).then(function (d) { if (d.success) { status.textContent = 'Gespeichert ✓ (Score: ' + d.metadata_quality_score + ')'; setTimeout(function(){ location.reload(); }, 800); } else { status.textContent = 'Fehler: ' + (d.error || 'unbekannt'); } }).catch(function (e) { status.textContent = 'Netzwerkfehler: ' + e; });
         });
     });
+    // OP77b: Versuchsfrage/Wuensche am bestehenden Projekt speichern
+    var btnWishes = document.getElementById('btnSaveWishes');
+    if (btnWishes) {
+      btnWishes.addEventListener('click', function () {
+        var ta = document.getElementById('analysisWishesExisting');
+        var status = document.getElementById('wishesStatus');
+        var text = (ta.value || '').trim();
+        btnWishes.disabled = true;
+        status.textContent = 'Wunsch wird übernommen, Aufbereitung läuft …';
+        fetch('/projects/' + projectId + '/metadata/', {
+          method: 'POST', credentials: 'same-origin',
+          headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+          body: JSON.stringify({analysis_wishes: text, metadata: {}})
+        }).then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.success) {
+              status.textContent = 'Übernommen ✓' +
+                (d.wishes_applied ? ' – Wunsch erkannt, Aufbereitung aktualisiert.' : ' – Wunsch nicht erkannt (siehe offene Fragen im Bericht).');
+              setTimeout(function () { location.reload(); }, 900);
+            } else {
+              status.textContent = 'Fehler: ' + (d.error || 'unbekannt');
+              btnWishes.disabled = false;
+            }
+          })
+          .catch(function (e) {
+            status.textContent = 'Netzwerkfehler: ' + e;
+            btnWishes.disabled = false;
+          });
+      });
+    }
     document.getElementById('btn-reingest').addEventListener('click', function () {
         var btn = document.getElementById('btn-reingest');
         btn.disabled = true;
