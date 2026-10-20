@@ -253,8 +253,13 @@
                 {% endfor %}
                 {% for ref in sensor_reference.unknown %}
                 <li>
+                    {% if ref.device_known %}
+                    <span class="badge bg-info text-dark">{% trans "Gerät bekannt (keine Dokumente)" %}</span>
+                    {% else %}
                     <span class="badge bg-warning text-dark">{% trans "nicht in der Datenbank" %}</span>
+                    {% endif %}
                     <strong>{{ ref.sensor }}</strong>
+                    {% if ref.device_known %}{% trans "(registrierter Adapter: {{ ref.model_id }})" %}{% endif %}
                     &ndash; {% trans "Keine Dokumente hinterlegt. Dokumente (Datenblatt, Handbuch, Kalibrierung) hochladen:" %}
                     <a href="{{ ref.sensor_url }}#documents">{% trans "Sensorseite / Dokumente" %}</a>
                 </li>
@@ -788,7 +793,10 @@ document.addEventListener('click', function (ev) {
             ev.preventDefault();
             var fields = {};
             new FormData(form).forEach(function (value, key) {
-                if (key) fields[key] = value;
+                // OP74-Fix: CSRF-Formularfeld ist KEIN Metadatum -
+                // sonst landet das Sicherheitstoken als 'Feld' im
+                // Metadaten-Report (Nutzer-Befund 2026-10-20).
+                if (key && key !== 'csrfmiddlewaretoken') fields[key] = value;
             });
             var saveBtn = form.querySelector('button[type="submit"]');
             if (saveBtn) { saveBtn.disabled = true; }

@@ -106,10 +106,24 @@ def check_sensor_reference(instrument_types: List[str],
             continue
         seen.add(name)
         docs = list(sensor_documents(name, user))
+        # OP74: Alias-Aufloesung auch hier - 'Triad' ist als Geraet
+        # bekannt (sparkfun_triad), nur die DOKUMENTE fehlen. Die
+        # Anzeige trennt das ehrlich (Nutzer-Befund 2026-10-20:
+        # 'nicht in der Datenbank' suggerierte ein unbekanntes Geraet,
+        # waehrend die Einstellungs-Box denselben Sensor korrekt
+        # erkannte).
+        model_id = None
+        try:
+            from services.sensor_catalog import match_model_id
+            model_id = match_model_id(name)
+        except Exception:
+            model_id = None
         entry: Dict[str, Any] = {
             "sensor": name,
+            "model_id": model_id,
+            "device_known": bool(model_id),
             "document_count": len(docs),
-            "sensor_url": f"/projects/sensors/{name}/",
+            "sensor_url": f"/projects/sensors/{model_id or name}/",
         }
         # OP56: known settings for this sensor are offered as one-click
         # suggestions for missing metadata fields (e.g. SparkFun Triad).
