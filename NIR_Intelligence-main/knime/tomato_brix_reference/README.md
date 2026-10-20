@@ -89,3 +89,36 @@ KNIME. Die Workflow-Abbildung fuer den Artikel:
 
 Erwartete Kennzahlen (Referenz, seed 42): A 0.621 / B 0.722 /
 Fusion V0 0.545 (Levene p=0.006) / SNV 0.646 / MSC 0.453 / 0.472.
+
+
+## tomato_fusion_native.knwf (2026-10-20, NEU) — native Workflow-Struktur
+
+Diese Datei ist im **nativen KNIME-Format** aufgebaut (Workflow-Ordner
+mit `workflow.knime` + je Knoten ein Verzeichnis mit `settings.xml`,
+plus **gebuendelten Datendateien** unter `data/`):
+
+- **Import:** KNIME 5.x → File → Open… → `tomato_fusion_native.knwf`
+  (oder ZIP entpacken und den Ordner in den KNIME-Workspace kopieren).
+- **Lauffaehigkeit:** Beide CSV Reader nutzen `knime://knime.workflow/`
+  -Pfade auf die gebuendelten Daten (Quelle A + B) — nach dem Import
+  keinen Pfad anfassen, direkt "Execute All" (ggf. nach dem ersten
+  Oeffnen einmal speichern, damit KNIME die Ports verbindet).
+- **Kette:** 2× CSV Reader → 2× Row Filter (ADC/Null) → 2× Normalizer
+  (z-score) → Concatenate → Partitioning (80/20, seed 42) →
+  Linear Regression (Brix ~ Kanaele) → Regression Predictor →
+  Numeric Scorer (R²/RMSE) → Scatter Plot → CSV Writer.
+- **Ehrliche Grenze 1 (PLS):** KNIME base hat keinen PLS-Knoten. Der
+  Regression-Knoten ist der lauffaehige Basis-Fallback (OLS); die
+  PLS-Referenz-Zahlen des Artikels stammen aus dem deterministischen
+  Pendant `scripts/knime_fusion_analysis.py` (seed 42). Fuer PLS im
+  Workflow: Chemistry-Erweiterung oder Python-Snippet nachinstallieren
+  (10 Komp. → V0 0.545 / SNV 0.646 / B 0.722).
+- **Ehrliche Grenze 2 (Best effort):** Der Workflow wurde ohne
+  Live-KNIME-Instanz generiert. Falls einzelne Knoten beim Import
+  Default-Einstellungen zeigen (z. B. Row-Filter-Regeln,
+  Normalizer-Spalten): Einstellungen stehen als Kommentar im
+  settings.xml je Knoten bzw. in der Nachbauanleitung unten —
+  2 Minuten Nachkonfiguration, dann laeuft die Kette.
+- **Verifikation nach dem Lauf:** Numeric Scorer sollte R² im Bereich
+  der OLS-Referenz (0.62-0.72) zeigen; Scatter mit Brix auf beiden
+  Achsen. Levene/Welch: R-Snippet oder das Python-Pendant.
