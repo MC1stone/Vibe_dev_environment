@@ -409,8 +409,40 @@ class StatisticalAnalysisAgent(BaseAgent):
             # bleibt unveraendert (kein hartcodierter Analysepfad).
             analysis_mode = context.get("analysis_mode")
             class_labels = context.get("class_labels")
+            # OP77: Klassen-Zusatzanalyse aus Nutzer-Wuenschen (generisch,
+            # nicht hardcodiert) - laeuft ZUSAETZLICH zur Regression
+            # (OP75-Guard unveraendert): die vom Ingest aus dem Messziel
+            # gebildeten Klassen werden klassifiziert, die Konfusions-
+            # matrix landet im Bericht.
+            derived_cls = context.get("derived_classification")
             classification_methods = self.config.get(
                 "classification_methods", ["LDA", "kNN", "PCA"])
+            if (derived_cls and analysis_mode != "classification"
+                    and context.get("classification_samples")):
+                # Zusatzpfad: Reifeklassen (zeilensynchrone Samples vom
+                # Ingest) - Konfusionsmatrix 'wahre Klasse x
+                # vorhergesagte Klasse' zusaetzlich zur Regression.
+                cls_samples = context.get("classification_samples")
+                cls_labels = context.get("classification_labels") \
+                    or class_labels
+                if cls_labels and len(cls_samples) == len(cls_labels):
+                    try:
+                        r_labels = [str(l) for l in cls_labels]
+                        matrix_rows = np.asarray(cls_samples, dtype=float)
+                        cls_outcome = self._run_lda_classification(
+                            matrix_rows, r_labels)
+                        if cls_outcome.get("status") == "ok":
+                            cls_outcome["analysis"] = "derived_classes"
+                            results.setdefault("derived_class_analysis", {})\
+                                ["LDA"] = cls_outcome
+                            self.journal_entry(
+                                "schlussfolgerung",
+                                f"Klassen-Zusatzanalyse (Nutzer-Wunsch): "
+                                f"LDA {cls_outcome.get('cv_accuracy_mean')}",
+                                iteration=0)
+                    except Exception:
+                        self.logger.exception(
+                            "derived class analysis failed (non-fatal)")
             if analysis_mode == "classification" and class_labels:
                 labels = list(class_labels)
                 if len(labels) != matrix.shape[0]:

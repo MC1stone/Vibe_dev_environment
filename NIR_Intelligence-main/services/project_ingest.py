@@ -1528,6 +1528,13 @@ def build_preparation_report(project) -> Dict[str, Any]:
     applied per file before the assessment.
     """
     overrides = getattr(project, "metadata_overrides", None) or {}
+    # OP77: Freie Analyse-Wuensche (vom Upload) - generisch ausgefuehrt
+    # an jedem Datensatz; nicht verstandene Wuensche werden ehrlich als
+    # offene Fragen sichtbar (kein stills Ignorieren, kein Hardcoding).
+    user_options = (getattr(project, "preparation_report", None) or {}) \
+        .get("user_options") or {}
+    parsed_wishes = user_options.get("parsed_wishes") or []
+    unparsed_wishes = user_options.get("unparsed_wishes") or []
     datasets = []
     for f in project.files.all():
         entries = ingest_file(f)
@@ -1543,6 +1550,33 @@ def build_preparation_report(project) -> Dict[str, Any]:
                     if entry.get("file_id") == str(f.id) else {}
             apply_metadata_overrides(entry, entry_overrides)
             datasets.append(entry)
+    if parsed_wishes:
+        try:
+            from services.analysis_wishes import apply_wishes_to_dataset
+            applied = []
+            for dataset in datasets:
+                if dataset.get("usable") \
+                        and dataset.get("calibration_samples") \
+                        and dataset.get("reference_values"):
+                    done = apply_wishes_to_dataset(dataset, parsed_wishes)
+                    if done:
+                        applied.extend(done)
+            if applied:
+                logger.info("analysis wishes applied: %s",
+                            "; ".join(applied))
+        except Exception:
+            logger.exception("analysis wish pass failed (non-fatal)")
+    if unparsed_wishes:
+        # Ehrlichkeit: nicht verstandene Wuensche sichtbar machen
+        for dataset in datasets:
+            if dataset.get("usable"):
+                questions = dataset.setdefault("open_questions", [])
+                for w in unparsed_wishes:
+                    questions.append(
+                        f"Analyse-Wunsch erkannt, aber noch nicht "
+                        f"unterstuetzt: '{w}'. Beschreiben Sie ihn im "
+                        "Metadaten-Editor oder als Kommentar - die "
+                        "Plattform lernt dazu.")
     _propagate_project_metadata(datasets)
     metadata_assessment = _assess_metadata(datasets)
     for dataset in datasets:
