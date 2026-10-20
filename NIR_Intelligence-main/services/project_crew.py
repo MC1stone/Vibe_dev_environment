@@ -621,6 +621,13 @@ def run_project_crew(project) -> Dict[str, Any]:
                           dataset['metadata']['class_label_column']}
                          if (dataset.get('metadata') or {}).get('class_label_column')
                          else {}),
+                      # OP77: Klassen-Zusatzanalyse aus Nutzer-Wuenschen
+                      # (generisch: '5 Reifeklassen', '3 Feuchtegruppen'
+                      # ... vom Ingest zielagnostisch gebildet, zeilen-
+                      # synchron) - Statistik-Agent klassifiziert
+                      # ZUSAETZLICH zur Regression.
+                      **({'derived_classification': True}
+                         if dataset.get('derived_classes') else {}),
                       **({'reference_values': dataset['reference_values']}
                          if dataset.get('reference_values') else {}),
                       **_meta},

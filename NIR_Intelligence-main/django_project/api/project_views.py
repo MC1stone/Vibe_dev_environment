@@ -749,6 +749,11 @@ class ProjectCreateView(APIView if DRF_AVAILABLE else object):
                             status=status.HTTP_401_UNAUTHORIZED)
         file_ids = request.data.get('file_ids', [])
         name = (request.data.get('name') or '').strip()
+        # OP77: Freie Analyse-Wuensche beim Upload (nicht hardcodiert):
+        # der Nutzer formuliert z. B. '5 Reifeklassen der Tomaten' oder
+        # '3 Feuchtegruppen' - parse_wishes uebersetzt generisch.
+        analysis_wishes_text = str(
+            request.data.get('analysis_wishes') or '').strip()[:2000]
         if not file_ids:
             return Response({'success': False, 'error': gettext('file_ids required')},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -758,9 +763,20 @@ class ProjectCreateView(APIView if DRF_AVAILABLE else object):
                             status=status.HTTP_404_NOT_FOUND)
         if not name:
             name = f"Projekt {files.first().name}"
+        description = request.data.get('description', '')
         project = AnalysisProject.objects.create(user=request.user, name=name,
-                                                 description=request.data.get('description', ''))
+                                                 description=description)
         project.files.set(files)
+        if analysis_wishes_text:
+            from services.analysis_wishes import parse_wishes
+            parsed = parse_wishes(analysis_wishes_text)
+            project.preparation_report = {
+                'user_options': {
+                    'analysis_wishes': analysis_wishes_text,
+                    'parsed_wishes': parsed['wishes'],
+                    'unparsed_wishes': parsed['unparsed'],
+                }}
+            project.save(update_fields=['preparation_report'])
 
         from threading import Thread
         from services.project_ingest import build_preparation_report
