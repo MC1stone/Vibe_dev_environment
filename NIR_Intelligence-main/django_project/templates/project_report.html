@@ -306,11 +306,12 @@
                 {% endif %}
             {% endfor %}
 
-            {% if project.phase == 'drafted' %}
             <!-- OP77b: Versuchsfrage / Analyse-Wuensche - EIGENER,
-                 direkt sichtbarer Abschnitt UEBER dem Metadaten-Editor
-                 (Nutzer-Befund: im Datei-Akkordeon war er unsichtbar
-                 zu suchen) -->
+                 direkt sichtbarer Abschnitt in JEDER Phase (auch
+                 released/completed - Nutzer-Befund: das Panel war nur
+                 bei NEU angelegten Projekten sichtbar, weil es an der
+                 drafted-Bedingung hing). Der Wunsch wirkt auch in
+                 Phase 2/3: Speichern triggert den Reingest. -->
             <div class="card border-info mb-3">
                 <div class="card-body py-2">
                     <label for="analysisWishesExisting" class="form-label fw-bold mb-1">
@@ -328,6 +329,7 @@
                     <span id="wishesStatus" class="small ms-2"></span>
                 </div>
             </div>
+            {% if project.phase == 'drafted' %}
             <!-- Metadata editor (OP13): edit dataset metadata online, no re-upload -->
             <h6 class="mt-4"><i class="bi bi-pencil-square me-1"></i>{% trans "Metadaten online anpassen" %}
                 <span class="text-muted fs-6">(wirkt sofort auf die Metadatenbewertung, kein erneuter Upload nötig)</span></h6>
