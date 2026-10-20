@@ -16,7 +16,7 @@ from django.http import JsonResponse
 from rest_framework_simplejwt.views import TokenRefreshView
 from api.views import CustomTokenObtainPairView
 from api.project_views import CalibrationOverviewView
-from api.dashboard_views import DashboardStartView, IntroSpectroscopyView
+from api.dashboard_views import DashboardStartView
 from api.views import (
     AgentListView, AgentDetailView, AgentExecuteView,
     SpectrumListCreateView, SpectrumRetrieveView,
@@ -90,7 +90,6 @@ urlpatterns = [
     
     # Main Entry Point
     path('', DashboardStartView.as_view(), name='home'),
-    path('intro/spectroscopy/', IntroSpectroscopyView.as_view(), name='intro-spectroscopy'),
     path('dashboard/', TemplateView.as_view(template_name='dashboard_colorful.html'), name='dashboard'),
     path('agents/', user_passes_test(lambda u: u.is_staff, login_url='/login/')(TemplateView.as_view(template_name='agents.html')), name='agents-page'),
     path('spectra/', ensure_csrf_cookie(
@@ -137,7 +136,6 @@ urlpatterns = [
 # language (de) stays unprefixed for backward compatibility (bookmarks, JS links).
 urlpatterns += i18n_patterns(
     path('', DashboardStartView.as_view(), name='home'),
-    path('intro/spectroscopy/', IntroSpectroscopyView.as_view(), name='intro-spectroscopy'),
     path('dashboard/', TemplateView.as_view(template_name='dashboard_colorful.html'), name='dashboard'),
     path('agents/', user_passes_test(lambda u: u.is_staff, login_url='/login/')(TemplateView.as_view(template_name='agents.html')), name='agents-page'),
     path('spectra/', TemplateView.as_view(template_name='spectra.html'), name='spectra-page'),

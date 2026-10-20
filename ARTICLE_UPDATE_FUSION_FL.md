@@ -35,6 +35,29 @@ Herkunftsgruppe (Levene + Welch, scipy).
 | Quelle B einzeln | 30 | 0,980 | 0,531 | 9,0 |
 | **Fusion (kombiniert)** | **60** | **0,997** | **0,203** | **21,6** |
 
+**Gegenprobe an realen Quellen (KNIME-Referenzauswertung, PR #200,
+FUSION_ANALYSIS.md):** derselbe Fusionspfad auf die beiden realen
+Erfassungsläufe angewendet (Quelle A: T4-T5, 2014 Zeilen, 40 Objekte;
+Quelle B: CSV-Export, 1506 Zeilen, 33 Objekte; 0 gemeinsame
+Messobjekte, keine gemeinsame ADC-Skalierungsbrücke):
+
+| Kalibration | n | R²cv | RMSECV | RPD | Treffer ±0,5 / ±1,0 |
+|---|---|---|---|---|---|
+| Quelle A allein | 2014 | 0,621 | 0,623 | 1,63 | 63 % / 90 % |
+| Quelle B allein | 1506 | 0,722 | 0,568 | 1,90 | 66 % / 91 % |
+| **Fusion (global normalisiert)** | 3520 | **0,545** | **0,724** | 1,48 | 51 % / 84 % |
+| Fusion (pro Quelle normalisiert) | 3520 | 0,456 | 0,793 | 1,36 | 47 % / 80 % |
+
+Signifikanztest: Levene p = 0,006, Welch p < 0,001 — hochsignifikante
+Restheterogenität. **Die Fusion verschlechtert messbar** (R²-Verlust
+−0,176 gegen die bessere Quelle); das Resultat ist robust gegen die
+Normalisierungsvariante. Genau das ist der Zweck des
+Artikel-Fusionspfads: er misst pro Quellenpaar, ob Fusion hilft —
+hier lautet die Antwort nein, mit dokumentierter Ursache (getrennte
+Erfassungsläufe ohne Joint-Anchor) und Empfehlung (pro Quelle
+kalibrieren oder gemeinsame Anchor-Messung nachholen, dann Fusion
+wiederholen). Ein negatives Verdict ist ein Ergebnis erster Klasse.
+
 Signifikanz-Test: Levene p = 0,176 (Varianzen gleich), Welch p = 0,933
 (Mittelwerte gleich) — die Zusammenführung ist kalibrationstechnisch
 unproblematisch; das Fazit wird von der Plattform automatisch formuliert.
@@ -121,7 +144,22 @@ Köpfe) — erwartetes, ehrlich dokumentiertes Verhalten des FL2-Adapters.
 > 0.935 and 0.980 for the single sources, with the significance test
 > finding no residual heterogeneity (Levene p = 0.176, Welch p = 0.933).
 > Whether fusion helps is thereby an empirical, per-campaign question that
-> the platform answers with measurements, not an assumption.
+> the platform answers with measurements, not an assumption. Applied to
+> the two real acquisition runs of the proof-of-concept sensor (2014 and
+> 1506 cleaned rows, zero shared objects, no shared scaling bridge), the
+> same fusion path returns a first-class negative verdict: the combined
+> calibration degrades measurably (R²(CV) 0.545 vs. 0.621 and 0.722 for
+> the single sources; RMSECV 0.724), the significance test localizes the
+> cause in significant residual heterogeneity (Levene p = 0.006, Welch
+> p < 0.001 — incompatible ADC scaling across acquisition runs), and the
+> result is robust against the normalization variant (per-source
+> standardization yields 0.456). The recorded recommendation is therefore
+> not to merge these sources, but to calibrate per source or repeat the
+> fusion after a joint anchor measurement (shared white/grey reference
+> and a shared fruit probe). The fusion branch thereby demonstrates both
+> of its intended behaviours on real data: it produces a measured gain
+> when sources are compatible, and a documented refusal with cause when
+> they are not.
 >
 > **A first federated exercise.** The same two-operator split was run as a
 > federated session with Flower-transport semantics: each client trained a
@@ -191,6 +229,12 @@ Köpfe) — erwartetes, ehrlich dokumentiertes Verhalten des FL2-Adapters.
 ## 3. Verifikationsprotokolle
 
 ### 3.1 Offline-Matrizen (CI, alle grün)
+
+Zusätzlich (KNIME-Referenzauswertung, PR #200, CI grün):
+`scripts/knime_reference_validation.py` (PLS 0,621 vs. Orange 0,622 vs.
+Plattform 0,626 — dritte unabhängige Implementierung bestätigt Tabelle 6;
+gruppenweise CV 0,555 belegt die replica_overlap_in_cv-Warnung quantitativ)
+und `scripts/knime_fusion_analysis.py` (Fusions-Ergebnis oben).
 
 | Matrix | Ergebnis |
 |---|---|

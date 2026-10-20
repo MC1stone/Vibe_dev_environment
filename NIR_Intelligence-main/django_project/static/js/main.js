@@ -825,34 +825,6 @@ window.nirFusionCalibration = function (projectId) {
                     html += `<p class="small mb-2">${nirGettext(sig.interpretation)}</p>`;
                 }
             }
-            // OP70: Brix-Band-Matrix (gemessen x geschaetzt) je Kalibration
-            // + am Fusions-Datensatz pro Quell-Datensatz getrennt
-            labels.forEach(label => {
-                const c = cals[label];
-                const pvr = c.predicted_vs_reference || {};
-                const bm = pvr.brix_band_matrix;
-                const chartUrl = c.band_matrix_chart;
-                if (!bm || !bm.matrix) return;
-                const renderMx = (m, title) => {
-                    let h = `<h6 class="mt-2 mb-1"><i class="bi bi-grid-3x3-gap me-1"></i>${nirGettext('Konfusionsmatrix (Brix-Bänder)')}: ${title}</h6>`;
-                    h += '<div class="table-responsive"><table class="table table-sm table-bordered mb-2 small text-center" style="width:auto;"><thead><tr><th>' +
-                        nirGettext('gemessen \ geschaetzt') + '</th>' + bm.labels.map(l => `<th class="small">${l}</th>`).join('') + '</tr></thead><tbody>';
-                    m.forEach((row, i) => {
-                        h += `<tr><th class="small">${bm.labels[i]}</th>` + row.map(v => {
-                            const cls = v === 0 ? 'table-light text-muted' : (bm.labels[i] === bm.labels[row.indexOf(v)] && false ? '' : '');
-                            return `<td class="${v > 0 ? 'table-primary' : 'table-light'}">${v}</td>`;
-                        }).join('') + '</tr>';
-                    });
-                    h += '</tbody></table></div>';
-                    if (chartUrl) h += `<img src="${chartUrl}" alt="${nirGettext('Brix-Band-Matrix')} ${title}" class="img-fluid border rounded mt-1" style="max-height:380px;">`;
-                    return h;
-                };
-                html += renderMx(bm.matrix, label);
-                const perSrc = c.band_matrix_charts_sources || {};
-                Object.keys(perSrc).forEach(src => {
-                    if (perSrc[src]) html += `<img src="${perSrc[src]}" alt="${nirGettext('Brix-Band-Matrix')} ${src}" class="img-fluid border rounded mt-1" style="max-height:380px;">`;
-                });
-            });
             // OP66: Brix-Vorhersage vs. gemessene Brix des Fusionsprojekts
             // als EIN kombinierter Datensatz - Streudiagramm (Base64-PNG)
             // inkl. aufklappbarer Erklaerung unter der Grafik.
@@ -867,80 +839,12 @@ window.nirFusionCalibration = function (projectId) {
                     nirGettext('Vorhergesagte gegen gemessene Referenzwerte; Punkte auf der Diagonalen bedeuten perfekte Vorhersage.');
                 html += `<details class="small text-muted mt-1"><summary>${nirGettext('Was zeigt dieses Diagramm?')}</summary>${expl}</details></div>`;
             }
-            // OP68: Sensor-Vergleich (alle Details) + Korrekturvarianten
-            const cmp = data.sensor_comparison;
-            if (cmp && cmp.performed) {
-                html += `<h6 class="mt-2 mb-1"><i class="bi bi-cpu me-1"></i>${nirGettext('Sensor-Vergleich der Quellen')}</h6>`;
-                html += '<div class="table-responsive"><table class="table table-sm table-striped mb-1 small align-middle"><thead><tr>' +
-                    `<th>${nirGettext('Kanal')}</th><th>Med. A</th><th>Med. B</th><th>B/A</th><th>CV A %</th><th>CV B %</th></tr></thead><tbody>`;
-                (cmp.channels || []).forEach(c => {
-                    const r = c.ratio_b_over_a;
-                    const cls = r == null ? '' : (r > 1.5 || r < 0.67 ? 'text-danger fw-bold' : (r > 1.2 || r < 0.83 ? 'text-warning' : ''));
-                    html += `<tr><td>${c.name}</td><td>${c.median_a?.toFixed?.(0) ?? c.median_a}</td><td>${c.median_b?.toFixed?.(0) ?? c.median_b}</td>` +
-                        `<td class="${cls}">${r != null ? r.toFixed(3) : '—'}</td><td>${c.cv_a_percent != null ? c.cv_a_percent.toFixed(1) : '—'}</td><td>${c.cv_b_percent != null ? c.cv_b_percent.toFixed(1) : '—'}</td></tr>`;
-                });
-                html += '</tbody></table></div>';
-                if (cmp.correlation_structure) {
-                    html += `<p class="small mb-1">${nirGettext('Korrelationsstruktur-Differenz (Sensor-Signatur)')}: ` +
-                        `Ø |Δ| ${cmp.correlation_structure.mean_abs_diff?.toFixed(3)}, max ${cmp.correlation_structure.max_abs_diff?.toFixed(3)} ` +
-                        `${nirGettext('bei')} ${cmp.correlation_structure.max_channel}. ${nirGettext('Signifikant unterschiedliche Kanäle (p<0.001)')}: ${cmp.n_significant_channels}/18.</p>`;
-                }
-                if (cmp.confounding) {
-                    html += `<div class="alert ${cmp.confounding.median_iqr > 0.5 ? 'alert-warning' : 'alert-success'} py-2 small mb-2">${nirGettext(cmp.confounding.interpretation)} ` +
-                        `(IQR max ${cmp.confounding.max_iqr?.toFixed(2)} ${nirGettext('bei')} ${cmp.confounding.max_iqr_channel})</div>`;
-                }
-            }
-            const gcr = data.gain_curve_report;
-            if (gcr) {
-                if (gcr.estimable) {
-                    html += `<div class="alert alert-success py-2 small mb-2"><i class="bi bi-check-circle me-1"></i>` +
-                        nirGettext('Gain-Kurve aus Dark/White-Referenzen geschätzt (sensoragnostisch)') +
-                        ` — ${nirGettext(gcr.confidence_note || '')}</div>`;
-                } else {
-                    html += `<div class="alert alert-secondary py-2 small mb-2"><i class="bi bi-info-circle me-1"></i>` +
-                        `${nirGettext('Gain-Kurve nicht schätzbar:')} ${nirGettext(gcr.reason || '')} ` +
-                        `${nirGettext('Vertrag: Dark/White-Abgleich mit ≥ 50 Wiederholungen je Quelle, als Referenzmessung deklariert (nur Fusionsprojekte).')}</div>`;
-                }
-            }
-            const cv = data.correction_variants || {};
-            const cvNames = Object.keys(cv);
-            if (cvNames.length) {
-                html += `<h6 class="mt-2 mb-1"><i class="bi bi-sliders me-1"></i>${nirGettext('Korrekturvarianten (Bewertung auf Basis korrigierter Zahlen)')}</h6>`;
-                html += '<div class="table-responsive"><table class="table table-sm table-striped mb-2 small align-middle"><thead><tr>' +
-                    `<th>${nirGettext('Variante')}</th><th>n</th><th>RMSE</th><th>MAE</th><th>${nirGettext('Treffer ±0,5')}</th><th>${nirGettext('Treffer ±1,0')}</th></tr></thead><tbody>`;
-                cvNames.forEach(name => {
-                    const pvr = cv[name].predicted_vs_reference || {};
-                    const hits = pvr.hits_within_tolerance || {};
-                    const first = Object.values(hits)[0];
-                    const last = Object.values(hits)[Object.values(hits).length - 1];
-                    html += `<tr><td><strong>${name}</strong></td><td>${pvr.n ?? '—'}</td><td>${pvr.rmse != null ? Number(pvr.rmse).toFixed(3) : '—'}</td>` +
-                        `<td>${pvr.mae != null ? Number(pvr.mae).toFixed(3) : '—'}</td>` +
-                        `<td>${first ? (100 * first.ratio).toFixed(0) + ' %' : '—'}</td><td>${last ? (100 * last.ratio).toFixed(0) + ' %' : '—'}</td></tr>`;
-                });
-                html += '</tbody></table></div>';
-                if (data.corrected_verdict) {
-                    html += `<div class="alert alert-info py-2 mb-2 small"><strong>${nirGettext('Korrigiertes Fazit:')}</strong> ${nirGettext(data.corrected_verdict)}</div>`;
-                }
-            }
             if (data.conclusion) {
                 html += `<div class="alert alert-info py-2 mb-0 small"><strong>${nirGettext('Fazit:')}</strong> ${nirGettext(data.conclusion)}</div>`;
             }
             box.innerHTML = html;
             if (data.discussion_summary && window.nirChatbotContext) {
-                let ds = data.discussion_summary;
-                if (data.corrected_verdict) ds += ' Korrigierte Bewertung: ' + data.corrected_verdict;
-                if (data.sensor_comparison && data.sensor_comparison.performed) {
-                    const c = data.sensor_comparison;
-                    ds += ' Sensor-Vergleich: ' + (c.n_significant_channels ?? '?') + ' von ' + (c.channels || []).length + ' Kanaelen signifikant verschieden (p<0.001)';
-                    if (c.correlation_structure) ds += '; Korrelationsstruktur-Differenz max ' + (c.correlation_structure.max_abs_diff ?? '?') + ' bei ' + (c.correlation_structure.max_channel ?? '?');
-                    if (c.confounding) ds += '; ' + c.confounding.interpretation;
-                }
-                if (data.gain_curve_report) {
-                    ds += data.gain_curve_report.estimable
-                        ? '; Gain-Kurve aus Dark/White-Referenzen geschätzt.'
-                        : '; Gain-Kurve nicht schätzbar: ' + (data.gain_curve_report.reason || '');
-                }
-                window.nirChatbotContext.fusion_discussion = ds;
+                window.nirChatbotContext.fusion_discussion = data.discussion_summary;
             }
         })
         .catch(err => {

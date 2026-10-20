@@ -3786,20 +3786,3 @@ msgstr "ausstehend"
 
 msgid "Einstellungen"
 msgstr "Einstellungen"
-
-# OP72: Einfuehrungs-Seite 'Richtig messen' (Quelltext deutsch -> Identity)
-msgid "Einführung: Spektroskopie messen"
-msgstr "Einführung: Spektroskopie messen"
-
-msgid "Einführung: Wie messe ich richtig mit Spektroskopie?"
-msgstr "Einführung: Wie messe ich richtig mit Spektroskopie?"
-
-msgid "Einführung: Richtig messen"
-msgstr "Einführung: Richtig messen"
-
-msgid "Zur Einführung"
-msgstr "Zur Einführung"
-
-msgid "Wie führe ich eine Spektroskopie-Messung durch? Licht, Schwarz/Weiß-Abgleich und Metadaten - für Einsteiger erklärt."
-msgstr "Wie führe ich eine Spektroskopie-Messung durch? Licht, Schwarz/Weiß-Abgleich und Metadaten - für Einsteiger erklärt."
-

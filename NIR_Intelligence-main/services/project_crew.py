@@ -654,37 +654,6 @@ def run_project_crew(project) -> Dict[str, Any]:
         raise ValueError('Crew analysis produced no results')
 
     primary = results[0]
-    # OP71: Warnungen aller Datensaetze fuehren - nicht nur die des
-    # ersten. Rausch-Warnungen ('Noise level X exceeds threshold Y')
-    # werden dabei konsolidiert: nur die HOECHSTE gemeldete Rausch-
-    # warnung bleibt stehen (Nutzer-Befund 2026-10-19: Fusionbericht
-    # zeigte nur den Noise-Level des ersten Datensatzes, obwohl der
-    # des zweiten 3x hoeher war).
-    import re as _re
-    _noise_re = _re.compile(
-        r'Noise level ([0-9.]+) exceeds threshold ([0-9.]+)')
-    all_warnings: list = []
-    _best_noise = None
-    _seen = set()
-    _file_names = [d.get('file_name', '') for d in datasets]
-    for _idx, _res in enumerate(results):
-        _src = (_file_names[_idx] if _idx < len(_file_names)
-                else (_res.sample_id or ''))
-        for _w in (_res.warnings or []):
-            _m = _noise_re.match(str(_w))
-            if _m:
-                _level = float(_m.group(1))
-                _tagged = f'{_w} [{_src}]' if _src else _w
-                if _best_noise is None or _level > _best_noise[0]:
-                    _best_noise = (_level, _tagged)
-                continue
-            if _w not in _seen:
-                _seen.add(_w)
-                all_warnings.append(str(_w))
-    if _best_noise is not None:
-        all_warnings.append(
-            f'{_best_noise[1]} (hoechstes Rauschniveau aller '
-            'Datensaetze)' if len(results) > 1 else _best_noise[1])
     full_series = [{'file_name': d.get('file_name', str(d.get('file_id'))),
                     'wavelengths': d.get('preview', {}).get('wavelengths', []),
                     'intensities': d.get('preview', {}).get('intensities', [])}
@@ -693,7 +662,7 @@ def run_project_crew(project) -> Dict[str, Any]:
         'request_id': primary.request_id,
         'overall_quality_score': primary.overall_quality_score,
         'recommendations': primary.recommendations,
-        'warnings': all_warnings,
+        'warnings': primary.warnings,
         'errors': primary.errors,
         'processing_time': primary.processing_time,
         'datasets_analyzed': len(results),
