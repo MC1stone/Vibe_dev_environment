@@ -51,3 +51,41 @@ Erzeugt `output/knime_reference/knime_reference_results.json` und
 - Kein Anspruch auf ein überlegenes Modell: Die Daten sind zu verrauscht für
   Präzisionskalibration (RPD 1.63); der Beleg gilt der Übereinstimmung der
   Pipelines, nicht der Genauigkeit.
+
+
+## Wichtiger Hinweis zur .knwf-Datei (Korrektur 2026-10-20)
+
+Die `tomato_fusion_analysis.knwf` ist eine **generierte Beschreibung im
+KNIME-XML-Austauschstil** (erzeugt vom NIR-IP-Referenz-Generator), **kein
+in KNIME 5.x autorelier, importierbarer Workflow**: Fuer einen echten
+Import benoetigt KNIME das volle Node-XML (nodeSettingsXML, Node-IDs,
+UI-Koordinaten, exakte Version), das nur eine echte KNIME-Instanz
+erzeugt. Die Datei dokumentiert Knotenkette, Einstellungen und
+Referenz-Kennzahlen - **zum Nachbau in KNIME** (Schritt fuer Schritt,
+siehe unten), nicht zum Direktimport.
+
+**Ehrliche Alternative (vollstaendig ausfuehrbar):**
+`scripts/knime_fusion_analysis.py` ist das deterministische Pendant der
+Knotenkette (identische Logik, seed 42, gleiche Zahlen) und laeuft ohne
+KNIME. Die Workflow-Abbildung fuer den Artikel:
+`article_figures/fig4_knime_workflow.png` (300 dpi) bzw. `.svg`.
+
+## Nachbau in KNIME (5.x) - Schritt fuer Schritt
+
+1. **CSV Reader** x2 (Quelle A: T4-T5_ALLE_mit_Brix_2.txt; Quelle B:
+   Alle_Daten_Brix-CSV) - Semikolon, Header auto.
+2. **Rule-based Row Filter** x2 je Quelle: exclude
+   $[alle Kanaele]$ >= 2147483647 (ADC-Ueberlauf) OR <= 0.
+3. **Normalizer** je Variante: V0 Z-score (spaltenweise) / V1 SNV
+   (zeilenweise) - bzw. **Moving Aggregate** (MSC) fuer V2/V3.
+4. **Concatenate**: beide Quellen als EIN Datensatz, Spalte 'source'.
+5. **X-Partitioner**: 5 folds, shuffle, seed 42.
+6. **PLS Learner** (Python-Snippet: sklearn PLSRegression, 10 Komp.) +
+   **Predictor**.
+7. **Numeric Scorer** (R², RMSE) + **R-Snippet**
+   (car::leveneTest, t.test je Quelle).
+8. **Scatter (JFreeChart)**: Vorhersage vs. Referenz; **Bar Chart**:
+   RMSE je Variante.
+
+Erwartete Kennzahlen (Referenz, seed 42): A 0.621 / B 0.722 /
+Fusion V0 0.545 (Levene p=0.006) / SNV 0.646 / MSC 0.453 / 0.472.

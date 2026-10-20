@@ -80,6 +80,11 @@ What no device in any class ships with is the analytical infrastructure around t
 
 > The external validation was later repeated by a third, independent implementation: a KNIME reference analysis (deterministic node chain, seed 42, executed and documented in the project repository) reproduces the PLS cross-validation at R²cv = 0.621 (vs. platform 0.626, Orange 0.622) and confirms the ADC saturation channels (F_535, R_610), the dominant channel (G_560), and the replicate structure. The group-wise cross-validation proposed by the platform and marked as an open draft item was executed in this reference: R²cv drops from 0.621 (naive) to 0.555 (group-wise by measured object), quantitatively confirming the platform's `replica_overlap_in_cv` warning. Orange and KNIME remain external references only — neither is part of the platform workflow.
 
+🟡 **[Figur einfügen — KNIME-Referenz-Workflow]**
+
+![Figure 1: KNIME reference workflow — tomato Brix fusion analysis with correction variants (node chain as executed; stylized KNIME editor view)](article_figures/fig4_knime_workflow.png)
+*(The repository artifact `tomato_fusion_analysis.knwf` documents the node chain, settings, and reference scores as a generated description — not auto-importable; a deterministic, fully executable counterpart (`scripts/knime_fusion_analysis.py`) reproduces every number without KNIME, and the README provides step-by-step rebuild instructions for KNIME 5.x.)*
+
 ---
 
 ## 3. System Design
@@ -272,7 +277,8 @@ Federation remains the third level of the iterative method (Section 5.6): each a
 | 5 | PLS-Komponentenzahl | Tabelle 6 | gegen Vergleichsbericht prüfen | Checkliste §5 |
 | 6 | Einzelwerte-Kennzeichnung | §6.4/§8 | 0.555 nachtragen; MLP/CNN-Runs deklarieren | Checkliste §6 |
 | 7 | Alt-Text einfügen | §1.3 etc. | unveränderte Alt-Abschnitte aus der Word/PDF-Quelle an „*(… unverändert …)*"-Stellen | konsolidierter Stand 19.10.2026 |
-| 8 | Band-Matrix-Abbildung | §6.7 | Export aus Live-Report + Bildunterschrift | Text steht im Canvas |
+| 8a | KNIME-Workflow-Figur | §2.1 | fig4 einbauen; Ehrlichkeits-Note zur .knwf im Captions/Supp. | Canvas §2.1 |
+| 8b | Band-Matrix-Abbildung | §6.7 | Export aus Live-Report + Bildunterschrift | Text steht im Canvas |
 | 9 | Grafiken final einbauen | §1.3/§6.7 | fig2 (§3), fig1+fig3 (§6.7) — SVG oder PNG | article_figures/ |
 | 10 | Referenzen | Literaturverzeichnis | [1]–[28] + 5 neue Zitate ergänzen | Checkliste §9 |
 | 11 | Danksagung/COI | Ack./Conflicts | Tester ergänzen, Varianten prüfen | Checkliste |
