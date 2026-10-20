@@ -307,6 +307,27 @@
             {% endfor %}
 
             {% if project.phase == 'drafted' %}
+            <!-- OP77b: Versuchsfrage / Analyse-Wuensche - EIGENER,
+                 direkt sichtbarer Abschnitt UEBER dem Metadaten-Editor
+                 (Nutzer-Befund: im Datei-Akkordeon war er unsichtbar
+                 zu suchen) -->
+            <div class="card border-info mb-3">
+                <div class="card-body py-2">
+                    <label for="analysisWishesExisting" class="form-label fw-bold mb-1">
+                        <i class="bi bi-question-circle me-1"></i>{% trans "Versuchsfrage / Analyse-Wünsche" %}
+                    </label>
+                    <div class="text-muted small mb-2">{% trans "Formulieren Sie Ihre Versuchsfrage in freiem Text – z. B. '5 Reifeklassen der Tomaten bilden' oder '3 Feuchtegruppen'. Verstandene Wünsche werden als Zusatz-Analyse ausgeführt." %}</div>
+                    <textarea class="form-control form-control-sm" id="analysisWishesExisting" rows="2"
+                              placeholder="{% trans "z. B. '5 Reifeklassen der Tomaten bilden'" %}">{{ preparation.user_options.analysis_wishes|default:'' }}</textarea>
+                    {% if preparation.user_options.analysis_wishes %}
+                    <div class="small text-muted mt-1">{% trans "Aktiver Wunsch:" %} <code>{{ preparation.user_options.analysis_wishes }}</code></div>
+                    {% endif %}
+                    <button type="button" class="btn btn-sm btn-primary mt-2" id="btnSaveWishes">
+                        <i class="bi bi-stars me-1"></i>{% trans "Wunsch übernehmen & Aufbereitung neu ausführen" %}
+                    </button>
+                    <span id="wishesStatus" class="small ms-2"></span>
+                </div>
+            </div>
             <!-- Metadata editor (OP13): edit dataset metadata online, no re-upload -->
             <h6 class="mt-4"><i class="bi bi-pencil-square me-1"></i>{% trans "Metadaten online anpassen" %}
                 <span class="text-muted fs-6">(wirkt sofort auf die Metadatenbewertung, kein erneuter Upload nötig)</span></h6>
@@ -347,21 +368,6 @@
                                 <button type="submit" class="btn btn-sm btn-primary mt-3">
                                     <i class="bi bi-save me-1"></i>{% trans "Metadaten speichern" %}
                                 </button>
-                            <!-- OP77b: Versuchsfrage/Wuensche am bestehenden Projekt -->
-                            <div class="mt-3 p-2 border rounded bg-light-subtle">
-                                <label for="analysisWishesExisting" class="form-label small fw-bold">
-                                    <i class="bi bi-question-circle me-1"></i>{% trans "Versuchsfrage / Analyse-Wünsche" %}
-                                </label>
-                                <textarea class="form-control form-control-sm" id="analysisWishesExisting" rows="2"
-                                          placeholder="{% trans "z. B. '5 Reifeklassen der Tomaten bilden' – wird als Zusatz-Analyse ausgeführt" %}">{{ preparation.user_options.analysis_wishes|default:'' }}</textarea>
-                                {% if preparation.user_options.analysis_wishes %}
-                                <div class="small text-muted mt-1">{% trans "Aktiver Wunsch:" %} <code>{{ preparation.user_options.analysis_wishes }}</code></div>
-                                {% endif %}
-                                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="btnSaveWishes">
-                                    <i class="bi bi-stars me-1"></i>{% trans "Wunsch übernehmen & Aufbereitung neu ausführen" %}
-                                </button>
-                                <span id="wishesStatus" class="small ms-2"></span>
-                            </div>
                                 <span class="metadata-status text-muted small ms-2"></span>
                             </form>
                         </div>
