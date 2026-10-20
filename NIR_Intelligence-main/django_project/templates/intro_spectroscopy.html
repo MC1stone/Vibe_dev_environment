@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Einführung: Spektroskopie messen" %} - NIR-IP{% endblock %}
+{% block content %}
+<div class="container mt-4" style="max-width: 960px;">
+
+    <h1 class="mb-1"><i class="bi bi-book-half me-2"></i>{% trans "Einführung: Wie messe ich richtig mit Spektroskopie?" %}</h1>
+    <p class="text-muted mb-4">{% trans "Für Einsteiger: Was Sie bei der Messung beachten sollten, welche Lichtverhältnisse nötig sind, wie der Schwarz/Weiß-Abgleich funktioniert und welche Metadaten Sie festhalten sollten. Die Angaben berücksichtigen die Sensoren und Einstellungen aus der Sensor-Datenbank dieser Plattform." %}</p>
+
+    <!-- ===================== 1. Grundprinzip ===================== -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h5 mb-3"><i class="bi bi-lightbulb me-2 text-warning"></i>{% trans "1. Das Grundprinzip in einem Satz" %}</h2>
+            <p class="mb-2">{% trans "Licht trifft auf Ihre Probe (z. B. eine Tomate), ein Teil wird absorbiert und ein Teil reflektiert. Das Spektrometer misst, <strong>wie viel Licht bei jeder Wellenlänge</strong> zurückkommt — dieses „Farbfingerabdruck“-Muster (das Spektrum) verrät etwas über die Zusammensetzung der Probe, z. B. den Zuckergehalt (Brix)." %}</p>
+            <div class="row align-items-center g-3">
+                <div class="col-md-7">
+                    <svg viewBox="0 0 640 190" role="img" aria-label="{% trans 'Illustration: Lampe strahlt auf Tomate, Sensor misst reflektiertes Licht' %}" style="width:100%; height:auto;">
+                        <!-- Lampe -->
+                        <ellipse cx="110" cy="18" rx="55" ry="12" fill="#f7d774" stroke="#b8860b" stroke-width="2"/>
+                        <rect x="85" y="18" width="50" height="10" rx="2" fill="#555"/>
+                        <!-- Lichtstrahlen -->
+                        <g stroke="#ffd54f" stroke-width="3" stroke-dasharray="8,6">
+                            <line x1="105" y1="32" x2="255" y2="105"/>
+                            <line x1="130" y1="32" x2="270" y2="110"/>
+                        </g>
+                        <!-- Tomate -->
+                        <circle cx="300" cy="130" r="42" fill="#d9534f" stroke="#a94442" stroke-width="3"/>
+                        <path d="M300 88 q-14 -14 0 -22 q14 8 0 22" fill="#5cb85c"/>
+                        <!-- reflektierte Strahlen zum Sensor -->
+                        <g stroke="#5bc0de" stroke-width="3" stroke-dasharray="8,6">
+                            <line x1="330" y1="105" x2="480" y2="55"/>
+                            <line x1="335" y1="120" x2="490" y2="70"/>
+                        </g>
+                        <!-- Sensor -->
+                        <rect x="480" y="55" width="90" height="60" rx="8" fill="#0d6efd" opacity="0.85"/>
+                        <circle cx="492" cy="85" r="7" fill="#fff"/>
+                        <text x="525" y="90" text-anchor="middle" font-size="13" fill="#fff" font-family="sans-serif">Spektrometer</text>
+                        <text x="180" y="80" font-size="12" fill="#8a6d3b" font-family="sans-serif">Licht (Lampe/Sonne)</text>
+                        <text x="400" y="150" font-size="12" fill="#247" font-family="sans-serif">reflektiertes Licht → Spektrum</text>
+                    </svg>
+                </div>
+                <div class="col-md-5">
+                    <p class="small mb-1"><i class="bi bi-info-circle me-1"></i>{% trans "Sichtbares Licht: ca. 380–780 nm. Nahinfrarot (NIR): ca. 780–2500 nm. In beiden Regionen absorbieren Moleküle (Pigmente, Zucker, Wasser) charakteristisch — darauf beruht die Messung." %}</p>
+                    <p class="small mb-0">{% trans "Die Spektren-Signale des Sensors sind Rohwerte (ADC-Zahlen) — erst der Vergleich mit Referenzwerten (z. B. Brix aus dem Refraktometer) ergibt eine Kalibration." %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== 2. Lichtverhältnisse ===================== -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h5 mb-3"><i class="bi bi-brightness-high me-2 text-warning"></i>{% trans "2. Licht und Lichtverhältnisse" %}</h2>
+            <p class="mb-2">{% trans "Das wichtigste bei jeder Spektroskopie-Messung: <strong>konsistente Beleuchtung</strong>. Ändert sich das Licht zwischen zwei Messungen, ändert sich auch das Spektrum — und Sie können nicht mehr zwischen Probenunterschied und Lichtunterschied unterscheiden." %}</p>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100 bg-success-subtle">
+                        <h3 class="h6 text-success mb-2"><i class="bi bi-check-circle me-1"></i>{% trans "So geht's richtig" %}</h3>
+                        <ul class="small mb-0">
+                            <li>{% trans "Gleichbleibende Lichtquelle: Nutzen Sie wenn möglich die <strong>eingebaute Beleuchtung</strong> des Sensors (bei Chip-Sensoren meist LED-Onboard) — dann ist das Licht bei jeder Messung identisch." %}</li>
+                            <li>{% trans "Tageslicht meiden: Messen Sie nicht direkt am Fenster; wechselndes Sonnenlicht ist der häufigste Fehler." %}</li>
+                            <li>{% trans "Umgebung dunkel/gleichmäßig halten: keine flackernden Lampen, keine bewegten Schatten." %}</li>
+                            <li>{% trans "Immer gleiche Geometrie: Probenoberfläche, Abstand und Ausrichtung gleich halten." %}</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100 bg-danger-subtle">
+                        <h3 class="h6 text-danger mb-2"><i class="bi bi-x-circle me-1"></i>{% trans "Häufige Fehler" %}</li>
+                            <li>{% trans "Erste Messung am Morgen, zweite am Abend (anderes Licht)" %}</li>
+                            <li>{% trans "Teilweise im Schatten, teilweise in der Sonne gemessen" %}</li>
+                            <li>{% trans "Beleuchtung zwischen zwei Erfassungsläufen umgestellt (auch die Empfindlichkeit/„Gain“ pro Kanal verändert dann alle Werte!)" %}</li>
+                            <li>{% trans "Probe einmal direkt unter der Lampe, einmal am Rand des Lichtflecks" %}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="alert alert-info mt-3 mb-0 small">
+                <i class="bi bi-signpost-2 me-1"></i>
+                {% trans "Warum ist das so wichtig? Wenn zwei Messreihen (z. B. zwei Projekte) unter unterschiedlichem Licht aufgenommen wurden, können die Daten <strong>nicht direkt zusammengeworfen</strong> werden — die Plattform erkennt das im Fusions-Vergleich (Signifikanztest) und meldet die Inkompatibilität. Nur der Schwarz/Weiß-Abgleich (Abschnitt 3) schafft hier eine Brücke." %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== 3. Schwarz/Weiß-Abgleich ===================== -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h5 mb-3"><i class="bi bi-contrast me-2"></i>{% trans "3. Der Schwarz/Weiß-Abgleich (Dark/White-Kalibrierung)" %}</h2>
+            <p class="mb-3">{% trans "Der Abgleich ist die <strong>Brücke zwischen verschiedenen Messungen und sogar verschiedenen Sensoren</strong>. Die Idee: Messen Sie zwei Referenzen — <strong>Schwarz</strong> (kein Licht) und <strong>Weiß</strong> (volle Reflektion) — und rechnen Sie jede eigentliche Messung auf diese Skala um:" %}</p>
+            <div class="text-center mb-3">
+                <code class="fs-6 bg-light border rounded p-2 d-inline-block">Reflexwert = ( Messung − Schwarz ) / ( Weiß − Schwarz )</code>
+            </div>
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <h3 class="h6 mb-2"><span class="badge bg-dark me-1">Schwarz</span> Dark-Referenz</h3>
+                        <p class="small mb-1">{% trans "Sensor mit <strong>abgedunkelter Öffnung</strong> messen (Deckel zu, schwarzes Tuch, dunkler Kasten). Das misst den Dunkelstrom/Offset des Detektors — das Grundrauschen, das auch ohne Licht anliegt." %}</p>
+                        <p class="small text-muted mb-0">{% trans "Praxis-Tipp: Deckel oder lichtdichtes Tuch über die Messöffnung; je dunkler, desto besser." %}</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <h3 class="h6 mb-2"><span class="badge bg-light text-dark border me-1">Weiß</span> White-Referenz</h3>
+                        <p class="small mb-1">{% trans "Sensor auf eine <strong>weiße, diffuse reflektierende Fläche</strong> richten: handelsübliche weiße Referenz (z. B. Kalibrierkachel/Spectralon), notfalls helles, mattes Papier oder eine weiße Keramikfläche. Das entspricht „100 % Licht“." %}</p>
+                        <p class="small text-muted mb-0">{% trans "Praxis-Tipp: gleiche Geometrie wie bei der Probenmessung (Abstand, Winkel)." %}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="row align-items-center g-3">
+                <div class="col-md-5">
+                    <svg viewBox="0 0 260 210" role="img" aria-label="{% trans 'Illustration: Schwarz-Abgleich (Deckel zu) und Weiß-Abgleich (weiße Referenz)' %}" style="width:100%; height:auto;">
+                        <!-- Dark -->
+                        <rect x="20" y="20" width="90" height="60" rx="8" fill="#0d6efd" opacity="0.85"/>
+                        <rect x="50" y="80" width="30" height="16" fill="#222"/>
+                        <text x="65" y="52" text-anchor="middle" font-size="11" fill="#fff" font-family="sans-serif">Sensor</text>
+                        <text x="65" y="108" text-anchor="middle" font-size="11" fill="#333" font-family="sans-serif">Deckel zu (dunkel)</text>
+                        <text x="65" y="122" text-anchor="middle" font-size="10" fill="#888" font-family="sans-serif">→ Schwarz-Wert</text>
+                        <!-- White -->
+                        <rect x="150" y="20" width="90" height="60" rx="8" fill="#0d6efd" opacity="0.85"/>
+                        <rect x="180" y="80" width="30" height="16" fill="#888"/>
+                        <rect x="160" y="96" width="70" height="14" rx="3" fill="#fff" stroke="#ccc"/>
+                        <text x="195" y="52" text-anchor="middle" font-size="11" fill="#fff" font-family="sans-serif">Sensor</text>
+                        <text x="195" y="124" text-anchor="middle" font-size="11" fill="#333" font-family="sans-serif">weiße Referenz</text>
+                        <text x="195" y="138" text-anchor="middle" font-size="10" fill="#888" font-family="sans-serif">→ Weiß-Wert</text>
+                    </svg>
+                </div>
+                <div class="col-md-7">
+                    <ul class="small mb-0">
+                        <li class="mb-2"><strong>{% trans "Wann?" %}</strong> {% trans "Zu Beginn jeder Messsitzung — und immer dann, wenn sich Beleuchtung oder Temperatur merklich ändern." %}</li>
+                        <li class="mb-2"><strong>{% trans "Wie oft?" %}</strong> {% trans "Mehrere Wiederholungen! Die Plattform verlangt für Fusionsprojekte <strong>mindestens 50 Wiederholungen</strong> je Referenz — aus der Streuung der Wiederholungen ergibt sich das Rauschniveau, und aus den White-Werten zweier Sensoren lässt sich die Übertragungskurve („Gain-Kurve“) zwischen ihnen berechnen." %}</li>
+                        <li class="mb-2"><strong>{% trans "In der Plattform anmelden:" %}</strong> {% trans "Legen Sie die Dark- und White-Messungen als eigene Datensätze in Ihrem Projekt ab und deklarieren Sie sie im Metadaten-Editor: <code>reference_type</code> = dark bzw. white, <code>n_repeats</code> = Anzahl der Wiederholungen, <code>reference_artifact</code> = was Sie benutzt haben (z. B. „weiße Referenzkachel“). Erst mit dieser Deklaration kann die Plattform die Gain-Kurve berechnen und Daten aus zwei Erfassungsläufen korrekt zusammenführen." %}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== 4. Metadaten ===================== -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h5 mb-3"><i class="bi bi-journal-text me-2 text-primary"></i>{% trans "4. Welche Metadaten sollten Sie festhalten?" %}</h2>
+            <p class="mb-3">{% trans "Ohne Metadaten ist ein Spektrum ein Jahr später nicht mehr interpretierbar. Die Plattform prüft diese Felder automatisch beim Import (Metadaten-Agent) und fordert fehlende höflich an. Dies sind die wichtigen Angaben — inklusive der Einstellungen, die die Plattform pro Sensor versteht:" %}</p>
+
+            <h3 class="h6 mt-2 mb-2">{% trans "Pflicht (immer angeben)" %}</h3>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle small">
+                    <thead><tr><th style="width: 180px;">{% trans "Feld" %}</th><th>{% trans "Warum wichtig" %}</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>Proben-ID / Messobjekt</code></td><td>{% trans "Welche Frucht/Probe wurde gemessen? Mehrere Messungen derselben Probe teilen sich die ID (Replikate) — die Plattform erkennt daran die Replikatstruktur und schützt vor verfälschten Validierungswerten." %}</td></tr>
+                        <tr><td><code>Referenzwert (z. B. Brix)</code></td><td>{% trans "Der laborseitig gemessene Wahrheitswert (z. B. Refraktometer). Ohne Referenzwerte kann keine Kalibration erstellt werden." %}</td></tr>
+                        <tr><td><code>Datum &amp; Uhrzeit</code></td><td>{% trans "Für Drift-Analyse und Reproduzierbarkeit." %}</td></tr>
+                        <tr><td><code>Instrument / Sensor</code></td><td>{% trans "Welches Gerät? Muss mit der Sensor-Datenbank übereinstimmen (die Plattform ordnet automatisch zu und fragt bei Unklarheiten)." %}</td></tr>
+                        <tr><td><code>Operator</code></td><td>{% trans "Wer hat gemessen? Unterschiedliche Operatoren können systematisch anders messen — für Vergleiche und Fusions-Analysen wichtig." %}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="h6 mt-3 mb-2">{% trans "Mess-Einstellungen (die Plattform versteht diese pro Sensor)" %}</h3>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle small">
+                    <thead><tr><th style="width: 220px;">{% trans "Einstellung" %}</th><th>{% trans "Erklärung für Einsteiger" %}</th></tr></thead>
+                    <tbody>
+                        {% for opt in setting_options %}
+                        <tr>
+                            <td><code>{{ opt.name }}</code>{% if opt.unit %} <span class="text-muted">[{{ opt.unit }}]</span>{% endif %}</td>
+                            <td>{{ opt.description }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-muted">{% trans "Keine Einstellungsoptionen verfügbar — Sensor-Datenbank prüfen." %}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="h6 mt-3 mb-2">{% trans "Empfohlen (gute wissenschaftliche Praxis)" %}</h3>
+            <ul class="small mb-0">
+                <li>{% trans "Umgebungstemperatur und Luftfeuchte (optimal: 15–30 °C, 30–70 %)" %}</li>
+                <li>{% trans "Lichtverhältnisse beschreiben (z. B. „Sensor-LED, Raum abgedunkelt“)" %}</li>
+                <li>{% trans "Ob ein Schwarz/Weiß-Abgleich gemacht wurde (und womit)" %}</li>
+                <li>{% trans "Probenbeschreibung / -vorbereitung (z. B. „unverletzte Tomate, gewaschen, Raumtemperatur“)" %}</li>
+                <li>{% trans "Standort (Garten, Labor, Feld)" %}</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ===================== 5. Ihre Sensoren ===================== -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h5 mb-3"><i class="bi bi-cpu me-2"></i>{% trans "5. Die Sensoren dieser Plattform (aus der Sensor-Datenbank)" %}</h2>
+            <p class="mb-3 small">{% trans "Diese Geräte sind der Plattform bekannt — Kanäle, Wellenlängenbereich und Schnittstelle werden beim Import automatisch erkannt und geprüft. Für einsteigerfreundliches Messen gilt pro Gerät:" %}</p>
+            <div class="row g-3">
+                {% for s in sensors %}
+                <div class="col-md-4">
+                    <div class="border rounded p-3 h-100">
+                        <h3 class="h6 mb-1">{{ s.name }}</h3>
+                        <p class="small text-muted mb-2">{{ s.detector }}</p>
+                        <ul class="small mb-0">
+                            <li><strong>{% trans "Kanäle" %}:</strong> {{ s.channels }}</li>
+                            <li><strong>{% trans "Wellenlängen" %}:</strong> {{ s.range }}</li>
+                            <li><strong>{% trans "Schnittstelle" %}:</strong> {{ s.interface }}</li>
+                        </ul>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12"><p class="text-muted mb-0">{% trans "Keine Sensoren registriert." %}</p></div>
+                {% endfor %}
+            </div>
+            <p class="small text-muted mt-3 mb-0">
+                <i class="bi bi-box-arrow-up-right me-1"></i>
+                {% trans "Vollständige Details, Nutzungsnachweise und Optimierungsvorschläge: " %}
+                <a href="/projects/sensors/">{% trans "Zur Sensor-Datenbank" %}</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- ===================== 6. Schritt-für-Schritt Checkliste ===================== -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h5 mb-3"><i class="bi bi-list-check me-2 text-success"></i>{% trans "6. Checkliste: Ihre erste Messung" %}</h2>
+            <div class="row g-2">
+                {% for step in checklist %}
+                <div class="col-md-6">
+                    <div class="d-flex align-items-start border rounded p-2 h-100">
+                        <span class="badge bg-primary rounded-pill me-2 mt-1 flex-shrink-0">{{ forloop.counter }}</span>
+                        <span class="small">{{ step }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="alert alert-success mt-3 mb-0 small">
+                <i class="bi bi-emoji-smile me-1"></i>
+                {% trans "Das war’s! Messen Sie ruhig mehrere Wiederholungen pro Probe (Replikate verbessern die Qualität), legen Sie die Daten als Projekt an und starten Sie die Analyse — die Plattform prüft Qualität, Metadaten und Struktur ehrlich und sagt Ihnen, was zu verbessern ist." %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
