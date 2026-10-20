@@ -3688,20 +3688,3 @@ msgstr "pending"
 
 msgid "Einstellungen"
 msgstr "Settings"
-
-# OP72: Intro page (translations)
-msgid "Einführung: Spektroskopie messen"
-msgstr "Introduction: Measuring with Spectroscopy"
-
-msgid "Einführung: Wie messe ich richtig mit Spektroskopie?"
-msgstr "Introduction: How do I measure correctly with spectroscopy?"
-
-msgid "Einführung: Richtig messen"
-msgstr "Introduction: Measuring correctly"
-
-msgid "Zur Einführung"
-msgstr "Go to the introduction"
-
-msgid "Wie führe ich eine Spektroskopie-Messung durch? Licht, Schwarz/Weiß-Abgleich und Metadaten - für Einsteiger erklärt."
-msgstr "How do I perform a spectroscopy measurement? Light, dark/white calibration and metadata - explained for beginners."
-

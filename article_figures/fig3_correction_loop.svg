@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 430" font-family="Helvetica,Arial,sans-serif">
+  <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs>
+  <style>.d{fill:#eef4fb;stroke:#2b6cb0;stroke-width:1.5}.k{fill:#fdf3e0;stroke:#b8860b;stroke-width:1.5}.r{fill:#fdeaea;stroke:#c0392b;stroke-width:1.5}.g{fill:#e8f8e8;stroke:#2e7d32;stroke-width:1.5}.t{font-size:12px}.m{font-size:10px;fill:#555}.h{font-size:14px;font-weight:bold}</style>
+  <text x="430" y="24" text-anchor="middle" class="h">Correction Loop on Real Source Pair — Measured Outcome (Section 6.7, Table 9)</text>
+  <rect x="30" y="50" width="180" height="70" class="d" rx="8"/><text x="120" y="78" text-anchor="middle" class="t">Fusion baseline V0</text><text x="120" y="96" text-anchor="middle" class="t">R²cv 0.545</text><text x="120" y="112" text-anchor="middle" class="m">Levene p=0.006</text>
+  <line x1="210" y1="85" x2="250" y2="85" stroke="#333" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <rect x="250" y="50" width="190" height="70" class="k" rx="8"/><text x="345" y="78" text-anchor="middle" class="t">Apply corrections</text><text x="345" y="96" text-anchor="middle" class="m">SNV · MSC per source ·</text><text x="345" y="110" text-anchor="middle" class="m">MSC shared anchor</text>
+  <line x1="440" y1="85" x2="480" y2="85" stroke="#333" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <rect x="480" y="50" width="170" height="70" class="g" rx="8"/><text x="565" y="78" text-anchor="middle" class="t">Best: SNV</text><text x="565" y="96" text-anchor="middle" class="t">R²cv 0.646</text><text x="565" y="112" text-anchor="middle" class="m">hit ±0.5: 51%→60%</text>
+  <rect x="680" y="50" width="150" height="70" class="r" rx="8"/><text x="755" y="78" text-anchor="middle" class="t">MSC variants</text><text x="755" y="96" text-anchor="middle" class="t">0.453 / 0.472</text><text x="755" y="112" text-anchor="middle" class="m">no improvement</text>
+  <line x1="650" y1="70" x2="680" y2="70" stroke="#333" stroke-width="1.2" marker-end="url(#arr2)"/>
+  <rect x="30" y="170" width="380" height="90" class="d" rx="8"/>
+  <text x="220" y="196" text-anchor="middle" class="t" font-weight="bold">Corrected verdict (automatic)</text>
+  <text x="220" y="218" text-anchor="middle" class="m">"SNV improves the fusion measurably (0.545 → 0.646),"</text>
+  <text x="220" y="234" text-anchor="middle" class="m">"remains below the best single source (0.722) —"</text>
+  <text x="220" y="250" text-anchor="middle" class="m">"calibrate per source or acquire reference measurements."</text>
+  <line x1="565" y1="120" x2="565" y2="170" stroke="#333" stroke-width="1.5" marker-end="url(#arr2)"/><line x1="565" y1="170" x2="410" y2="215" stroke="#333" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <rect x="450" y="170" width="380" height="120" class="d" rx="8"/>
+  <text x="640" y="194" text-anchor="middle" class="t" font-weight="bold">Why correction is not enough (measured)</text>
+  <text x="640" y="216" text-anchor="middle" class="m">Levene under SNV: p &lt; 0.001 (stronger, not weaker)</text>
+  <text x="640" y="232" text-anchor="middle" class="m">10/18 channels significantly different · ratio G_560: 0.52</text>
+  <text x="640" y="248" text-anchor="middle" class="m">correlation-structure difference max |Δ|=0.64 at G_560</text>
+  <text x="640" y="264" text-anchor="middle" class="m">gain ↔ sample confounding (object ratio IQR 2.2)</text>
+  <text x="640" y="282" text-anchor="middle" class="m">→ only the reference protocol resolves the confounding</text>
+  <rect x="30" y="310" width="800" height="94" class="k" rx="8"/>
+  <text x="430" y="338" text-anchor="middle" class="t" font-weight="bold">Future work: reference protocol → empirically validated gain correction</text>
+  <text x="430" y="360" text-anchor="middle" class="m">Acquire dark/white references (≥ 50 repetitions per source, declared as metadata)</text>
+  <text x="430" y="376" text-anchor="middle" class="m">→ platform estimates the sensor transfer function radiometrically: (raw − dark)/(white − dark)</text>
+  <text x="430" y="392" text-anchor="middle" class="m">→ gain-curve correction variant → re-run fusion → Table 9 result row (scheduled loop iteration)</text>
+</svg>
