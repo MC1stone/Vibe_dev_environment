@@ -1244,6 +1244,10 @@ class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
                 continue
             merged = dict(overrides.get(str(file_id), {}))
             for key, value in fields.items():
+                # OP74: CSRF-Formularfeld nie als Metadatum uebernehmen
+                # (auch bei alten Clients / anderen Formularen).
+                if str(key).lower() == 'csrfmiddlewaretoken':
+                    continue
                 if len(str(key)) > 64:
                     return Response({'success': False,
                                      'error': gettext('Metadatenfeld zu lang: {}').format(key)},

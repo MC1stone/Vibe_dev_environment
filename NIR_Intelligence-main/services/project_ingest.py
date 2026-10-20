@@ -1076,6 +1076,8 @@ def _ki_forward_questions(entry: Dict[str, Any],
                     "Fehlende Felder: target_name. "
                     "Bitte im Metadaten-Editor ergaenzen.")
 
+        _asked_dedup = set()
+
         topics = [
             ("sensor",
              ("instrument_type", "instrument_model", "serial_number"),
@@ -1149,6 +1151,19 @@ def _ki_forward_questions(entry: Dict[str, Any],
             known_part = (f" Bekannt ist bereits: "
                          f"{', '.join(f'{f}={metadata[f]}' for f in present)}."
                          if present else "")
+            # OP74: Fragetext defensiv normalisieren (Antwort muss
+            # mit Grossbuchstaben beginnen - Nutzer-Befund 2026-10-20:
+            # 'itte geben Sie uns...' statt 'Bitte geben Sie uns...').
+            question = question.strip()
+            if question and question[0].islower():
+                question = question[0].upper() + question[1:]
+            # OP74: Deduplizierung - dieselbe Fachfrage (Thema +
+            # fehlende Felder) nur einmal pro Datensatz (Befund:
+            # fast identische Sensor-Frage doppelt im Bericht).
+            dedup_key = (topic, tuple(sorted(missing)))
+            if dedup_key in _asked_dedup:
+                continue
+            _asked_dedup.add(dedup_key)
             questions.append(
                 f"KI-Frage zum Thema '{topic}'{std_part}: {question} "
                 f"Fehlende Felder: {fields_part}.{known_part} "
@@ -1383,6 +1398,9 @@ def _sync_recommended_aliases(metadata: Dict[str, Any]) -> None:
         return
 
 
+_NON_METADATA_KEYS = {'csrfmiddlewaretoken', 'csrf_token'}
+
+
 def apply_metadata_overrides(entry: Dict[str, Any], overrides: Dict[str, Any]) -> None:
     """Merge user-entered metadata overrides (OP13) into a dataset entry.
 
@@ -1391,10 +1409,13 @@ def apply_metadata_overrides(entry: Dict[str, Any], overrides: Dict[str, Any]) -
     """
     if not overrides:
         return
-    merged = dict(entry.get("metadata") or {})
+    merged = {k: v for k, v in (entry.get("metadata") or {}).items()
+              if str(k).lower() not in _NON_METADATA_KEYS}
     applied = []
     for key, value in (overrides or {}).items():
         if value in (None, ""):
+            continue
+        if str(key).lower() in _NON_METADATA_KEYS:
             continue
         merged[key] = value
         applied.append(key)
