@@ -140,5 +140,32 @@ r4 = client.get('/en/intro/spectroscopy/')
 check("T3h i18n-Pfad /en/intro/spectroscopy/ erreichbar",
       r4.status_code == 200, f"status {r4.status_code}")
 
+# ---------------------------------------------------------------------------
+# T4: OP72-Nachtrag - Sensor-Dropdown (wachsende Sensor-Datenbank)
+# ---------------------------------------------------------------------------
+tpl_src2 = tpl_path.read_text("utf-8")
+check("T4a Dropdown vorhanden (sensorSelect)",
+      "sensorSelect" in tpl_src2 and "<select" in tpl_src2)
+check("T4b Optionen aus der Sensor-DB (Loop ueber alle Sensoren)",
+      "{% for s in sensors %}" in tpl_src2
+      and "value=\"{{ s.model_id }}\"" in tpl_src2)
+check("T4c Auswahl via Query-Parameter (onchange ?sensor=)",
+      "?sensor=" in tpl_src2 and "encodeURIComponent" in tpl_src2)
+check("T4d Detail-Panel des gewaehlten Sensors",
+      "selected_sensor.model_id" in tpl_src2
+      and "selected_sensor.channels" in tpl_src2)
+check("T4e View liefert selected_sensor (Default: erster Sensor)",
+      "selected_sensor = sensors[0]" in views_path.read_text("utf-8"))
+
+r_sel = client.get(url + '?sensor=sparkfun_triad')
+html_sel = r_sel.content.decode()
+check("T4f Auswahl rendert 200", r_sel.status_code == 200)
+check("T4g gewaehlter Sensor im Dropdown markiert (selected)",
+      'value="sparkfun_triad" selected' in html_sel)
+check("T4h Triad-Detail angezeigt (18 Kanaele)",
+      "Sparkfun Triad" in html_sel and "18" in html_sel)
+check("T4i Default (ohne Parameter) zeigt ersten Sensor",
+      client.get(url).content.decode().count("col-md-4") >= 1)
+
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)

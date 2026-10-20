@@ -187,24 +187,33 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <h2 class="h5 mb-3"><i class="bi bi-cpu me-2"></i>{% trans "5. Die Sensoren dieser Plattform (aus der Sensor-Datenbank)" %}</h2>
-            <p class="mb-3 small">{% trans "Diese Geräte sind der Plattform bekannt — Kanäle, Wellenlängenbereich und Schnittstelle werden beim Import automatisch erkannt und geprüft. Für einsteigerfreundliches Messen gilt pro Gerät:" %}</p>
-            <div class="row g-3">
-                {% for s in sensors %}
-                <div class="col-md-4">
-                    <div class="border rounded p-3 h-100">
-                        <h3 class="h6 mb-1">{{ s.name }}</h3>
-                        <p class="small text-muted mb-2">{{ s.detector }}</p>
-                        <ul class="small mb-0">
-                            <li><strong>{% trans "Kanäle" %}:</strong> {{ s.channels }}</li>
-                            <li><strong>{% trans "Wellenlängen" %}:</strong> {{ s.range }}</li>
-                            <li><strong>{% trans "Schnittstelle" %}:</strong> {{ s.interface }}</li>
-                        </ul>
-                    </div>
+            <p class="mb-2 small">{% trans "Wählen Sie Ihren Sensor aus — die Liste enthält alle Geräte aus der Sensor-Datenbank und wächst mit jedem neu registrierten Sensor:" %}</p>
+            <div class="row g-2 align-items-end mb-3">
+                <div class="col-md-6">
+                    <label for="sensorSelect" class="form-label small fw-bold mb-1">{% trans "Mein Sensor:" %}</label>
+                    <select class="form-select" id="sensorSelect"
+                            onchange="window.location.href='?sensor=' + encodeURIComponent(this.value);">
+                        {% for s in sensors %}
+                        <option value="{{ s.model_id }}"{% if selected_sensor and selected_sensor.model_id == s.model_id %} selected{% endif %}>{{ s.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-                {% empty %}
-                <div class="col-12"><p class="text-muted mb-0">{% trans "Keine Sensoren registriert." %}</p></div>
-                {% endfor %}
             </div>
+            {% if selected_sensor %}
+            <div class="border rounded p-3 bg-light-subtle">
+                <h3 class="h6 mb-1">{{ selected_sensor.name }}</h3>
+                <p class="small text-muted mb-2">{{ selected_sensor.detector }}</p>
+                <div class="row g-2 small">
+                    <div class="col-md-4"><strong>{% trans "Kanäle" %}:</strong> {{ selected_sensor.channels }}</div>
+                    <div class="col-md-4"><strong>{% trans "Wellenlängen" %}:</strong> {{ selected_sensor.range }}</div>
+                    <div class="col-md-4"><strong>{% trans "Schnittstelle" %}:</strong> {{ selected_sensor.interface }}</div>
+                </div>
+                {% if selected_sensor.description %}<p class="small mb-1 mt-2">{{ selected_sensor.description }}</p>{% endif %}
+                {% if selected_sensor.extra %}<p class="small text-muted mb-0">{{ selected_sensor.extra }}</p>{% endif %}
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">{% trans "Keine Sensoren registriert." %}</p>
+            {% endif %}
             <p class="small text-muted mt-3 mb-0">
                 <i class="bi bi-box-arrow-up-right me-1"></i>
                 {% trans "Vollständige Details, Nutzungsnachweise und Optimierungsvorschläge: " %}

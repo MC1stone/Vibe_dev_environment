@@ -66,6 +66,7 @@ class IntroSpectroscopyView(TemplateView):
                 caps = r.get('capabilities') or {}
                 meta = caps.get('metadata') or {}
                 sensors.append({
+                    'model_id': str(r.get('model_id', '')),
                     'name': (r.get('display_name')
                              or str(r.get('model_id', '')).replace('_', ' ')
                              .title()),
@@ -79,11 +80,32 @@ class IntroSpectroscopyView(TemplateView):
                                + ' nm')
                               if caps.get('wavelength_range_nm') else '-'),
                     'interface': caps.get('interface_type', '-') or '-',
+                    'description': (str(meta.get('description', '')
+                                       or caps.get('description', ''))
+                                    or ('Selbstbau-Spektrometer '
+                                        if str(r.get('model_id')) ==
+                                        'diy_matchbox' else '')),
+                    'extra': ', '.join(
+                        f'{k}: {v}' for k, v in meta.items()
+                        if k not in ('sensors', 'num_channels',
+                                     'description')
+                        and not isinstance(v, (list, dict)))[:160],
                 })
             setting_options = data.get('setting_options') or []
         except Exception:
             sensors = []
             setting_options = []
+        # OP72-Nachtrag: Sensor-Auswahl per Dropdown - die Liste in der
+        # Sensor-Datenbank waechst ueber die Zeit; Auswahl per Query-
+        # Parameter (?sensor=<model_id>), Default = erster Sensor.
+        selected = request.GET.get('sensor') or ''
+        selected_sensor = None
+        for s_ in sensors:
+            if s_['model_id'] == selected:
+                selected_sensor = s_
+                break
+        if selected_sensor is None and sensors:
+            selected_sensor = sensors[0]
         checklist = [
             ('Beleuchtung festlegen: eingebaute Sensor-LED einschalten, '
              'Raum gleichmäßig beleuchten, direktes Sonnenlicht vermeiden.'),
@@ -106,6 +128,7 @@ class IntroSpectroscopyView(TemplateView):
         context = {
             'page_title': 'Einführung Spektroskopie',
             'sensors': sensors,
+            'selected_sensor': selected_sensor,
             'setting_options': setting_options,
             'checklist': checklist,
         }
