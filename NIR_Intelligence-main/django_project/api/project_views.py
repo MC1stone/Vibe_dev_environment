@@ -1239,7 +1239,33 @@ class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
                 'error': gettext('Project already released'),
                 'message': gettext('Metadaten können nur vor der Freigabe angepasst werden.'),
             }, status=status.HTTP_409_CONFLICT)
+        # OP77b: Analyse-Wuensche koennen auch am BESTEHENDEN Projekt
+        # angebracht werden (Nutzer-Befund: 'Wo kann ich meine
+        # Versuchsfrage anbringen?' - nicht nur beim Upload).
+        wishes_text = str(request.data.get('analysis_wishes') or '').strip()[:2000]
         metadata = request.data.get('metadata')
+        if wishes_text:
+            from services.analysis_wishes import parse_wishes
+            parsed = parse_wishes(wishes_text)
+            report = (project.preparation_report or {})
+            opts = report.setdefault('user_options', {})
+            opts['analysis_wishes'] = wishes_text
+            opts['parsed_wishes'] = parsed['wishes']
+            opts['unparsed_wishes'] = parsed['unparsed']
+            project.preparation_report = report
+            project.save(update_fields=['preparation_report', 'updated_at'])
+            if not isinstance(metadata, dict) or not metadata:
+                # Nur Wunsch gesetzt, keine Felder - direkt neu aufbauen
+                from services.project_ingest import build_preparation_report
+                rebuilt = build_preparation_report(project)
+                return Response({
+                    'success': True,
+                    'wishes_applied': bool(parsed['wishes']),
+                    'wishes_unparsed': parsed['unparsed'],
+                    'metadata_quality_score': rebuilt.get(
+                        'metadata_quality', {}).get('overall_quality_score'),
+                    'report_url': f'/projects/{project.id}/',
+                })
         if not isinstance(metadata, dict) or not metadata:
             return Response({'success': False, 'error': gettext('metadata dict required')},
                             status=status.HTTP_400_BAD_REQUEST)

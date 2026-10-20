@@ -1595,6 +1595,10 @@ def build_preparation_report(project) -> Dict[str, Any]:
         "usable_dataset_count": usable_count,
         "total_dataset_count": len(datasets),
         "ki_status": _ki_llm_status(),
+        # OP77b: Nutzer-Optionen (Analyse-Wuensche) ueberleben den
+        # Reingest - sonst waere ein Wunsch nach 'Aufbereitung erneut
+        # ausfuehren' verloren.
+        "user_options": user_options,
     }
     # OP53: sensor database reference check - does the sensor used in
     # this new project have a reference entry (documents) in the sensor
