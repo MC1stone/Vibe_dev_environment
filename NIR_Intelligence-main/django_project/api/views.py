@@ -1166,3 +1166,33 @@ class FileUploadView(APIView):
             logger.error(f"Error parsing spectrum file: {e}")
 
         return metadata
+
+class OllamaStatusView(APIView):
+    """OP76: Ollama-Status fuer die Statuszeile in der App - zuallererst
+    geklaert, eald die KI irgendetwas tun soll (Nutzer-Befund
+    2026-10-20). Ehrlich: server-erreichbar? Modell vorhanden?"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from services.ollama_status import ollama_status
+        return Response(ollama_status())
+
+
+class OllamaStartView(APIView):
+    """OP76: Ollama aus der App aktivieren (Staff-only): Container-
+    Neustart + Modell-Sicherung, mit ehrlichem Protokoll."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not request.user.is_staff:
+            return Response({'success': False,
+                              'reason': 'staff_required',
+                              'error': gettext('Nur Staff (Admin) darf Ollama '
+                                              'aus der App starten.')},
+                            status=status.HTTP_403_FORBIDDEN)
+        from services.ollama_status import start_ollama
+        result = start_ollama(started_by_staff=True)
+        return Response(result)
+
