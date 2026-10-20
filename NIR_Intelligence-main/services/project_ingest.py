@@ -316,19 +316,53 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
     # Klassen-Labels werden fuer Klassifikations-Samples mitgefuehrt.
     class_label_column = None
     class_labels = None
+    _pseudo_class_note = None
     analysis_mode = 'regression' if target_name else 'unsupervised'
     if text_reference_columns:
         # Text-Label-Spalte (Sorte/Probe) hat Vorrang: Kategorien sind der
         # fachliche Zweck des Versuchs (z.B. Kaffeesorten unterscheiden).
-        best_text = max(text_reference_columns, key=lambda r: r['unique_values'])
-        class_label_column = best_text['name']
-        class_labels = df[class_label_column].astype(str).unique().tolist()
-        analysis_mode = 'classification'
+        # OP75: gilt nur OHNE eindeutiges Kalibrationsziel - mit Ziel
+        # (z. B. Brix) ist Regression der Analyse-Zweck; das Text-Label
+        # bleibt als Spalte erhalten, kapiert aber nicht den Modus.
+        if target_name:
+            best_text = max(text_reference_columns,
+                            key=lambda r: r['unique_values'])
+            _pseudo_class_note = (
+                f"Text-Spalte '{best_text['name']}' wirkt wie ein "
+                f"Klassen-Label, aber die Datei hat ein eindeutiges "
+                f"Messziel ('{target_name}') - der Analysemodus bleibt "
+                f"Regression. Soll '{best_text['name']}' dennoch als "
+                f"Klassen-Label verwendet werden?")
+            analysis_mode = 'regression'
+        else:
+            best_text = max(text_reference_columns,
+                            key=lambda r: r['unique_values'])
+            class_label_column = best_text['name']
+            class_labels = df[class_label_column].astype(str).unique().tolist()
+            analysis_mode = 'classification'
     elif reference_columns:
         for ref in reference_columns:
             values = df[ref['name']].astype(str)
             num_unique = values.nunique()
             if 2 <= num_unique <= 30 and values.str.len().mean() <= 40:
+                # OP75 (Nutzer-Befund 2026-10-20): Wenn die Datei bereits
+                # ein gueltiges KALIBRATIONSZIEL hat (target_name + Referenz-
+                # werte, z. B. Brix), ist der Analyse-Zweck eindeutig eine
+                # Regression - eine zusaetzliche numerische Spalte mit
+                # wenigen Werten (z. B. Temp0, eine Temperatur) ist KEIN
+                # Klassen-Label. Der Modus wird nicht gekapert; die
+                # Beobachtung wird als offene KI-Frage in der App
+                # sichtbar gemacht statt still entschieden.
+                if target_name:
+                    _pseudo_class_note = (
+                        f"Numerische Spalte '{ref['name']}' mit "
+                        f"{num_unique} Werten wirkt wie eine Kategorie, "
+                        f"aber die Datei hat ein eindeutiges Messziel "
+                        f"('{target_name}') - der Analysemodus bleibt "
+                        f"Regression. Soll '{ref['name']}' dennoch als "
+                        f"Klassen-Label verwendet werden?")
+                    analysis_mode = 'regression'
+                    break
                 class_label_column = str(ref['name'])
                 class_labels = values.unique().tolist()
                 analysis_mode = 'classification'
@@ -372,6 +406,8 @@ def _ingest_wide_format(file_record, file_path: str, wide: Dict[str, Any]) -> Di
         **({'classification_samples': classification_samples,
             'classification_labels': classification_labels}
            if classification_samples else {}),
+        **({'open_questions': [_pseudo_class_note]}
+           if _pseudo_class_note else {}),
         'metadata': {
             **wide.get('preamble_metadata', {}),
             'channel_count': len(series),
