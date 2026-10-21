@@ -852,7 +852,8 @@ document.addEventListener('click', function (ev) {
           .then(function (d) {
             if (d.success) {
               status.textContent = 'Übernommen ✓' +
-                (d.wishes_applied ? ' – Wunsch erkannt, Aufbereitung aktualisiert.' : ' – Wunsch nicht erkannt (siehe offene Fragen im Bericht).');
+                (d.wishes_applied ? ' – Wunsch erkannt.' : ' – Wunsch nicht erkannt (siehe offene Fragen im Bericht).') +
+                ' Aufbereitung läuft im Hintergrund – die Seite lädt neu und zeigt den Fortschritt …';
               setTimeout(function () { location.reload(); }, 900);
             } else {
               status.textContent = 'Fehler: ' + (d.error || 'unbekannt');

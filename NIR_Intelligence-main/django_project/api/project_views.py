@@ -1233,17 +1233,23 @@ class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
             return Response({'success': False, 'error': gettext('Authentication required')},
                             status=status.HTTP_401_UNAUTHORIZED)
         project = _get_project(project_id, request.user)
-        if project.phase != 'drafted':
+        # OP77b: Analyse-Wuensche koennen auch am BESTEHENDEN Projekt
+        # angebracht werden (Nutzer-Befund: 'Wo kann ich meine
+        # Versuchsfrage anbringen?' - nicht nur beim Upload) - auch in
+        # released/completed: der Wunsch wirkt ueber den Reingest, das
+        # Projekt kehrt dafuer in die Vorbereitung zurueck (wie beim
+        # Reingest-Button). Nur der Metadaten-Editor bleibt drafted-only.
+        wishes_text = str(request.data.get('analysis_wishes') or '').strip()[:2000]
+        metadata = request.data.get('metadata')
+        if not wishes_text and project.phase != 'drafted':
             return Response({
                 'success': False,
                 'error': gettext('Project already released'),
                 'message': gettext('Metadaten können nur vor der Freigabe angepasst werden.'),
             }, status=status.HTTP_409_CONFLICT)
-        # OP77b: Analyse-Wuensche koennen auch am BESTEHENDEN Projekt
-        # angebracht werden (Nutzer-Befund: 'Wo kann ich meine
-        # Versuchsfrage anbringen?' - nicht nur beim Upload).
-        wishes_text = str(request.data.get('analysis_wishes') or '').strip()[:2000]
-        metadata = request.data.get('metadata')
+        if wishes_text and project.phase != 'drafted':
+            project.phase = 'drafted'
+            project.save(update_fields=['phase', 'updated_at'])
         if wishes_text:
             from services.analysis_wishes import parse_wishes
             parsed = parse_wishes(wishes_text)
@@ -1255,15 +1261,49 @@ class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
             project.preparation_report = report
             project.save(update_fields=['preparation_report', 'updated_at'])
             if not isinstance(metadata, dict) or not metadata:
-                # Nur Wunsch gesetzt, keine Felder - direkt neu aufbauen
-                from services.project_ingest import build_preparation_report
-                rebuilt = build_preparation_report(project)
+                # Nur Wunsch gesetzt, keine Felder - Aufbereitung im
+                # HINTERGRUND neu aufbauen (OP55-Muster wie beim
+                # Projekt-Anlegen): der synchrone Lauf blockte den
+                # Request still, der Nutzer sah nicht, dass die
+                # Aufbereitung laeuft (Nutzer-Befund 2026-10-21). Die
+                # Detailseite zeigt nach dem Reload die Fortschritts-
+                # karte 'Datenaufbereitung laeuft...' mit Polling.
+                report.pop('datasets', None)
+                report.pop('preparation_error', None)
+                project.preparation_report = report
+                project.save(update_fields=['preparation_report',
+                                            'updated_at'])
+                from threading import Thread
+
+                def _prepare_wishes(pid):
+                    try:
+                        from core.models import AnalysisProject as AP
+                        proj = AP.objects.get(id=pid)
+                        from services.project_ingest import \
+                            build_preparation_report
+                        build_preparation_report(proj)
+                    except Exception as exc:
+                        import logging
+                        logging.getLogger(__name__).warning(
+                            'Background preparation failed for project '
+                            '%s: %s', pid, exc)
+                        try:
+                            proj = AP.objects.get(id=pid)
+                            rep = proj.preparation_report or {}
+                            rep['preparation_error'] = str(exc)
+                            proj.preparation_report = rep
+                            proj.save(update_fields=[
+                                'preparation_report', 'updated_at'])
+                        except Exception:
+                            pass
+                thread = Thread(target=_prepare_wishes,
+                                 args=(project.id,), daemon=True)
+                thread.start()
                 return Response({
                     'success': True,
                     'wishes_applied': bool(parsed['wishes']),
                     'wishes_unparsed': parsed['unparsed'],
-                    'metadata_quality_score': rebuilt.get(
-                        'metadata_quality', {}).get('overall_quality_score'),
+                    'preparing': True,
                     'report_url': f'/projects/{project.id}/',
                 })
         if not isinstance(metadata, dict) or not metadata:
