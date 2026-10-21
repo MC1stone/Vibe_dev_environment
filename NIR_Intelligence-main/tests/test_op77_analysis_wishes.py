@@ -196,6 +196,13 @@ check("T7c View: Aufbereitung asynchron (Thread, preparing: True)",
       "_prepare_wishes" in views_src and "'preparing': True" in views_src)
 check("T7d Wunsch-Save auch in released/completed (kein 409-Guard davor)",
       "if not wishes_text and project.phase != 'drafted'" in views_src)
+# OP77-Fix: Crew-Orchestrierung reicht derived_classification und die
+# zeilensynchronen classification_samples an den Statistik-Agenten durch
+crew_src = (REPO_ROOT / "agents" / "nir_analysis_crew.py").read_text("utf-8")
+check("T8a Crew reicht derived_classification an Statistik-Agent durch",
+      '"derived_classification": (request.metadata or {}).get(' in crew_src)
+check("T8b Crew reicht classification_samples im supervised_context durch",
+      '"classification_samples": classification_samples' in crew_src)
 
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)

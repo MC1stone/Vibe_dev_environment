@@ -799,6 +799,16 @@ class NIRAnalysisCrew:
                 "analysis_mode": (request.metadata or {}).get("analysis_mode"),
                 "class_labels": classification_labels
                 or (request.metadata or {}).get("class_labels"),
+                # OP77: Klassen-Zusatzanalyse aus Nutzer-Wuenschen - die
+                # Crew-Orchestrierung hat derived_classification und die
+                # zeilensynchronen classification_samples bisher NICHT
+                # an den Statistik-Agenten durchgereicht: der Zusatzpfad
+                # im Agenten sah die Flags nie, die Konfusionsmatrix aus
+                # der Versuchsfrage fehlte im Bericht (Nutzer-Befund
+                # 2026-10-21: Status-Block sichtbar, Matrix nicht).
+                "derived_classification": (request.metadata or {}).get(
+                    "derived_classification"),
+                "classification_samples": classification_samples,
             }
             sensor_output = self.sensor_quality_agent.execute(
                 {**parallel_context, "sample_id": request.sample_id}
