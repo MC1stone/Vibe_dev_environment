@@ -241,10 +241,68 @@ check("T7b View reicht analysis_intent durch",
       "analysis_intent" in (REPO_ROOT / "django_project" / "api"
                            / "project_views.py").read_text("utf-8"))
 main_js2 = main_js
-check("T7c UI: Analyse-Fokus-Auswahl im Preview-Ergebnis",
-      "fusionAnalysisIntent" in main_js2)
-check("T7d Execute sendet analysis_intent mit",
-      "payload.analysis_intent" in main_js2)
+# OP79b: das starre Fokus-Dropdown wurde durch FREIE Wuensche ersetzt
+# (siehe T8) - T7c/T7d pruefen jetzt die flexible Variante.
+check("T7c UI: Wuensche-Eingabe im Preview-Ergebnis (flexibel)",
+      "fusionAnalysisWishes" in main_js2)
+check("T7d Execute sendet die freien Wuensche mit",
+      "payload.analysis_wishes" in main_js2)
+
+# ---------------------------------------------------------------------------
+# T8: OP79b - FREIE Analyse-Wuensche bei der Fusion (kein hartes Dropdown
+# mehr): freier Text durch die generische parse_wishes-Pipeline,
+# Shortcut-Buttons befuellen nur das Textfeld, analysis_intent bleibt
+# als Abwaertskompatibilitaets-Shortcut erhalten.
+# ---------------------------------------------------------------------------
+fusion_src2 = (REPO_ROOT / "services" / "project_fusion.py").read_text("utf-8")
+check("T8a execute_fusion kennt freie analysis_wishes",
+      "analysis_wishes: str = ''" in fusion_src2)
+check("T8b Wuensche durchlaufen die generische parse_wishes-Pipeline",
+      "from services.analysis_wishes import parse_wishes" in fusion_src2)
+check("T8c KEIN hartkodiertes n=5 mehr",
+      "{'type': 'classes', 'n': 5," not in fusion_src2)
+check("T8d unverstandene Wuensche ehrlich als unparsed_wishes",
+      "unparsed_wishes" in fusion_src2)
+check("T8e analysis_intent bleibt als Shortcut (Abwaertskompatibilitaet)",
+      "analysis_intent" in fusion_src2)
+main_js3 = main_js
+check("T8f UI: freies Wuensche-Textfeld (fusionAnalysisWishes)",
+      "fusionAnalysisWishes" in main_js3)
+check("T8g Shortcuts befuellen nur das Feld (kein starrer Fokus mehr)",
+      "data-wish" in main_js3
+      and "fusionAnalysisIntent" not in main_js3)
+views_src3 = (REPO_ROOT / "django_project" / "api"
+              / "project_views.py").read_text("utf-8")
+check("T8h Execute-Endpoint nimmt analysis_wishes entgegen",
+      "analysis_wishes=str(" in views_src3)
+
+# E2E: Fusion mit freiem Wunsch -> parsed_wishes landen im Projekt
+from core.models import AnalysisProject as AP  # noqa: E402
+from services.project_fusion import execute_fusion  # noqa: E402
+src_ids = ids[:2]
+res = execute_fusion(user, src_ids,
+                     analysis_wishes="5 Reifeklassen der Tomaten bilden "
+                                     "und 3 Feuchtegruppen")
+check("T8i execute_fusion mit freiem Wunsch erfolgreich",
+      bool(res.get("success")), str(res.get("error"))[:100])
+fused = AP.objects.filter(id=res.get("project_id")).first()
+opts = ((fused.preparation_report or {}).get("user_options") or {})
+check("T8j Wunsch-Text im Fusionsprojekt gespeichert",
+      "5 Reifeklassen" in (opts.get("analysis_wishes") or ""))
+check("T8k parse_wishes hat uebersetzt (2 Wuensche: 5 Klassen, 3 Gruppen)",
+      len(opts.get("parsed_wishes") or []) == 2,
+      str(opts.get("parsed_wishes"))[:120])
+
+# Shortcut-Kompatibilitaet: altes analysis_intent='classification'
+res2 = execute_fusion(user, [ids[0], ids[2]],
+                      analysis_intent="classification")
+check("T8l alter Shortcut classification funktioniert noch",
+      bool(res2.get("success")))
+fused2 = AP.objects.filter(id=res2.get("project_id")).first()
+opts2 = ((fused2.preparation_report or {}).get("user_options") or {})
+check("T8m Shortcut erzeugt Wunsch-Text (kein hartes n=5)",
+      bool(opts2.get("analysis_wishes"))
+      and "parsed_wishes" in opts2)
 
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)

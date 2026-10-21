@@ -343,7 +343,8 @@ def preview_fusion(user, project_ids: List[str],
 
 def execute_fusion(user, project_ids: List[str], name: str = '',
                    description: str = '',
-                   analysis_intent: str = '') -> Dict[str, Any]:
+                   analysis_intent: str = '',
+                   analysis_wishes: str = '') -> Dict[str, Any]:
     """Zusammenfuehrung in ein NEUES Projekt (Stufe 2, PO-Entscheidung).
 
     Die Messdaten beider Quell-Projekte werden referenziert (Original-
@@ -402,23 +403,31 @@ def execute_fusion(user, project_ids: List[str], name: str = '',
         fused = AnalysisProject.objects.create(
             user=user, name=name[:255], description=description)
         fused.files.set(source_files)
-        # OP79 Stufe 3: Analyse-Fokus der Fusion. 'classification' =>
-        # die Aufbereitung baut zusaetzlich Klassen (derived_classes) und
-        # die Crew klassifiziert ZUSAETZLICH zur Regression (Nutzer-
-        # Szenario: Regression-Projekt + Klassifikations-Projekt nach
-        # Klassen auswerten). 'regression' oder '' => Standard (OP75-
-        # Zielwert-Guard entscheidet).
+        # OP79b: FREIE Analyse-Wuensche bei der Fusion statt starrer
+        # Intents (Nutzer-Wunsch: 'Flexibilitaet' - das alte Dropdown
+        # hardkodierte 5 Klassen). Der freie Text (z. B. '5 Reifeklassen
+        # der Tomaten', '3 Feuchtegruppen') wird ueber die generische
+        # parse_wishes-Pipeline (OP77) uebersetzt - nicht verstandene
+        # Wuensche ehrlich als offene Fragen im Bericht.
+        wishes_text = str(analysis_wishes or '').strip()[:2000]
+        if not wishes_text:
+            # Abwaertskompatibilitaet: altes Dropdown-Feld
+            # analysis_intent ('classification'/'regression') bleibt
+            # als Shortcut erhalten und wird in Text uebersetzt.
+            intent = str(analysis_intent or '').strip().lower()
+            if intent in ('classification', 'klassifikation',
+                          'klassifizieren'):
+                wishes_text = ('Bilde Klassen aus dem Messziel und '
+                               'klassifiziere die Datensätze')
+            elif intent in ('regression',):
+                wishes_text = ''
         user_options: Dict[str, Any] = {}
-        intent = str(analysis_intent or '').strip().lower()
-        if intent in ('classification', 'klassifikation', 'klassifizieren'):
-            user_options['analysis_wishes'] = (
-                'Klassifikation: Klassen aus dem Messziel bilden und '
-                'klassifizieren')
-            user_options['parsed_wishes'] = [
-                {'type': 'classes', 'n': 5,
-                 'name': 'Klassen aus dem Messziel (Fusion)'}]
-        elif intent in ('regression', 'regression'):
-            user_options['analysis_wishes'] = ''
+        if wishes_text:
+            from services.analysis_wishes import parse_wishes
+            parsed = parse_wishes(wishes_text)
+            user_options['analysis_wishes'] = wishes_text
+            user_options['parsed_wishes'] = parsed['wishes']
+            user_options['unparsed_wishes'] = parsed['unparsed']
         fused.preparation_report = {
             'user_options': user_options,
             'fusion': {
