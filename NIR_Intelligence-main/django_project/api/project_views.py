@@ -1666,11 +1666,13 @@ class ProjectFusionExecuteView(APIView if DRF_AVAILABLE else object):
                 request.user, project_ids,
                 name=(request.data.get('name') or '').strip(),
                 description=(request.data.get('description') or '').strip(),
-                # OP79 Stufe 3: Analyse-Fokus der Fusion (Nutzer-Szenario:
-                # Regression- + Klassifikations-Projekt nach Klassen
-                # auswerten) - leer = Standard (OP75-Guard entscheidet).
+                # OP79b: FREIE Analyse-Wuensche bei der Fusion (flexibel,
+                # generisch) - der Text geht durch die parse_wishes-
+                # Pipeline; das alte analysis_intent bleibt als Shortcut.
                 analysis_intent=str(
-                    request.data.get('analysis_intent') or '').strip())
+                    request.data.get('analysis_intent') or '').strip(),
+                analysis_wishes=str(
+                    request.data.get('analysis_wishes') or '').strip())
             status_code = (status.HTTP_200_OK if result.get('success')
                           else status.HTTP_422_UNPROCESSABLE_ENTITY)
             return Response(result, status=status_code)

@@ -742,17 +742,28 @@ window.nirFusionPreview = function (projectIds) {
                 }
             });
             html += `<div class="mb-2 small">
-                <label class="form-label mb-1"><i class="bi bi-bullseye me-1"></i>${nirGettext('Analyse-Fokus der Fusion:')}</label>
-                <select id="fusionAnalysisIntent" class="form-select form-select-sm" style="max-width: 380px;">
-                    <option value="">${nirGettext('Automatisch (Messziel entscheidet – Standard)')}</option>
-                    <option value="classification">${nirGettext('Klassifikation: Klassen aus dem Messziel bilden und klassifizieren')}</option>
-                    <option value="regression">${nirGettext('Regression: Zielwert-Kalibration erzwingen')}</option>
-                </select></div>`;
+                <label class="form-label mb-1"><i class="bi bi-stars me-1"></i>${nirGettext('Analyse-Wünsche für die Fusion (freier Text – flexibel):')}</label>
+                <textarea id="fusionAnalysisWishes" class="form-control form-control-sm" rows="2"
+                          placeholder="${nirGettext('z. B. „5 Reifeklassen der Tomaten bilden“, „3 Feuchtegruppen nach dem Brix“ – alles unverstandene wird ehrlich als offene Frage gemeldet.')}"></textarea>
+                <div class="d-flex flex-wrap gap-1 mt-1">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-wish="5 Reifeklassen aus dem Messziel bilden und klassifizieren">${nirGettext('5 Klassen + Klassifikation')}</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-wish="3 Feuchtegruppen aus dem Messziel bilden">${nirGettext('3 Feuchtegruppen')}</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-wish="">${nirGettext('Kein Wunsch (Standard)')}</button>
+                </div></div>`;
             html += `<div class="d-flex gap-2 flex-wrap mt-2">` +
                 `<button type="button" class="btn btn-sm btn-success" onclick="nirFusionExecute(this.dataset.pids)" data-pids='${JSON.stringify(projectIds)}'>` +
                 `<i class="bi bi-boxes me-1"></i>${nirGettext('Zusammenführung durchführen (neues Projekt)')}</button>` +
                 `<span class="small text-muted align-self-center">${nirGettext('Die Original-Projekte bleiben unangetastet.')}</span></div>`;
             box.innerHTML = html;
+            // OP79b: Shortcut-Buttons befuellen nur das freie Textfeld
+            box.querySelectorAll('[data-wish]').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    const ta = document.getElementById('fusionAnalysisWishes');
+                    if (ta) { ta.value = b.dataset.wish || ''; }
+                    box.querySelectorAll('[data-wish]').forEach(x => x.classList.remove('active'));
+                    b.classList.add('active');
+                });
+            });
         })
         .catch(err => {
             box.innerHTML = `<div class="alert alert-danger py-2 mb-0">${nirGettext('Metadaten-Abgleich fehlgeschlagen:')} ${err.message || err}</div>`;
@@ -771,9 +782,11 @@ window.nirFusionExecute = function (projectIds) {
         return;
     }
     if (!window.confirm(nirGettext('Zusammenführung in ein neues Fusionsprojekt durchführen? Die Original-Projekte bleiben unangetastet.'))) return;
-    const intentSel = document.getElementById('fusionAnalysisIntent');
     const payload = { project_ids: projectIds };
-    if (intentSel && intentSel.value) payload.analysis_intent = intentSel.value;
+    const wishesEl = document.getElementById('fusionAnalysisWishes');
+    if (wishesEl && wishesEl.value.trim()) {
+        payload.analysis_wishes = wishesEl.value.trim();
+    }
     axios.post('/projects/fusion/execute/', payload)
         .then(resp => {
             const data = resp.data || {};
