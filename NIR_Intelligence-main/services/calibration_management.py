@@ -111,6 +111,26 @@ def evaluate_assignments(calibration) -> Dict[str, Any]:
             a.save()
         return summary
 
+    # OP81-Fix: LOFO allein kann bei >2 Dateien nicht unterscheiden,
+    # OB die Datei schlecht ist oder eine ANDERE die Kombination
+    # verschlechtert (ohne A = nur B; ist B schlecht, wirkt es wie
+    # 'A verschlechtert'). Zusaetzliche Einzel-Bewertung: RMSE der
+    # Datei ALLEIN vs. beste Einzel-Kalibration - nur wenn die Datei
+    # sowohl die Kombination verschlechtert (delta > eps) ALS AUCH
+    # eigenstaendig schlechter ist, wird sie reported_only.
+    singles: Dict[str, Optional[float]] = {}
+    for a in active:
+        rows = rows_by_file.get(str(a.id))
+        if rows:
+            fit_single = _fit_calibration(rows['samples'],
+                                          rows['targets'])
+            singles[str(a.id)] = (float(fit_single['rmse_cv'])
+                                 if fit_single else None)
+        else:
+            singles[str(a.id)] = None
+    best_single = min((v for v in singles.values()
+                       if v is not None), default=None)
+
     from django.db import transaction
     with transaction.atomic():
         for a in active:
@@ -130,8 +150,11 @@ def evaluate_assignments(calibration) -> Dict[str, Any]:
                 a.save()
                 summary['important'] += 1
                 continue
-            delta = baseline - without  # negativ = besser MIT der Datei
+            delta = baseline - without  # >0 = ohne Datei BESSER
             a.influence_rmse = round(delta, 4)
+            single = singles.get(str(a.id))
+            self_worse = (single is not None and best_single is not None
+                          and single > best_single + NO_INFLUENCE_EPS)
             if delta < -NO_INFLUENCE_EPS:
                 a.status = 'active'
                 a.influence_note = (
@@ -139,14 +162,28 @@ def evaluate_assignments(calibration) -> Dict[str, Any]:
                     f'{abs(delta):.4f} - die Kalibrierung wird '
                     f'schlechter.')
                 summary['important'] += 1
-            elif delta > NO_INFLUENCE_EPS:
+            elif delta > NO_INFLUENCE_EPS and self_worse:
                 a.status = 'reported_only'
                 a.influence_note = (
                     f'Ohne Mehrwert: ohne diese Datei sinkt der RMSE um '
-                    f'{delta:.4f} - die Datei verschlechtert die '
-                    f'Kalibrierung. Nur berichtet, kein Effekt auf die '
-                    f'Kalibrierungsentwicklung.')
+                    f'{delta:.4f}, und ihre eigene Kalibration '
+                    f'(RMSE {single:.4f}) ist schlechter als die beste '
+                    f'Einzel-Kalibration ({best_single:.4f}) - die '
+                    f'Datei verschlechtert die Kalibrierung. Nur '
+                    f'berichtet, kein Effekt auf die Kalibrierungs-'
+                    f'entwicklung.')
                 summary['harmful'] += 1
+            elif delta > NO_INFLUENCE_EPS:
+                # Die Kombination bessert sich ohne die Datei, aber die
+                # Datei selbst ist gut - das LOFO-Signal kommt von der
+                # ANDEREN Datei. Aktive lassen (ehrliche Notiz).
+                a.status = 'active'
+                a.influence_note = (
+                    f'Gemischtes LOFO-Signal (delta RMSE {delta:+.4f}): '
+                    f'die Datei selbst kalibriert sauber (RMSE '
+                    f'{single:.4f} allein) - die Verbesserung ohne sie '
+                    f'stammt von der anderen Datei. Bleibt aktiv.')
+                summary['important'] += 1
             else:
                 a.status = 'reported_only'
                 a.influence_note = (

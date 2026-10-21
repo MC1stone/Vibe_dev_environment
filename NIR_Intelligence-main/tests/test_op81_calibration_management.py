@@ -133,15 +133,27 @@ for i in range(2):
     p.files.add(gf)
     # Vorbereitungsbericht mit kalibrationsfaehigen Daten (min. 12 Zeilen)
     n_rows = 14
-    # Kalibrationsfaehige Zeilen: Kanaele MUessen variieren (PLS mit
-    # identischen Spalten ist singulaer) - Spektrum korreliert mit Brix.
+    # Kalibrationsfaehige Zeilen, bewusst kontrastiert (deterministisch,
+    # seeded): Datei 0 = SAUBERE Korrelation Spektrum<->Brix (wichtig),
+    # Datei 1 = gleiche Brix-Werte, aber STARK verrauschte Spektren
+    # (verschlechtert die gemeinsame Kalibrierung -> reported_only).
+    # So ist das LOFO-Ergebnis eindeutig: Datei 0 bleibt aktiv, Datei 1
+    # wird nur berichtet - genau die Nutzer-Anforderung.
+    import numpy as _np
+    rng = _np.random.default_rng(81 + i)
+    brix_vals = [4.0 + 0.1 * j for j in range(n_rows)]
+    if i == 0:
+        spectra = [[brix * 0.1 + 0.02 * k for k in range(12)]
+                   for brix in brix_vals]
+    else:
+        spectra = [[brix * 0.1 + 0.02 * k
+                    + 0.9 * float(rng.random()) for k in range(12)]
+                   for brix in brix_vals]
     p.preparation_report = {"datasets": [{
         "file_id": str(gf.id), "file_name": f"cal{i}.csv",
         "usable": True, "target_name": "brix",
-        "calibration_samples": [
-            [0.4 + 0.02 * ((k + j + i) % 12) for k in range(12)]
-            for j in range(n_rows)],
-        "reference_values": [4.0 + i + 0.1 * j for j in range(n_rows)],
+        "calibration_samples": spectra,
+        "reference_values": brix_vals,
     }]}
     p.save()
     file_ids.append(str(gf.id))
