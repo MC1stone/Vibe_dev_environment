@@ -167,5 +167,21 @@ check("T6b JS sendet analysis_wishes",
 check("T6c Agent-Ergebnis-Schluessel derived_class_analysis",
       "derived_class_analysis" in agent_src)
 
+# OP77-Fix: der Bericht muss die Zusatz-Konfusionsmatrix auch im
+# regression-Modus rendern (derived_class_analysis), nicht nur im
+# classification-Zweig
+report_src = (REPO_ROOT / "services" / "project_report.py").read_text("utf-8")
+check("T6d Bericht rendert derived_class_analysis (HTML)",
+      "data_dict.get('derived_class_analysis')" in report_src)
+check("T6e Bericht rendert derived_class_analysis (Markdown)",
+      "data.get('derived_class_analysis')" in report_src)
+check("T6f Bericht zeigt Versuchsfrage-Status je Datensatz (HTML)",
+      "Versuchsfrage" in report_src
+      and "derived.get('distribution')" in report_src)
+check("T6g Bericht zeigt Versuchsfrage-Status je Datensatz (MD)",
+      "Analyse-W\\u00fcnsche:** abgeleitete " in report_src
+      or "abgeleitete \n" in report_src
+      or "derived_classes" in report_src)
+
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)
