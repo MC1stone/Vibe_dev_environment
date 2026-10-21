@@ -1214,6 +1214,81 @@ class StructureProfile(models.Model):
         return f"{self.signature} (x{self.confirmed_count})"
 
 
+class Calibration(models.Model):
+    """OP81: Kalibrierungs-Management - mehrere Dateien (projektueber-
+    greifend) bilden EINE Kalibrierung. Dateien aus unterschiedlichen
+    Projekten koennen derselben Kalibrierung zugeordnet werden; eine
+    Datei kann in mehreren Kalibrierungen liegen. Je Datei wird der
+    Einfluss auf die Kalibrierungsqualitaet bewertet (LOFO) - Dateien
+    ohne Mehrwert werden nur berichtet (reported_only) und fliessen
+    nicht in die Kalibrierungsentwicklung ein."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4,
+                          editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='calibrations',
+        verbose_name='Owner'
+    )
+    name = models.CharField(max_length=255, verbose_name='Name')
+    description = models.TextField(blank=True, verbose_name='Description')
+    target_name = models.CharField(
+        max_length=120, blank=True, verbose_name='Target Name',
+        help_text='Messziel der Kalibrierung (z. B. Brix)'
+    )
+    created_at = models.DateTimeField(auto_now_add=True,
+                                      verbose_name='Created At')
+    updated_at = models.DateTimeField(auto_now=True,
+                                      verbose_name='Updated At')
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Calibration'
+        verbose_name_plural = 'Calibrations'
+
+    def __str__(self):
+        return f'{self.name} ({self.target_name or "Ziel offen"})'
+
+
+class CalibrationFileAssignment(models.Model):
+    """OP81: Zuordnung einer Datei zu einer Kalibrierung mit Status und
+    Einfluss-Bewertung. status: 'active' = fliesst in die Kalibrierungs-
+    entwicklung ein; 'reported_only' = kein Mehrwert, wird nur im
+    Bericht genannt (kein Effekt auf die Kalibrierung)."""
+
+    ASSIGNMENT_STATUS = [
+        ('active', 'Aktiv - beeinflusst die Kalibrierung'),
+        ('reported_only', 'Nur berichtet - ohne Einfluss'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4,
+                          editable=False)
+    calibration = models.ForeignKey(
+        Calibration, on_delete=models.CASCADE,
+        related_name='assignments', verbose_name='Calibration')
+    file = models.ForeignKey(
+        GenericFile, on_delete=models.CASCADE,
+        related_name='calibration_assignments', verbose_name='File')
+    status = models.CharField(
+        max_length=20, choices=ASSIGNMENT_STATUS, default='active',
+        verbose_name='Status')
+    influence_rmse = models.FloatField(
+        null=True, blank=True, verbose_name='Influence RMSE',
+        help_text='LOFO: RMSE mit minus RMSE ohne diese Datei; '
+                  'negativ = verbessert die Kalibrierung')
+    influence_note = models.TextField(
+        blank=True, verbose_name='Influence Note')
+    added_at = models.DateTimeField(auto_now_add=True,
+                                    verbose_name='Added At')
+
+    class Meta:
+        unique_together = [('calibration', 'file')]
+        ordering = ['added_at']
+        verbose_name = 'Calibration File Assignment'
+        verbose_name_plural = 'Calibration File Assignments'
+
+
 class SensorDocument(models.Model):
     """One uploaded document for a spectrometer (OP53).
 

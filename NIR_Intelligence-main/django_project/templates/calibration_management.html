@@ -1,0 +1,190 @@
+{% extends 'base.html' %}{% load i18n %}
+{% block title %}Kalibrierungen verwalten - NIR Intelligence Platform{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-bullseye me-2"></i>{% trans "Kalibrierungen verwalten" %}</h1>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#calibrationCreateModal">
+            <i class="bi bi-plus-circle me-1"></i>{% trans "Neue Kalibrierung" %}
+        </button>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <p class="text-muted mb-0 small">
+                {% trans "Dateien aus unterschiedlichen Projekten können derselben Kalibrierung zugeordnet werden - die Dateien bleiben in ihren Projekten verfügbar. Die Bewertung zeigt den Einfluss jeder Datei auf die Qualität der Kalibrierung (Leave-One-File-Out auf dem PLS-RMSE). Dateien ohne Mehrwert werden nur berichtet und haben keinen Effekt auf die Kalibrierungsentwicklung." %}
+            </p>
+        </div>
+    </div>
+
+    {% for cal in calibrations %}
+    <div class="card shadow-sm mb-4" data-calibration-row="{{ cal.id }}">
+        <div class="card-header bg-light d-flex flex-wrap align-items-center gap-2">
+            <strong><i class="bi bi-bullseye me-1"></i>{{ cal.name }}</strong>
+            {% if cal.target_name %}<span class="badge bg-primary">{{ cal.target_name }}</span>{% endif %}
+            <span class="badge bg-success">{{ cal.active_count }} {% trans "aktiv" %}</span>
+            {% if cal.reported_count %}<span class="badge bg-secondary">{{ cal.reported_count }} {% trans "nur berichtet" %}</span>{% endif %}
+            <button class="btn btn-sm btn-outline-primary ms-auto js-cal-evaluate" data-cal-id="{{ cal.id }}">
+                <i class="bi bi-graph-up-arrow me-1"></i>{% trans "Einfluss bewerten (LOFO)" %}
+            </button>
+        </div>
+        <div class="card-body">
+            {% if cal.description %}<p class="small text-muted">{{ cal.description }}</p>{% endif %}
+            {% if cal.assignments %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-2">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Datei" %}</th>
+                            <th>{% trans "Status" %}</th>
+                            <th>{% trans "Einfluss auf Kalibrierungsqualität (Δ RMSE)" %}</th>
+                            <th>{% trans "Bewertung" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in cal.assignments %}
+                        <tr>
+                            <td>{{ a.file_name }}</td>
+                            <td>
+                                {% if a.status == 'active' %}
+                                <span class="badge bg-success">{% trans "aktiv - beeinflusst Kalibrierung" %}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{% trans "nur berichtet - kein Effekt" %}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if a.influence_rmse is not None %}
+                                    <span class="{% if a.influence_rmse < 0 %}text-success fw-bold{% elif a.influence_rmse > 0.05 %}text-danger{% else %}text-muted{% endif %}">
+                                        {{ a.influence_rmse|floatformat:4 }}
+                                    </span>
+                                {% else %}&mdash;{% endif %}
+                            </td>
+                            <td class="small">{{ a.influence_note|default:'-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mb-2">{% trans "Noch keine Dateien zugeordnet." %}</p>
+            {% endif %}
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-sm btn-outline-secondary js-cal-assign" data-cal-id="{{ cal.id }}">
+                    <i class="bi bi-file-earmark-plus me-1"></i>{% trans "Datei zuordnen (Datei-ID)" %}
+                </button>
+                <span class="small text-muted align-self-center">{% trans "Federated Learning: aktive Dateien bilden je einen Shard (Gruppe = Datei); reported_only-Dateien fließen nicht in FL ein." %}</span>
+            </div>
+            <div class="js-cal-result mt-2"></div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-5">
+        <i class="bi bi-bullseye display-4 text-muted"></i>
+        <p class="mt-3 mb-1"><strong>{% trans "Noch keine Kalibrierungen" %}</strong></p>
+        <p class="text-muted">{% trans "Legen Sie eine Kalibrierung an und ordnen Sie Dateien aus Ihren Projekten zu." %}</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal: neue Kalibrierung -->
+<div class="modal fade" id="calibrationCreateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% trans "Neue Kalibrierung anlegen" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">{% trans "Name" %} *</label>
+                    <input type="text" class="form-control" id="calName" placeholder="{% trans 'z. B. Brix Tomaten 2026' %}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">{% trans "Messziel" %}</label>
+                    <input type="text" class="form-control" id="calTarget" placeholder="{% trans 'z. B. Brix' %}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">{% trans "Beschreibung" %}</label>
+                    <textarea class="form-control" id="calDescription" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Abbrechen" %}</button>
+                <button type="button" class="btn btn-primary" id="btnCalCreate">{% trans "Anlegen" %}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    function getCsrfToken() {
+        const hidden = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (hidden && hidden.value) { return hidden.value; }
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var c = cookies[i].trim();
+            if (c.indexOf('csrftoken=') === 0) {
+                return decodeURIComponent(c.substring('csrftoken='.length));
+            }
+        }
+        return '';
+    }
+    document.getElementById('btnCalCreate').addEventListener('click', function () {
+        var btn = this;
+        btn.disabled = true;
+        fetch('/projects/calibration/create/', {
+            method: 'POST', credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({
+                name: document.getElementById('calName').value,
+                target_name: document.getElementById('calTarget').value,
+                description: document.getElementById('calDescription').value
+            })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+            if (d.success) { location.reload(); }
+            else { alert(d.error || 'Fehler'); btn.disabled = false; }
+        }).catch(function (e) { alert('Netzwerkfehler: ' + e); btn.disabled = false; });
+    });
+    document.querySelectorAll('.js-cal-evaluate').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var calId = btn.dataset.calId;
+            var result = btn.closest('.card').querySelector('.js-cal-result');
+            btn.disabled = true;
+            result.textContent = 'Einfluss-Bewertung läuft (Leave-One-File-Out, PLS-Kalibration je Datei-Kombination - kann je Dateianzahl einige Momente dauern) …';
+            fetch('/projects/calibration/' + calId + '/evaluate/', {
+                method: 'POST', credentials: 'same-origin',
+                headers: {'X-CSRFToken': getCsrfToken()}
+            }).then(function (r) { return r.json(); }).then(function (d) {
+                if (d.success) {
+                    var s = d.summary || {};
+                    result.textContent = 'Bewertung abgeschlossen: ' +
+                        (s.important || 0) + ' wichtig, ' +
+                        (s.neutral || 0) + ' ohne Einfluss, ' +
+                        (s.harmful || 0) + ' verschlechternd. Seite lädt neu …';
+                    setTimeout(function () { location.reload(); }, 1200);
+                } else { result.textContent = 'Fehler: ' + (d.error || 'unbekannt'); btn.disabled = false; }
+            }).catch(function (e) { result.textContent = 'Netzwerkfehler: ' + e; btn.disabled = false; });
+        });
+    });
+    document.querySelectorAll('.js-cal-assign').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var calId = btn.dataset.calId;
+            var fileId = prompt('Datei-ID (UUID) der zuzuordnenden Datei eingeben. Die Datei bleibt in ihrem Projekt verfügbar - die Zuordnung ist eine zusätzliche Verwaltungsebene.');
+            if (!fileId) { return; }
+            var result = btn.closest('.card').querySelector('.js-cal-result');
+            fetch('/projects/calibration/' + calId + '/assign/', {
+                method: 'POST', credentials: 'same-origin',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+                body: JSON.stringify({file_id: fileId.trim()})
+            }).then(function (r) { return r.json(); }).then(function (d) {
+                if (d.success) { location.reload(); }
+                else { result.textContent = 'Fehler: ' + (d.error || 'unbekannt'); }
+            }).catch(function (e) { result.textContent = 'Netzwerkfehler: ' + e; });
+        });
+    });
+})();
+</script>
+{% endblock %}

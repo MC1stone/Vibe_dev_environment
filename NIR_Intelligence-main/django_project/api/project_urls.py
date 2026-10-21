@@ -27,6 +27,10 @@ from .project_views import (
     SpectrumDatabaseDetailView,
     ReferenceImportView,
     CalibrationOverviewView,
+    CalibrationManagementView,
+    CalibrationCreateView,
+    CalibrationAssignFileView,
+    CalibrationEvaluateView,
     ProjectKIAcceptView,
     ProjectFusionPreviewView,
     ProjectFusionExecuteView,
@@ -59,6 +63,12 @@ urlpatterns = [
     path('database/import-reference/', ReferenceImportView.as_view(), name='reference-import'),
     path('database/<uuid:spectrum_id>/', SpectrumDatabaseDetailView.as_view(), name='spectrum-detail'),
     path('calibration/overview/', CalibrationOverviewView.as_view(), name='calibration-overview'),
+    # OP81: Kalibrierungs-Management (Dateien projektuebergreifend zu
+    # Kalibrierungen zuordnen, LOFO-Einflussbewertung, FL-Information)
+    path('calibration/manage/', CalibrationManagementView.as_view(), name='calibration-manage'),
+    path('calibration/create/', CalibrationCreateView.as_view(), name='calibration-create'),
+    path('calibration/<uuid:calibration_id>/assign/', CalibrationAssignFileView.as_view(), name='calibration-assign'),
+    path('calibration/<uuid:calibration_id>/evaluate/', CalibrationEvaluateView.as_view(), name='calibration-evaluate'),
     path('sensors/', SensorListView.as_view(), name='sensor-list'),
     path('sensors/<str:sensor_key>/summary/',
          SensorSummaryView.as_view(), name='sensor-summary'),
