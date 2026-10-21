@@ -175,6 +175,13 @@ check("T6d Bericht rendert derived_class_analysis (HTML)",
       "data_dict.get('derived_class_analysis')" in report_src)
 check("T6e Bericht rendert derived_class_analysis (Markdown)",
       "data.get('derived_class_analysis')" in report_src)
+check("T6f Bericht zeigt Versuchsfrage-Status je Datensatz (HTML)",
+      "Versuchsfrage" in report_src
+      and "derived.get('distribution')" in report_src)
+check("T6g Bericht zeigt Versuchsfrage-Status je Datensatz (MD)",
+      "Analyse-W\\u00fcnsche:** abgeleitete " in report_src
+      or "abgeleitete \n" in report_src
+      or "derived_classes" in report_src)
 
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)

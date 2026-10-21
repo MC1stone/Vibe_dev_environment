@@ -656,12 +656,41 @@ def _metadata_overview_html(datasets: List[Dict[str, Any]],
         q_html = ''.join(f'<li>{_escape(q)}</li>' for q in questions)
         q_block = (f'<p class="muted small"><strong>Offene KI-Fragen:</strong></p>'
                    f'<ul>{q_html}</ul>') if q_html else ''
+        # OP77: Versuchsfrage-Status je Datensatz sichtbar machen -
+        # ob aus dem Nutzer-Wunsch abgeleitete Klassen gebildet wurden
+        # (und die Zusatz-Klassifikation im Crew-Lauf laeuft) oder ob der
+        # Wunsch nicht ausgefuehrt werden konnte.
+        derived = dataset.get('derived_classes')
+        wish_block = ''
+        if isinstance(derived, dict):
+            dist = derived.get('distribution') or {}
+            wish_block = (
+                '<p class="muted small"><strong>Versuchsfrage / '
+                'Analyse-W&uuml;nsche:</strong> abgeleitete Klassen aus '
+                f"&quot;{_escape(str(derived.get('target_name') or ''))}&quot; "
+                f"({_escape(str(derived.get('n_classes', '?')))} Klassen) "
+                'gebaut - die Klassen-Zusatzanalyse (Konfusionsmatrix) '
+                'l&auml;uft zus&auml;tzlich zur Regression. '
+                f"Verteilung: {_escape(', '.join(f'{k}: {v}' for k, v in dist.items()))}</p>")
+        elif dataset.get('classification_samples'):
+            wish_block = ''
+        elif questions:
+            wish_unparsed = [q for q in questions
+                             if 'Analyse-Wunsch' in str(q)]
+            if wish_unparsed:
+                wish_block = ('<p class="muted small"><strong>Versuchsfrage / '
+                              'Analyse-W&uuml;nsche:</strong> Wunsch erkannt, '
+                              'konnte aber nicht ausgef&uuml;hrt werden '
+                              '(siehe offene Fragen).</p>')
         if rows:
             blocks.append(
                 f'<h3>{_escape(dataset.get("file_name", "?"))}</h3>'
                 f'<table class="meta-table"><thead><tr><th>Feld</th><th>Wert</th>'
                 f'<th>Quelle</th></tr></thead><tbody>{"".join(rows)}</tbody></table>'
-                f'{q_block}')
+                f'{wish_block}{q_block}')
+        elif wish_block:
+            blocks.append(
+                f'<h3>{_escape(dataset.get("file_name", "?"))}</h3>{wish_block}')
     standards = metadata_quality.get('standards_compliance') or []
     std_rows = ''.join(
         f'<tr><td>{_escape(c.get("standard", "?"))}</td>'
@@ -846,6 +875,24 @@ def generate_markdown_report(project, crew_results: Dict[str, Any],
         if rows:
             lines += [f"### Metadaten: {dataset.get('file_name', '?')}", '',
                       _md_table(['Feld', 'Wert', 'Quelle'], rows), '']
+        # OP77: Versuchsfrage-Status je Datensatz (MD-Bericht)
+        derived = dataset.get('derived_classes')
+        if isinstance(derived, dict):
+            dist = derived.get('distribution') or {}
+            lines += [f"**Versuchsfrage / Analyse-W\u00fcnsche:** abgeleitete "
+                      f"Klassen aus \"{derived.get('target_name') or ''}\" "
+                      f"({derived.get('n_classes', '?')} Klassen) gebaut - "
+                      "die Klassen-Zusatzanalyse (Konfusionsmatrix) l\u00e4uft "
+                      f"zus\u00e4tzlich zur Regression. "
+                      f"Verteilung: "
+                      + ", ".join(f"{k}: {v}" for k, v in dist.items()), '']
+        elif not dataset.get('classification_samples'):
+            wish_unparsed = [str(q) for q in (dataset.get('open_questions') or [])
+                            if 'Analyse-Wunsch' in str(q)]
+            if wish_unparsed:
+                lines += ["**Versuchsfrage / Analyse-W\u00fcnsche:** Wunsch "
+                          "erkannt, konnte aber nicht ausgef\u00fchrt werden "
+                          f"({'; '.join(wish_unparsed)})", '']
     for section in per_agent:
         agent = section.get('agent', '?')
         figs = [f for f in figures if f.get('section_index')
