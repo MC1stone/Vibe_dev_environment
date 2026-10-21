@@ -68,6 +68,82 @@
                 </div>
             </div>
             {% endif %}
+            {% for d in datasets %}
+            {% if d.fusion_merge %}
+            <!-- OP80: Review-Karte des kombinierten Fusions-Datensatzes -->
+            <div class="card border-success mb-3" id="fusionCombinedReview">
+                <div class="card-header bg-success-subtle d-flex align-items-center gap-2">
+                    <i class="bi bi-merge"></i>
+                    <strong>{% trans "Kombinierter Fusions-Datensatz zum Review" %}</strong>
+                    <span class="badge bg-success ms-2">{{ d.metadata.n_sources }} {% trans "Quellen" %}</span>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        {% trans "Ihre Quelldatensätze wurden zu EINEM Datensatz zusammengeführt - die Analyse läuft damit in einer Auswertung über alle gemergten Zeilen. Bitte prüfen Sie die Zusammenführung, bevor Sie das Projekt zur Analyse freigeben:" %}
+                    </p>
+                    <table class="table table-sm mb-2">
+                        <thead><tr><th>{% trans "Quelldatei" %}</th><th>{% trans "Status" %}</th><th>{% trans "Zeilen" %}</th><th>{% trans "Bereich (nm)" %}</th></tr></thead>
+                        <tbody>
+                        {% for src in d.fusion_merge.sources %}
+                        <tr>
+                            <td>{{ src.file }}</td>
+                            <td>{% if src.status == 'merged' %}<span class="badge bg-success">{% trans "zusammengeführt" %}</span>{% else %}<span class="badge bg-secondary">{{ src.status }}</span>{% endif %}</td>
+                            <td>{{ src.n_rows|default:'-' }}</td>
+                            <td>{{ src.range|default:'-' }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if d.fusion_merge.harmonization %}
+                    <div class="alert alert-info py-2 small mb-2">
+                        <strong><i class="bi bi-rulers me-1"></i>{% trans "Wellenlängen harmonisiert:" %}</strong>
+                        {% trans "Die Quellen hatten unterschiedliche Wellenlängen-Raster. Die Intensitäten wurden per linearer Interpolation auf ein gemeinsames Raster übertragen:" %}
+                        {{ d.fusion_merge.harmonization.range_low|floatformat:1 }}&ndash;{{ d.fusion_merge.harmonization.range_high|floatformat:1 }} nm,
+                        {% trans "Schrittweite" %} {{ d.fusion_merge.harmonization.step|floatformat:2 }} nm,
+                        {{ d.fusion_merge.harmonization.n_interpolated_rows }} {% trans "interpolierte Zeilen" %}.
+                        {% if d.fusion_merge.harmonization.excluded_ranges %}
+                        <br>{% trans "Nicht überlappende Bereiche entfielen ehrlich:" %}
+                        {% for ex in d.fusion_merge.harmonization.excluded_ranges %}
+                        {{ ex.file }} ({% trans "außerhalb" %} {{ ex.below|floatformat:1 }}&ndash;{{ ex.above|floatformat:1 }} nm){% if not forloop.last %}; {% endif %}
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% if d.fusion_merge.wishes_applied %}
+                    <div class="alert alert-success py-2 small mb-2">
+                        <strong><i class="bi bi-stars me-1"></i>{% trans "Analyse-Wünsche auf den kombinierten Daten ausgeführt:" %}</strong>
+                        {% for w in d.fusion_merge.wishes_applied %}{{ w }}{% if not forloop.last %}; {% endif %}{% endfor %}
+                    </div>
+                    {% endif %}
+                    <div class="row mb-0">
+                        <div class="col-md-4">
+                            <div class="border rounded p-2 text-center">
+                                <div class="fs-4">{{ d.calibration_samples|length }}</div>
+                                <div class="text-muted small">{% trans "Zeilen im kombinierten Datensatz" %}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-2 text-center">
+                                <div class="fs-4">{{ d.preview.wavelengths|length }}</div>
+                                <div class="text-muted small">{% trans "Kanäle im gemeinsamen Raster" %}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-2 text-center">
+                                <div class="fs-4">{{ d.reference_values|length }}</div>
+                                <div class="text-muted small">{% trans "Referenzwerte (Ziel)" %}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="small text-muted mb-0 mt-2">
+                        <i class="bi bi-shield-check me-1"></i>
+                        {% trans "Gruppenzugehörigkeit je Zeile ist gespeichert (Quelldatei) - damit lassen sich bekannte Unterschiede wie ein anderer Sensor statistisch signifikanztesten (Sensor-Vergleich + Levene/Welch im Analyse-Bericht). Stimmt etwas nicht, korrigieren Sie die Metadaten und führen Sie die Aufbereitung erneut aus." %}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+
             <div class="row mb-3">
                 <div class="col-md-4">
                     <div class="border rounded p-3 text-center">

@@ -1619,6 +1619,39 @@ def build_preparation_report(project) -> Dict[str, Any]:
             apply_metadata_overrides(entry, entry_overrides)
             datasets.append(entry)
     trace.step("Datensätze zusammengeführt (Metadaten-Overrides angewendet)")
+    # OP80: Fusionsprojekte - die Quell-Datensaetze werden zu EINEM
+    # kombinierten Datensatz gemergt (eine Auswertung statt je-
+    # Datensatz). Unterschiedliche Wellenlaengen-Raster werden auf ein
+    # gemeinsames Raster harmonisiert (lineare Interpolation, ehrlich
+    # im fusion_merge-Berichtsteil dokumentiert). Die Kombination wird
+    # dem Nutzer auf der Projektseite zum REVIEW angezeigt (Quellen,
+    # Harmonisierung, Zeilen je Quelle) - die Freigabe zur Analyse
+    # bleibt seine Entscheidung.
+    is_fusion = bool(((getattr(project, 'preparation_report', None)
+                       or {}).get('fusion') or {}).get('source_projects'))
+    combined_dataset = None
+    if is_fusion:
+        try:
+            from services.fusion_combine import build_combined_dataset
+            file_names = {
+                str(f.id): str(getattr(f, 'original_filename', '')
+                               or getattr(getattr(f, 'file', None),
+                                          'name', ''))
+                for f in project.files.all()}
+            combined_dataset = build_combined_dataset(
+                datasets,
+                parsed_wishes=parsed_wishes,
+                unparsed_wishes=unparsed_wishes,
+                file_names=file_names)
+            if combined_dataset is not None:
+                trace.step("Fusions-Datensätze kombiniert ("
+                           + str(len(combined_dataset['reference_values']))
+                           + " Zeilen, "
+                           + str(combined_dataset['metadata']['n_sources'])
+                           + " Quellen)")
+        except Exception:
+            logger.exception('combined fusion dataset failed '
+                             '(non-fatal, fallback: Einzelauswertung)')
     if parsed_wishes:
         try:
             from services.analysis_wishes import apply_wishes_to_dataset
@@ -1657,9 +1690,17 @@ def build_preparation_report(project) -> Dict[str, Any]:
     if relevance:
         metadata_assessment["ki_relevance"] = relevance
     recommendations = _recommendations(datasets, metadata_assessment)
+    if combined_dataset is not None:
+        # Review-freundlich: die Kombination STEHT OBEN (was analysiert
+        # wird), die Quell-Datensaetze folgen darunter (urspruengliche
+        # Daten bleiben pruefbar).
+        datasets = [combined_dataset, *datasets]
+        report_datasets = datasets
+    else:
+        report_datasets = datasets
     usable_count = sum(1 for d in datasets if d.get("usable"))
     report = {
-        "datasets": datasets,
+        "datasets": report_datasets,
         "metadata_quality": metadata_assessment,
         "recommendations": recommendations,
         "usable_dataset_count": usable_count,
