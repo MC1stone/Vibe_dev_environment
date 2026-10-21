@@ -123,6 +123,7 @@ jobs:
           python tests/test_op78_prep_progress.py
           python tests/test_op79_fusion_candidate_selection.py
           python tests/test_op80_fusion_combined_dataset.py
+          python tests/test_op81_calibration_management.py
           python tests/test_op68_fusion_sensor_correction.py
           python tests/test_op70_bandmatrix_xai_charts.py
           python tests/test_op71_warning_aggregation.py

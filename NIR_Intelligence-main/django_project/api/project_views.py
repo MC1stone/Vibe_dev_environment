@@ -1755,3 +1755,135 @@ class ProjectFusionMetadataSuggestionsView(APIView if DRF_AVAILABLE else object)
             logger.exception('Fusion metadata suggestions failed')
             return Response({'success': False, 'error': str(exc)},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# =========================================================================
+# OP81: Kalibrierungs-Management
+# =========================================================================
+
+class CalibrationManagementView(TemplateView):
+    """OP81: Liste der Kalibrierungen mit Einfluss-Bewertung je Datei
+    (LOFO), Status (aktiv / nur berichtet) und FL-Shard-Information
+    der aktiven Dateien."""
+
+    template_name = 'calibration_management.html'
+
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=' + request.get_full_path())
+        from core.models import Calibration
+        calibrations = []
+        for cal in (Calibration.objects.filter(user=request.user)
+                    .prefetch_related('assignments__file')):
+            entries = []
+            for a in cal.assignments.all():
+                entries.append({
+                    'id': str(a.id),
+                    'file_id': str(a.file.id),
+                    'file_name': (getattr(a.file, 'original_filename', '')
+                                  or str(a.file.id)),
+                    'status': a.status,
+                    'influence_rmse': a.influence_rmse,
+                    'influence_note': a.influence_note,
+                })
+            calibrations.append({
+                'id': str(cal.id),
+                'name': cal.name,
+                'target_name': cal.target_name,
+                'description': cal.description,
+                'created_at': cal.created_at,
+                'assignments': entries,
+                'active_count': sum(1 for e in entries
+                                    if e['status'] == 'active'),
+                'reported_count': sum(1 for e in entries
+                                      if e['status'] != 'active'),
+            })
+        context = {
+            'page_title': 'Kalibrierungen verwalten',
+            'calibrations': calibrations,
+        }
+        return render(request, self.template_name, context)
+
+
+class CalibrationCreateView(APIView if DRF_AVAILABLE else object):
+    """OP81: Neue Kalibrierung anlegen (Name, Ziel, Beschreibung)."""
+
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return Response({'success': False,
+                              'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        from core.models import Calibration
+        name = str(request.data.get('name') or '').strip()[:255]
+        if not name:
+            return Response({'success': False,
+                              'error': gettext('Name erforderlich')},
+                            status=status.HTTP_400_BAD_REQUEST)
+        cal = Calibration.objects.create(
+            user=request.user,
+            name=name,
+            target_name=str(
+                request.data.get('target_name') or '').strip()[:120],
+            description=str(
+                request.data.get('description') or '').strip())
+        return Response({'success': True, 'calibration_id': str(cal.id),
+                         'name': cal.name})
+
+
+class CalibrationAssignFileView(APIView if DRF_AVAILABLE else object):
+    """OP81: Datei (projektuebergreifend) einer Kalibrierung zuordnen.
+    Datei bleibt in ihrem Projekt verfuegbar - die Zuordnung ist eine
+    zusätzliche Verwaltungsebene (M2M)."""
+
+    def post(self, request, calibration_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False,
+                              'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        from core.models import Calibration, GenericFile, \
+            CalibrationFileAssignment
+        try:
+            cal = Calibration.objects.get(id=calibration_id,
+                                          user=request.user)
+        except (Calibration.DoesNotExist, ValueError):
+            return Response({'success': False,
+                              'error': gettext('Kalibrierung nicht gefunden')},
+                            status=status.HTTP_404_NOT_FOUND)
+        file_id = str(request.data.get('file_id') or '')
+        try:
+            gf = GenericFile.objects.get(id=file_id,
+                                         user=request.user)
+        except (GenericFile.DoesNotExist, ValueError):
+            return Response({'success': False,
+                             'error': gettext('Datei nicht gefunden')},
+                            status=status.HTTP_404_NOT_FOUND)
+        assignment, _ = CalibrationFileAssignment.objects.get_or_create(
+            calibration=cal, file=gf,
+            defaults={'status': 'active'})
+        return Response({'success': True,
+                         'assignment_id': str(assignment.id),
+                         'status': assignment.status})
+
+
+class CalibrationEvaluateView(APIView if DRF_AVAILABLE else object):
+    """OP81: LOFO-Einflussbewertung ausloesen - aktualisiert Status und
+    influence_rmse je Zuordnung; Dateien ohne Mehrwert werden auf
+    reported_only gesetzt (nur Bericht, kein Effekt auf die
+    Kalibrierungsentwicklung)."""
+
+    def post(self, request, calibration_id):
+        if not request.user.is_authenticated:
+            return Response({'success': False,
+                              'error': gettext('Authentication required')},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        from core.models import Calibration
+        try:
+            cal = Calibration.objects.get(id=calibration_id,
+                                          user=request.user)
+        except (Calibration.DoesNotExist, ValueError):
+            return Response({'success': False,
+                             'error': gettext('Kalibrierung nicht gefunden')},
+                            status=status.HTTP_404_NOT_FOUND)
+        from services.calibration_management import evaluate_assignments
+        summary = evaluate_assignments(cal)
+        return Response({'success': True, 'summary': summary})
