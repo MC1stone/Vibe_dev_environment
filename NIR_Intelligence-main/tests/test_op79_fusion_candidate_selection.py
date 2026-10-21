@@ -304,5 +304,35 @@ check("T8m Shortcut erzeugt Wunsch-Text (kein hartes n=5)",
       bool(opts2.get("analysis_wishes"))
       and "parsed_wishes" in opts2)
 
+# ---------------------------------------------------------------------------
+# T9: OP80b - 422-Fehler ehrlich anzeigen (Nutzer-Befund: 'Zusammenfuehrung
+# fehlgeschlagen: Request failed with status code 422' ohne Grund). Bei
+# HTTP 422 wirft axios und der Grund (z. B. bereits zusammengefuehrt +
+# Link zum bestehenden Projekt) ging im alten catch verloren.
+# ---------------------------------------------------------------------------
+main_js4 = (REPO_ROOT / "django_project" / "static" / "js"
+            / "main.js").read_text("utf-8")
+check("T9a catch wertet err.response.data aus (422-Grund sichtbar)",
+      "err.response && err.response.data" in main_js4)
+check("T9b Link zum bestehenden Fusionsprojekt angeboten",
+      "existing_project_url" in main_js4
+      and "Zum bestehenden Fusionsprojekt" in main_js4)
+
+# E2E: Doppel-Execute -> 422 mit Grund + Link (Serverseite)
+import json as _json2  # noqa: E402
+from core.models import AnalysisProject as AP2  # noqa: E402
+from services.project_fusion import execute_fusion  # noqa: E402
+res_f = execute_fusion(user, [ids[1], ids[2]] if len(ids) > 2
+                       else ids[:2])
+check("T9c Erste Fusion der Kombination erfolgreich",
+      bool(res_f.get("success")), str(res_f.get("error"))[:80])
+res_g = execute_fusion(user, [ids[1], ids[2]] if len(ids) > 2
+                       else ids[:2])
+check("T9d Doppel-Execute -> success False + ehrlicher Grund",
+      (not res_g.get("success"))
+      and "bereits zusammengef" in (res_g.get("error") or ""))
+check("T9e Link zum bestehenden Projekt im Fehler",
+      bool(res_g.get("existing_project_url")))
+
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)
