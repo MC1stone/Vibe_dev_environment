@@ -196,6 +196,21 @@ check("T7c View: Aufbereitung asynchron (Thread, preparing: True)",
       "_prepare_wishes" in views_src and "'preparing': True" in views_src)
 check("T7d Wunsch-Save auch in released/completed (kein 409-Guard davor)",
       "if not wishes_text and project.phase != 'drafted'" in views_src)
+# OP77b-Fix 4 (2026-10-21): Der Wunsch-Button-Handler hing im
+# drafted-Script-Block, das Panel ist aber in JEDER Phase sichtbar -
+# in released/completed reagierte der Button GAR NICHT. Handler jetzt
+# phasenunabhaengig + Reingest-Buttons spiegeln den Lauf (Spinner).
+handler_block_start = tpl_src.index("btnSaveWishes')")
+# Der Handler liegt phasenunabhaengig, wenn zwischen dem letzten
+# </script> vor ihm und ihm selbst KEIN drafted-Block geoeffnet wird.
+block_before = tpl_src[tpl_src.rindex("</script>", 0,
+                                       handler_block_start):handler_block_start]
+check("T7e Wunsch-Handler ausserhalb des drafted-Blocks (alle Phasen)",
+      "{% if project.phase == 'drafted' %}" not in block_before)
+check("T7f Wunsch-Klick spiegelt Reingest-Buttons (Spinner + Status)",
+      "_spinReingest" in tpl_src
+      and "_wishesShow" in tpl_src
+      and "'btn-reingest', 'btn-reingest-released'" in tpl_src)
 # OP77-Fix: Crew-Orchestrierung reicht derived_classification und die
 # zeilensynchronen classification_samples an den Statistik-Agenten durch
 crew_src = (REPO_ROOT / "agents" / "nir_analysis_crew.py").read_text("utf-8")
