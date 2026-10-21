@@ -342,7 +342,8 @@ def preview_fusion(user, project_ids: List[str],
 
 
 def execute_fusion(user, project_ids: List[str], name: str = '',
-                   description: str = '') -> Dict[str, Any]:
+                   description: str = '',
+                   analysis_intent: str = '') -> Dict[str, Any]:
     """Zusammenfuehrung in ein NEUES Projekt (Stufe 2, PO-Entscheidung).
 
     Die Messdaten beider Quell-Projekte werden referenziert (Original-
@@ -401,7 +402,25 @@ def execute_fusion(user, project_ids: List[str], name: str = '',
         fused = AnalysisProject.objects.create(
             user=user, name=name[:255], description=description)
         fused.files.set(source_files)
+        # OP79 Stufe 3: Analyse-Fokus der Fusion. 'classification' =>
+        # die Aufbereitung baut zusaetzlich Klassen (derived_classes) und
+        # die Crew klassifiziert ZUSAETZLICH zur Regression (Nutzer-
+        # Szenario: Regression-Projekt + Klassifikations-Projekt nach
+        # Klassen auswerten). 'regression' oder '' => Standard (OP75-
+        # Zielwert-Guard entscheidet).
+        user_options: Dict[str, Any] = {}
+        intent = str(analysis_intent or '').strip().lower()
+        if intent in ('classification', 'klassifikation', 'klassifizieren'):
+            user_options['analysis_wishes'] = (
+                'Klassifikation: Klassen aus dem Messziel bilden und '
+                'klassifizieren')
+            user_options['parsed_wishes'] = [
+                {'type': 'classes', 'n': 5,
+                 'name': 'Klassen aus dem Messziel (Fusion)'}]
+        elif intent in ('regression', 'regression'):
+            user_options['analysis_wishes'] = ''
         fused.preparation_report = {
+            'user_options': user_options,
             'fusion': {
                 'source_projects': [
                     {'project_id': str(p.id), 'project_name': p.name}

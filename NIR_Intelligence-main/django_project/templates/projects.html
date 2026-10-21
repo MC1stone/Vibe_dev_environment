@@ -1,4 +1,4 @@
-{% extends 'base.html' %}{% load i18n %}
+{% extends 'base.html' %}{% load i18n static %}
 {% block title %}Projekte - NIR Intelligence Platform{% endblock %}
 {% block content %}
 <div class="container mt-4">
@@ -68,6 +68,12 @@
                 <div id="fusionProjectsResult" class="mt-2"></div>
             </div>
         </div>
+    </div>
+
+    <!-- OP79 Stufe 2: Chat-Assistent auf der Uebersicht - Wunsch im
+         Chat aeussern (z. B. 'Fusioniere A und B') -->
+    <div class="mb-4">
+        {% include 'chatbot_panel.html' %}
     </div>
 
     <div class="card shadow-sm">
@@ -468,6 +474,36 @@
         modal.show();
     }
 </script>
+
+<script>
+// OP79 Stufe 1: Fusion von der Projekt-Uebersicht - angehakte Projekte
+// sammeln, Metadaten-Abgleich (Preview) und Zusammenfuehrung (Execute).
+// OP79 Stufe 2: Projektliste als Chat-Kontext (Fusion-Wunsch-Erkennung)
+window.nirChatbotContext = {
+    context_projects: [
+        {% for p in projects %}
+        {% if p.file_count %}{ "id": "{{ p.id }}", "name": "{{ p.name|escapejs }}" }{% if not forloop.last %},{% endif %}{% endif %}
+        {% endfor %}
+    ]
+};
+function nirFusionProjectsPreview() {
+    var ids = [];
+    document.querySelectorAll('.fusion-project-check:checked').forEach(function (cb) {
+        if (cb.value) ids.push(cb.value);
+    });
+    var status = document.getElementById('fusionProjectsStatus');
+    var box = document.getElementById('fusionProjectsResult');
+    if (ids.length < 2) {
+        status.textContent = 'Bitte mindestens zwei Projekte ankreuzen.';
+        return;
+    }
+    status.textContent = 'Metadaten-Abgleich wird geladen …';
+    window.nirFusionPreviewResult = box;
+    window.nirFusionPreview(ids);
+    status.textContent = '';
+}
+</script>
+<script src="{% static 'js/chatbot_panel.js' %}?v=2"></script>
 {% endblock %}
 
 <script>

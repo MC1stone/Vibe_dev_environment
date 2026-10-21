@@ -48,6 +48,28 @@ def chatbot_message(request):
         return Response({"error": gettext("question is required")},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    # OP79 Stufe 2: deterministischer Fusion-Wunsch-Filter VOR dem LLM -
+    # ein 'Fusioniere A und B' wird strukturiert beantwortet (Bestaeti-
+    # gungskarte mit project_ids), nie sofort ausgefuehrt. Ohne Treffer
+    # laeuft der normale Chat-Weg unveraendert weiter.
+    fusion_intent = None
+    context_projects = request.data.get("context_projects") or []
+    if context_projects:
+        try:
+            from services.fusion_intent import detect_fusion_intent
+            fusion_intent = detect_fusion_intent(
+                str(question), context_projects)
+        except Exception:
+            fusion_intent = None
+    if fusion_intent:
+        return Response({
+            "answer": fusion_intent["hint"],
+            "model": "fusion-intent",
+            "degraded": False,
+            "rag_sources": [],
+            "fusion_intent": fusion_intent,
+        })
+
     service = _get_chatbot_service()
     # OP48e: the answer language follows the negotiated request language
     from django.utils import translation
