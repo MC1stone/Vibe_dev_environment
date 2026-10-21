@@ -961,7 +961,7 @@ document.addEventListener('click', function (ev) {
                 return r.json();
             })
             .then(function (d) {
-                if (d.success) { show('Aufbereitung aktualisiert: ' + d.usable_dataset_count + ' verwertbare Datensätze.', true); setTimeout(function(){ location.reload(); }, 1200); }
+                if (d.success) { show('Aufbereitung wird im Hintergrund neu ausgeführt - die Seite lädt neu und zeigt den Fortschritt.', true); setTimeout(function(){ location.reload(); }, 900); }
                 else { show('Fehler: ' + (d.error || 'unbekannt'), false); btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>{% trans "Daten angepasst? Aufbereitung erneut ausführen" %}'; }
             })
             .catch(function (e) {
@@ -1022,8 +1022,8 @@ document.addEventListener('click', function (ev) {
                 .then(function (r) { if (!r.ok) { throw new Error('HTTP ' + r.status); } return r.json(); })
                 .then(function (d) {
                     if (d.success) {
-                        show('Aufbereitung aktualisiert: ' + d.usable_dataset_count + ' verwertbare Datensätze. Das Projekt ist wieder in der Vorbereitung - jetzt erneut zur Analyse freigeben.', true);
-                        setTimeout(function(){ location.reload(); }, 1800);
+                        show('Aufbereitung wird im Hintergrund neu ausgeführt - das Projekt kehrt in die Vorbereitung zurück. Die Seite lädt neu und zeigt den Fortschritt.', true);
+                        setTimeout(function(){ location.reload(); }, 900);
                     } else {
                         show('Fehler: ' + (d.error || 'unbekannt'), false);
                         btn.disabled = false;
