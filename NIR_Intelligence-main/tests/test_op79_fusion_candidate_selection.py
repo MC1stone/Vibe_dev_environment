@@ -170,5 +170,81 @@ check("T5c Projekte ohne Dateien erscheinen nicht als Kandidat",
       == AnalysisProject.objects.filter(user=user, files__isnull=False)
       .distinct().count() + 0 or True)  # alle 3 haben Dateien
 
+# ---------------------------------------------------------------------------
+# T6: OP79 Stufe 2 - Chat-Assistent auf der Uebersicht + Fusion-Wunsch
+# ---------------------------------------------------------------------------
+chat_views = (REPO_ROOT / "django_project" / "api" / "chatbot_views.py") \
+    .read_text("utf-8")
+check("T6a Intent-Filter VOR dem LLM (context_projects)",
+      "detect_fusion_intent" in chat_views
+      and "context_projects" in chat_views)
+check("T6b nie automatisch: Antwort ist eine Bestaetigungskarte",
+      "fusion_intent" in chat_views and "detect_fusion_intent" in chat_views)
+intent_svc = (REPO_ROOT / "services" / "fusion_intent.py").read_text("utf-8")
+check("T6c fusion_intent-Dienst vorhanden",
+      "def detect_fusion_intent" in intent_svc)
+
+from services.fusion_intent import detect_fusion_intent  # noqa: E402
+projects_ctx = [{"id": "a1", "name": "Tomaten Regression"},
+                {"id": "b2", "name": "Tomaten Reifeklassen"}]
+fi = detect_fusion_intent(
+    "Fusioniere Tomaten Regression und Tomaten Reifeklassen", projects_ctx)
+check("T6d zwei Namen erkannt -> ready",
+      fi and fi["ready"] and fi["project_ids"] == ["a1", "b2"])
+fi1 = detect_fusion_intent("Fusioniere die Tomaten Regression", projects_ctx)
+check("T6e ein Name -> ehrlicher Hinweis (not ready)",
+      fi1 and not fi1["ready"] and "nur ein Projekt" in fi1["hint"])
+fi0 = detect_fusion_intent("Was bedeutet Brix?", projects_ctx)
+check("T6f kein Fusions-Wunsch -> None", fi0 is None)
+
+panel_js = (REPO_ROOT / "django_project" / "static" / "js"
+            / "chatbot_panel.js").read_text("utf-8")
+check("T6g Panel sendet context_projects",
+      "context_projects" in panel_js)
+check("T6h Panel rendert Bestaetigungs-Button (Zusammenfuehren)",
+      "fi.ready" in panel_js and "nirFusionPreview(fi.project_ids)"
+      in panel_js)
+
+r5 = client.get("/projects/")
+html5 = r5.content.decode()
+check("T6i Uebersicht: Chatbot-Panel gerendert",
+      "chatbotPanel" in html5)
+check("T6j Uebersicht: Projektkontext im Chat (context_projects + Namen)",
+      "window.nirChatbotContext" in html5
+      and "context_projects" in html5
+      and "Tomaten Regression" in html5 or "Fusion-Kandidat" in html5)
+
+import json as _json  # noqa: E402
+all_ctx = [{"id": ids[0], "name": "Fusion-Kandidat 0"},
+           {"id": ids[1], "name": "Fusion-Kandidat 1"}]
+r6 = client.post("/api/chatbot/message/",
+                 data=_json.dumps({
+                     "question": "Fusioniere Fusion-Kandidat 0 und "
+                                 "Fusion-Kandidat 1",
+                     "context_projects": all_ctx}),
+                 content_type="application/json")
+d6 = r6.json()
+check("T6k Chat-Endpoint antwortet mit fusion_intent (ready, 2 IDs)",
+      (d6.get("fusion_intent") or {}).get("ready") is True
+      and len((d6.get("fusion_intent") or {}).get("project_ids", [])) == 2)
+check("T6l Antworttext erklaert das neue Fusionsprojekt",
+      "NEUEN Fusionsprojekt" in (d6.get("answer") or ""))
+
+# ---------------------------------------------------------------------------
+# T7: OP79 Stufe 3 - analysis_intent (Klassifikations-Fokus der Fusion)
+# ---------------------------------------------------------------------------
+fusion_src = (REPO_ROOT / "services" / "project_fusion.py").read_text("utf-8")
+check("T7a execute_fusion kennt analysis_intent",
+      "analysis_intent" in fusion_src
+      and "parsed_wishes" in fusion_src)
+check("T7b View reicht analysis_intent durch",
+      "analysis_intent" in (REPO_ROOT / "django_project" / "api"
+                           / "project_views.py").read_text("utf-8"))
+main_js2 = main_js
+check("T7c UI: Analyse-Fokus-Auswahl im Preview-Ergebnis",
+      "fusionAnalysisIntent" in main_js2)
+check("T7d Execute sendet analysis_intent mit",
+      "payload.analysis_intent" in main_js2)
+
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)

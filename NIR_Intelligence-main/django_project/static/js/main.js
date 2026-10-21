@@ -741,6 +741,13 @@ window.nirFusionPreview = function (projectIds) {
                     html += '</tbody></table>';
                 }
             });
+            html += `<div class="mb-2 small">
+                <label class="form-label mb-1"><i class="bi bi-bullseye me-1"></i>${nirGettext('Analyse-Fokus der Fusion:')}</label>
+                <select id="fusionAnalysisIntent" class="form-select form-select-sm" style="max-width: 380px;">
+                    <option value="">${nirGettext('Automatisch (Messziel entscheidet – Standard)')}</option>
+                    <option value="classification">${nirGettext('Klassifikation: Klassen aus dem Messziel bilden und klassifizieren')}</option>
+                    <option value="regression">${nirGettext('Regression: Zielwert-Kalibration erzwingen')}</option>
+                </select></div>`;
             html += `<div class="d-flex gap-2 flex-wrap mt-2">` +
                 `<button type="button" class="btn btn-sm btn-success" onclick="nirFusionExecute(this.dataset.pids)" data-pids='${JSON.stringify(projectIds)}'>` +
                 `<i class="bi bi-boxes me-1"></i>${nirGettext('Zusammenführung durchführen (neues Projekt)')}</button>` +
@@ -764,7 +771,10 @@ window.nirFusionExecute = function (projectIds) {
         return;
     }
     if (!window.confirm(nirGettext('Zusammenführung in ein neues Fusionsprojekt durchführen? Die Original-Projekte bleiben unangetastet.'))) return;
-    axios.post('/projects/fusion/execute/', { project_ids: projectIds })
+    const intentSel = document.getElementById('fusionAnalysisIntent');
+    const payload = { project_ids: projectIds };
+    if (intentSel && intentSel.value) payload.analysis_intent = intentSel.value;
+    axios.post('/projects/fusion/execute/', payload)
         .then(resp => {
             const data = resp.data || {};
             if (!data.success) { throw new Error(data.error || 'execute failed'); }

@@ -51,7 +51,10 @@
             question: question,
             analysis_results: ctx.analysis_results || [],
             documents: documents,
-            history: state.history.slice(-6)
+            history: state.history.slice(-6),
+            // OP79 Stufe 2: eigene Projektliste als Kontext - der
+            // Server erkennt Fusions-Wuensche strukturiert (kein LLM).
+            context_projects: ctx.context_projects || []
         };
 
         fetch('/api/chatbot/message/', {
@@ -79,6 +82,31 @@
                     render('assistant', esc(data.answer).replace(/\n/g, '<br>'));
                     state.history.push({ role: 'user', content: question });
                     state.history.push({ role: 'assistant', content: data.answer });
+                    // OP79 Stufe 2: Fusion-Wunsch erkannt -> strukturierte
+                    // Bestaetigungskarte mit Button (nie automatisch).
+                    const fi = data.fusion_intent;
+                    if (fi && fi.ready && (fi.project_ids || []).length >= 2) {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn btn-sm btn-success mt-1';
+                        btn.innerHTML = '<i class="bi bi-boxes me-1"></i>' +
+                            'Zusammenführen: ' + esc((fi.projects || [])
+                                .map(p => p.name).join(' + '));
+                        btn.onclick = function () {
+                            btn.disabled = true;
+                            window.nirFusionPreviewResult =
+                                document.getElementById('fusionProjectsResult')
+                                || document.getElementById('fusionPreviewResult');
+                            window.nirFusionPreview(fi.project_ids);
+                        };
+                        const last = document.getElementById('chatbotPanelMessages');
+                        if (last) {
+                            const w = document.createElement('div');
+                            w.className = 'd-flex justify-content-start mb-2';
+                            w.appendChild(btn);
+                            last.appendChild(w);
+                            last.scrollTop = last.scrollHeight;
+                        }
+                    }
                     const rag = data.rag_sources || [];
                     sources.textContent = rag.length
                         ? 'RAG: ' + rag.join(', ')
