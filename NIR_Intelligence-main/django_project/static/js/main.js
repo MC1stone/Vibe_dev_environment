@@ -795,7 +795,18 @@ window.nirFusionExecute = function (projectIds) {
                 `<a href="${data.detail_url}">${nirGettext('Zum Fusionsprojekt')}</a></div>`;
         })
         .catch(err => {
-            box.innerHTML = `<div class="alert alert-danger py-2 mb-0">${nirGettext('Zusammenführung fehlgeschlagen:')} ${err.message || err}</div>`;
+            // OP80b: Bei HTTP 422 liefert der Server einen ehrlichen Grund
+            // ({success: false, error, existing_project_url?}) - axios
+            // wirft bei 4xx automatisch, deshalb hier err.response.data
+            // auswerten, sonst sieht der Nutzer nur 'status code 422'.
+            const d = (err.response && err.response.data) || {};
+            const msg = d.error || err.message || err;
+            let html = `<div class="alert alert-danger py-2 mb-0">${nirGettext('Zusammenführung fehlgeschlagen:')} ${msg}</div>`;
+            if (d.existing_project_url) {
+                html += `<div class="alert alert-info py-2 mb-0">${nirGettext('Ein Fusionsprojekt dieser Kombination existiert bereits:')} ` +
+                    `<a href="${d.existing_project_url}">${nirGettext('Zum bestehenden Fusionsprojekt')}</a></div>`;
+            }
+            box.innerHTML = html;
         });
 };
 
