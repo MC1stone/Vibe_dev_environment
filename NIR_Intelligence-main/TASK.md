@@ -3,6 +3,51 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
+## Current Task: OP68 - Sensor-Analyse + Korrektur-Loop der Fusion
+
+### Ziel
+Nutzer-Anforderungen (2026-10-19): (1) Beim Merge soll die Sensor-Analyse
+und der Vergleich aller Details Teil der Bewertung sein. (2) Aus den
+'brauchbaren' Kanaelen soll eine Gain-Kurve geschaetzt werden, um die
+Kalibration zu stuetzen - sensoragnostisch. (3) Verbindlicher
+Protokoll-Vertrag: Dark/White-Abgleich mit >= 50 Wiederholungen je
+Quelle. PO-Entscheidung: NUR fuer Fusionsprojekte.
+
+### Umsetzung
+- services/fusion_sensor_analysis.py (neu): reference_measurements()
+  erkennt deklarierte Referenzmessungen (metadata: reference_type
+  dark/white, n_repeats; Vertrag >= 50, sensoragnostisch - kein
+  Geraet, kein Format hard-codiert). sensor_comparison(): Kanal-Ratios,
+  CV, Korrelationsstruktur-Differenz, signifikante Kanaele
+  (Mann-Whitney), Konfundierungs-Diagnose (Ratio-Streuung zwischen
+  Messobjekten - ohn e gemeinsame Objekte ist Gain vs. Probenbestand
+  konfundiert). gain_curve_from_references(): Transferfunktion B->A aus
+  White-Referenzen (radiometrisch: (raw-dark)/(white-dark)),
+  Wellenlaengen-geglaettet, mit Konfidenz aus den Wiederholungen.
+  apply_gain_curve(): B auf A-Skala. Ehrliche Nicht-Schaetzbarkeit ohne
+  Referenzen (kein Fake).
+- services/fusion_calibration.py: _snv/_msc/_zscore (Wiederverwendung
+  der task_definition.yaml-Methoden snv/msc), correction_variants()
+  (SNV + MSC + Gain-Kurve falls Referenzen konform), corrected_verdict()
+  (automatisch formuliert, RMSE-basiert, ehrlich gegenueber der besten
+  Einzelquelle). comparative_calibration() dockt Sensor-Vergleich,
+  Gain-Kurven-Report und Korrektur-Loop an - non-fatal.
+- main.js: Sensor-Vergleichstabelle (Ratios farbcodiert),
+  Konfundierungs-Warnung, Gain-Kurven-Status (estimable + Vertragstext),
+  Korrekturvarianten-Tabelle + korrigiertes Fazit; Chatbot-Kontext
+  (fusion_discussion) enthaelt korrigierte Bewertung + Sensor-Befunde.
+- Keine neuen Endpoints (bestehender Fusion-Kalibrations-Endpoint
+  liefert die OP68-Felder mit); keine neuen Abhaengigkeiten.
+
+### Verifikation
+- Neue Matrix tests/test_op68_fusion_sensor_correction.py: 44/44 gruen
+  (Vertrag, Compliancy, Gain-Kurve + apply, Sensor-Vergleich,
+  Korrektur-Loop Runtime mit/ohne Referenzen, Verdict-Logik inkl.
+  Grenzfall 'erreicht Einzelquelle', Endpoint-Payload, UI-Checks,
+  node --check, Scope-Fusion-only, OP63/64/66-Regression intakt).
+- Regressionen: OP63 St3 37/37, OP63 St1+2 45/45, OP64 19/19,
+  OP65 30/30, OP66 28/28 gruen. manage.py check OK. CI erweitert.
+
 ## Current Task: OP67 - Artikel-Dokumentation Fusion + Foerderierte Session
 
 ### Ziel
