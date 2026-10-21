@@ -137,8 +137,11 @@ finally:
 tpl_dir = (Path(__file__).resolve().parent.parent
            / "django_project" / "templates")
 report = (tpl_dir / "project_report.html").read_text(encoding="utf-8")
+# OP78: die Karte ist jetzt ein Fahrplan (Datei-Zaehler, Balken,
+# Zeitschaetzung) - geprueft wird die Karte + ihr Polling; der
+# Umlaut-Stil wurde mit OP78 auf "läuft" normalisiert.
 check("T5a report shows preparing banner when no datasets yet",
-      "preparingCard" in report and "Datenaufbereitung laeuft" in report)
+      "preparingCard" in report and "Datenaufbereitung läuft" in report)
 check("T5b report polls the status endpoint",
       'url "project-prepare-status"' in report)
 projects_tpl = (tpl_dir / "projects.html").read_text(encoding="utf-8")

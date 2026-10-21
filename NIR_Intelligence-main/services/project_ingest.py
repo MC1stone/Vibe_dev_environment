@@ -1518,6 +1518,68 @@ def _ki_llm_status() -> Dict[str, Any]:
                 "solution": ""}
 
 
+
+class _PrepTrace:
+    """OP78: Schrittweiser Fortschritts-Trace der Aufbereitung - schreibt
+    vor jedem Schritt den aktuellen Stand incrementell ins Projekt
+    (preparation_report['progress']), damit der Nutzer sieht, WELCHE Datei
+    gerade verarbeitet wird und welcher Schritt laeuft - statt einer
+    Black Box (Nutzer-Befund: 30 min ohne Rueckmeldung). Speichert nur
+    kleine Statusfelder, nie die (ggf. riesigen) Dataset-Inhalte."""
+
+    def __init__(self, project, total_files: int):
+        self.project = project
+        self.total_files = total_files
+        self.done_files = 0
+        self.steps_done: List[str] = []
+        self.file_durations: List[float] = []
+        self._file_started = None
+
+    def _write(self, current_step: str, current_file: str = "") -> None:
+        import time as _time
+        report = getattr(self.project, "preparation_report", None) or {}
+        progress = report.setdefault("progress", {})
+        progress.update({
+            "total_files": self.total_files,
+            "done_files": self.done_files,
+            "current_step": current_step,
+            "current_file": current_file,
+            "steps_done": list(self.steps_done[-8:]),
+            "last_update": _time.strftime("%Y-%m-%d %H:%M:%S"),
+        })
+        if self.file_durations:
+            progress["avg_file_seconds"] = round(
+                sum(self.file_durations) / len(self.file_durations), 1)
+        self.project.preparation_report = report
+        try:
+            self.project.save(update_fields=["preparation_report",
+                                             "updated_at"])
+        except Exception:
+            pass
+
+    def step(self, message: str) -> None:
+        self.steps_done.append(message)
+        self._write(message)
+
+    def file_started(self, name: str) -> None:
+        import time as _time
+        self._file_started = _time.monotonic()
+        self._write("Datei wird eingelesen (deterministisch + KI)", name)
+
+    def file_done(self) -> None:
+        import time as _time
+        if self._file_started is not None:
+            self.file_durations.append(_time.monotonic()
+                                       - self._file_started)
+            self._file_started = None
+        self.done_files += 1
+        self._write("Datei abgeschlossen")
+
+    def snapshot(self) -> Dict[str, Any]:
+        report = getattr(self.project, "preparation_report", None) or {}
+        return dict(report.get("progress") or {})
+
+
 def build_preparation_report(project) -> Dict[str, Any]:
     """Build the full phase-1 preparation report for an AnalysisProject.
 
@@ -1536,10 +1598,16 @@ def build_preparation_report(project) -> Dict[str, Any]:
     parsed_wishes = user_options.get("parsed_wishes") or []
     unparsed_wishes = user_options.get("unparsed_wishes") or []
     datasets = []
-    for f in project.files.all():
+    files = list(project.files.all())
+    trace = _PrepTrace(project, len(files))
+    trace.step("Analyse-Wünsche geprüft"
+               + (f": {len(parsed_wishes)} verstanden" if parsed_wishes else ""))
+    for f in files:
+        trace.file_started(getattr(f, "original_filename", str(f.id)))
         entries = ingest_file(f)
         if isinstance(entries, dict):
             entries = [entries]
+        trace.file_done()
         for entry in entries:
             # Metadata overrides are keyed by file id; inner archive files
             # carry the '<archive-id>:<name>' key of their inner entry (OP30)
@@ -1550,6 +1618,7 @@ def build_preparation_report(project) -> Dict[str, Any]:
                     if entry.get("file_id") == str(f.id) else {}
             apply_metadata_overrides(entry, entry_overrides)
             datasets.append(entry)
+    trace.step("Datensätze zusammengeführt (Metadaten-Overrides angewendet)")
     if parsed_wishes:
         try:
             from services.analysis_wishes import apply_wishes_to_dataset
@@ -1577,6 +1646,7 @@ def build_preparation_report(project) -> Dict[str, Any]:
                         f"unterstuetzt: '{w}'. Beschreiben Sie ihn im "
                         "Metadaten-Editor oder als Kommentar - die "
                         "Plattform lernt dazu.")
+    trace.step("Metadaten-Bewertung und Empfehlungen")
     _propagate_project_metadata(datasets)
     metadata_assessment = _assess_metadata(datasets)
     for dataset in datasets:
@@ -1629,11 +1699,10 @@ def build_preparation_report(project) -> Dict[str, Any]:
                       or {}).get('fusion')
     if fusion_section:
         report['fusion'] = fusion_section
+    trace.step("Aufbereitung abgeschlossen")
+    report["progress"] = trace.snapshot()
     project.preparation_report = report
-    if usable_count:
-        project.save(update_fields=["preparation_report", "updated_at"])
-    else:
-        project.save(update_fields=["preparation_report", "updated_at"])
+    project.save(update_fields=["preparation_report", "updated_at"])
     logger.info(
         "Preparation report for project %s: %s/%s usable datasets",
         project.id, usable_count, len(datasets),

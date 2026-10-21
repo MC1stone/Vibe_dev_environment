@@ -824,11 +824,16 @@ class ProjectPrepareStatusView(APIView if DRF_AVAILABLE else object):
         project = _get_project(project_id, request.user)
         report = project.preparation_report or {}
         ready = bool(report.get('datasets'))
+        progress = report.get('progress') or {}
         return Response({
             'success': True,
             'ready': ready,
             'error': report.get('preparation_error'),
             'dataset_count': len(report.get('datasets') or []),
+            # OP78: schrittweiser Fortschritts-Trace statt Black Box -
+            # aktuelle Datei, Schritt, Zähler und Zeitdaten fuer die
+            # Fahrplan-Karte (project_report.html).
+            'progress': progress,
         })
 
 
