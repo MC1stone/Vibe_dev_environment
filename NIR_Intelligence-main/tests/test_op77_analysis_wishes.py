@@ -183,15 +183,19 @@ check("T6g Bericht zeigt Versuchsfrage-Status je Datensatz (MD)",
       or "abgeleitete \n" in report_src
       or "derived_classes" in report_src)
 
-# OP77b-Fix: Wunsch-Button startet die Analyse wirklich (Reingest ->
-# automatischer Release -> Crew-Lauf), statt nur den Reingest zu triggern
+# OP77b-Fix: Wunsch-Button triggert die AUFBEREITUNG asynchron im
+# Hintergrund (OP55-Muster) mit sichtbarer Fortschrittskarte statt
+# stiller synchroner Blockade; Wunsch-Save auch in released/completed
 tpl_src = (REPO_ROOT / "django_project" / "templates"
            / "project_report.html").read_text("utf-8")
-check("T7a Wunsch-Button verspricht Analyse-Neustart",
-      "Analyse neu starten" in tpl_src)
-check("T7b Wunsch-Button stoest Release automatisch an",
-      "/release/" in tpl_src
-      and "btnWishes.disabled = false" in tpl_src)
+check("T7a Wunsch-Button verspricht Aufbereitungs-Neustart",
+      "Aufbereitung neu ausf\u00fchren" in tpl_src)
+check("T7b Aufbereitung laeuft im Hintergrund (JS-Status sichtbar)",
+      "Aufbereitung l\u00e4uft im Hintergrund" in tpl_src)
+check("T7c View: Aufbereitung asynchron (Thread, preparing: True)",
+      "_prepare_wishes" in views_src and "'preparing': True" in views_src)
+check("T7d Wunsch-Save auch in released/completed (kein 409-Guard davor)",
+      "if not wishes_text and project.phase != 'drafted'" in views_src)
 
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)
