@@ -222,10 +222,46 @@
         </div>
     </div>
 
-    <!-- ===================== 6. Schritt-für-Schritt Checkliste ===================== -->
+    <!-- ===================== 6. Quellcode im Bericht ===================== -->
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <h2 class="h5 mb-3"><i class="bi bi-list-check me-2 text-success"></i>{% trans "6. Checkliste: Ihre erste Messung" %}</h2>
+            <h2 class="h5 mb-3"><i class="bi bi-code-slash me-2 text-primary"></i>{% trans "6. Der Quellcode im Projektbericht: Was kann ich damit machen?" %}</h2>
+            <p class="mb-2">
+                {% trans "Jeder Quartobericht (Abschlussbericht eines Projekts) enthält am Ende jeder Agent-Sektion den vollständigen, ausführbaren Python-Quellcode der Analyse-Schritte (z. B. Spektral-Analyse, Kalibration, PCA). Sie erkennen ihn an der Überschrift „Quellcode: … (ausführbar)“ – aufklappbar über einen Klick." %}
+            </p>
+            <h3 class="h6 mt-3 mb-2">{% trans "Anleitung: In 5 Schritten selbst nachvollziehen" %}</h3>
+            <ol class="small mb-3">
+                <li>{% trans "Aufklappen und kopieren: Im Bericht auf „Quellcode: …“ klicken, den Code markieren und kopieren (Strg+C bzw. Cmd+C)." %}</li>
+                <li>{% trans "Als Datei speichern: Den Code in eine neue Datei speichern, z. B. analyse.py (Dateiendung .py, reiner Text – kein Textverarbeitungsprogramm)." %}</li>
+                <li>{% trans "Python installieren: Einmalig Python 3.12 von python.org installieren (Häkchen „Add to PATH“ nicht vergessen). Die benötigten Bibliotheken stehen in requirements.txt des Projekts: pip install -r requirements.txt." %}</li>
+                <li>{% trans "Ausführen: Im Terminal in den Ordner der Datei wechseln und starten mit python analyse.py. Der Code liest die Projektdaten und führt dieselben Schritte aus wie die Plattform." %}</li>
+                <li>{% trans "Ändern und experimentieren: Parameter (z. B. Wellenlängenbereiche, Modelltypen) ändern, erneut starten und die Wirkung auf die Ergebnisse beobachten – so lernen Sie, wie jede Analyse-Zahl im Bericht entsteht." %}</li>
+            </ol>
+            <h3 class="h6 mb-2">{% trans "Beispiel: Die Regressionsgleichung aus dem Bericht selbst ausrechnen" %}</h3>
+            <p class="small mb-2">
+                {% trans "Der Bericht liefert pro Kanal die Koeffizienten, Mittelwerte und Standardabweichungen. Mit diesem kurzen Programm rechnen Sie eine Vorhersage für Ihre eigene Messung nach:" %}
+            </p>
+            <pre class="code bg-light border rounded p-3 small"><code># Beispiel: Brix-Vorhersage mit der Gleichung aus dem Bericht
+# (Zahlen bitte durch die Werte aus IHREM Bericht ersetzen)
+intercept = 4.2          # aus dem Bericht: Achsenabschnitt
+coefs     = [0.8, -0.3]  # Koeffizienten je Kanal
+means     = [3450.0, 1900.0]  # Kanal-Mittelwerte
+stds      = [120.0, 80.0]     # Kanal-Standardabweichungen
+messung   = [3500.0, 1850.0]  # Ihre neue Messung (2 Kanäle)
+
+z = [(m - mean) / std for m, mean, std in zip(messung, means, stds)]
+brix = intercept + sum(c * v for c, v in zip(coefs, z))
+print(f"Vorhergesagter Brix-Wert: {brix:.2f}")</code></pre>
+            <p class="small mb-0 text-muted">
+                {% trans "Tipp: Genau diese Formel (y = intercept + Σ coef_i · (x_i − mean_i)/std_i) steht auch unter der Koeffizienten-Tabelle im Bericht – der Quellcode zeigt, wie sie in der Praxis angewendet wird." %}
+            </p>
+        </div>
+    </div>
+
+    <!-- ===================== 7. Schritt-für-Schritt Checkliste ===================== -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h5 mb-3"><i class="bi bi-list-check me-2 text-success"></i>{% trans "7. Checkliste: Ihre erste Messung" %}</h2>
             <div class="row g-2">
                 {% for step in checklist %}
                 <div class="col-md-6">
