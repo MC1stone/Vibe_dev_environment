@@ -14,6 +14,62 @@
         </div>
     </div>
 
+    <!-- OP79 Stufe 1: Datenfusion starten - Kandidaten selektieren -->
+    <div class="card shadow-sm mb-4 border-info" id="fusionStartCard">
+        <div class="card-header bg-light d-flex align-items-center gap-2">
+            <i class="bi bi-diagram-3"></i>
+            <strong>{% trans "Datenfusion: Projekte zusammenführen" %}</strong>
+            <button class="btn btn-sm btn-outline-secondary ms-auto" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#fusionCandidates"
+                    aria-expanded="false" aria-controls="fusionCandidates">
+                {% trans "Kandidaten auswählen" %}
+            </button>
+        </div>
+        <div class="collapse" id="fusionCandidates">
+            <div class="card-body">
+                <p class="text-muted small mb-2">
+                    {% trans "Wählen Sie zwei oder mehr Projekte aus - die Messdaten werden in einem NEUEN Fusionsprojekt zusammengeführt (Originalprojekte bleiben unangetastet). Vorher prüft die Plattform im Metadaten-Abgleich, ob die Kombination sinnvoll ist." %}
+                </p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-2">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>{% trans "Projekt" %}</th>
+                                <th>{% trans "Phase" %}</th>
+                                <th>{% trans "Dateien" %}</th>
+                                <th>{% trans "Datensätze" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in projects %}
+                            {% if p.file_count %}
+                            <tr>
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input fusion-project-check"
+                                           value="{{ p.id }}" aria-label="{% trans "Projekt für Zusammenführung auswählen" %}">
+                                </td>
+                                <td><a href="/projects/{{ p.id }}/">{{ p.name }}</a></td>
+                                <td>{{ p.phase }}</td>
+                                <td>{{ p.file_count }}</td>
+                                <td>{{ p.dataset_count }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="nirFusionProjectsPreview()">
+                        <i class="bi bi-eye me-1"></i>{% trans "Auswahl prüfen (Metadaten-Abgleich)" %}
+                    </button>
+                    <span id="fusionProjectsStatus" class="small align-self-center"></span>
+                </div>
+                <div id="fusionProjectsResult" class="mt-2"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="card shadow-sm">
         <div class="card-body">
             <p class="text-muted">
@@ -413,3 +469,24 @@
     }
 </script>
 {% endblock %}
+
+<script>
+// OP79 Stufe 1: Fusion von der Projekt-Uebersicht - angehakte Projekte
+// sammeln, Metadaten-Abgleich (Preview) und Zusammenfuehrung (Execute).
+function nirFusionProjectsPreview() {
+    var ids = [];
+    document.querySelectorAll('.fusion-project-check:checked').forEach(function (cb) {
+        if (cb.value) ids.push(cb.value);
+    });
+    var status = document.getElementById('fusionProjectsStatus');
+    var box = document.getElementById('fusionProjectsResult');
+    if (ids.length < 2) {
+        status.textContent = 'Bitte mindestens zwei Projekte ankreuzen.';
+        return;
+    }
+    status.textContent = 'Metadaten-Abgleich wird geladen …';
+    window.nirFusionPreviewResult = box;
+    window.nirFusionPreview(ids);
+    status.textContent = '';
+}
+</script>

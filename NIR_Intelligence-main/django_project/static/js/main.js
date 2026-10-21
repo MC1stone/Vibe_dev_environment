@@ -669,28 +669,49 @@ window.nirBuildFusionOfferHtml = function (offer, context) {
     let html = '<div class="border rounded p-2 bg-light mt-2" id="fusionOfferBox">';
     html += `<h6><i class="bi bi-diagram-3 me-1"></i>${nirGettext('Analyse-Zweig: Datenfusion anderer Projekte')}</h6>`;
     html += `<p class="mb-2 small">${nirGettext(offer.explanation || '')}</p>`;
+    const selfId = (context && context.project_id) || '';
+    let bestPid = '';
     if (offer.candidates && offer.candidates.length) {
+        html += `<p class="mb-1 small text-muted">${nirGettext('Kandidaten zum Zusammenführen auswählen (mindestens einer):')}</p>`;
         html += '<table class="table table-sm mb-2"><thead><tr>' +
-            `<th>${nirGettext('Spektrum')}</th><th>${nirGettext('Ähnlichkeit')}</th><th>${nirGettext('Projekt')}</th></tr></thead><tbody>`;
+            `<th></th><th>${nirGettext('Spektrum')}</th><th>${nirGettext('Ähnlichkeit')}</th><th>${nirGettext('Projekt')}</th></tr></thead><tbody>`;
         offer.candidates.forEach(c => {
+            const pid = String(c.project_id || '');
+            if (!bestPid && pid) bestPid = pid;
+            const checked = pid === bestPid ? ' checked' : '';
             html += '<tr>' +
+                `<td class="text-center"><input type="checkbox" class="form-check-input fusion-candidate-check" value="${pid}"${checked} aria-label="${nirGettext('Projekt für Zusammenführung auswählen')}"></td>` +
                 `<td>${c.file_name}</td>` +
                 `<td>${c.similarity !== null && c.similarity !== undefined ? (100 * c.similarity).toFixed(1) + ' %' : '—'}</td>` +
-                `<td>${c.project_id ? `<a href="/projects/${c.project_id}/">${c.project_name || nirGettext('Projekt öffnen')}</a>` : nirGettext('kein Projekt')}</td></tr>`;
+                `<td>${pid ? `<a href="/projects/${pid}/">${c.project_name || nirGettext('Projekt öffnen')}</a>` : nirGettext('kein Projekt')}</td></tr>`;
         });
         html += '</tbody></table>';
     }
-    const pids = offer.project_ids || [];
-    html += `<button type="button" class="btn btn-sm btn-primary me-2" id="fusionPreviewBtn" onclick="nirFusionPreview(this.dataset.pids)" data-pids='${JSON.stringify(pids)}'>` +
-        `<i class="bi bi-eye me-1"></i>${nirGettext('Zweig öffnen: Metadaten-Abgleich ansehen')}</button>`;
+    html += `<button type="button" class="btn btn-sm btn-primary me-2" id="fusionPreviewBtn" onclick="nirFusionPreview(nirFusionSelectedIds('${selfId}'))">` +
+        `<i class="bi bi-eye me-1"></i>${nirGettext('Auswahl prüfen: Metadaten-Abgleich ansehen')}</button>`;
     html += `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('fusionOfferBox').style.display='none'">` +
         `${nirGettext('Nein, nicht öffnen')}</button>`;
     html += '<div id="fusionPreviewResult" class="mt-2"></div></div>';
     return html;
 };
 
+
+// OP79 Stufe 1: angehakte Fusions-Kandidaten sammeln (Checkboxen im
+// Angebot) + das eigene Projekt - der Nutzer selektiert, welche der
+// potentiellen Merge-Partner wirklich zusammengefuehrt werden.
+window.nirFusionSelectedIds = function (selfId) {
+    const ids = [];
+    if (selfId) ids.push(String(selfId));
+    document.querySelectorAll('.fusion-candidate-check:checked').forEach(cb => {
+        if (cb.value && !ids.includes(cb.value)) ids.push(cb.value);
+    });
+    return ids;
+};
+
 window.nirFusionPreview = function (projectIds) {
-    const box = document.getElementById('fusionPreviewResult');
+    let box = window.nirFusionPreviewResult
+        || document.getElementById('fusionPreviewResult');
+    window.nirFusionPreviewResult = null;
     if (!box) return;
     if (typeof projectIds === 'string') {
         try { projectIds = JSON.parse(projectIds); } catch (e) { projectIds = []; }
@@ -732,7 +753,8 @@ window.nirFusionPreview = function (projectIds) {
 };
 
 window.nirFusionExecute = function (projectIds) {
-    const box = document.getElementById('fusionPreviewResult');
+    const box = document.getElementById('fusionPreviewResult')
+        || document.getElementById('fusionProjectsResult');
     if (!box) return;
     if (typeof projectIds === 'string') {
         try { projectIds = JSON.parse(projectIds); } catch (e) { projectIds = []; }
