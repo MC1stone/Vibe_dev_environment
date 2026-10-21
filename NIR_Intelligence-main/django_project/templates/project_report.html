@@ -26,18 +26,25 @@
 
     {% if project.phase == 'drafted' and not preparation.datasets %}
     <div class="card shadow-sm mb-4 border-info" id="preparingCard">
-        <div class="card-body d-flex align-items-center gap-3">
-            <div class="spinner-border text-info" role="status"></div>
-            <div>
-                <h5 class="mb-1">{% trans "Datenaufbereitung laeuft..." %}</h5>
-                <p class="text-muted mb-0">
-                    {% trans "Die Dateien werden gerade ausgewertet (inkl. KI-Metadaten-Extraktion). Diese Seite aktualisiert sich automatisch, sobald der Bericht fertig ist - das kann bei grossen Dateien einige Minuten dauern." %}
-                </p>
-                <p class="text-muted small mb-0">
-                    {% trans "Verstrichene Zeit" %}: <span id="prepare-elapsed">0:00</span>
-                    &middot; {% trans "Datens&auml;tze bisher" %}: <span id="prepare-count">0</span>
-                </p>
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-3 mb-2">
+                <div class="spinner-border text-info" role="status"></div>
+                <div class="flex-grow-1">
+                    <h5 class="mb-1">{% trans "Datenaufbereitung läuft…" %} <span id="prepare-file-counter" class="text-muted fs-6"></span></h5>
+                    <p class="text-muted small mb-2" id="prepare-current">
+                        {% trans "Die Dateien werden gerade ausgewertet (inkl. KI-Metadaten-Extraktion). Diese Seite aktualisiert sich automatisch." %}
+                    </p>
+                    <div class="progress" style="height: 8px;" role="progressbar" aria-label="Fortschritt der Aufbereitung">
+                        <div class="progress-bar bg-info" id="prepare-bar" style="width: 0%"></div>
+                    </div>
+                    <p class="text-muted small mb-0 mt-1">
+                        {% trans "Verstrichene Zeit" %}: <span id="prepare-elapsed">0:00</span>
+                        &middot; {% trans "Datensätze bisher" %}: <span id="prepare-count">0</span>
+                        <span id="prepare-eta"></span>
+                    </p>
+                </div>
             </div>
+            <ul class="list-unstyled mb-0 small" id="prepare-steps"></ul>
         </div>
     </div>
     {% endif %}
@@ -743,6 +750,45 @@ document.addEventListener('click', function (ev) {
                 var countEl = document.getElementById('prepare-count');
                 if (countEl && typeof data.dataset_count !== 'undefined') {
                     countEl.textContent = data.dataset_count;
+                }
+                var pr = data.progress || {};
+                var counter = document.getElementById('prepare-file-counter');
+                if (counter && typeof pr.total_files !== 'undefined') {
+                    counter.textContent = (pr.done_files || 0) + ' / ' + pr.total_files +
+                        (pr.total_files ? ' ' + '{% trans "Dateien" %}' : '');
+                }
+                var current = document.getElementById('prepare-current');
+                if (current) {
+                    var step = pr.current_step || '';
+                    var file = pr.current_file || '';
+                    current.textContent = (file ? ('„' + file + '“: ') : '') +
+                        (step || '{% trans "Dateien werden ausgewertet…" %}');
+                }
+                var bar = document.getElementById('prepare-bar');
+                if (bar && pr.total_files) {
+                    var pct = Math.round(100 * (pr.done_files || 0) / pr.total_files);
+                    bar.style.width = Math.max(pct, 3) + '%';
+                    bar.setAttribute('aria-valuenow', pct);
+                }
+                var eta = document.getElementById('prepare-eta');
+                if (eta) {
+                    var rest = '';
+                    if (pr.total_files && pr.avg_file_seconds) {
+                        var remain = Math.max(0, pr.total_files - (pr.done_files || 0));
+                        var secs = Math.round(remain * pr.avg_file_seconds);
+                        rest = ' · {% trans "geschätzt noch" %} ' +
+                            Math.floor(secs / 60) + ':' + ('0' + (secs % 60)).slice(-2) + ' min';
+                    }
+                    if (pr.last_update) {
+                        rest += ' · {% trans "letzter Schritt" %}: ' + pr.last_update.slice(11);
+                    }
+                    eta.textContent = rest;
+                }
+                var stepsEl = document.getElementById('prepare-steps');
+                if (stepsEl && pr.steps_done) {
+                    stepsEl.innerHTML = (pr.steps_done || []).map(function (st) {
+                        return '<li class="text-success mb-1"><i class="bi bi-check-circle-fill me-1"></i>' + st + '</li>';
+                    }).join('');
                 }
                 if (data.ready) {
                     window.location.reload();
