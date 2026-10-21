@@ -183,5 +183,15 @@ check("T6g Bericht zeigt Versuchsfrage-Status je Datensatz (MD)",
       or "abgeleitete \n" in report_src
       or "derived_classes" in report_src)
 
+# OP77b-Fix: Wunsch-Button startet die Analyse wirklich (Reingest ->
+# automatischer Release -> Crew-Lauf), statt nur den Reingest zu triggern
+tpl_src = (REPO_ROOT / "django_project" / "templates"
+           / "project_report.html").read_text("utf-8")
+check("T7a Wunsch-Button verspricht Analyse-Neustart",
+      "Analyse neu starten" in tpl_src)
+check("T7b Wunsch-Button stoest Release automatisch an",
+      "/release/" in tpl_src
+      and "btnWishes.disabled = false" in tpl_src)
+
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)
