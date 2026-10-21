@@ -757,6 +757,71 @@ document.addEventListener('click', function (ev) {
     setTimeout(poll, 2000);
 })();
 </script>
+</script>
+<script>
+(function () {
+    function getCsrfToken() {
+        const hidden = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (hidden && hidden.value) { return hidden.value; }
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            if (cookie.indexOf('csrftoken=') === 0) {
+                return decodeURIComponent(cookie.substring('csrftoken='.length));
+            }
+        }
+        return '';
+    }
+    var _wishesBox = document.getElementById('workflow-status');
+    function _wishesShow(msg, ok) {
+        if (!_wishesBox) { return; }
+        _wishesBox.style.display = 'block';
+        _wishesBox.innerHTML = '<div class="alert alert-' + (ok ? 'success' : 'danger') + ' mb-0">' + msg + '</div>';
+    }
+    function _spinReingest(on) {
+        ['btn-reingest', 'btn-reingest-released'].forEach(function (id) {
+            var b = document.getElementById(id);
+            if (!b) { return; }
+            if (on) { b.disabled = true; b.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Aufbereitung läuft…'; }
+            else { b.disabled = false; b.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Aufbereitung erneut ausführen'; }
+        });
+    }
+    // OP77b: Versuchsfrage/Wuensche am bestehenden Projekt speichern
+    var btnWishes = document.getElementById('btnSaveWishes');
+    if (btnWishes) {
+      btnWishes.addEventListener('click', function () {
+        var ta = document.getElementById('analysisWishesExisting');
+        var status = document.getElementById('wishesStatus');
+        var text = (ta.value || '').trim();
+        btnWishes.disabled = true;
+        _spinReingest(true);
+        status.textContent = 'Wunsch wird übernommen, Aufbereitung läuft …';
+        fetch('/projects/' + projectId + '/metadata/', {
+          method: 'POST', credentials: 'same-origin',
+          headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+          body: JSON.stringify({analysis_wishes: text, metadata: {}})
+        }).then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.success) {
+              _wishesShow('Übernommen ✓' +
+                (d.wishes_applied ? ' – Wunsch erkannt.' : ' – Wunsch nicht erkannt (siehe offene Fragen im Bericht).') +
+                ' Aufbereitung läuft im Hintergrund – die Seite lädt neu und zeigt den Fortschritt …', true);
+              setTimeout(function () { location.reload(); }, 900);
+            } else {
+              _wishesShow('Fehler: ' + (d.error || 'unbekannt'), false);
+              btnWishes.disabled = false;
+              _spinReingest(false);
+            }
+          })
+          .catch(function (e) {
+            _wishesShow('Netzwerkfehler: ' + e, false);
+            btnWishes.disabled = false;
+            _spinReingest(false);
+          });
+      });
+    }
+})();
+</script>
 {% if project.phase == 'drafted' %}
 <script>
 (function () {
@@ -835,37 +900,6 @@ document.addEventListener('click', function (ev) {
             }).then(function (r) { return r.json(); }).then(function (d) { if (d.success) { status.textContent = 'Gespeichert ✓ (Score: ' + d.metadata_quality_score + ')'; setTimeout(function(){ location.reload(); }, 800); } else { status.textContent = 'Fehler: ' + (d.error || 'unbekannt'); } }).catch(function (e) { status.textContent = 'Netzwerkfehler: ' + e; });
         });
     });
-    // OP77b: Versuchsfrage/Wuensche am bestehenden Projekt speichern
-    var btnWishes = document.getElementById('btnSaveWishes');
-    if (btnWishes) {
-      btnWishes.addEventListener('click', function () {
-        var ta = document.getElementById('analysisWishesExisting');
-        var status = document.getElementById('wishesStatus');
-        var text = (ta.value || '').trim();
-        btnWishes.disabled = true;
-        status.textContent = 'Wunsch wird übernommen, Aufbereitung läuft …';
-        fetch('/projects/' + projectId + '/metadata/', {
-          method: 'POST', credentials: 'same-origin',
-          headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
-          body: JSON.stringify({analysis_wishes: text, metadata: {}})
-        }).then(function (r) { return r.json(); })
-          .then(function (d) {
-            if (d.success) {
-              status.textContent = 'Übernommen ✓' +
-                (d.wishes_applied ? ' – Wunsch erkannt.' : ' – Wunsch nicht erkannt (siehe offene Fragen im Bericht).') +
-                ' Aufbereitung läuft im Hintergrund – die Seite lädt neu und zeigt den Fortschritt …';
-              setTimeout(function () { location.reload(); }, 900);
-            } else {
-              status.textContent = 'Fehler: ' + (d.error || 'unbekannt');
-              btnWishes.disabled = false;
-            }
-          })
-          .catch(function (e) {
-            status.textContent = 'Netzwerkfehler: ' + e;
-            btnWishes.disabled = false;
-          });
-      });
-    }
     document.getElementById('btn-reingest').addEventListener('click', function () {
         var btn = document.getElementById('btn-reingest');
         btn.disabled = true;
