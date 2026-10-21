@@ -212,5 +212,24 @@ check("T6c Fortschrittsbalken + Zähler + ETA + Schritte im HTML",
       all(k in html for k in ("prepare-bar", "prepare-file-counter",
                               "prepare-eta", "prepare-steps")))
 
+# ---------------------------------------------------------------------------
+# T7: OP78-Fix - Reingest asynchron (die Fahrplan-Karte muss auch beim
+# 'Aufbereitung erneut ausfuehren'-Button erscheinen, nicht nur beim
+# Projekt-Anlegen/Wunsch-Save)
+# ---------------------------------------------------------------------------
+views_src2 = (REPO_ROOT / "django_project" / "api" / "project_views.py").read_text("utf-8")
+check("T7a Reingest asynchron (Thread + preparing: True)",
+      "Background reingest failed" in views_src2
+      and "'preparing': True" in views_src2)
+check("T7b Reingest leert den alten Report (Karte wird sichtbar)",
+      "report = {'user_options': user_options}" in views_src2)
+check("T7c Reingest erhaelt user_options (Wuensche ueberleben)",
+      "user_options = report.get('user_options') or {}" in views_src2)
+tpl2 = tpl_src
+check("T7d Buttons kommunizieren Hintergrund-Start + Reload",
+      tpl2.count("wird im Hintergrund neu ausgeführt") >= 2)
+check("T7e Buttons erwarten keine syncen Counts mehr",
+      "d.usable_dataset_count + ' verwertbare" not in tpl2)
+
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)

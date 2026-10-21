@@ -1204,14 +1204,45 @@ class ProjectReingestView(APIView if DRF_AVAILABLE else object):
             project.phase = 'drafted'
             project.save(update_fields=['phase', 'updated_at'])
             phase_returned = True
+        # OP78: Reingest asynchron im Hintergrund (OP55-Muster wie beim
+        # Projekt-Anlegen und Wunsch-Save) - der SYNCHRONE Lauf liess den
+        # Request minutenlang im Button-Spinner haengen, OHNE dass die
+        # OP78-Fahrplan-Karte je erschien (Nutzer-Befund 2026-10-21:
+        # 'Ich sehe die Fahrplan-Karte nicht'). Der alte Report wird
+        # geleert -> nach dem Reload zeigt die Karte den _PrepTrace.
+        report = (project.preparation_report or {})
+        user_options = report.get('user_options') or {}
+        report = {'user_options': user_options}
+        project.preparation_report = report
+        project.save(update_fields=['preparation_report', 'updated_at'])
+        from threading import Thread
         from services.project_ingest import build_preparation_report
-        report = build_preparation_report(project)
+
+        def _prepare(pid):
+            try:
+                from core.models import AnalysisProject as AP
+                proj = AP.objects.get(id=pid)
+                build_preparation_report(proj)
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).warning(
+                    'Background reingest failed for project %s: %s', pid, exc)
+                try:
+                    proj = AP.objects.get(id=pid)
+                    rep = proj.preparation_report or {}
+                    rep['preparation_error'] = str(exc)
+                    proj.preparation_report = rep
+                    proj.save(update_fields=['preparation_report',
+                                             'updated_at'])
+                except Exception:
+                    pass
+
+        thread = Thread(target=_prepare, args=(project.id,), daemon=True)
+        thread.start()
         return Response({
             'success': True,
             'phase_returned_to_preparation': phase_returned,
-            'usable_dataset_count': report.get('usable_dataset_count'),
-            'total_dataset_count': report.get('total_dataset_count'),
-            'recommendations': report.get('recommendations', []),
+            'preparing': True,
             'report_url': f'/projects/{project.id}/',
         })
 
