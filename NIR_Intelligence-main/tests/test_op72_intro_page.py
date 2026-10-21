@@ -100,6 +100,15 @@ check("T2h Illustrationen vorhanden (SVG, offline-faehig)",
       tpl_src.count("<svg") >= 2 and "http" not in tpl_src[:2000])
 check("T2i Checkliste fuer die erste Messung", "Checkliste" in tpl_src
       and "{% for step in checklist %}" in tpl_src)
+# Nutzer-Anforderung (2026-10-21): Anleitung, was man mit dem Quellcode im
+# Quartobericht machen kann + Beispiel, ergaenzt als Abschnitt 6.
+check("T2j Quellcode-Anleitung vorhanden (5 Schritte)",
+      "Quellcode im Projektbericht" in tpl_src
+      and "In 5 Schritten selbst nachvollziehen" in tpl_src
+      and "pip install -r requirements.txt" in tpl_src)
+check("T2k Beispiel-Regressionsgleichung im Quellcode-Abschnitt",
+      "brix = intercept + sum(" in tpl_src
+      and "Vorhergesagter Brix-Wert" in tpl_src)
 
 # ---------------------------------------------------------------------------
 # T3: Runtime - Seite rendert mit echten Sensor-Daten
