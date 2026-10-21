@@ -628,6 +628,15 @@ def run_project_crew(project) -> Dict[str, Any]:
                       # ZUSAETZLICH zur Regression.
                       **({'derived_classification': True}
                          if dataset.get('derived_classes') else {}),
+                      # OP80: Beim kombinierten Fusions-Datensatz die
+                      # Gruppenzugehoerigkeit je Zeile mitgeben - der
+                      # Statistik-Agent kann damit Gruppenunterschiede
+                      # (z. B. Sensor A vs. B) signifikanztesten
+                      # (Levene/Welch, OP68-Vertrag).
+                      **({'group_labels':
+                          dataset['metadata']['group_labels']}
+                         if (dataset.get('metadata') or {}).get(
+                             'group_labels') else {}),
                       **({'reference_values': dataset['reference_values']}
                          if dataset.get('reference_values') else {}),
                       **_meta},
