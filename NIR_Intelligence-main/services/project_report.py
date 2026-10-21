@@ -548,6 +548,21 @@ def _agent_section_html(section: Dict[str, Any],
     if lda_result and isinstance(data_dict, dict) \
             and data_dict.get('analysis_mode') == 'classification':
         confusion_html = _confusion_matrix_html(lda_result)
+    # OP77: Klassen-Zusatzanalyse aus Nutzer-Wuenschen (derived_class_
+    # analysis) laeuft ZUSAETZLICH zur Regression - die Konfusionsmatrix
+    # muss auch im regression-Modus gerendert werden, nicht nur im
+    # classification-Zweig (Sonst laeuft die Analyse, der Bericht
+    # zeigt sie nicht).
+    derived_cls = (data_dict.get('derived_class_analysis')
+                   if isinstance(data_dict, dict) else None) or {}
+    if isinstance(derived_cls, dict):
+        derived_lda = derived_cls.get('LDA')
+        if derived_lda:
+            derived_html = _confusion_matrix_html(derived_lda)
+            if derived_html:
+                confusion_html += (
+                    '<h3>Klassen-Zusatzanalyse aus Versuchsfrage'
+                    ' (Nutzer-Wunsch)</h3>' + derived_html)
     # Agenten-Journal (MO 13): iterative Dokumentation sichtbar machen
     journal_html = ''
     if section.get('agent') == 'agenten_journal':
@@ -852,6 +867,12 @@ def generate_markdown_report(project, crew_results: Dict[str, Any],
         if isinstance(data, dict) and data.get('analysis_mode') == 'classification':
             lda = (data.get('method_results') or {}).get('LDA') or {}
             lines += _confusion_matrix_md(lda)
+        if isinstance(data, dict):
+            derived = (data.get('derived_class_analysis') or {}).get('LDA')
+            if derived:
+                lines += ['**Klassen-Zusatzanalyse aus Versuchsfrage'
+                          ' (Nutzer-Wunsch):**', '']
+                lines += _confusion_matrix_md(derived)
         journal_lines = _journal_md_lines(data.get('journal'))
         if journal_lines:
             lines += ['**Agenten-Journal (Analysen, Rückschlüsse, Iterationen):**', '']
