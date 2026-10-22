@@ -68,6 +68,21 @@
                 </div>
             </div>
             {% endif %}
+            {% if preparation.fusion_merge_note and not preparation.fusion_merge_note.combined %}
+            <!-- OP85: ehrlicher Hinweis, wenn der Merge nicht moeglich war -->
+            <div class="card border-warning mb-3" id="fusionMergeNote">
+                <div class="card-header bg-warning-subtle d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>{% trans "Kombination nicht möglich - Einzelauswertung als Fallback" %}</strong>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">{{ preparation.fusion_merge_note.reason }}</p>
+                    <p class="small text-muted mb-0">
+                        {% trans "Die Analyse läuft daher je Datensatz statt als eine kombinierte Auswertung. Prüfen Sie die Quell-Datensätze (Referenzspalte, Zeilenzahl, Kanäle) und starten Sie die Aufbereitung erneut." %}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
             {% for d in datasets %}
             {% if d.fusion_merge %}
             <!-- OP80: Review-Karte des kombinierten Fusions-Datensatzes -->

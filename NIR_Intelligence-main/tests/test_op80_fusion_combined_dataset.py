@@ -249,5 +249,57 @@ check("T6c fusion-Sektion nach Reingest-Start erhalten",
 check("T6d user_options ebenfalls erhalten",
       "user_options" in rep7)
 
+# ---------------------------------------------------------------------------
+# T7: OP85 - Ehrlichkeit, wenn der Merge NICHT moeglich ist (Still-
+# Schweigen war der Bug: der Nutzer sah keine Review-Karte und keinen
+# Grund). Jetzt: fusion_merge_note mit Grund + Warnkarte.
+# ---------------------------------------------------------------------------
+ingest_src2 = (REPO_ROOT / "services" / "project_ingest.py").read_text("utf-8")
+check("T7a fehlgeschlagener Merge dokumentiert (fusion_merge_note)",
+      "fusion_merge_note" in ingest_src2)
+check("T7b Grund mit kalibrationsfaehiger Anzahl",
+      "calibratable_datasets" in ingest_src2)
+tpl2 = (REPO_ROOT / "django_project" / "templates"
+        / "project_report.html").read_text("utf-8")
+check("T7c Warnkarte im Template (fusionMergeNote)",
+      "fusionMergeNote" in tpl2)
+check("T7d Karte zeigt den Grund",
+      "preparation.fusion_merge_note.reason" in tpl2)
+
+# E2E: Fusionsprojekt mit nur EINEM kalibrationsfaehigen Datensatz
+# -> Note + Warnkarte statt stiller Einzel-Auswertung
+p2 = AnalysisProject.objects.create(name="OP85-NoMerge", phase="drafted",
+                                    user=user)
+gf_a = GenericFile.objects.create(
+    file=SimpleUploadedFile("a.csv", _wide_csv("A", 900, 10, 12, 4.0),
+                            content_type="text/csv"),
+    file_size=10, user=user)
+gf_b = GenericFile.objects.create(
+    file=SimpleUploadedFile("b.csv", b"nur,text,ohne,brix\n1,2,3,4\n",
+                            content_type="text/csv"),
+    file_size=10, user=user)
+p2.files.add(gf_a)
+p2.files.add(gf_b)
+p2.preparation_report = {
+    'user_options': {},
+    'fusion': {'source_projects': [{'project_id': 'x1'}],
+               'created_by': 'op63_fusion'}}
+p2.save()
+from services.project_ingest import build_preparation_report  # noqa: E402
+report2 = build_preparation_report(p2)
+rep2 = p2.preparation_report or {}
+note2 = rep2.get('fusion_merge_note') or {}
+check("T7e E2E: Note gesetzt (combined False)",
+      note2.get('combined') is False, str(note2)[:100])
+check("T7f E2E: Grund nennt die kalibrationsfaehige Anzahl",
+      'kalibrationsf' in str(note2.get('reason', '')),
+      str(note2.get('reason', ''))[:80])
+r8 = client.get(f"/projects/{p2.id}/")
+html8 = r8.content.decode()
+check("T7g E2E: Warnkarte gerendert",
+      "fusionMergeNote" in html8)
+check("T7h E2E: Grund auf der Seite sichtbar",
+      "kalibrationsf" in html8)
+
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)
