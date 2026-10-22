@@ -1,0 +1,1859 @@
+{
+  "version": 1,
+  "module_to_tests": {
+    "agents.__init__": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.ansible_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op26_ansible_install.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.audio_processor_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.base_agent": [
+      "test_agenten_journal.py",
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.calibration_agent": [
+      "test_agenten_journal.py",
+      "test_calibration_metrics.py",
+      "test_fl2_federated_calibration.py",
+      "test_op18_cnn_agent.py",
+      "test_op20_calibration_charts.py",
+      "test_op63_st3_calibration.py",
+      "test_op81_calibration_management.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.chatbot_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op24_report_chatbot.py",
+      "test_op36_target_agnostic.py",
+      "test_op9_mcp_data_agent.py",
+      "test_s6_chatbot.py"
+    ],
+    "agents.crewai_compat": [
+      "test_op18_cnn_agent.py",
+      "test_op6_crewai_agents.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.data_preparation_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op28_file_type_agnostic.py",
+      "test_op9_mcp_data_agent.py",
+      "test_s3_format_loaders.py",
+      "test_struktur_dialog_stufe_b.py",
+      "test_validierung_stufe0.py",
+      "test_wide_format_loader.py"
+    ],
+    "agents.django_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.docker_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.faiss_agent": [
+      "test_op14_agent_truthfulness.py",
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.finalization_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.flower_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.generic_file_handler_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.hswt_styling_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.ilias_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op2_ilias_token_flow.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.ilias_course_agent": [
+      "test_fl6_deployment_ilias_agent.py",
+      "test_op18_cnn_agent.py",
+      "test_op2_ilias_token_flow.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.ilias_integration_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op2_ilias_token_flow.py",
+      "test_op9_mcp_data_agent.py",
+      "test_s8_ilias_integration.py"
+    ],
+    "agents.image_processor_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.mcp_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op28_file_type_agnostic.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.metadata_agent": [
+      "test_op13_online_metadata_editing.py",
+      "test_op18_cnn_agent.py",
+      "test_op31_metadata_llm.py",
+      "test_op33_derived_metadata.py",
+      "test_op35_metadata_editor_report.py",
+      "test_op73_metadata_flow.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.metadata_quality_agent": [
+      "test_op13_online_metadata_editing.py",
+      "test_op18_cnn_agent.py",
+      "test_op31_metadata_llm.py",
+      "test_op33_derived_metadata.py",
+      "test_op35_metadata_editor_report.py",
+      "test_op40_metadata_consistency_print.py",
+      "test_op73_metadata_flow.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.neural_network_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.nir_analysis_crew": [
+      "test_agenten_journal.py",
+      "test_m5_peak_analysis.py",
+      "test_op18_cnn_agent.py",
+      "test_op77_analysis_wishes.py",
+      "test_op8_analysis_fix.py",
+      "test_op8_crew_results_ui.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.onboarding_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.parameter_recommender_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.port_agent.__init__": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.port_agent.agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.port_agent.crewai_integration": [
+      "test_op18_cnn_agent.py",
+      "test_op6_crewai_agents.py",
+      "test_op9_mcp_data_agent.py",
+      "test_s8_ilias_integration.py"
+    ],
+    "agents.port_agent.docker_port_manager": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.port_agent.exceptions": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.port_agent.integration": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py",
+      "test_s8_ilias_integration.py"
+    ],
+    "agents.port_agent.port_manager": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.postgresql_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.project_finalization_agent": [
+      "test_op12_project_upload_ui.py",
+      "test_op17_project_delete.py",
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.qdrant_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.quarto_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.reporting_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op56_report_fixes.py",
+      "test_op74_report_bugs.py",
+      "test_op8_crew_results_ui.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.sensor_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op29_sensor_agent.py",
+      "test_op49_sensor_diy.py",
+      "test_op53_sensor_pages.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.sensor_quality_agent": [
+      "test_op14_agent_truthfulness.py",
+      "test_op18_cnn_agent.py",
+      "test_op21_sensor_dashboard.py",
+      "test_op29_sensor_agent.py",
+      "test_op49_sensor_diy.py",
+      "test_op53_sensor_pages.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.shift_detector_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.spectral_analysis_agent": [
+      "test_m5_peak_analysis.py",
+      "test_op14_agent_truthfulness.py",
+      "test_op15_spectral_database.py",
+      "test_op18_cnn_agent.py",
+      "test_op77_analysis_wishes.py",
+      "test_op8_analysis_fix.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.statistical_analysis_agent": [
+      "test_agenten_journal.py",
+      "test_m5_peak_analysis.py",
+      "test_op18_cnn_agent.py",
+      "test_op77_analysis_wishes.py",
+      "test_op8_analysis_fix.py",
+      "test_op9_mcp_data_agent.py",
+      "test_validierung_stufe0.py"
+    ],
+    "agents.uvx_agent": [
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "agents.workflow_orchestrator": [
+      "test_op10_project_workflow.py",
+      "test_op18_cnn_agent.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "api.crewai_views": [
+      "test_legacy_regression_fix.py"
+    ],
+    "api.project_views": [
+      "test_op52_nav_menu.py",
+      "test_op54_diy_pages.py",
+      "test_op55_async_prep.py",
+      "test_s1_s2_s5_redesign.py",
+      "test_ui_bedienelemente.py"
+    ],
+    "api.serializers": [
+      "test_mui_scientific_integrity.py"
+    ],
+    "api.views": [
+      "test_fa1_password_change.py",
+      "test_fa1_settings_repair.py",
+      "test_mui_scientific_integrity.py"
+    ],
+    "core.models": [
+      "test_legacy_regression_fix.py",
+      "test_mui_scientific_integrity.py",
+      "test_op54_diy_pages.py",
+      "test_op55_async_prep.py",
+      "test_op57_async_crew.py",
+      "test_op64_fusion_release_feedback.py",
+      "test_op68_fusion_sensor_correction.py",
+      "test_op70_bandmatrix_xai_charts.py",
+      "test_op78_prep_progress.py",
+      "test_op79_fusion_candidate_selection.py",
+      "test_op80_fusion_combined_dataset.py",
+      "test_op84_selective_llm_metadata.py",
+      "test_struktur_dialog_stufe_b.py",
+      "test_ui_bedienelemente.py"
+    ],
+    "scripts.background_crew_runner": [
+      "test_op51_start_scripts.py"
+    ],
+    "scripts.build_test_impact_map": [
+      "test_op51_start_scripts.py"
+    ],
+    "scripts.check_updates": [
+      "test_op51_start_scripts.py"
+    ],
+    "scripts.flower_superlink_entry": [
+      "test_op51_start_scripts.py"
+    ],
+    "scripts.flower_supernode_entry": [
+      "test_op51_start_scripts.py"
+    ],
+    "scripts.ilias_course_agent_runner": [
+      "test_op18_cnn_agent.py",
+      "test_op2_ilias_token_flow.py",
+      "test_op51_start_scripts.py",
+      "test_op9_mcp_data_agent.py"
+    ],
+    "scripts.knime_fusion_analysis": [
+      "test_m5_peak_analysis.py",
+      "test_op51_start_scripts.py",
+      "test_op63_fusion_branch.py",
+      "test_op65_fusion_ux.py",
+      "test_op66_fusion_pvr_charts.py",
+      "test_op77_analysis_wishes.py",
+      "test_op8_analysis_fix.py"
+    ],
+    "scripts.knime_reference_validation": [
+      "test_m3_reference_import.py",
+      "test_op51_start_scripts.py"
+    ],
+    "scripts.main_orchestrator": [
+      "test_op51_start_scripts.py"
+    ],
+    "scripts.make_orange_dataset": [
+      "test_op51_start_scripts.py"
+    ],
+    "scripts.make_ows_workflow": [
+      "test_op10_project_workflow.py",
+      "test_op51_start_scripts.py"
+    ],
+    "scripts.orange_workflow_analysis": [
+      "test_m5_peak_analysis.py",
+      "test_op10_project_workflow.py",
+      "test_op51_start_scripts.py",
+      "test_op77_analysis_wishes.py",
+      "test_op8_analysis_fix.py"
+    ],
+    "scripts.run_change_tests": [
+      "test_op51_start_scripts.py",
+      "test_op89_change_impact_gate.py"
+    ],
+    "services": [
+      "test_op21_sensor_dashboard.py",
+      "test_op32_metadata_relevance.py",
+      "test_op36_target_agnostic.py",
+      "test_op39_equation_export_source.py",
+      "test_op40_metadata_consistency_print.py",
+      "test_op50_ollama_startup.py"
+    ],
+    "services.analysis_wishes": [
+      "test_m5_peak_analysis.py",
+      "test_op77_analysis_wishes.py",
+      "test_op8_analysis_fix.py"
+    ],
+    "services.calibration_charts": [
+      "test_calibration_metrics.py",
+      "test_fl2_federated_calibration.py",
+      "test_op16_pca_charts.py",
+      "test_op19_xai_charts.py",
+      "test_op20_calibration_charts.py",
+      "test_op39_equation_export_source.py",
+      "test_op63_st3_calibration.py",
+      "test_op81_calibration_management.py"
+    ],
+    "services.calibration_management": [
+      "test_calibration_metrics.py",
+      "test_fl2_federated_calibration.py",
+      "test_op20_calibration_charts.py",
+      "test_op63_st3_calibration.py",
+      "test_op81_calibration_management.py"
+    ],
+    "services.calibration_optimization": [
+      "test_calibration_metrics.py",
+      "test_fl2_federated_calibration.py",
+      "test_op20_calibration_charts.py",
+      "test_op63_st3_calibration.py",
+      "test_op81_calibration_management.py",
+      "test_s7_update_monitoring.py"
+    ],
+    "services.chatbot_service": [
+      "test_op24_report_chatbot.py",
+      "test_op50_ollama_startup.py",
+      "test_s6_chatbot.py",
+      "test_s7_update_monitoring.py"
+    ],
+    "services.embedding_service": [
+      "test_op1_embedding_pipeline.py",
+      "test_op50_ollama_startup.py"
+    ],
+    "services.federated_calibration": [
+      "test_calibration_metrics.py",
+      "test_fl2_federated_calibration.py",
+      "test_fl3_federated_privacy.py",
+      "test_fl4_federated_ui.py",
+      "test_fl5_federated_ilias.py",
+      "test_op20_calibration_charts.py",
+      "test_op58_federated_options.py",
+      "test_op63_st3_calibration.py",
+      "test_op81_calibration_management.py",
+      "test_s9_federated_learning.py"
+    ],
+    "services.federated_ilias_service": [
+      "test_fl3_federated_privacy.py",
+      "test_fl4_federated_ui.py",
+      "test_fl5_federated_ilias.py",
+      "test_op2_ilias_token_flow.py",
+      "test_op58_federated_options.py",
+      "test_s9_federated_learning.py"
+    ],
+    "services.federated_learning_service": [
+      "test_fl1_flwr_runtime.py",
+      "test_fl3_federated_privacy.py",
+      "test_fl4_federated_ui.py",
+      "test_fl5_federated_ilias.py",
+      "test_op58_federated_options.py",
+      "test_s9_federated_learning.py"
+    ],
+    "services.federated_privacy": [
+      "test_fl3_federated_privacy.py",
+      "test_fl4_federated_ui.py",
+      "test_fl5_federated_ilias.py",
+      "test_op58_federated_options.py",
+      "test_s9_federated_learning.py"
+    ],
+    "services.flower_apps": [
+      "test_fl1_flwr_runtime.py"
+    ],
+    "services.fusion_calibration": [
+      "test_calibration_metrics.py",
+      "test_fl2_federated_calibration.py",
+      "test_op20_calibration_charts.py",
+      "test_op63_fusion_branch.py",
+      "test_op63_st3_calibration.py",
+      "test_op64_fusion_release_feedback.py",
+      "test_op65_fusion_ux.py",
+      "test_op66_fusion_pvr_charts.py",
+      "test_op68_fusion_sensor_correction.py",
+      "test_op70_bandmatrix_xai_charts.py",
+      "test_op81_calibration_management.py"
+    ],
+    "services.fusion_combine": [
+      "test_op63_fusion_branch.py",
+      "test_op65_fusion_ux.py",
+      "test_op66_fusion_pvr_charts.py",
+      "test_op80_fusion_combined_dataset.py"
+    ],
+    "services.fusion_intent": [
+      "test_op63_fusion_branch.py",
+      "test_op65_fusion_ux.py",
+      "test_op66_fusion_pvr_charts.py",
+      "test_op79_fusion_candidate_selection.py"
+    ],
+    "services.fusion_sensor_analysis": [
+      "test_m5_peak_analysis.py",
+      "test_op29_sensor_agent.py",
+      "test_op49_sensor_diy.py",
+      "test_op53_sensor_pages.py",
+      "test_op63_fusion_branch.py",
+      "test_op65_fusion_ux.py",
+      "test_op66_fusion_pvr_charts.py",
+      "test_op68_fusion_sensor_correction.py",
+      "test_op77_analysis_wishes.py",
+      "test_op8_analysis_fix.py"
+    ],
+    "services.ilias_api_service": [
+      "test_fl6_deployment_ilias_agent.py",
+      "test_op2_ilias_token_flow.py"
+    ],
+    "services.ilias_learning_service": [
+      "test_fl6_deployment_ilias_agent.py",
+      "test_op2_ilias_token_flow.py"
+    ],
+    "services.jcamp_parser": [
+      "test_m2_jcamp_opus.py"
+    ],
+    "services.metadata_llm": [
+      "test_op13_online_metadata_editing.py",
+      "test_op31_metadata_llm.py",
+      "test_op32_metadata_relevance.py",
+      "test_op33_derived_metadata.py",
+      "test_op35_metadata_editor_report.py",
+      "test_op50_ollama_startup.py",
+      "test_op59_release_install.py",
+      "test_op73_metadata_flow.py",
+      "test_op84_selective_llm_metadata.py"
+    ],
+    "services.ollama_health": [
+      "test_op50_ollama_startup.py",
+      "test_op76_ollama_status.py"
+    ],
+    "services.ollama_status": [
+      "test_op76_ollama_status.py"
+    ],
+    "services.outlier_analysis": [
+      "test_m5_peak_analysis.py",
+      "test_op37_outlier_chatbot.py",
+      "test_op77_analysis_wishes.py",
+      "test_op8_analysis_fix.py",
+      "test_validierung_stufe0.py"
+    ],
+    "services.pca_charts": [
+      "test_op16_pca_charts.py",
+      "test_op19_xai_charts.py"
+    ],
+    "services.peak_analysis": [
+      "test_m5_peak_analysis.py",
+      "test_op77_analysis_wishes.py",
+      "test_op8_analysis_fix.py"
+    ],
+    "services.pipeline_record": [
+      "test_m4_pipeline_record.py",
+      "test_op7_crew_pipeline_bridge.py"
+    ],
+    "services.project_crew": [
+      "test_agenten_journal.py",
+      "test_op11_rendered_final_report.py",
+      "test_op12_project_upload_ui.py",
+      "test_op14_agent_truthfulness.py",
+      "test_op17_project_delete.py"
+    ],
+    "services.project_fusion": [
+      "test_op12_project_upload_ui.py",
+      "test_op17_project_delete.py",
+      "test_op63_fusion_branch.py",
+      "test_op65_fusion_ux.py",
+      "test_op66_fusion_pvr_charts.py",
+      "test_op79_fusion_candidate_selection.py"
+    ],
+    "services.project_ingest": [
+      "test_op11_rendered_final_report.py",
+      "test_op12_project_upload_ui.py",
+      "test_op14_agent_truthfulness.py",
+      "test_op17_project_delete.py",
+      "test_op21_sensor_dashboard.py",
+      "test_op28_file_type_agnostic.py",
+      "test_op30_archive_ingest.py",
+      "test_op59_release_install.py",
+      "test_op64_fusion_release_feedback.py",
+      "test_op75_target_guard.py",
+      "test_op78_prep_progress.py",
+      "test_op80_fusion_combined_dataset.py",
+      "test_op83_llm_ingest_tuning.py",
+      "test_op84_selective_llm_metadata.py",
+      "test_validierung_stufe0.py"
+    ],
+    "services.project_report": [
+      "test_op11_rendered_final_report.py",
+      "test_op12_project_upload_ui.py",
+      "test_op17_project_delete.py",
+      "test_op21_sensor_dashboard.py",
+      "test_op56_report_fixes.py",
+      "test_op74_report_bugs.py",
+      "test_struktur_dialog_stufe_b.py",
+      "test_validierung_stufe0.py"
+    ],
+    "services.reference_import": [
+      "test_m3_reference_import.py"
+    ],
+    "services.report_chatbot": [
+      "test_op24_report_chatbot.py",
+      "test_op56_report_fixes.py",
+      "test_op74_report_bugs.py",
+      "test_s6_chatbot.py"
+    ],
+    "services.sensor_catalog": [
+      "test_op29_sensor_agent.py",
+      "test_op49_sensor_diy.py",
+      "test_op53_sensor_pages.py"
+    ],
+    "services.sensor_charts": [
+      "test_op16_pca_charts.py",
+      "test_op19_xai_charts.py",
+      "test_op21_sensor_dashboard.py",
+      "test_op29_sensor_agent.py",
+      "test_op49_sensor_diy.py",
+      "test_op53_sensor_pages.py"
+    ],
+    "services.sensor_documents": [
+      "test_op29_sensor_agent.py",
+      "test_op49_sensor_diy.py",
+      "test_op53_sensor_pages.py"
+    ],
+    "services.sensor_summary": [
+      "test_op29_sensor_agent.py",
+      "test_op49_sensor_diy.py",
+      "test_op53_sensor_pages.py",
+      "test_op54_diy_pages.py"
+    ],
+    "services.sensor_websearch": [
+      "test_op29_sensor_agent.py",
+      "test_op49_sensor_diy.py",
+      "test_op50_ollama_startup.py",
+      "test_op53_sensor_pages.py"
+    ],
+    "services.similarity_charts": [
+      "test_op16_pca_charts.py",
+      "test_op19_xai_charts.py",
+      "test_op22_spectrum_similarity_charts.py",
+      "test_s5_spectrum_similarity.py"
+    ],
+    "services.similarity_search": [
+      "test_op22_spectrum_similarity_charts.py",
+      "test_s5_spectrum_similarity.py"
+    ],
+    "services.spectrum_curve": [
+      "test_legacy_regression_fix.py",
+      "test_m1_spectrum_units.py",
+      "test_op38_spectrum_cleaned.py"
+    ],
+    "services.spectrum_database": [
+      "test_m1_spectrum_units.py",
+      "test_op38_spectrum_cleaned.py"
+    ],
+    "services.spectrum_similarity": [
+      "test_m1_spectrum_units.py",
+      "test_op22_spectrum_similarity_charts.py",
+      "test_op38_spectrum_cleaned.py",
+      "test_s5_spectrum_similarity.py",
+      "test_s7_update_monitoring.py"
+    ],
+    "services.spectrum_units": [
+      "test_m1_spectrum_units.py",
+      "test_op38_spectrum_cleaned.py"
+    ],
+    "services.structure_dialog": [
+      "test_struktur_dialog_stufe_b.py"
+    ],
+    "services.student_report": [
+      "test_op23_student_report.py",
+      "test_op56_report_fixes.py",
+      "test_op74_report_bugs.py"
+    ],
+    "services.update_lookup": [
+      "test_op4_update_lookups.py"
+    ],
+    "services.update_monitor": [
+      "test_op4_update_lookups.py",
+      "test_s7_update_monitoring.py"
+    ],
+    "services.xai_charts": [
+      "test_op16_pca_charts.py",
+      "test_op19_xai_charts.py",
+      "test_op70_bandmatrix_xai_charts.py"
+    ]
+  },
+  "test_assignment": {
+    "test_agenten_journal.py": {
+      "covers": [
+        "agents.base_agent",
+        "agents.calibration_agent",
+        "agents.nir_analysis_crew",
+        "agents.statistical_analysis_agent",
+        "services.project_crew"
+      ],
+      "strategy": "imports"
+    },
+    "test_calibration_metrics.py": {
+      "covers": [
+        "agents.calibration_agent",
+        "services.calibration_charts",
+        "services.calibration_management",
+        "services.calibration_optimization",
+        "services.federated_calibration",
+        "services.fusion_calibration"
+      ],
+      "strategy": "name:calibration"
+    },
+    "test_fa1_password_change.py": {
+      "covers": [
+        "api.views"
+      ],
+      "strategy": "imports"
+    },
+    "test_fa1_settings_repair.py": {
+      "covers": [
+        "api.views"
+      ],
+      "strategy": "imports"
+    },
+    "test_fl1_flwr_runtime.py": {
+      "covers": [
+        "services.federated_learning_service",
+        "services.flower_apps"
+      ],
+      "strategy": "imports"
+    },
+    "test_fl2_federated_calibration.py": {
+      "covers": [
+        "agents.calibration_agent",
+        "services.calibration_charts",
+        "services.calibration_management",
+        "services.calibration_optimization",
+        "services.federated_calibration",
+        "services.fusion_calibration"
+      ],
+      "strategy": "name:calibration"
+    },
+    "test_fl3_federated_privacy.py": {
+      "covers": [
+        "services.federated_calibration",
+        "services.federated_ilias_service",
+        "services.federated_learning_service",
+        "services.federated_privacy"
+      ],
+      "strategy": "name:federated"
+    },
+    "test_fl4_federated_ui.py": {
+      "covers": [
+        "services.federated_calibration",
+        "services.federated_ilias_service",
+        "services.federated_learning_service",
+        "services.federated_privacy"
+      ],
+      "strategy": "name:federated"
+    },
+    "test_fl5_federated_ilias.py": {
+      "covers": [
+        "services.federated_calibration",
+        "services.federated_ilias_service",
+        "services.federated_learning_service",
+        "services.federated_privacy"
+      ],
+      "strategy": "name:federated"
+    },
+    "test_fl6_deployment_ilias_agent.py": {
+      "covers": [
+        "agents.ilias_course_agent",
+        "services.ilias_api_service",
+        "services.ilias_learning_service"
+      ],
+      "strategy": "imports"
+    },
+    "test_legacy_regression_fix.py": {
+      "covers": [
+        "api.crewai_views",
+        "core.models",
+        "services.spectrum_curve"
+      ],
+      "strategy": "imports"
+    },
+    "test_m1_spectrum_units.py": {
+      "covers": [
+        "services.spectrum_curve",
+        "services.spectrum_database",
+        "services.spectrum_similarity",
+        "services.spectrum_units"
+      ],
+      "strategy": "name:spectrum"
+    },
+    "test_m2_jcamp_opus.py": {
+      "covers": [
+        "services.jcamp_parser"
+      ],
+      "strategy": "name:jcamp"
+    },
+    "test_m3_reference_import.py": {
+      "covers": [
+        "services.reference_import",
+        "scripts.knime_reference_validation"
+      ],
+      "strategy": "name:reference"
+    },
+    "test_m4_pipeline_record.py": {
+      "covers": [
+        "services.pipeline_record"
+      ],
+      "strategy": "name:pipeline"
+    },
+    "test_m5_peak_analysis.py": {
+      "covers": [
+        "agents.nir_analysis_crew",
+        "agents.spectral_analysis_agent",
+        "agents.statistical_analysis_agent",
+        "services.analysis_wishes",
+        "services.fusion_sensor_analysis",
+        "services.outlier_analysis",
+        "services.peak_analysis",
+        "scripts.knime_fusion_analysis",
+        "scripts.orange_workflow_analysis"
+      ],
+      "strategy": "name:analysis"
+    },
+    "test_mui_scientific_integrity.py": {
+      "covers": [
+        "api.serializers",
+        "api.views",
+        "core.models"
+      ],
+      "strategy": "imports"
+    },
+    "test_op10_project_workflow.py": {
+      "covers": [
+        "agents.workflow_orchestrator",
+        "scripts.make_ows_workflow",
+        "scripts.orange_workflow_analysis"
+      ],
+      "strategy": "name:workflow"
+    },
+    "test_op11_rendered_final_report.py": {
+      "covers": [
+        "services.project_crew",
+        "services.project_ingest",
+        "services.project_report"
+      ],
+      "strategy": "imports"
+    },
+    "test_op12_project_upload_ui.py": {
+      "covers": [
+        "agents.project_finalization_agent",
+        "services.project_crew",
+        "services.project_fusion",
+        "services.project_ingest",
+        "services.project_report"
+      ],
+      "strategy": "name:project"
+    },
+    "test_op13_online_metadata_editing.py": {
+      "covers": [
+        "agents.metadata_agent",
+        "agents.metadata_quality_agent",
+        "services.metadata_llm"
+      ],
+      "strategy": "name:metadata"
+    },
+    "test_op14_agent_truthfulness.py": {
+      "covers": [
+        "agents.faiss_agent",
+        "agents.sensor_quality_agent",
+        "agents.spectral_analysis_agent",
+        "services.project_crew",
+        "services.project_ingest"
+      ],
+      "strategy": "imports"
+    },
+    "test_op15_spectral_database.py": {
+      "covers": [
+        "agents.spectral_analysis_agent"
+      ],
+      "strategy": "name:spectral"
+    },
+    "test_op16_pca_charts.py": {
+      "covers": [
+        "services.calibration_charts",
+        "services.pca_charts",
+        "services.sensor_charts",
+        "services.similarity_charts",
+        "services.xai_charts"
+      ],
+      "strategy": "name:charts"
+    },
+    "test_op17_project_delete.py": {
+      "covers": [
+        "agents.project_finalization_agent",
+        "services.project_crew",
+        "services.project_fusion",
+        "services.project_ingest",
+        "services.project_report"
+      ],
+      "strategy": "name:project"
+    },
+    "test_op18_cnn_agent.py": {
+      "covers": [
+        "agents.__init__",
+        "agents.ansible_agent",
+        "agents.audio_processor_agent",
+        "agents.base_agent",
+        "agents.calibration_agent",
+        "agents.chatbot_agent",
+        "agents.crewai_compat",
+        "agents.data_preparation_agent",
+        "agents.django_agent",
+        "agents.docker_agent",
+        "agents.faiss_agent",
+        "agents.finalization_agent",
+        "agents.flower_agent",
+        "agents.generic_file_handler_agent",
+        "agents.hswt_styling_agent",
+        "agents.ilias_agent",
+        "agents.ilias_course_agent",
+        "agents.ilias_integration_agent",
+        "agents.image_processor_agent",
+        "agents.mcp_agent",
+        "agents.metadata_agent",
+        "agents.metadata_quality_agent",
+        "agents.neural_network_agent",
+        "agents.nir_analysis_crew",
+        "agents.onboarding_agent",
+        "agents.parameter_recommender_agent",
+        "agents.port_agent.__init__",
+        "agents.port_agent.agent",
+        "agents.port_agent.crewai_integration",
+        "agents.port_agent.docker_port_manager",
+        "agents.port_agent.exceptions",
+        "agents.port_agent.integration",
+        "agents.port_agent.port_manager",
+        "agents.postgresql_agent",
+        "agents.project_finalization_agent",
+        "agents.qdrant_agent",
+        "agents.quarto_agent",
+        "agents.reporting_agent",
+        "agents.sensor_agent",
+        "agents.sensor_quality_agent",
+        "agents.shift_detector_agent",
+        "agents.spectral_analysis_agent",
+        "agents.statistical_analysis_agent",
+        "agents.uvx_agent",
+        "agents.workflow_orchestrator",
+        "scripts.ilias_course_agent_runner"
+      ],
+      "strategy": "name:agent"
+    },
+    "test_op19_xai_charts.py": {
+      "covers": [
+        "services.calibration_charts",
+        "services.pca_charts",
+        "services.sensor_charts",
+        "services.similarity_charts",
+        "services.xai_charts"
+      ],
+      "strategy": "name:charts"
+    },
+    "test_op1_embedding_pipeline.py": {
+      "covers": [
+        "services.embedding_service"
+      ],
+      "strategy": "name:embedding"
+    },
+    "test_op20_calibration_charts.py": {
+      "covers": [
+        "agents.calibration_agent",
+        "services.calibration_charts",
+        "services.calibration_management",
+        "services.calibration_optimization",
+        "services.federated_calibration",
+        "services.fusion_calibration"
+      ],
+      "strategy": "name:calibration"
+    },
+    "test_op21_sensor_dashboard.py": {
+      "covers": [
+        "agents.sensor_quality_agent",
+        "services",
+        "services.project_ingest",
+        "services.project_report",
+        "services.sensor_charts"
+      ],
+      "strategy": "imports"
+    },
+    "test_op22_spectrum_similarity_charts.py": {
+      "covers": [
+        "services.similarity_charts",
+        "services.similarity_search",
+        "services.spectrum_similarity"
+      ],
+      "strategy": "name:similarity"
+    },
+    "test_op23_student_report.py": {
+      "covers": [
+        "services.student_report"
+      ],
+      "strategy": "name:student"
+    },
+    "test_op24_report_chatbot.py": {
+      "covers": [
+        "agents.chatbot_agent",
+        "services.chatbot_service",
+        "services.report_chatbot"
+      ],
+      "strategy": "name:chatbot"
+    },
+    "test_op25_website_cleanup.py": {
+      "covers": [],
+      "strategy": "imports"
+    },
+    "test_op26_ansible_install.py": {
+      "covers": [
+        "agents.ansible_agent"
+      ],
+      "strategy": "name:ansible"
+    },
+    "test_op27_deb_package.py": {
+      "covers": [],
+      "strategy": "imports"
+    },
+    "test_op28_file_type_agnostic.py": {
+      "covers": [
+        "agents.data_preparation_agent",
+        "agents.mcp_agent",
+        "services.project_ingest"
+      ],
+      "strategy": "imports"
+    },
+    "test_op29_sensor_agent.py": {
+      "covers": [
+        "agents.sensor_agent",
+        "agents.sensor_quality_agent",
+        "services.fusion_sensor_analysis",
+        "services.sensor_catalog",
+        "services.sensor_charts",
+        "services.sensor_documents",
+        "services.sensor_summary",
+        "services.sensor_websearch"
+      ],
+      "strategy": "name:sensor"
+    },
+    "test_op2_ilias_token_flow.py": {
+      "covers": [
+        "agents.ilias_agent",
+        "agents.ilias_course_agent",
+        "agents.ilias_integration_agent",
+        "services.federated_ilias_service",
+        "services.ilias_api_service",
+        "services.ilias_learning_service",
+        "scripts.ilias_course_agent_runner"
+      ],
+      "strategy": "name:ilias"
+    },
+    "test_op30_archive_ingest.py": {
+      "covers": [
+        "services.project_ingest"
+      ],
+      "strategy": "imports"
+    },
+    "test_op31_metadata_llm.py": {
+      "covers": [
+        "agents.metadata_agent",
+        "agents.metadata_quality_agent",
+        "services.metadata_llm"
+      ],
+      "strategy": "name:metadata"
+    },
+    "test_op32_metadata_relevance.py": {
+      "covers": [
+        "services",
+        "services.metadata_llm"
+      ],
+      "strategy": "imports"
+    },
+    "test_op33_derived_metadata.py": {
+      "covers": [
+        "agents.metadata_agent",
+        "agents.metadata_quality_agent",
+        "services.metadata_llm"
+      ],
+      "strategy": "name:metadata"
+    },
+    "test_op35_metadata_editor_report.py": {
+      "covers": [
+        "agents.metadata_agent",
+        "agents.metadata_quality_agent",
+        "services.metadata_llm"
+      ],
+      "strategy": "name:metadata"
+    },
+    "test_op36_target_agnostic.py": {
+      "covers": [
+        "agents.chatbot_agent",
+        "services"
+      ],
+      "strategy": "imports"
+    },
+    "test_op37_outlier_chatbot.py": {
+      "covers": [
+        "services.outlier_analysis"
+      ],
+      "strategy": "name:outlier"
+    },
+    "test_op38_spectrum_cleaned.py": {
+      "covers": [
+        "services.spectrum_curve",
+        "services.spectrum_database",
+        "services.spectrum_similarity",
+        "services.spectrum_units"
+      ],
+      "strategy": "name:spectrum"
+    },
+    "test_op39_equation_export_source.py": {
+      "covers": [
+        "services",
+        "services.calibration_charts"
+      ],
+      "strategy": "imports"
+    },
+    "test_op3_platform_ui.py": {
+      "covers": [],
+      "strategy": "imports"
+    },
+    "test_op40_metadata_consistency_print.py": {
+      "covers": [
+        "agents.metadata_quality_agent",
+        "services"
+      ],
+      "strategy": "imports"
+    },
+    "test_op41_preflight_timeout.py": {
+      "covers": [],
+      "strategy": "imports"
+    },
+    "test_op42_bootstrap_script.py": {
+      "covers": [],
+      "strategy": "imports"
+    },
+    "test_op43_ventoy_stick.py": {
+      "covers": [],
+      "strategy": "imports"
+    },
+    "test_op45_host_backend_stack.py": {
+      "covers": [],
+      "strategy": "imports"
+    },
+    "test_op48_i18n.py": {
+      "covers": [],
+      "strategy": "imports"
+    },
+    "test_op49_sensor_diy.py": {
+      "covers": [
+        "agents.sensor_agent",
+        "agents.sensor_quality_agent",
+        "services.fusion_sensor_analysis",
+        "services.sensor_catalog",
+        "services.sensor_charts",
+        "services.sensor_documents",
+        "services.sensor_summary",
+        "services.sensor_websearch"
+      ],
+      "strategy": "name:sensor"
+    },
+    "test_op4_update_lookups.py": {
+      "covers": [
+        "services.update_lookup",
+        "services.update_monitor"
+      ],
+      "strategy": "imports"
+    },
+    "test_op50_ollama_startup.py": {
+      "covers": [
+        "services",
+        "services.chatbot_service",
+        "services.embedding_service",
+        "services.metadata_llm",
+        "services.ollama_health",
+        "services.sensor_websearch"
+      ],
+      "strategy": "imports"
+    },
+    "test_op51_start_scripts.py": {
+      "covers": [
+        "scripts.background_crew_runner",
+        "scripts.build_test_impact_map",
+        "scripts.check_updates",
+        "scripts.flower_superlink_entry",
+        "scripts.flower_supernode_entry",
+        "scripts.ilias_course_agent_runner",
+        "scripts.knime_fusion_analysis",
+        "scripts.knime_reference_validation",
+        "scripts.main_orchestrator",
+        "scripts.make_orange_dataset",
+        "scripts.make_ows_workflow",
+        "scripts.orange_workflow_analysis",
+        "scripts.run_change_tests"
+      ],
+      "strategy": "name:scripts"
+    },
+    "test_op52_nav_menu.py": {
+      "covers": [
+        "api.project_views"
+      ],
+      "strategy": "imports"
+    },
+    "test_op53_sensor_pages.py": {
+      "covers": [
+        "agents.sensor_agent",
+        "agents.sensor_quality_agent",
+        "services.fusion_sensor_analysis",
+        "services.sensor_catalog",
+        "services.sensor_charts",
+        "services.sensor_documents",
+        "services.sensor_summary",
+        "services.sensor_websearch"
+      ],
+      "strategy": "name:sensor"
+    },
+    "test_op54_diy_pages.py": {
+      "covers": [
+        "api.project_views",
+        "core.models",
+        "services.sensor_summary"
+      ],
+      "strategy": "imports"
+    },
+    "test_op55_async_prep.py": {
+      "covers": [
+        "api.project_views",
+        "core.models"
+      ],
+      "strategy": "imports"
+    },
+    "test_op56_report_fixes.py": {
+      "covers": [
+        "agents.reporting_agent",
+        "services.project_report",
+        "services.report_chatbot",
+        "services.student_report"
+      ],
+      "strategy": "name:report"
+    },
+    "test_op57_async_crew.py": {
+      "covers": [
+        "core.models"
+      ],
+      "strategy": "imports"
+    },
+    "test_op58_federated_options.py": {
+      "covers": [
+        "services.federated_calibration",
+        "services.federated_ilias_service",
+        "services.federated_learning_service",
+        "services.federated_privacy"
+      ],
+      "strategy": "name:federated"
+    },
+    "test_op59_release_install.py": {
+      "covers": [
+        "services.metadata_llm",
+        "services.project_ingest"
+      ],
+      "strategy": "imports"
+    },
+    "test_op62_diagnose_staff.py": {
+      "covers": [],
+      "strategy": "imports"
+    },
+    "test_op63_fusion_branch.py": {
+      "covers": [
+        "services.fusion_calibration",
+        "services.fusion_combine",
+        "services.fusion_intent",
+        "services.fusion_sensor_analysis",
+        "services.project_fusion",
+        "scripts.knime_fusion_analysis"
+      ],
+      "strategy": "name:fusion"
+    },
+    "test_op63_st3_calibration.py": {
+      "covers": [
+        "agents.calibration_agent",
+        "services.calibration_charts",
+        "services.calibration_management",
+        "services.calibration_optimization",
+        "services.federated_calibration",
+        "services.fusion_calibration"
+      ],
+      "strategy": "name:calibration"
+    },
+    "test_op64_fusion_release_feedback.py": {
+      "covers": [
+        "core.models",
+        "services.fusion_calibration",
+        "services.project_ingest"
+      ],
+      "strategy": "imports"
+    },
+    "test_op65_fusion_ux.py": {
+      "covers": [
+        "services.fusion_calibration",
+        "services.fusion_combine",
+        "services.fusion_intent",
+        "services.fusion_sensor_analysis",
+        "services.project_fusion",
+        "scripts.knime_fusion_analysis"
+      ],
+      "strategy": "name:fusion"
+    },
+    "test_op66_fusion_pvr_charts.py": {
+      "covers": [
+        "services.fusion_calibration",
+        "services.fusion_combine",
+        "services.fusion_intent",
+        "services.fusion_sensor_analysis",
+        "services.project_fusion",
+        "scripts.knime_fusion_analysis"
+      ],
+      "strategy": "name:fusion"
+    },
+    "test_op68_fusion_sensor_correction.py": {
+      "covers": [
+        "core.models",
+        "services.fusion_calibration",
+        "services.fusion_sensor_analysis"
+      ],
+      "strategy": "imports"
+    },
+    "test_op6_crewai_agents.py": {
+      "covers": [
+        "agents.crewai_compat",
+        "agents.port_agent.crewai_integration"
+      ],
+      "strategy": "name:crewai"
+    },
+    "test_op70_bandmatrix_xai_charts.py": {
+      "covers": [
+        "core.models",
+        "services.fusion_calibration",
+        "services.xai_charts"
+      ],
+      "strategy": "imports"
+    },
+    "test_op71_warning_aggregation.py": {
+      "covers": [],
+      "strategy": "imports"
+    },
+    "test_op72_intro_page.py": {
+      "covers": [],
+      "strategy": "imports"
+    },
+    "test_op73_metadata_flow.py": {
+      "covers": [
+        "agents.metadata_agent",
+        "agents.metadata_quality_agent",
+        "services.metadata_llm"
+      ],
+      "strategy": "name:metadata"
+    },
+    "test_op74_report_bugs.py": {
+      "covers": [
+        "agents.reporting_agent",
+        "services.project_report",
+        "services.report_chatbot",
+        "services.student_report"
+      ],
+      "strategy": "name:report"
+    },
+    "test_op75_target_guard.py": {
+      "covers": [
+        "services.project_ingest"
+      ],
+      "strategy": "imports"
+    },
+    "test_op76_ollama_status.py": {
+      "covers": [
+        "services.ollama_health",
+        "services.ollama_status"
+      ],
+      "strategy": "name:ollama"
+    },
+    "test_op77_analysis_wishes.py": {
+      "covers": [
+        "agents.nir_analysis_crew",
+        "agents.spectral_analysis_agent",
+        "agents.statistical_analysis_agent",
+        "services.analysis_wishes",
+        "services.fusion_sensor_analysis",
+        "services.outlier_analysis",
+        "services.peak_analysis",
+        "scripts.knime_fusion_analysis",
+        "scripts.orange_workflow_analysis"
+      ],
+      "strategy": "name:analysis"
+    },
+    "test_op78_prep_progress.py": {
+      "covers": [
+        "core.models",
+        "services.project_ingest"
+      ],
+      "strategy": "imports"
+    },
+    "test_op79_fusion_candidate_selection.py": {
+      "covers": [
+        "core.models",
+        "services.fusion_intent",
+        "services.project_fusion"
+      ],
+      "strategy": "imports"
+    },
+    "test_op7_crew_pipeline_bridge.py": {
+      "covers": [
+        "services.pipeline_record"
+      ],
+      "strategy": "name:pipeline"
+    },
+    "test_op80_fusion_combined_dataset.py": {
+      "covers": [
+        "core.models",
+        "services.fusion_combine",
+        "services.project_ingest"
+      ],
+      "strategy": "imports"
+    },
+    "test_op81_calibration_management.py": {
+      "covers": [
+        "agents.calibration_agent",
+        "services.calibration_charts",
+        "services.calibration_management",
+        "services.calibration_optimization",
+        "services.federated_calibration",
+        "services.fusion_calibration"
+      ],
+      "strategy": "name:calibration"
+    },
+    "test_op83_llm_ingest_tuning.py": {
+      "covers": [
+        "services.project_ingest"
+      ],
+      "strategy": "name:ingest"
+    },
+    "test_op84_selective_llm_metadata.py": {
+      "covers": [
+        "core.models",
+        "services.metadata_llm",
+        "services.project_ingest"
+      ],
+      "strategy": "imports"
+    },
+    "test_op89_change_impact_gate.py": {
+      "covers": [
+        "scripts.run_change_tests"
+      ],
+      "strategy": "name:change"
+    },
+    "test_op8_analysis_fix.py": {
+      "covers": [
+        "agents.nir_analysis_crew",
+        "agents.spectral_analysis_agent",
+        "agents.statistical_analysis_agent",
+        "services.analysis_wishes",
+        "services.fusion_sensor_analysis",
+        "services.outlier_analysis",
+        "services.peak_analysis",
+        "scripts.knime_fusion_analysis",
+        "scripts.orange_workflow_analysis"
+      ],
+      "strategy": "name:analysis"
+    },
+    "test_op8_crew_results_ui.py": {
+      "covers": [
+        "agents.nir_analysis_crew",
+        "agents.reporting_agent"
+      ],
+      "strategy": "imports"
+    },
+    "test_op9_mcp_data_agent.py": {
+      "covers": [
+        "agents.__init__",
+        "agents.ansible_agent",
+        "agents.audio_processor_agent",
+        "agents.base_agent",
+        "agents.calibration_agent",
+        "agents.chatbot_agent",
+        "agents.crewai_compat",
+        "agents.data_preparation_agent",
+        "agents.django_agent",
+        "agents.docker_agent",
+        "agents.faiss_agent",
+        "agents.finalization_agent",
+        "agents.flower_agent",
+        "agents.generic_file_handler_agent",
+        "agents.hswt_styling_agent",
+        "agents.ilias_agent",
+        "agents.ilias_course_agent",
+        "agents.ilias_integration_agent",
+        "agents.image_processor_agent",
+        "agents.mcp_agent",
+        "agents.metadata_agent",
+        "agents.metadata_quality_agent",
+        "agents.neural_network_agent",
+        "agents.nir_analysis_crew",
+        "agents.onboarding_agent",
+        "agents.parameter_recommender_agent",
+        "agents.port_agent.__init__",
+        "agents.port_agent.agent",
+        "agents.port_agent.crewai_integration",
+        "agents.port_agent.docker_port_manager",
+        "agents.port_agent.exceptions",
+        "agents.port_agent.integration",
+        "agents.port_agent.port_manager",
+        "agents.postgresql_agent",
+        "agents.project_finalization_agent",
+        "agents.qdrant_agent",
+        "agents.quarto_agent",
+        "agents.reporting_agent",
+        "agents.sensor_agent",
+        "agents.sensor_quality_agent",
+        "agents.shift_detector_agent",
+        "agents.spectral_analysis_agent",
+        "agents.statistical_analysis_agent",
+        "agents.uvx_agent",
+        "agents.workflow_orchestrator",
+        "scripts.ilias_course_agent_runner"
+      ],
+      "strategy": "name:agent"
+    },
+    "test_s1_s2_s5_redesign.py": {
+      "covers": [
+        "api.project_views"
+      ],
+      "strategy": "imports"
+    },
+    "test_s3_format_loaders.py": {
+      "covers": [
+        "agents.data_preparation_agent"
+      ],
+      "strategy": "imports"
+    },
+    "test_s3_s4_s6_redesign.py": {
+      "covers": [],
+      "strategy": "imports"
+    },
+    "test_s4_spectrometer_adapters.py": {
+      "covers": [],
+      "strategy": "imports"
+    },
+    "test_s5_spectrum_similarity.py": {
+      "covers": [
+        "services.similarity_charts",
+        "services.similarity_search",
+        "services.spectrum_similarity"
+      ],
+      "strategy": "name:similarity"
+    },
+    "test_s6_chatbot.py": {
+      "covers": [
+        "agents.chatbot_agent",
+        "services.chatbot_service",
+        "services.report_chatbot"
+      ],
+      "strategy": "name:chatbot"
+    },
+    "test_s7_update_monitoring.py": {
+      "covers": [
+        "services.calibration_optimization",
+        "services.chatbot_service",
+        "services.spectrum_similarity",
+        "services.update_monitor"
+      ],
+      "strategy": "imports"
+    },
+    "test_s8_ilias_integration.py": {
+      "covers": [
+        "agents.ilias_integration_agent",
+        "agents.port_agent.crewai_integration",
+        "agents.port_agent.integration"
+      ],
+      "strategy": "name:integration"
+    },
+    "test_s9_federated_learning.py": {
+      "covers": [
+        "services.federated_calibration",
+        "services.federated_ilias_service",
+        "services.federated_learning_service",
+        "services.federated_privacy"
+      ],
+      "strategy": "name:federated"
+    },
+    "test_struktur_dialog_stufe_b.py": {
+      "covers": [
+        "agents.data_preparation_agent",
+        "core.models",
+        "services.project_report",
+        "services.structure_dialog"
+      ],
+      "strategy": "imports"
+    },
+    "test_ui_bedienelemente.py": {
+      "covers": [
+        "api.project_views",
+        "core.models"
+      ],
+      "strategy": "imports"
+    },
+    "test_validierung_stufe0.py": {
+      "covers": [
+        "agents.data_preparation_agent",
+        "agents.statistical_analysis_agent",
+        "services.outlier_analysis",
+        "services.project_ingest",
+        "services.project_report"
+      ],
+      "strategy": "imports"
+    },
+    "test_wide_format_loader.py": {
+      "covers": [
+        "agents.data_preparation_agent"
+      ],
+      "strategy": "imports"
+    },
+    "test_workflow_smoke.py": {
+      "covers": [],
+      "strategy": "always-run"
+    }
+  },
+  "imports": {
+    "agents.__init__": [],
+    "agents.ansible_agent": [],
+    "agents.audio_processor_agent": [],
+    "agents.base_agent": [],
+    "agents.calibration_agent": [],
+    "agents.chatbot_agent": [],
+    "agents.crewai_compat": [],
+    "agents.data_preparation_agent": [
+      "services.jcamp_parser",
+      "services.opus_reader",
+      "services.pipeline_record"
+    ],
+    "agents.django_agent": [],
+    "agents.docker_agent": [],
+    "agents.faiss_agent": [
+      "services.spectrum_similarity"
+    ],
+    "agents.finalization_agent": [],
+    "agents.flower_agent": [],
+    "agents.generic_file_handler_agent": [],
+    "agents.hswt_styling_agent": [],
+    "agents.ilias_agent": [
+      "services.ilias_api_service",
+      "services.ilias_learning_service"
+    ],
+    "agents.ilias_course_agent": [
+      "services.ilias_api_service",
+      "services.ilias_learning_service"
+    ],
+    "agents.ilias_integration_agent": [],
+    "agents.image_processor_agent": [],
+    "agents.mcp_agent": [],
+    "agents.metadata_agent": [],
+    "agents.metadata_quality_agent": [],
+    "agents.neural_network_agent": [],
+    "agents.nir_analysis_crew": [
+      "services.iteration_evaluator"
+    ],
+    "agents.onboarding_agent": [],
+    "agents.parameter_recommender_agent": [],
+    "agents.port_agent.__init__": [],
+    "agents.port_agent.agent": [],
+    "agents.port_agent.crewai_integration": [],
+    "agents.port_agent.docker_port_manager": [],
+    "agents.port_agent.exceptions": [],
+    "agents.port_agent.integration": [],
+    "agents.port_agent.port_manager": [],
+    "agents.postgresql_agent": [],
+    "agents.project_finalization_agent": [],
+    "agents.qdrant_agent": [
+      "services.spectrum_similarity"
+    ],
+    "agents.quarto_agent": [],
+    "agents.reporting_agent": [
+      "agents"
+    ],
+    "agents.sensor_agent": [
+      "services.sensor_catalog",
+      "services.sensor_websearch"
+    ],
+    "agents.sensor_quality_agent": [],
+    "agents.shift_detector_agent": [
+      "services.peak_analysis"
+    ],
+    "agents.spectral_analysis_agent": [],
+    "agents.statistical_analysis_agent": [],
+    "agents.uvx_agent": [],
+    "agents.workflow_orchestrator": [],
+    "services.analysis_wishes": [],
+    "services.calibration_charts": [],
+    "services.calibration_management": [
+      "core.models",
+      "services.fusion_calibration"
+    ],
+    "services.calibration_optimization": [],
+    "services.chatbot_service": [
+      "services.ollama_health",
+      "services.spectrum_similarity"
+    ],
+    "services.embedding_service": [
+      "services.ollama_health"
+    ],
+    "services.faiss_server": [],
+    "services.federated_calibration": [],
+    "services.federated_ilias_service": [],
+    "services.federated_learning_service": [],
+    "services.federated_privacy": [],
+    "services.flower_apps": [],
+    "services.flower_server": [],
+    "services.fusion_calibration": [
+      "agents.calibration_agent",
+      "services.calibration_charts",
+      "services.fusion_sensor_analysis"
+    ],
+    "services.fusion_combine": [
+      "services.analysis_wishes",
+      "services.project_ingest"
+    ],
+    "services.fusion_intent": [],
+    "services.fusion_sensor_analysis": [],
+    "services.ilias_api_service": [],
+    "services.ilias_learning_service": [
+      "services.ilias_api_service"
+    ],
+    "services.iteration_evaluator": [],
+    "services.jcamp_parser": [],
+    "services.mcp_data_server": [
+      "agents.mcp_agent"
+    ],
+    "services.metadata_llm": [
+      "services.ollama_health"
+    ],
+    "services.napari_server.app": [],
+    "services.ollama_health": [],
+    "services.ollama_status": [
+      "services.ollama_health"
+    ],
+    "services.opus_reader": [],
+    "services.outlier_analysis": [],
+    "services.pca_charts": [],
+    "services.peak_analysis": [],
+    "services.pipeline_record": [],
+    "services.project_crew": [
+      "agents.faiss_agent",
+      "agents.nir_analysis_crew",
+      "agents.reporting_agent",
+      "services.calibration_charts",
+      "services.ollama_health",
+      "services.outlier_analysis",
+      "services.pca_charts",
+      "services.project_fusion",
+      "services.project_report",
+      "services.sensor_catalog",
+      "services.sensor_charts",
+      "services.similarity_charts",
+      "services.spectrum_database",
+      "services.xai_charts"
+    ],
+    "services.project_fusion": [
+      "agents.faiss_agent",
+      "core.models",
+      "services.analysis_wishes",
+      "services.project_ingest",
+      "services.similarity_search",
+      "services.spectrum_database"
+    ],
+    "services.project_ingest": [
+      "agents.data_preparation_agent",
+      "services.analysis_wishes",
+      "services.fusion_combine",
+      "services.metadata_llm",
+      "services.ollama_health",
+      "services.sensor_documents",
+      "services.structure_dialog",
+      "services.workflow_integration"
+    ],
+    "services.project_report": [
+      "core.models",
+      "services.outlier_analysis",
+      "services.report_chatbot",
+      "services.student_report"
+    ],
+    "services.reference_import": [
+      "core.models",
+      "services.spectrum_units"
+    ],
+    "services.report_chatbot": [
+      "agents.chatbot_agent"
+    ],
+    "services.sensor_catalog": [
+      "agents.parameter_recommender_agent",
+      "core.models",
+      "services.metadata_llm",
+      "services.sensor_charts"
+    ],
+    "services.sensor_charts": [],
+    "services.sensor_documents": [
+      "core.models",
+      "services.sensor_catalog"
+    ],
+    "services.sensor_summary": [
+      "services.metadata_llm"
+    ],
+    "services.sensor_websearch": [
+      "services.ollama_health"
+    ],
+    "services.similarity_charts": [],
+    "services.similarity_search": [
+      "agents.faiss_agent",
+      "services.spectrum_database"
+    ],
+    "services.spectrum_curve": [
+      "agents.data_preparation_agent",
+      "services.spectrum_units"
+    ],
+    "services.spectrum_database": [
+      "core.models",
+      "services.reference_import"
+    ],
+    "services.spectrum_similarity": [],
+    "services.spectrum_units": [],
+    "services.structure_dialog": [
+      "services.metadata_llm"
+    ],
+    "services.student_report": [],
+    "services.update_lookup": [],
+    "services.update_monitor": [],
+    "services.xai_charts": [
+      "agents.neural_network_agent"
+    ],
+    "scripts.background_crew_runner": [
+      "agents.nir_analysis_crew"
+    ],
+    "scripts.build_test_impact_map": [],
+    "scripts.check_updates": [
+      "services.update_lookup",
+      "services.update_monitor"
+    ],
+    "scripts.flower_superlink_entry": [],
+    "scripts.flower_supernode_entry": [
+      "services.federated_learning_service",
+      "services.flower_apps"
+    ],
+    "scripts.ilias_course_agent_runner": [
+      "agents.ilias_course_agent"
+    ],
+    "scripts.knime_fusion_analysis": [],
+    "scripts.knime_reference_validation": [],
+    "scripts.main_orchestrator": [],
+    "scripts.make_orange_dataset": [],
+    "scripts.make_ows_workflow": [],
+    "scripts.orange_workflow_analysis": [],
+    "scripts.run_change_tests": [],
+    "dev_framework.__init__": [],
+    "dev_framework.__main__": [],
+    "dev_framework.cli": [],
+    "dev_framework.config.__init__": [],
+    "dev_framework.docs": [],
+    "dev_framework.generator": [],
+    "dev_framework.quality": [],
+    "dev_framework.server": [],
+    "dev_framework.setup_framework": [],
+    "dev_framework.tester": [],
+    "dev_framework.validator": []
+  },
+  "js_files": [
+    "django_project/static/js/agents.js",
+    "django_project/static/js/analysis.js",
+    "django_project/static/js/auth.js",
+    "django_project/static/js/chatbot_panel.js",
+    "django_project/static/js/files.js",
+    "django_project/static/js/i18n.js",
+    "django_project/static/js/jobs.js",
+    "django_project/static/js/main.js",
+    "django_project/static/js/spectra.js"
+  ],
+  "source_roots": [
+    "agents",
+    "services",
+    "scripts",
+    "dev_framework"
+  ],
+  "django_roots": [
+    "api",
+    "core",
+    "nir_web",
+    "port_manager",
+    "middleware"
+  ]
+}

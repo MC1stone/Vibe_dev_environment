@@ -1,44 +1,33 @@
 # DockerAgent
 
-**Version**: 1.0.0  
-**Author**: NIR Development Team  
-**Created**: 2026  
-**Type**: default Agent
+**File**: `agents/docker_agent.py`
+**Version**: 1.0.0
 
-## Overview
+## Description
 
-DockerAgent is a specialized agent in the NIR Intelligence Platform responsible for Docker functionality.
-
-## Responsibilities
-
-- [ ] TODO: Define primary responsibilities
-- [ ] TODO: Define secondary responsibilities
-- [ ] TODO: Define success criteria
-
-## Configuration
-
-### Required Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| N/A | - | - | TODO: Add configuration parameters |
-
-### Optional Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| N/A | - | - | TODO: Add optional parameters |
+Agent for managing Docker containers and services with enhanced error handling
 
 ## Dependencies
 
-DockerAgent requires the following dependencies:
+This agent requires the following dependencies:
+
+- `base_agent`
+- `os`
+- `shutil`
+- `subprocess`
+- `time`
+- `typing`
+
+## Installation
 
 ```bash
-
+pip install base_agent
+pip install os
+pip install shutil
+pip install subprocess
+pip install time
+pip install typing
 ```
-
-### Python Dependencies
-- 
 
 ## Usage
 
@@ -54,99 +43,472 @@ agent = DockerAgent()
 output = agent.initialize()
 
 # Execute agent
-context = {
-    "iteration": 1,
-    "timestamp": time.time()
-}
+context = {'iteration': 1, 'timestamp': time.time()}
 result = agent.execute(context)
-```
-
-### With Configuration
-
-```python
-# Create agent with custom configuration
-agent = DockerAgent(
-    param1="value1",
-    param2="value2"
-)
 ```
 
 ## Methods
 
-### `execute(context: Dict[str, Any]) -> AgentOutput`
+### `__init__`
 
-Executes the agent's primary function.
+**Parameters**:
 
-**Parameters:**
-- `context`: Dictionary containing execution context
+- `self`: TODO
 
-**Returns:**
-- `AgentOutput`: Output containing status, data, and errors
+**Returns**: TODO
 
-### `validate() -> List[AgentError]`
+### `_log_debug`
 
-Validates the agent's current state and configuration.
+Log debug messages if debug mode is enabled
 
-**Returns:**
-- `List[AgentError]`: List of validation errors
+**Parameters**:
 
-### `initialize() -> AgentOutput`
+- `self`: TODO
+- `message`: TODO
 
-Initializes the agent and its environment.
+**Returns**: TODO
 
-**Returns:**
-- `AgentOutput`: Initialization status
+### `_run_command`
 
-## Error Handling
+Run a command with enhanced error handling
 
-DockerAgent handles the following error scenarios:
+**Parameters**:
 
-- [ ] TODO: Document error scenarios
-- [ ] TODO: Document recovery strategies
+- `self`: TODO
+- `cmd`: TODO
+- `check`: TODO
 
-## Performance
+**Returns**: TODO
 
-- **Expected Execution Time**: TODO
-- **Memory Usage**: TODO
-- **CPU Usage**: TODO
+### `_check_docker_client`
 
-## Testing
+Check if Docker client is available
 
-Run tests for DockerAgent:
+**Parameters**:
 
-```bash
-# Unit tests
-pytest tests/unit/test_docker_agent.py
+- `self`: TODO
 
-# Integration tests
-pytest tests/integration/test_docker_agent_integration.py
+**Returns**: TODO
 
-# End-to-end tests
-pytest tests/e2e/test_docker_agent_e2e.py
-```
+### `_check_docker_daemon`
 
-## Examples
+Check if Docker daemon is running
 
-### Example 1: Basic Execution
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+### `_check_docker_permissions`
+
+Check if current user has Docker permissions
+
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+### `_check_docker_compose`
+
+Check if Docker Compose is available
+
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+### `_check_docker_compose_file`
+
+Check if docker-compose file exists and is valid
+
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+### `_check_or_create_network`
+
+Check if Docker network exists, create if not
+
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+### `_start_services`
+
+Start Docker services with enhanced error handling
+
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+### `_check_service_health`
+
+Check health status of individual services
+
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+### `_get_service_logs`
+
+Get logs for a specific service for debugging
+
+**Parameters**:
+
+- `self`: TODO
+- `service_name`: TODO
+
+**Returns**: TODO
+
+### `execute`
+
+Execute Docker agent workflow with comprehensive error handling
+
+**Parameters**:
+
+- `self`: TODO
+- `context`: TODO
+
+**Returns**: TODO
+
+## Source Code
 
 ```python
-# TODO: Add example
+# NIR Intelligence Platform - Docker Agent
+# Handles containerization and Docker services management with improved error handling
+
+import os
+import shutil
+import subprocess
+import time
+from typing import Any, Dict, List
+
+from .base_agent import AgentOutput, AgentStatus, BaseAgent, ErrorSeverity
+
+
+class DockerAgent(BaseAgent):
+    """Agent for managing Docker containers and services with enhanced error handling"""
+
+    def __init__(self, **kwargs):
+        super().__init__(name="DockerAgent", version="1.0.1", **kwargs)
+        self.dependencies = ["docker", "docker-compose"]
+        self.docker_compose_file = kwargs.get("docker_compose_file", "docker-compose.yml")
+        self.network_name = kwargs.get("network_name", "nir_network")
+        self.services = kwargs.get("services", ["qdrant", "postgresql", "faiss", "mcp_server"])
+        self.timeout = kwargs.get("timeout", 300)
+        self.skip_if_unavailable = kwargs.get("skip_if_unavailable", False)
+        self.debug_mode = kwargs.get("debug", False)
+
+    def _log_debug(self, message: str):
+        """Log debug messages if debug mode is enabled"""
+        if self.debug_mode:
+            self.logger.debug(message)
+
+    def _run_command(self, cmd: List[str], check: bool = True) -> subprocess.CompletedProcess:
+        """Run a command with enhanced error handling"""
+        try:
+            self._log_debug(f"Running command: {' '.join(cmd)}")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            if check and result.returncode != 0:
+                error_msg = f"Command failed: {' '.join(cmd)}\n" f"stdout: {result.stdout}\n" f"stderr: {result.stderr}"
+                self.logger.error(error_msg)
+            return result
+        except subprocess.TimeoutExpired:
+            self.log_error(f"Command timed out: {' '.join(cmd)}", ErrorSeverity.MEDIUM)
+            return subprocess.CompletedProcess(cmd, -1, stdout="", stderr="Timeout")
+        except Exception as e:
+            self.log_error(f"Command execution error: {str(e)}", ErrorSeverity.HIGH)
+            return subprocess.CompletedProcess(cmd, -1, stdout="", stderr=str(e))
+
+    def _check_docker_client(self) -> bool:
+        """Check if Docker client is available"""
+        result = self._run_command(["docker", "--version"], check=False)
+        if result.returncode != 0:
+            self.log_error(
+                "Docker client not found",
+                ErrorSeverity.CRITICAL,
+                {"suggested_fix": "Install Docker: sudo apt-get install docker.io", "error_output": result.stderr},
+            )
+            return False
+        return True
+
+    def _check_docker_daemon(self) -> bool:
+        """Check if Docker daemon is running"""
+        result = self._run_command(["docker", "info"], check=False)
+        if result.returncode != 0:
+            self.log_error(
+                "Docker daemon not running",
+                ErrorSeverity.CRITICAL,
+                {"suggested_fix": "Start Docker service: sudo systemctl start docker", "error_output": result.stderr},
+            )
+            return False
+        return True
+
+    def _check_docker_permissions(self) -> bool:
+        """Check if current user has Docker permissions"""
+        result = self._run_command(["docker", "ps"], check=False)
+        if result.returncode != 0:
+            self.log_error(
+                "Docker permission denied",
+                ErrorSeverity.HIGH,
+                {
+                    "suggested_fix": "Add user to docker group: sudo usermod -aG docker $USER && newgrp docker",
+                    "error_output": result.stderr,
+                },
+            )
+            return False
+        return True
+
+    def _check_docker_compose(self) -> bool:
+        """Check if Docker Compose is available"""
+        # Try docker-compose plugin first
+        result = self._run_command(["docker", "compose", "version"], check=False)
+        if result.returncode == 0:
+            self.logger.info("Using Docker Compose plugin")
+            return True
+
+        # Fall back to standalone docker-compose
+        result = self._run_command(["docker-compose", "--version"], check=False)
+        if result.returncode != 0:
+            self.log_error(
+                "Docker Compose not found",
+                ErrorSeverity.HIGH,
+                {
+                    "suggested_fix": "Install Docker Compose: sudo apt-get install docker-compose-plugin",
+                    "error_output": result.stderr,
+                },
+            )
+            return False
+        return True
+
+    def _check_docker_compose_file(self) -> bool:
+        """Check if docker-compose file exists and is valid"""
+        if not os.path.exists(self.docker_compose_file):
+            self.log_error(
+                f"Docker Compose file not found: {self.docker_compose_file}",
+                ErrorSeverity.CRITICAL,
+                {"suggested_fix": f"Create {self.docker_compose_file} or check path"},
+            )
+            return False
+
+        # Validate the compose file
+        result = self._run_command(["docker", "compose", "-f", self.docker_compose_file, "config"], check=False)
+        if result.returncode != 0:
+            self.log_error(
+                f"Invalid Docker Compose file: {self.docker_compose_file}",
+                ErrorSeverity.HIGH,
+                {"validation_error": result.stderr, "suggested_fix": "Check YAML syntax in docker-compose.yml"},
+            )
+            return False
+
+        self.logger.info(f"Docker Compose file validated: {self.docker_compose_file}")
+        return True
+
+    def _check_or_create_network(self) -> bool:
+        """Check if Docker network exists, create if not"""
+        result = self._run_command(["docker", "network", "inspect", self.network_name], check=False)
+
+        if result.returncode == 0:
+            self.logger.info(f"Docker network exists: {self.network_name}")
+            return True
+
+        # Network doesn't exist, try to create it
+        self.logger.info(f"Creating Docker network: {self.network_name}")
+        result = self._run_command(["docker", "network", "create", self.network_name], check=False)
+
+        if result.returncode != 0:
+            self.log_error(
+                f"Failed to create Docker network: {result.stderr}",
+                ErrorSeverity.MEDIUM,
+                {"suggested_fix": "Check network name or manually create network"},
+            )
+            return False
+
+        self.logger.info(f"Docker network created: {self.network_name}")
+        return True
+
+    def _start_services(self) -> Dict[str, bool]:
+        """Start Docker services with enhanced error handling"""
+        service_status = {}
+
+        # Check if services are already running
+        result = self._run_command(["docker", "compose", "-f", self.docker_compose_file, "ps"], check=False)
+
+        if "running" in result.stdout.lower():
+            self.logger.info("Some services are already running")
+            return self._check_service_health()
+
+        # Start services
+        self.logger.info(f"Starting services: {', '.join(self.services)}")
+        result = self._run_command(["docker", "compose", "-f", self.docker_compose_file, "up", "-d"], check=False)
+
+        if result.returncode != 0:
+            self.log_error(
+                f"Failed to start services: {result.stderr}",
+                ErrorSeverity.HIGH,
+                {"command": "docker compose up -d", "suggested_fix": "Check service configurations and logs"},
+            )
+            return self._check_service_health()
+
+        # Wait for services to stabilize
+        self.logger.info(f"Waiting for services to initialize (timeout: {self.timeout}s)")
+        time.sleep(10)
+
+        return self._check_service_health()
+
+    def _check_service_health(self) -> Dict[str, bool]:
+        """Check health status of individual services"""
+        health_status = {}
+
+        # Get all service containers
+        result = self._run_command(["docker", "compose", "-f", self.docker_compose_file, "ps"], check=False)
+
+        for service in self.services:
+            service_line = None
+            for line in result.stdout.split("\n"):
+                if f"{self.network_name}_{service}" in line or service in line.split():
+                    service_line = line
+                    break
+
+            if service_line and "running" in service_line.lower():
+                health_status[service] = True
+                self.logger.info(f"Service {service} is running")
+            else:
+                health_status[service] = False
+                self.log_error(
+                    f"Service {service} is not running",
+                    ErrorSeverity.MEDIUM,
+                    {
+                        "service_line": service_line,
+                        "suggested_fix": f"Check logs: docker logs {self.network_name}_{service}_1",
+                    },
+                )
+
+        return health_status
+
+    def _get_service_logs(self, service_name: str) -> str:
+        """Get logs for a specific service for debugging"""
+        containers = self._run_command(
+            ["docker", "ps", "--filter", f"name={service_name}", "--format", "{{.Names}}"], check=False
+        )
+
+        if containers.stdout.strip():
+            container_name = containers.stdout.strip().split("\n")[0]
+            result = self._run_command(["docker", "logs", container_name], check=False)
+            return result.stdout
+        return "No container found"
+
+    def execute(self, context: Dict[str, Any]) -> AgentOutput:
+        """Execute Docker agent workflow with comprehensive error handling"""
+        try:
+            self.status = AgentStatus.PROCESSING
+            self.logger.info("Starting Docker agent execution")
+
+            # Skip entirely if configured to do so
+            if self.skip_if_unavailable:
+                self.logger.warning("Docker agent configured to skip if unavailable")
+                return self._create_success_output({"status": "skipped", "docker_available": False})
+
+            # Step 1: Check Docker client
+            if not self._check_docker_client():
+                if not self.skip_if_unavailable:
+                    return self._handle_error(Exception("Docker client check failed"))
+                return self._create_success_output({"status": "skipped"})
+
+            # Step 2: Check Docker daemon
+            if not self._check_docker_daemon():
+                if not self.skip_if_unavailable:
+                    return self._handle_error(Exception("Docker daemon check failed"))
+                return self._create_success_output({"status": "skipped"})
+
+            # Step 3: Check Docker permissions
+            if not self._check_docker_permissions():
+                if not self.skip_if_unavailable:
+                    return self._handle_error(Exception("Docker permission check failed"))
+                return self._create_success_output({"status": "skipped"})
+
+            # Step 4: Check Docker Compose
+            if not self._check_docker_compose():
+                if not self.skip_if_unavailable:
+                    return self._handle_error(Exception("Docker Compose check failed"))
+                return self._create_success_output({"status": "skipped"})
+
+            # Step 5: Check Docker Compose file
+            if not self._check_docker_compose_file():
+                if not self.skip_if_unavailable:
+                    return self._handle_error(Exception("Docker Compose file check failed"))
+                return self._create_success_output({"status": "skipped"})
+
+            # Step 6: Check/create network
+            if not self._check_or_create_network():
+                self.log_error("Network check failed, continuing without network", ErrorSeverity.LOW)
+
+            # Step 7: Start services
+            health_status = self._start_services()
+
+            # Check if we should consider this a success
+            all_healthy = all(health_status.values())
+            if not all_healthy and not self.skip_if_unavailable:
+                failed_services = [s for s, h in health_status.items() if not h]
+                self.log_error(
+                    f"Some services failed: {', '.join(failed_services)}",
+                    ErrorSeverity.MEDIUM,
+                    {"health_status": health_status},
+                )
+
+                # Get logs for failed services
+                for service in failed_services:
+                    logs = self._get_service_logs(service)
+                    self.logger.error(f"Logs for {service}:\n{logs}")
+
+            # Complete execution
+            self.status = AgentStatus.COMPLETED
+            return self._create_success_output(
+                {
+                    "docker_client": True,
+                    "docker_daemon": True,
+                    "docker_permissions": True,
+                    "docker_compose": True,
+                    "network_created": True,
+                    "services_started": all_healthy,
+                    "service_health": health_status,
+                    "debug_info": {
+                        "docker_version": self._run_command(["docker", "--version"], check=False).stdout,
+                        "compose_version": self._run_command(["docker", "compose", "version"], check=False).stdout,
+                        "networks": self._run_command(["docker", "network", "ls"], check=False).stdout,
+                    },
+                }
+            )
+
+        except Exception as e:
+            error_output = self._handle_error(e)
+
+            # Provide additional debugging info
+            try:
+                error_output.data["debug_info"] = {
+                    "docker_ps": self._run_command(["docker", "ps"], check=False).stdout,
+                    "docker_networks": self._run_command(["docker", "network", "ls"], check=False).stdout,
+                    "current_user": self._run_command(["whoami"], check=False).stdout.strip(),
+                    "docker_group": "docker" in self._run_command(["groups"], check=False).stdout,
+                }
+            except:
+                pass
+
+            return error_output
+
 ```
 
-### Example 2: Advanced Usage
+---
 
-```python
-# TODO: Add example
-```
-
-## Notes
-
-- TODO: Add implementation notes
-- TODO: Add known limitations
-- TODO: Add future enhancements
-
-## References
-
-- [NIR Intelligence Platform Documentation](../README.md)
-- [Base Agent Documentation](../base_agent.md)
-- [Agent Development Guide](../development_guide.md)
+Generated by DeveloperAgent Framework

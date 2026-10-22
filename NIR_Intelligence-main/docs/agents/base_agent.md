@@ -1,44 +1,31 @@
 # BaseAgent
 
-**Version**: 1.0.0  
-**Author**: NIR Development Team  
-**Created**: 2026  
-**Type**: default Agent
+**File**: `agents/base_agent.py`
+**Version**: 1.0.0
 
-## Overview
+## Description
 
-BaseAgent is a specialized agent in the NIR Intelligence Platform responsible for Base functionality.
-
-## Responsibilities
-
-- [ ] TODO: Define primary responsibilities
-- [ ] TODO: Define secondary responsibilities
-- [ ] TODO: Define success criteria
-
-## Configuration
-
-### Required Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| N/A | - | - | TODO: Add configuration parameters |
-
-### Optional Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| N/A | - | - | TODO: Add optional parameters |
+Base class for all NIR Intelligence Platform agents
 
 ## Dependencies
 
-BaseAgent requires the following dependencies:
+This agent requires the following dependencies:
+
+- `dataclasses`
+- `datetime`
+- `enum`
+- `logging`
+- `typing`
+
+## Installation
 
 ```bash
-
+pip install dataclasses
+pip install datetime
+pip install enum
+pip install logging
+pip install typing
 ```
-
-### Python Dependencies
-- 
 
 ## Usage
 
@@ -54,99 +41,367 @@ agent = BaseAgent()
 output = agent.initialize()
 
 # Execute agent
-context = {
-    "iteration": 1,
-    "timestamp": time.time()
-}
+context = {'iteration': 1, 'timestamp': time.time()}
 result = agent.execute(context)
-```
-
-### With Configuration
-
-```python
-# Create agent with custom configuration
-agent = BaseAgent(
-    param1="value1",
-    param2="value2"
-)
 ```
 
 ## Methods
 
-### `execute(context: Dict[str, Any]) -> AgentOutput`
+### `__init__`
 
-Executes the agent's primary function.
+**Parameters**:
 
-**Parameters:**
-- `context`: Dictionary containing execution context
+- `self`: TODO
+- `name`: TODO
+- `version`: TODO
 
-**Returns:**
-- `AgentOutput`: Output containing status, data, and errors
+**Returns**: TODO
 
-### `validate() -> List[AgentError]`
+### `journal_entry`
 
-Validates the agent's current state and configuration.
+Document one analysis step with its conclusion (MO 13).
 
-**Returns:**
-- `List[AgentError]`: List of validation errors
+phase: 'analyse' | 'schlussfolgerung' | 'iteration' | 'entscheidung'
+analysis: what was examined (data, method, scope)
+conclusion: the drawn conclusion / reasoning
+action: resulting action or recommendation
+iteration: iteration counter (0 = first pass, Iterationsregel)
+options: improvement options offered to the user/crew, each as
+          {'id', 'label', 'description', 'expected_effect'}
 
-### `initialize() -> AgentOutput`
+**Parameters**:
 
-Initializes the agent and its environment.
+- `self`: TODO
+- `phase`: TODO
+- `analysis`: TODO
+- `conclusion`: TODO
+- `action`: TODO
+- `iteration`: TODO
+- `options`: TODO
 
-**Returns:**
-- `AgentOutput`: Initialization status
+**Returns**: TODO
 
-## Error Handling
+### `journal_decision`
 
-BaseAgent handles the following error scenarios:
+Document a made improvement decision as its own iteration entry.
 
-- [ ] TODO: Document error scenarios
-- [ ] TODO: Document recovery strategies
+Called when a previously offered option (see journal_entry with
+options) is selected and executed: the selection, its rationale and
+the outcome become part of the documented iteration chain.
 
-## Performance
+**Parameters**:
 
-- **Expected Execution Time**: TODO
-- **Memory Usage**: TODO
-- **CPU Usage**: TODO
+- `self`: TODO
+- `iteration`: TODO
+- `selected_option_id`: TODO
+- `rationale`: TODO
+- `outcome`: TODO
 
-## Testing
+**Returns**: TODO
 
-Run tests for BaseAgent:
+### `_setup_logging`
 
-```bash
-# Unit tests
-pytest tests/unit/test_base_agent.py
+Setup agent-specific logging
 
-# Integration tests
-pytest tests/integration/test_base_agent_integration.py
+**Parameters**:
 
-# End-to-end tests
-pytest tests/e2e/test_base_agent_e2e.py
-```
+- `self`: TODO
 
-## Examples
+**Returns**: TODO
 
-### Example 1: Basic Execution
+### `initialize`
+
+Initialize agent and its environment
+
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+### `execute`
+
+Execute agent's primary function - must be implemented by subclass
+
+**Parameters**:
+
+- `self`: TODO
+- `context`: TODO
+
+**Returns**: TODO
+
+### `validate`
+
+Validate agent's current state and configuration
+
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+### `get_requirements`
+
+Return agent's requirements and dependencies
+
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+### `log_error`
+
+Log an error for this agent
+
+**Parameters**:
+
+- `self`: TODO
+- `message`: TODO
+- `severity`: TODO
+- `details`: TODO
+- `suggested_fix`: TODO
+
+**Returns**: TODO
+
+### `clear_errors`
+
+Clear all logged errors
+
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+### `has_errors`
+
+Check if agent has any errors
+
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+### `_handle_error`
+
+Handle exceptions and return appropriate AgentOutput
+
+**Parameters**:
+
+- `self`: TODO
+- `exception`: TODO
+
+**Returns**: TODO
+
+### `_create_success_output`
+
+Create a successful AgentOutput (carries the agent journal)
+
+**Parameters**:
+
+- `self`: TODO
+- `data`: TODO
+
+**Returns**: TODO
+
+## Source Code
 
 ```python
-# TODO: Add example
+# NIR Intelligence Platform - Base Agent Class
+# This class provides the foundation for all NIR platform agents
+
+import logging
+from dataclasses import dataclass, field
+from enum import Enum, auto
+from typing import Any, Dict, List, Optional
+
+
+class AgentStatus(Enum):
+    """Status enum for agent execution"""
+
+    INITIALIZING = auto()
+    READY = auto()
+    PROCESSING = auto()
+    ERROR = auto()
+    COMPLETED = auto()
+
+
+class ErrorSeverity(Enum):
+    """Severity enum for errors"""
+
+    CRITICAL = auto()
+    HIGH = auto()
+    MEDIUM = auto()
+    LOW = auto()
+
+
+@dataclass
+class AgentError:
+    """Data class for agent errors"""
+
+    agent_name: str
+    message: str
+    severity: ErrorSeverity
+    details: Dict[str, Any] = field(default_factory=dict)
+    suggested_fix: Optional[str] = None
+
+
+@dataclass
+class AgentOutput:
+    """Data class for agent output"""
+
+    agent_name: str
+    status: AgentStatus
+    data: Dict[str, Any] = field(default_factory=dict)
+    errors: List[AgentError] = field(default_factory=list)
+    version: str = "1.0.0"
+    dependencies: List[str] = field(default_factory=list)
+    # Agenten-Journal (MO 13, Iterationsregel): jeder Agent dokumentiert
+    # seine Analysen, Rueckschluesse und Iterationen strukturiert, damit
+    # der Abschlussbericht nachvollziehbar ist.
+    journal: List[Dict[str, Any]] = field(default_factory=list)
+
+
+class BaseAgent:
+    """Base class for all NIR Intelligence Platform agents"""
+
+    def __init__(self, name: str, version: str = "1.0.0", **kwargs):
+        self.name = name
+        self.version = version
+        self.status = AgentStatus.INITIALIZING
+        self.errors: List[AgentError] = []
+        self.logger = logging.getLogger(f"Agent.{name}")
+        self.dependencies: List[str] = []
+        self.config = kwargs.get("config", {})
+        # Agenten-Journal: Analysen/Rueckschluesse/Iterationen dieses Agents
+        self.journal: List[Dict[str, Any]] = []
+
+        # Initialize logging
+        self._setup_logging()
+
+    def journal_entry(self, phase: str, analysis: str,
+                      conclusion: str = "", action: str = "",
+                      iteration: int = 0,
+                      options: List[Dict[str, Any]] = None) -> None:
+        """Document one analysis step with its conclusion (MO 13).
+
+        phase: 'analyse' | 'schlussfolgerung' | 'iteration' | 'entscheidung'
+        analysis: what was examined (data, method, scope)
+        conclusion: the drawn conclusion / reasoning
+        action: resulting action or recommendation
+        iteration: iteration counter (0 = first pass, Iterationsregel)
+        options: improvement options offered to the user/crew, each as
+                  {'id', 'label', 'description', 'expected_effect'}
+        """
+        import datetime
+        self.journal.append({
+            "agent": self.name,
+            "phase": phase,
+            "analysis": analysis,
+            "conclusion": conclusion,
+            "action": action,
+            "iteration": iteration,
+            "options": options or [],
+            "timestamp": datetime.datetime.now().isoformat(),
+        })
+
+    def journal_decision(self, iteration: int, selected_option_id: str,
+                         rationale: str, outcome: str = "") -> None:
+        """Document a made improvement decision as its own iteration entry.
+
+        Called when a previously offered option (see journal_entry with
+        options) is selected and executed: the selection, its rationale and
+        the outcome become part of the documented iteration chain.
+        """
+        import datetime
+        self.journal.append({
+            "agent": self.name,
+            "phase": "iteration",
+            "analysis": f"Ausgewaehlte Verbesserungsoption: {selected_option_id}",
+            "conclusion": rationale,
+            "action": outcome,
+            "iteration": iteration,
+            "options": [],
+            "timestamp": datetime.datetime.now().isoformat(),
+        })
+
+    def _setup_logging(self):
+        """Setup agent-specific logging"""
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+        self.logger.setLevel(logging.INFO)
+
+    def initialize(self) -> AgentOutput:
+        """Initialize agent and its environment"""
+        self.status = AgentStatus.READY
+        self.logger.info(f"{self.name} v{self.version} initialized")
+        return AgentOutput(
+            agent_name=self.name, status=self.status, version=self.version, dependencies=self.dependencies
+        )
+
+    def execute(self, context: Dict[str, Any]) -> AgentOutput:
+        """Execute agent's primary function - must be implemented by subclass"""
+        raise NotImplementedError(f"Execute method must be implemented by {self.__class__.__name__}")
+
+    def validate(self) -> List[AgentError]:
+        """Validate agent's current state and configuration"""
+        return self.errors
+
+    def get_requirements(self) -> Dict[str, Any]:
+        """Return agent's requirements and dependencies"""
+        return {"dependencies": self.dependencies}
+
+    def log_error(
+        self, message: str, severity: ErrorSeverity, details: Dict[str, Any] = None, suggested_fix: str = None
+    ) -> AgentError:
+        """Log an error for this agent"""
+        error = AgentError(
+            agent_name=self.name, message=message, severity=severity, details=details or {}, suggested_fix=suggested_fix
+        )
+        self.errors.append(error)
+        self.logger.error(f"[{severity.name}] {message}")
+        if details:
+            self.logger.debug(f"Error details: {details}")
+        if suggested_fix:
+            self.logger.info(f"Suggested fix: {suggested_fix}")
+        return error
+
+    def clear_errors(self):
+        """Clear all logged errors"""
+        self.errors = []
+
+    def has_errors(self) -> bool:
+        """Check if agent has any errors"""
+        return len(self.errors) > 0
+
+    def _handle_error(self, exception: Exception) -> AgentOutput:
+        """Handle exceptions and return appropriate AgentOutput"""
+        error = self.log_error(
+            f"Execution failed: {str(exception)}",
+            ErrorSeverity.HIGH,
+            {"exception_type": type(exception).__name__},
+            "Check agent configuration and dependencies",
+        )
+
+        return AgentOutput(agent_name=self.name, status=AgentStatus.ERROR, errors=[error])
+
+    def _create_success_output(self, data: Dict[str, Any] = None) -> AgentOutput:
+        """Create a successful AgentOutput (carries the agent journal)"""
+        return AgentOutput(
+            agent_name=self.name,
+            status=AgentStatus.COMPLETED,
+            data=data or {},
+            version=self.version,
+            dependencies=self.dependencies,
+            journal=list(self.journal),
+        )
+
 ```
 
-### Example 2: Advanced Usage
+---
 
-```python
-# TODO: Add example
-```
-
-## Notes
-
-- TODO: Add implementation notes
-- TODO: Add known limitations
-- TODO: Add future enhancements
-
-## References
-
-- [NIR Intelligence Platform Documentation](../README.md)
-- [Base Agent Documentation](../base_agent.md)
-- [Agent Development Guide](../development_guide.md)
+Generated by DeveloperAgent Framework

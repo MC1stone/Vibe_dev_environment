@@ -1,47 +1,190 @@
 # SensorAgent
 
-**Version**: 1.0.0  
-**Author**: NIR Development Team  
-**Created**: 2026  
-**Type**: knowledge aggregation Agent
+**File**: `agents/sensor_agent.py`
+**Version**: 1.0.0
 
-## Overview
+## Description
 
-SensorAgent (OP29) collects everything the platform knows about the
-spectrometers used in analyses: registered adapter profiles, the setting
-options the platform understands, the usage recorded in the existing
-database (SpectrumRecord.instrument_type + project preparation reports) and
-deduplicated optimization suggestions from the analyses.
+Aggregates sensor knowledge for analyses and the /sensors/ web pages.
 
-## Responsibilities
-
-- Sensor catalog for the /projects/sensors/ web pages
-- Setting assessment (completeness + plausibility of recorded values)
-- Optimization suggestion deduplication (analytical > heuristic > generic)
-
-## Operations
-
-| Operation | Context keys | Result |
-|-----------|--------------|--------|
-| `collect` (default) | `user_id`, `metadata`, `sensor_quality_results`, `parameter_recommendations`, `crew_recommendations` | registered_sensors, setting_options, usage, setting_assessment, optimization_suggestions |
-| `usage` | `user_id` | usage statistics from the existing database |
-
-## Configuration
-
-### Required Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| operation | str | collect | Catalog operation to run |
-
-### Optional Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| user_id | int | None | Restrict database usage statistics to one user |
+Operations (context key 'operation', default 'collect'):
+- collect: full catalog - registered adapters, setting options and the
+  usage recorded in the existing database (per-user if 'user_id' given)
+- usage: only the database usage statistics
 
 ## Dependencies
 
-- django (existing database access; degrades gracefully offline)
-- devices registry (adapter profiles)
-- ParameterRecommenderAgent (parameter ranges)
+This agent requires the following dependencies:
+
+- `base_agent`
+- `services.sensor_catalog`
+- `services.sensor_websearch`
+- `typing`
+
+## Installation
+
+```bash
+pip install base_agent
+pip install services.sensor_catalog
+pip install services.sensor_websearch
+pip install typing
+```
+
+## Usage
+
+### Basic Usage
+
+```python
+from agents.sensor_agent import SensorAgent
+
+# Create agent instance
+agent = SensorAgent()
+
+# Initialize agent
+output = agent.initialize()
+
+# Execute agent
+context = {'iteration': 1, 'timestamp': time.time()}
+result = agent.execute(context)
+```
+
+## Methods
+
+### `__init__`
+
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+### `_collect`
+
+**Parameters**:
+
+- `self`: TODO
+- `context`: TODO
+
+**Returns**: TODO
+
+### `execute`
+
+Execute the sensor agent workflow.
+
+**Parameters**:
+
+- `self`: TODO
+- `context`: TODO
+
+**Returns**: TODO
+
+### `validate`
+
+**Parameters**:
+
+- `self`: TODO
+
+**Returns**: TODO
+
+## Source Code
+
+```python
+# NIR Intelligence Platform - Sensor Agent (OP29)
+# Collects all information about the sensors used in analyses: registered
+# adapter profiles, the settings/parameters recorded with the measurements
+# (existing database - SpectrumRecord.metadata / instrument_type, project
+# preparation reports) and the optimization suggestions produced by the
+# platform's three existing recommendation sources, deduplicated into one
+# prioritized list. Offline, CI-safe, no new tables, honest about unknowns.
+
+from typing import Any, Dict, List, Optional
+
+from .base_agent import AgentOutput, AgentStatus, BaseAgent, ErrorSeverity
+
+
+class SensorAgent(BaseAgent):
+    """Aggregates sensor knowledge for analyses and the /sensors/ web pages.
+
+    Operations (context key 'operation', default 'collect'):
+    - collect: full catalog - registered adapters, setting options and the
+      usage recorded in the existing database (per-user if 'user_id' given)
+    - usage: only the database usage statistics
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(name="SensorAgent", version="1.0.0", **kwargs)
+        self.dependencies = ["numpy", "django"]
+
+    def _collect(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        from services.sensor_catalog import (
+            assess_settings,
+            get_sensor_profiles,
+            merge_recommendations,
+        )
+        user_id = context.get("user_id")
+        profiles = get_sensor_profiles(user_id=user_id)
+        parameter_recommendations = context.get("parameter_recommendations") or []
+        sensor_results = context.get("sensor_quality_results")
+        crew_recommendations = context.get("crew_recommendations") or []
+
+        from services.sensor_catalog import get_optimization_suggestions
+        suggestions = get_optimization_suggestions(
+            sensor_results=sensor_results,
+            parameter_recommendations=parameter_recommendations,
+            crew_recommendations=crew_recommendations,
+        )
+
+        metadata = context.get("metadata") or {}
+        setting_assessment = assess_settings(
+            metadata, profiles.get("setting_options"))
+        from services.sensor_websearch import summarize_unmatched, websearch_enabled
+        websearch_results = []
+        if websearch_enabled() and profiles.get("unmatched_usage"):
+            websearch_results = summarize_unmatched(profiles["unmatched_usage"])
+        return {
+            "operation": "collect",
+            "registered_sensors": profiles["registered_sensors"],
+            "setting_options": profiles["setting_options"],
+            "usage": profiles["usage"],
+            "unmatched_usage": profiles["unmatched_usage"],
+            "setting_assessment": setting_assessment,
+            "optimization_suggestions": suggestions,
+            "websearch": {
+                "enabled": websearch_enabled(),
+                "external_unverified": True,
+                "results": websearch_results,
+            },
+        }
+
+    def execute(self, context: Dict[str, Any]) -> AgentOutput:
+        """Execute the sensor agent workflow."""
+        try:
+            self.status = AgentStatus.PROCESSING
+            self.logger.info("Starting sensor agent execution")
+            context = context or {}
+            operation = str(context.get("operation", "collect"))
+            if operation == "collect":
+                results = self._collect(context)
+            elif operation == "usage":
+                from services.sensor_catalog import _usage_from_database
+                results = {
+                    "operation": "usage",
+                    "usage": _usage_from_database(
+                        user_id=context.get("user_id")),
+                }
+            else:
+                return self._handle_error(
+                    ValueError(f"unknown operation '{operation}'"))
+            self.status = AgentStatus.COMPLETED
+            return self._create_success_output(results)
+        except Exception as exc:
+            return self._handle_error(exc)
+
+    def validate(self) -> list:
+        return []
+
+```
+
+---
+
+Generated by DeveloperAgent Framework

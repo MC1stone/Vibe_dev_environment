@@ -1,44 +1,56 @@
 # CalibrationAgent
 
-**Version**: 1.0.0  
-**Author**: NIR Development Team  
-**Created**: 2026  
-**Type**: default Agent
+**File**: `agents/calibration_agent.py`
+**Version**: 1.0.0
 
-## Overview
+## Description
 
-CalibrationAgent is a specialized agent in the NIR Intelligence Platform responsible for Calibration functionality.
+Agent for model calibration and optimization.
 
-## Responsibilities
-
-- [ ] TODO: Define primary responsibilities
-- [ ] TODO: Define secondary responsibilities
-- [ ] TODO: Define success criteria
-
-## Configuration
-
-### Required Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| N/A | - | - | TODO: Add configuration parameters |
-
-### Optional Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| N/A | - | - | TODO: Add optional parameters |
+context keys:
+- spectra: calibration samples (vectors or unified schema dicts)
+- reference_values / y: calibration targets (required)
+- methods: calibration methods (default PLS, PCR, SVM, RandomForest, XGBoost, CNN)
+- optimization: Optuna settings (n_trials); used when optuna is installed
+- cv_folds: cross-validation folds (default 5)
 
 ## Dependencies
 
-CalibrationAgent requires the following dependencies:
+This agent requires the following dependencies:
+
+- `base_agent`
+- `numpy`
+- `pandas`
+- `sklearn.cross_decomposition`
+- `sklearn.decomposition`
+- `sklearn.ensemble`
+- `sklearn.linear_model`
+- `sklearn.model_selection`
+- `sklearn.pipeline`
+- `sklearn.preprocessing`
+- `sklearn.svm`
+- `tensorflow`
+- `typing`
+- `xgboost`
+
+## Installation
 
 ```bash
-
+pip install base_agent
+pip install numpy
+pip install pandas
+pip install sklearn.cross_decomposition
+pip install sklearn.decomposition
+pip install sklearn.ensemble
+pip install sklearn.linear_model
+pip install sklearn.model_selection
+pip install sklearn.pipeline
+pip install sklearn.preprocessing
+pip install sklearn.svm
+pip install tensorflow
+pip install typing
+pip install xgboost
 ```
-
-### Python Dependencies
-- 
 
 ## Usage
 
@@ -54,99 +66,417 @@ agent = CalibrationAgent()
 output = agent.initialize()
 
 # Execute agent
-context = {
-    "iteration": 1,
-    "timestamp": time.time()
-}
+context = {'iteration': 1, 'timestamp': time.time()}
 result = agent.execute(context)
-```
-
-### With Configuration
-
-```python
-# Create agent with custom configuration
-agent = CalibrationAgent(
-    param1="value1",
-    param2="value2"
-)
 ```
 
 ## Methods
 
-### `execute(context: Dict[str, Any]) -> AgentOutput`
+### `__init__`
 
-Executes the agent's primary function.
+**Parameters**:
 
-**Parameters:**
-- `context`: Dictionary containing execution context
+- `self`: TODO
 
-**Returns:**
-- `AgentOutput`: Output containing status, data, and errors
+**Returns**: TODO
 
-### `validate() -> List[AgentError]`
+### `_fit_method`
 
-Validates the agent's current state and configuration.
+**Parameters**:
 
-**Returns:**
-- `List[AgentError]`: List of validation errors
+- `self`: TODO
+- `method`: TODO
+- `matrix`: TODO
+- `y`: TODO
+- `folds`: TODO
 
-### `initialize() -> AgentOutput`
+**Returns**: TODO
 
-Initializes the agent and its environment.
+### `_fit_cnn`
 
-**Returns:**
-- `AgentOutput`: Initialization status
+**Parameters**:
 
-## Error Handling
+- `self`: TODO
+- `matrix`: TODO
+- `y`: TODO
 
-CalibrationAgent handles the following error scenarios:
+**Returns**: TODO
 
-- [ ] TODO: Document error scenarios
-- [ ] TODO: Document recovery strategies
+### `execute`
 
-## Performance
+**Parameters**:
 
-- **Expected Execution Time**: TODO
-- **Memory Usage**: TODO
-- **CPU Usage**: TODO
+- `self`: TODO
+- `context`: TODO
 
-## Testing
+**Returns**: TODO
 
-Run tests for CalibrationAgent:
-
-```bash
-# Unit tests
-pytest tests/unit/test_calibration_agent.py
-
-# Integration tests
-pytest tests/integration/test_calibration_agent_integration.py
-
-# End-to-end tests
-pytest tests/e2e/test_calibration_agent_e2e.py
-```
-
-## Examples
-
-### Example 1: Basic Execution
+## Source Code
 
 ```python
-# TODO: Add example
+# NIR Intelligence Platform - Calibration Agent
+# Handles model calibration and optimization (MO 8/9).
+# Real implementation: PLS, PCR, SVM, RandomForest and XGBoost calibrations
+# are fitted and cross-validated with scikit-learn; CNN calibration needs
+# optional TensorFlow. Optuna hyperparameter studies are used when installed
+# (services/calibration_optimization.py protocol), otherwise a plain
+# cross-validated fit is reported.
+
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+
+from .base_agent import AgentOutput, AgentStatus, BaseAgent, ErrorSeverity
+
+
+def _extract_matrix(spectra: Any) -> Optional[np.ndarray]:
+    """Extract an (n_samples, n_points) matrix (see sensor_quality_agent)."""
+    if spectra is None:
+        return None
+    if isinstance(spectra, np.ndarray):
+        return np.asarray(spectra, dtype=float) if spectra.size else None
+    if isinstance(spectra, dict):
+        if spectra.get("data") is None and spectra.get("intensities") is None:
+            return None
+        spectra = [spectra]
+    if not isinstance(spectra, (list, tuple)) or len(spectra) == 0:
+        return None
+    rows = []
+    for item in spectra:
+        if isinstance(item, dict):
+            data = item.get("data")
+            if data is None:
+                intensities = item.get("intensities")
+                if intensities is None:
+                    return None
+                rows.append(np.asarray(intensities, dtype=float))
+            else:
+                import pandas as pd
+
+                if isinstance(data, pd.DataFrame):
+                    column = item.get("intensity_column", "intensity")
+                    if column not in data.columns:
+                        column = data.columns[-1]
+                    rows.append(data[column].to_numpy(dtype=float))
+                else:
+                    rows.append(np.asarray(data, dtype=float))
+        else:
+            rows.append(np.asarray(item, dtype=float))
+    if any(row.size == 0 for row in rows):
+        return None
+    if len({row.size for row in rows}) != 1:
+        return None
+    return np.vstack(rows)
+
+
+class CalibrationAgent(BaseAgent):
+    """Agent for model calibration and optimization.
+
+    context keys:
+    - spectra: calibration samples (vectors or unified schema dicts)
+    - reference_values / y: calibration targets (required)
+    - methods: calibration methods (default PLS, PCR, SVM, RandomForest, XGBoost, CNN)
+    - optimization: Optuna settings (n_trials); used when optuna is installed
+    - cv_folds: cross-validation folds (default 5)
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(name="CalibrationAgent", version="2.0.0", **kwargs)
+        self.dependencies = ["scikit-learn", "numpy", "optuna"]
+        self.errors = []
+        self.methods = kwargs.get("methods", ["PLS", "PCR", "SVM", "RandomForest", "XGBoost", "CNN"])
+        self.optimization_config = kwargs.get("optimization", {})
+        self.performance_thresholds = kwargs.get("performance_thresholds", {"r2": 0.8})
+        self.cv_folds = int(kwargs.get("cv_folds", 5))
+
+    def _fit_method(self, method: str, matrix: np.ndarray, y: np.ndarray,
+                    folds: int) -> Dict[str, Any]:
+        from sklearn.model_selection import KFold, cross_val_score
+
+        if method == "PLS":
+            from sklearn.cross_decomposition import PLSRegression
+            from sklearn.preprocessing import StandardScaler
+            from sklearn.pipeline import Pipeline
+
+            n_components = max(1, min(10, matrix.shape[0] - 1, matrix.shape[1]))
+            estimator = Pipeline([
+                ("scaler", StandardScaler()),
+                ("pls", PLSRegression(n_components=n_components)),
+            ])
+            param_note = {"n_components": n_components, "feature_scaling": "standardized"}
+        elif method == "PCR":
+            from sklearn.decomposition import PCA
+            from sklearn.linear_model import LinearRegression
+            from sklearn.pipeline import Pipeline
+            from sklearn.preprocessing import StandardScaler
+
+            n_components = max(1, min(10, matrix.shape[0] - 1, matrix.shape[1]))
+            estimator = Pipeline([
+                ("scaler", StandardScaler()),
+                ("pca", PCA(n_components=n_components)),
+                ("regression", LinearRegression()),
+            ])
+            param_note = {"n_components": n_components, "feature_scaling": "standardized"}
+        elif method == "SVM":
+            from sklearn.svm import SVR
+            from sklearn.preprocessing import StandardScaler
+            from sklearn.pipeline import Pipeline
+
+            estimator = Pipeline([
+                ("scaler", StandardScaler()),
+                ("svr", SVR(kernel="rbf", C=10.0)),
+            ])
+            param_note = {"kernel": "rbf", "C": 10.0}
+        elif method in ("RandomForest", "RF"):
+            from sklearn.ensemble import RandomForestRegressor
+
+            estimator = RandomForestRegressor(n_estimators=100, random_state=42)
+            param_note = {"n_estimators": 100}
+        elif method == "XGBoost":
+            try:
+                from xgboost import XGBRegressor
+            except ImportError:
+                return {"status": "deferred", "reason": "xgboost not installed"}
+            estimator = XGBRegressor(n_estimators=100, random_state=42, verbosity=0)
+            param_note = {"n_estimators": 100}
+        elif method == "CNN":
+            return self._fit_cnn(matrix, y)
+        else:
+            return {"status": "skipped", "reason": f"unknown method {method}"}
+
+        folds = max(2, min(folds, matrix.shape[0]))
+        splitter = KFold(n_splits=folds, shuffle=True, random_state=42)
+        from sklearn.model_selection import cross_validate
+        cv_results = cross_validate(
+            estimator, matrix, y, cv=splitter,
+            scoring=("r2", "neg_mean_squared_error"))
+        scores = cv_results["test_r2"]
+        rmse_cv = np.sqrt(np.maximum(0.0, -cv_results["test_neg_mean_squared_error"]))
+        mean_rmse_cv = float(np.mean(rmse_cv))
+        y_std = float(np.std(y, ddof=1)) if len(y) > 1 else 0.0
+        rpd = float(y_std / mean_rmse_cv) if mean_rmse_cv > 0 else None
+        return {
+            "status": "ok",
+            "parameters": param_note,
+            "r2_scores": [float(s) for s in scores],
+            "mean_r2": float(np.mean(scores)),
+            "std_r2": float(np.std(scores)),
+            "rmse_cv": mean_rmse_cv,
+            "std_rmse_cv": float(np.std(rmse_cv)),
+            "rpd": rpd,
+            "y_std": y_std,
+            "cv_folds": folds,
+        }
+
+    def _fit_cnn(self, matrix: np.ndarray, y: np.ndarray) -> Dict[str, Any]:
+        try:
+            import tensorflow as tf
+        except ImportError:
+            return {"status": "deferred", "reason": "TensorFlow not installed"}
+        try:
+            tf.get_logger().setLevel("ERROR")
+            from sklearn.model_selection import train_test_split
+
+            if matrix.shape[0] < 4:
+                return {"status": "skipped", "reason": "not enough samples"}
+            from sklearn.preprocessing import StandardScaler
+            feature_scaler = StandardScaler().fit(matrix)
+            scaled = feature_scaler.transform(matrix)
+            X = scaled.reshape(scaled.shape[0], scaled.shape[1], 1)
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.25, random_state=42)
+            y_mean = float(np.mean(y_train))
+            y_std = float(np.std(y_train)) or 1.0
+            y_train_scaled = (y_train - y_mean) / y_std
+            model = tf.keras.Sequential([
+                tf.keras.layers.Conv1D(16, 5, activation="relu", input_shape=(X.shape[1], 1)),
+                tf.keras.layers.MaxPooling1D(2),
+                tf.keras.layers.Flatten(),
+                tf.keras.layers.Dense(32, activation="relu"),
+                tf.keras.layers.Dense(1),
+            ])
+            model.compile(optimizer="adam", loss="mse")
+            model.fit(X_train, y_train_scaled, epochs=50, verbose=0)
+            predictions = model.predict(X_test, verbose=0).ravel() * y_std + y_mean
+            ss_res = float(np.sum((y_test - predictions) ** 2))
+            ss_tot = float(np.sum((y_test - np.mean(y_test)) ** 2))
+            r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+            return {"status": "ok", "parameters": {"epochs": 50}, "r2_scores": [float(r2)],
+                    "mean_r2": float(r2), "cv_folds": 1}
+        except Exception as exc:
+            return {"status": "deferred", "reason": f"CNN calibration failed: {exc}"}
+
+    def execute(self, context: Dict[str, Any]) -> AgentOutput:
+        # Klassifikations-Kontext (2026-10-08): analysis_mode=classification
+        # heisst, das Analyseziel sind Kategorien (z.B. Kaffeesorten) -
+        # Regressionskalibration (R2/RMSECV) ist dann fachlich nicht
+        # anwendbar. Der Agent meldet das ehrlich (statt falsch zu
+        # rechnen) und verweist auf die Klassifikationsmethoden; die
+        # Entscheidung + Begruendung steht im Journal (Iterationsregel).
+        if (context or {}).get("analysis_mode") == "classification":
+            self.journal_entry(
+                "entscheidung",
+                "analysis_mode=classification erkannt - "
+                "Regressionskalibration nicht anwendbar",
+                conclusion="Das Analyseziel ist eine Kategorie "
+                          "(z.B. Kaffeesorte), kein numerischer "
+                          "Referenzwert; R2/RMSECV waeren fachlich "
+                          "bedeutungslos.",
+                action="Klassifikation laeuft im Statistik-Agent "
+                       "(LDA/kNN laut Konfiguration); dieser Agent "
+                       "ueberspringt die Kalibration ehrlich.",
+                iteration=0)
+            return self._create_success_output({
+                "status": "not_applicable",
+                "reason": "analysis_mode=classification - "
+                          "Regressionskalibration nicht anwendbar; "
+                          "Klassifikation erfolgt im Statistik-Agent "
+                          "(LDA/kNN)",
+                "analysis_mode": "classification",
+            })
+        """Execute calibration workflow."""
+        try:
+            self.status = AgentStatus.PROCESSING
+            self.logger.info("Starting calibration execution")
+
+            context = context or {}
+            matrix = _extract_matrix(context.get("spectra", context.get("spectral_data")))
+            if matrix is None:
+                return self._create_success_output({
+                    "methods_tested": [],
+                    "status": "no_data",
+                    "message": "No spectra supplied for calibration",
+                })
+
+            y = context.get("reference_values", context.get("y"))
+            if y is None:
+                return self._create_success_output({
+                    "methods_tested": [],
+                    "status": "no_reference",
+                    "message": "Calibration requires reference values",
+                })
+            y = np.asarray(y, dtype=float).ravel()
+            if y.size != matrix.shape[0]:
+                return self._create_success_output({
+                    "methods_tested": [],
+                    "status": "no_reference",
+                    "message": "reference values count does not match spectra count",
+                })
+
+            methods = list(context.get("methods", self.methods))
+            folds = int(context.get("cv_folds", self.cv_folds))
+
+            results: Dict[str, Any] = {
+                "methods_tested": [],
+                "method_results": {},
+                "methods_deferred": [],
+                "num_samples": int(matrix.shape[0]),
+                "data_points": int(matrix.shape[1]),
+                "cv_folds": folds,
+            }
+
+            for method in methods:
+                name = str(method).strip()
+                outcome = self._fit_method(name, matrix, y, folds)
+                if outcome.get("status") == "ok":
+                    results["method_results"][name] = outcome
+                    results["methods_tested"].append(name)
+                elif outcome.get("status") == "deferred":
+                    results["methods_deferred"].append({"method": name, "reason": outcome["reason"]})
+                else:
+                    results["methods_deferred"].append(
+                        {"method": name, "reason": outcome.get("reason", "skipped")})
+
+            # Agenten-Journal (MO 13): Methodenvergleich dokumentieren
+            self.journal_entry(
+                "analyse",
+                f"Methodenvergleich auf {matrix.shape[0]} Messungen x "
+                f"{matrix.shape[1]} Kanaele: "
+                f"{', '.join(results['method_results'].keys())}",
+                iteration=0)
+            for name, outcome in results["method_results"].items():
+                self.journal_entry(
+                    "schlussfolgerung",
+                    f"{name}: CV R2={outcome['mean_r2']:.3f}, "
+                    f"RMSECV={outcome.get('rmse_cv', float('nan')):.4f}, "
+                    f"RPD={outcome.get('rpd') or 'n/a'}",
+                    iteration=0)
+            best_method = None
+            best_r2 = None
+            for name, outcome in results["method_results"].items():
+                if best_r2 is None or outcome["mean_r2"] > best_r2:
+                    best_r2 = outcome["mean_r2"]
+                    best_method = name
+            if best_method is not None:
+                results["best_method"] = best_method
+                results["best_r2_score"] = best_r2
+                threshold = float(self.performance_thresholds.get("r2", 0.8))
+                results["thresholds_met"] = bool(best_r2 >= threshold)
+                # Entscheidung dokumentieren (Iterationsregel: nicht erreichter
+                # Schwellwert fuehrt zu Empfehlung der Nachbesserung)
+                verdict = ("Schwellwert erreicht" if results["thresholds_met"]
+                           else f"Schwellwert R2>={threshold} NICHT erreicht - "
+                                "Kalibration nur eingeschraenkt nutzbar")
+                improvement_options = []
+                if not results["thresholds_met"]:
+                    improvement_options = [
+                        {"id": "more_calibration_samples",
+                         "label": "Mehr Kalibrationsmessungen",
+                         "description": "Messumfang erweitern und die "
+                                        "Kalibration erneut durchfuehren.",
+                         "expected_effect": "Robustere Kreuzvalidierung, "
+                                            "hoehere R2/RLPD-Erwartung."},
+                        {"id": "preprocessing_variant",
+                         "label": "Präprozessing-Variante testen",
+                         "description": "SNV/MSC/Savitzky-Golay-Kombination "
+                                        "variieren und neu kalibrieren.",
+                         "expected_effect": "Streuungs-/Baseline-Effekte "
+                                            "reduzieren, R2 verbessern."},
+                    ]
+                self.journal_entry(
+                    "entscheidung",
+                    f"Bestes Modell: {best_method} (R2={best_r2:.3f})",
+                    conclusion=verdict,
+                    action=("Kalibration freigeben" if results["thresholds_met"]
+                            else "Verbesserungsoption waehlen: "
+                                 + '; '.join(o['label'] for o in improvement_options)),
+                    iteration=0,
+                    options=improvement_options)
+                results["improvement_options"] = improvement_options
+
+            unique_refs = np.unique(y)
+            if 3 <= unique_refs.size < y.size * 0.9 and y.size >= 8:
+                _, ref_counts = np.unique(y, return_counts=True)
+                if ref_counts.mean() >= 2.0:
+                    results["replicate_structure"] = {
+                        "unique_reference_values": int(unique_refs.size),
+                        "mean_replicas_per_reference": round(
+                            float(ref_counts.mean()), 2),
+                        "max_replicas_per_reference": int(ref_counts.max()),
+                        "risk": (
+                            "replica_overlap_in_cv"
+                            if unique_refs.size < y.size * 0.25
+                            else "moderate_replica_overlap"
+                        ),
+                        "recommendation": (
+                            "Kalibrationszeilen sind Replikate je Messobjekt "
+                            "(eindeutige Referenzwerte: {n_unique} auf {n_rows} "
+                            "Zeilen). Kreuzvalidierung kann Replikate desselben "
+                            "Objekts auf Train- und Testfold verteilen und R\u00b2 "
+                            "optimistisch machen. Empfohlene Option: Group-wise CV "
+                            "(Replikate je Objekt strikt in denselben Fold), um "
+                            "generalisierbare G\u00fcte zu messen."
+                        ).format(n_unique=int(unique_refs.size), n_rows=int(y.size)),
+                    }
+
+            results["status"] = "ok"
+            self.status = AgentStatus.COMPLETED
+            return self._create_success_output(results)
+        except Exception as e:
+            return self._handle_error(e)
+
 ```
 
-### Example 2: Advanced Usage
+---
 
-```python
-# TODO: Add example
-```
-
-## Notes
-
-- TODO: Add implementation notes
-- TODO: Add known limitations
-- TODO: Add future enhancements
-
-## References
-
-- [NIR Intelligence Platform Documentation](../README.md)
-- [Base Agent Documentation](../base_agent.md)
-- [Agent Development Guide](../development_guide.md)
+Generated by DeveloperAgent Framework

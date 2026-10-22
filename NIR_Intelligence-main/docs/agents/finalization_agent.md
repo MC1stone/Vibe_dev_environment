@@ -1,50 +1,27 @@
 # FinalizationAgent
 
-**Version**: 1.0.0  
-**Author**: NIR Development Team  
-**Created**: 2026  
-**Type**: analysis Agent
+**File**: `agents/finalization_agent.py`
+**Version**: 1.0.0
 
-## Overview
+## Description
 
-FinalizationAgent is a specialized agent in the NIR Intelligence Platform responsible for Finalization functionality.
-
-## Responsibilities
-
-- [ ] TODO: Define primary responsibilities
-- [ ] TODO: Define secondary responsibilities
-- [ ] TODO: Define success criteria
-
-## Configuration
-
-### Required Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| N/A | - | - | TODO: Add configuration parameters |
-
-### Optional Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| N/A | - | - | TODO: Add optional parameters |
+Agent for Finalization functionality
 
 ## Dependencies
 
-FinalizationAgent requires the following dependencies:
+This agent requires the following dependencies:
+
+- `base_agent`
+- `logging`
+- `typing`
+
+## Installation
 
 ```bash
-pip install pandas
-pip install numpy
-pip install scipy
-pip install scikit-learn
+pip install base_agent
+pip install logging
+pip install typing
 ```
-
-### Python Dependencies
-- - `pandas`
-- `numpy`
-- `scipy`
-- `scikit-learn`
 
 ## Usage
 
@@ -60,99 +37,130 @@ agent = FinalizationAgent()
 output = agent.initialize()
 
 # Execute agent
-context = {
-    "iteration": 1,
-    "timestamp": time.time()
-}
+context = {'iteration': 1, 'timestamp': time.time()}
 result = agent.execute(context)
-```
-
-### With Configuration
-
-```python
-# Create agent with custom configuration
-agent = FinalizationAgent(
-    param1="value1",
-    param2="value2"
-)
 ```
 
 ## Methods
 
-### `execute(context: Dict[str, Any]) -> AgentOutput`
+### `__init__`
 
-Executes the agent's primary function.
+**Parameters**:
 
-**Parameters:**
-- `context`: Dictionary containing execution context
+- `self`: TODO
 
-**Returns:**
-- `AgentOutput`: Output containing status, data, and errors
+**Returns**: TODO
 
-### `validate() -> List[AgentError]`
+### `_initialize_attributes`
 
-Validates the agent's current state and configuration.
+Initialize agent-specific attributes
 
-**Returns:**
-- `List[AgentError]`: List of validation errors
+**Parameters**:
 
-### `initialize() -> AgentOutput`
+- `self`: TODO
 
-Initializes the agent and its environment.
+**Returns**: TODO
 
-**Returns:**
-- `AgentOutput`: Initialization status
+### `execute`
 
-## Error Handling
+Execute the agent's primary function
 
-FinalizationAgent handles the following error scenarios:
+**Parameters**:
 
-- [ ] TODO: Document error scenarios
-- [ ] TODO: Document recovery strategies
+- `self`: TODO
+- `context`: TODO
 
-## Performance
+**Returns**: TODO
 
-- **Expected Execution Time**: TODO
-- **Memory Usage**: TODO
-- **CPU Usage**: TODO
+### `validate`
 
-## Testing
+Validate agent configuration and state
 
-Run tests for FinalizationAgent:
+**Parameters**:
 
-```bash
-# Unit tests
-pytest tests/unit/test_finalization_agent.py
+- `self`: TODO
 
-# Integration tests
-pytest tests/integration/test_finalization_agent_integration.py
+**Returns**: TODO
 
-# End-to-end tests
-pytest tests/e2e/test_finalization_agent_e2e.py
-```
-
-## Examples
-
-### Example 1: Basic Execution
+## Source Code
 
 ```python
-# TODO: Add example
+#!/usr/bin/env python3
+"""
+NIR Intelligence Platform - FinalizationAgent
+Agent for NIR spectroscopy data processing
+"""
+
+import logging
+from typing import Any, Dict, List
+
+from .base_agent import AgentError, AgentOutput, AgentStatus, BaseAgent, ErrorSeverity
+
+
+class FinalizationAgent(BaseAgent):
+    """Agent for Finalization functionality"""
+
+    def __init__(self, **kwargs):
+        super().__init__(name="FinalizationAgent", version="1.0.0", **kwargs)
+        self.dependencies = ["pandas", "numpy", "scipy", "scikit-learn"]
+        self.logger = logging.getLogger(f"Agent.FinalizationAgent")
+
+        # Initialize agent-specific attributes
+        self._initialize_attributes()
+
+    def _initialize_attributes(self):
+        """Initialize agent-specific attributes"""
+        # Add agent-specific initialization here
+        pass
+
+    def execute(self, context: Dict[str, Any]) -> AgentOutput:
+        """Execute the agent's primary function"""
+        try:
+            self.status = AgentStatus.PROCESSING
+            self.logger.info("Starting FinalizationAgent execution")
+
+            # TODO: Implement FinalizationAgent logic
+            # Example workflow:
+            # 1. Load and validate input data
+            # 2. Perform agent-specific processing
+            # 3. Generate output
+
+            result = {"status": "completed", "message": "FinalizationAgent execution completed successfully"}
+
+            self.status = AgentStatus.COMPLETED
+            return self._create_success_output(result)
+
+        except Exception as e:
+            return self._handle_error(e)
+
+    def validate(self) -> List[AgentError]:
+        """Validate agent configuration and state"""
+        errors = super().validate()
+
+        # Add agent-specific validation
+        # Example: Check required dependencies
+        # for dep in self.dependencies:
+        #     try:
+        #         __import__(dep)
+        #     except ImportError:
+        #         self.log_error(
+        #             f"Missing dependency: {dep}",
+        #             ErrorSeverity.HIGH,
+        #             {"dependency": dep},
+        #             f"Install with: pip install {dep}"
+        #         )
+
+        return errors
+
+
+if __name__ == "__main__":
+    # Allow direct execution for testing
+    agent = FinalizationAgent()
+    output = agent.initialize()
+    print(f"FinalizationAgent initialized: {output.status.name}")
+
 ```
 
-### Example 2: Advanced Usage
+---
 
-```python
-# TODO: Add example
-```
-
-## Notes
-
-- TODO: Add implementation notes
-- TODO: Add known limitations
-- TODO: Add future enhancements
-
-## References
-
-- [NIR Intelligence Platform Documentation](../README.md)
-- [Base Agent Documentation](../base_agent.md)
-- [Agent Development Guide](../development_guide.md)
+Generated by DeveloperAgent Framework

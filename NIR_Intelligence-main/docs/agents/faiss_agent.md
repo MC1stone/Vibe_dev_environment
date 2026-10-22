@@ -1,44 +1,27 @@
 # FaissAgent
 
-**Version**: 1.0.0  
-**Author**: NIR Development Team  
-**Created**: 2026  
-**Type**: default Agent
+**File**: `agents/faiss_agent.py`
+**Version**: 1.0.0
 
-## Overview
+## Description
 
-FaissAgent is a specialized agent in the NIR Intelligence Platform responsible for Faiss functionality.
-
-## Responsibilities
-
-- [ ] TODO: Define primary responsibilities
-- [ ] TODO: Define secondary responsibilities
-- [ ] TODO: Define success criteria
-
-## Configuration
-
-### Required Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| N/A | - | - | TODO: Add configuration parameters |
-
-### Optional Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| N/A | - | - | TODO: Add optional parameters |
+Agent for managing FAISS similarity search
 
 ## Dependencies
 
-FaissAgent requires the following dependencies:
+This agent requires the following dependencies:
+
+- `base_agent`
+- `services.spectrum_similarity`
+- `typing`
+
+## Installation
 
 ```bash
-
+pip install base_agent
+pip install services.spectrum_similarity
+pip install typing
 ```
-
-### Python Dependencies
-- 
 
 ## Usage
 
@@ -54,99 +37,101 @@ agent = FaissAgent()
 output = agent.initialize()
 
 # Execute agent
-context = {
-    "iteration": 1,
-    "timestamp": time.time()
-}
+context = {'iteration': 1, 'timestamp': time.time()}
 result = agent.execute(context)
-```
-
-### With Configuration
-
-```python
-# Create agent with custom configuration
-agent = FaissAgent(
-    param1="value1",
-    param2="value2"
-)
 ```
 
 ## Methods
 
-### `execute(context: Dict[str, Any]) -> AgentOutput`
+### `__init__`
 
-Executes the agent's primary function.
+**Parameters**:
 
-**Parameters:**
-- `context`: Dictionary containing execution context
+- `self`: TODO
 
-**Returns:**
-- `AgentOutput`: Output containing status, data, and errors
+**Returns**: TODO
 
-### `validate() -> List[AgentError]`
+### `execute`
 
-Validates the agent's current state and configuration.
+Execute FAISS similarity operations.
 
-**Returns:**
-- `List[AgentError]`: List of validation errors
+context keys:
+- reference_spectra: list of unified spectral schema dicts
+- query_spectrum: one unified spectral schema dict
+- reference_ids: optional list of reference ids
+- top_k: optional number of matches (default 5)
 
-### `initialize() -> AgentOutput`
+**Parameters**:
 
-Initializes the agent and its environment.
+- `self`: TODO
+- `context`: TODO
 
-**Returns:**
-- `AgentOutput`: Initialization status
+**Returns**: TODO
 
-## Error Handling
-
-FaissAgent handles the following error scenarios:
-
-- [ ] TODO: Document error scenarios
-- [ ] TODO: Document recovery strategies
-
-## Performance
-
-- **Expected Execution Time**: TODO
-- **Memory Usage**: TODO
-- **CPU Usage**: TODO
-
-## Testing
-
-Run tests for FaissAgent:
-
-```bash
-# Unit tests
-pytest tests/unit/test_faiss_agent.py
-
-# Integration tests
-pytest tests/integration/test_faiss_agent_integration.py
-
-# End-to-end tests
-pytest tests/e2e/test_faiss_agent_e2e.py
-```
-
-## Examples
-
-### Example 1: Basic Execution
+## Source Code
 
 ```python
-# TODO: Add example
+# NIR Intelligence Platform - FAISS Agent
+# Handles similarity search operations via the SpectrumSimilarityEngine (S5):
+# FAISS backend when installed, exact numpy fallback otherwise.
+
+from typing import Any, Dict
+
+from .base_agent import AgentOutput, AgentStatus, BaseAgent, ErrorSeverity
+
+
+class FaissAgent(BaseAgent):
+    """Agent for managing FAISS similarity search"""
+
+    def __init__(self, **kwargs):
+        super().__init__(name="FaissAgent", version="1.1.0", **kwargs)
+        self.dependencies = ["faiss-cpu", "numpy"]
+        self.index_type = kwargs.get("index_type", "IVF100,Flat")
+        self.metric_type = kwargs.get("metric_type", "L2")
+        self.nprobe = kwargs.get("nprobe", 10)
+
+    def execute(self, context: Dict[str, Any]) -> AgentOutput:
+        """Execute FAISS similarity operations.
+
+        context keys:
+        - reference_spectra: list of unified spectral schema dicts
+        - query_spectrum: one unified spectral schema dict
+        - reference_ids: optional list of reference ids
+        - top_k: optional number of matches (default 5)
+        """
+        try:
+            self.status = AgentStatus.PROCESSING
+            self.logger.info("Starting FAISS agent execution")
+
+            from services.spectrum_similarity import SpectrumSimilarityEngine
+
+            engine = SpectrumSimilarityEngine(config={
+                "metric": "cosine" if str(self.metric_type).upper() == "COSINE" else "l2",
+                "top_k": int(context.get("top_k", 5)),
+            })
+
+            references = context.get("reference_spectra") or []
+            query = context.get("query_spectrum")
+
+            if references:
+                added = engine.add_references(references, reference_ids=context.get("reference_ids"))
+                self.logger.info(f"Added {added} reference spectra to the index")
+
+            faiss_results = {"engine_status": engine.status()}
+
+            if query is not None:
+                matches = engine.find_similar(query)
+                faiss_results["matches"] = [m.to_dict() for m in matches]
+                faiss_results["num_matches"] = len(matches)
+
+            self.status = AgentStatus.COMPLETED
+            return self._create_success_output(faiss_results)
+
+        except Exception as e:
+            return self._handle_error(e)
+
 ```
 
-### Example 2: Advanced Usage
+---
 
-```python
-# TODO: Add example
-```
-
-## Notes
-
-- TODO: Add implementation notes
-- TODO: Add known limitations
-- TODO: Add future enhancements
-
-## References
-
-- [NIR Intelligence Platform Documentation](../README.md)
-- [Base Agent Documentation](../base_agent.md)
-- [Agent Development Guide](../development_guide.md)
+Generated by DeveloperAgent Framework
