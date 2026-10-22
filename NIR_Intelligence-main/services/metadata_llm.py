@@ -200,8 +200,18 @@ class MetadataLLMService:
         self.client = client or OllamaMetadataClient()
         self.max_text_chars = max_text_chars
 
-    def extract(self, text: str, file_name: str = "") -> Optional[Dict[str, Any]]:
+    def extract(self, text: str, file_name: str = "",
+                focus_fields: Optional[list] = None) -> Optional[Dict[str, Any]]:
         """Extract metadata from a file's text with the LLM (KI-first).
+
+        focus_fields (OP84): wenn gesetzt, wird NUR nach diesen Feldern
+        gefragt - der Aufrufer (KI-Pass der Aufbereitung) ruft die KI
+        selektiv nur fuer die Felder, die der deterministische Layer
+        NICHT selbst zuordnen konnte. Das haelt die KI-Kreativitaet
+        (Begriffs-Zuordnung wie 'Bediener' -> operator_name) voll
+        erhalten, beschraenkt sie aber auf die tatsaechlichen Luecken
+        und spart bei vollstaendig deterministischen Dateien den
+        LLM-Call komplett (CPU-Ollama: Minuten pro Datei).
 
         Returns {'fields': {canonical: {'value', 'evidence'}},
                  'questions': [...], 'rejected': [field, ...]} or None
@@ -212,6 +222,18 @@ class MetadataLLMService:
         prompt = _EXTRACTION_PROMPT.format(
             file_name=file_name or "unbenannt",
             text=text[: self.max_text_chars])
+        if focus_fields:
+            focus = [f for f in focus_fields if f in CANONICAL_FIELDS]
+            if not focus:
+                return None
+            prompt += (
+                "\n\nFOKUS (OP84): Der deterministische Layer hat alle "
+                "uebrigen kanonischen Felder bereits zugeordnet. Extrahiere "
+                "Ausschliesslich diese noch offenen Felder: "
+                + ", ".join(focus)
+                + ". Alle anderen Felder: null. Der Zusatz-Auftrag "
+                "(Begriffs-Zuordnung, Fragen bei Mehrdeutigkeit) gilt "
+                "fuer genau diese Felder.")
         try:
             raw = self.client.chat(prompt)
         except Exception as e:

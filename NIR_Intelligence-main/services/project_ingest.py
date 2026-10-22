@@ -689,6 +689,30 @@ def _ki_metadata_pass(entry: Dict[str, Any], file_path: str, loader) -> None:
                           "deterministische Aufbereitung, deutlich "
                           "schneller; Metadaten ggf. im Editor ergänzen.")
         return
+    # OP84: Selektive KI-Nutzung - der KI-Pass existiert fuer die
+    # Zuordnung von Metadaten, die der deterministische Layer NICHT
+    # selbst leisten kann (Nutzer-Anforderung: 'Die KI-Leistung brauche
+    # ich fuer die Metadaten, die deterministisch nicht zugeordnet
+    # werden koennen'). Hat der deterministische Layer bereits ALLE
+    # relevanten Felder geliefert, wird der LLM-Call komplett gespart
+    # (CPU-Ollama: Minuten pro Datei). Bei Luecken erhaelt die KI einen
+    # fokussierten Auftrag NUR fuer die offenen Felder - die Kreativitaet
+    # (Begriffs-Zuordnung wie 'Bediener' -> operator_name) bleibt voll
+    # erhalten, wirkt aber gezielt.
+    try:
+        from services.metadata_llm import CANONICAL_FIELDS as _CANON
+    except Exception:
+        _CANON = []
+    metadata = entry.get("metadata") or {}
+    filled = {f for f in _CANON
+              if str(metadata.get(f) or "").strip()}
+    relevant_open = [f for f in _CANON if f not in filled]
+    if _CANON and not relevant_open:
+        sources = entry.setdefault("metadata_sources", {})
+        sources["llm"] = ("kein KI-Aufruf noetig - alle kanonischen "
+                          "Felder wurden deterministisch zugeordnet "
+                          "(OP84, LLM-Call gespart)")
+        return
     try:
         from services.metadata_llm import MetadataLLMService
         text = _file_text_for_llm(file_path, loader)
@@ -706,7 +730,9 @@ def _ki_metadata_pass(entry: Dict[str, Any], file_path: str, loader) -> None:
             else:
                 entry["metadata_sources"]["llm"] = "nicht erreichbar (deterministisch)"
             return
-        result = service.extract(text, file_name=str(entry.get("file_name")))
+        # OP84: nur die offenen Felder anfragen (fokussierter Prompt)
+        result = service.extract(text, file_name=str(entry.get("file_name")),
+                                 focus_fields=relevant_open or None)
         if result is None:
             return
         metadata = entry.setdefault("metadata", {})
