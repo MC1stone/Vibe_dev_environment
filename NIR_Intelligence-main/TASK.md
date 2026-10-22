@@ -3,6 +3,23 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
+## Current Task: OP90 - Test-Matrizen OP63/OP79: Thread-sichere Test-DB (Temp-Datei statt :memory:)
+### Ziel
+Befund aus Verifikation PR #229/#230 (pre-existing seit OP63): OP63/OP79
+setzen SQLite `:memory:`; `execute_fusion` startet `build_preparation_report`
+in einem Daemon-Thread -> Thread sieht leere DB -> `OperationalError: no such
+table: core_analysisproject` im Log (nach RESULT, Exit 0, kosmetisch).
+PO-Freigabe erteilt; Roadmap-Abschnitt OP90 angelegt (vor Umsetzung).
+### Umsetzung
+- tests/test_op63_fusion_branch.py + tests/test_op79_fusion_candidate_selection.py:
+  `:memory:` -> Temp-Datei-DB (tempfile.mkdtemp), nach migrate
+  `connections.close_all()`, damit der Thread eine frische Connection zur
+  Datei-DB aufbaut. Cleanup best effort am Dateiende.
+- Kein Produktionscode (services/project_fusion.py unangetastet).
+### Verifikation
+- OP63/OP79: RESULT ohne Traceback, Exit 0; Regression OP80 55/55,
+  OP55 14/14, OP63_st3 37/37; manage.py check OK.
+
 ## Current Task: OP68 - Sensor-Analyse + Korrektur-Loop der Fusion
 
 ### Ziel
