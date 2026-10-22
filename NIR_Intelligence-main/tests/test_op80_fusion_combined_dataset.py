@@ -301,5 +301,65 @@ check("T7g E2E: Warnkarte gerendert",
 check("T7h E2E: Grund auf der Seite sichtbar",
       "kalibrationsf" in html8)
 
+# ---------------------------------------------------------------------------
+# T8: OP86 - Metadaten der Quellen ueberleben den Merge (Nutzer-Befund:
+# 'Obwohl alle Daten fuer 100% vorhanden sind, entsteht im Merge nur
+# 20% - dann brauchen wir den Aufwand nicht zu betreiben').
+# ---------------------------------------------------------------------------
+combine_src = (REPO_ROOT / "services" / "fusion_combine.py").read_text("utf-8")
+check("T8a Quell-Metadaten werden uebernommen (kein Hardcode mehr)",
+      "merged_meta" in combine_src
+      and "src_meta" in combine_src)
+check("T8b metadata_sources ebenfalls gemergt",
+      "merged_sources" in combine_src)
+check("T8c Konflikte ehrlich dokumentiert (nie still waehlen)",
+      "konflikt" in combine_src
+      and "Metadatenkonflikt im Merge" in combine_src)
+
+from services.fusion_combine import build_combined_dataset as _bcd  # noqa: E402
+META_FIELDS = {"operator_name": "Anna", "instrument_type": "diy_matchbox",
+               "timestamp": "2026-10-22 07:00:00", "location": "Lab 1",
+               "experiment_name": "Tomaten"}
+d_m1 = {
+    'usable': True, 'file_name': 'm1.csv', 'target_name': 'brix',
+    'preview': {'wavelengths': [900.0, 910.0, 920.0], 'intensities': []},
+    'calibration_samples': [[0.5, 0.6, 0.7]] * 12,
+    'reference_values': [4.0 + 0.1 * i for i in range(12)],
+    'metadata': dict(META_FIELDS),
+    'metadata_sources': {k: 'deterministisch' for k in META_FIELDS},
+}
+d_m2 = {
+    'usable': True, 'file_name': 'm2.csv', 'target_name': 'brix',
+    'preview': {'wavelengths': [900.0, 910.0, 920.0], 'intensities': []},
+    'calibration_samples': [[0.52, 0.62, 0.72]] * 10,
+    'reference_values': [6.0 + 0.1 * i for i in range(10)],
+    'metadata': dict(META_FIELDS),
+    'metadata_sources': {k: 'deterministisch' for k in META_FIELDS},
+}
+c_merged = _bcd([d_m1, d_m2])
+check("T8d Merge mit gleichen Quell-Metadaten erfolgreich",
+      c_merged is not None)
+meta_c = (c_merged.get('metadata') or {}) if c_merged else {}
+kept = all(meta_c.get(k) == v for k, v in META_FIELDS.items())
+check("T8e ALLE Quell-Metadaten im kombinierten Satz (kein 20%-Verlust)",
+      kept, str(meta_c)[:150])
+srcs_c = (c_merged.get('metadata_sources') or {}) if c_merged else {}
+check("T8f Quellen-Bewertung mitgenommen",
+      all(k in srcs_c for k in META_FIELDS))
+
+# Konfliktfall: unterschiedliche Werte -> ehrlich dokumentiert
+d_m3 = dict(d_m2, file_name='m3.csv',
+            metadata=dict(META_FIELDS, operator_name='Ben'))
+c_conf = _bcd([d_m1, d_m3])
+meta_conf = (c_conf.get('metadata') or {}) if c_conf else {}
+check("T8g Konflikt: beide Werte sichtbar (Anna | Ben)",
+      c_conf is not None and 'Anna' in str(meta_conf.get('operator_name', ''))
+      and 'Ben' in str(meta_conf.get('operator_name', '')),
+      str(meta_conf.get('operator_name', '')))
+check("T8h Konflikt als offene Frage dokumentiert",
+      any('Metadatenkonflikt' in str(q)
+          for q in (c_conf.get('open_questions') or []))
+      if c_conf else False)
+
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)
