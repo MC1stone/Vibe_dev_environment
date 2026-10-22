@@ -6,8 +6,10 @@ Runs unit, integration, and end-to-end tests for agents.
 """
 
 import os
+import re
 import sys
 import json
+import time
 import subprocess
 import logging
 from pathlib import Path
@@ -74,6 +76,19 @@ class AgentTester:
             'test_files': []
         }
         
+        # OP88: Ehrlicher Fallback — die erwartete tests/unit|integration|e2e-
+        # Struktur existiert nicht; die reale Matrix liegt flach in tests/.
+        # Ohne Fallback meldete der Tester silent success (0 passed, 0 failed,
+        # exit 0), obwohl 100+ Matrizen existieren. Erkenne die flache Matrix
+        # und fuehre sie als einen Lauf.
+        structured = any(
+            (self.tests_dir / t).is_dir()
+            for t in ('unit', 'integration', 'e2e')
+        )
+        flat_matrices = sorted(self.tests_dir.glob('test_*.py'))
+        if not structured and flat_matrices:
+            return self._run_flat_matrix(flat_matrices)
+
         # Get all agent files
         agent_files = list(self.agents_dir.glob('*_agent.py'))
         
@@ -115,9 +130,25 @@ class AgentTester:
         test_type: str = 'all',
         with_coverage: bool = False
     ) -> Dict[str, Any]:
-        """Run tests for a specific agent"""
+        """Run tests for a specific agent.
+
+        OP88: Ehrlicher Fallback — die erwarteten tests/unit|integration|e2e-
+        Dateien existieren nicht. Statt silent success (0/0, exit 0) wird
+        die flache OP-Matrix nach Matrizen gefiltert, die den Agent-Namen
+        abdecken (Import-Scan + Namensheuristik, analog OP87-Impact-Map).
+        """
         snake_name = self._to_snake_case(agent_name)
-        
+        base = snake_name[:-6] if snake_name.endswith('_agent') else snake_name
+
+        # OP88: flache Matrix nach Agent-Bezug filtern (siehe
+        # _select_agent_matrices fuer die Match-Regeln)
+        candidates = self._select_agent_matrices(agent_name)
+        if candidates:
+            flat = self._run_flat_matrix(candidates)
+            flat['agent_name'] = agent_name
+            flat['mode'] = 'flat-matrix-agent'
+            return flat
+
         result = {
             'success': True,
             'passed': 0,
@@ -157,9 +188,109 @@ class AgentTester:
         
         return result
     
+    def _select_agent_matrices(self, agent_name: str) -> List[Path]:
+        """OP88: Select flat test matrices that truly cover one agent.
+
+        Match only on real imports:
+          from agents.X_agent import ...  /  import agents.X_agent  /
+          from agents import ...XAgent...
+        The class name alone (e.g. inside a JSON payload like
+        {"agent_name": "CalibrationAgent"}) is NOT test coverage — it would
+        match 48 matrices instead of the 3 real ones.
+        """
+        snake_name = self._to_snake_case(agent_name)
+        base = snake_name[:-6] if snake_name.endswith('_agent') else snake_name
+        class_name = ''.join(w.capitalize() for w in base.split('_')) + 'Agent'
+        candidates = []
+        for tf in sorted(self.tests_dir.glob('test_*.py')):
+            try:
+                src = tf.read_text(encoding='utf-8')
+            except (OSError, UnicodeDecodeError):
+                continue
+            if (f'from agents.{base}_agent import' in src
+                    or f'import agents.{base}_agent' in src
+                    or (f'from agents import' in src and class_name in src)):
+                candidates.append(tf)
+        return candidates
+
+    def _run_flat_matrix(self, matrices: List[Path]) -> Dict[str, Any]:
+        """OP88: Run the flat OP test matrix (tests/test_*.py) as one batch.
+
+        Each matrix is a standalone script with its own PASS/FAIL counter and
+        exit code (repo convention, see tests/test_op12_project_upload_ui.py).
+        We run them sequentially in one process group and aggregate honestly:
+        any failing matrix fails the whole run — never a silent 0/0 success.
+        """
+        result = {
+            'success': True,
+            'passed': 0,
+            'failed': 0,
+            'skipped': 0,
+            'errors': 0,
+            'coverage': None,
+            'duration': 0.0,
+            'agents': {},
+            'test_files': [str(m) for m in matrices],
+            'mode': 'flat-matrix',
+            'matrices_total': len(matrices),
+            'matrices_failed': [],
+        }
+        import time as _time
+        for matrix in matrices:
+            start = _time.time()
+            try:
+                proc = subprocess.run(
+                    [sys.executable, str(matrix)],
+                    capture_output=True, text=True,
+                    cwd=str(self.project_root), timeout=900,
+                )
+                dt = _time.time() - start
+                result['duration'] += dt
+                out = (proc.stdout or '') + (proc.stderr or '')
+                m_pass = re.search(r'(\d+) passed', out)
+                m_fail = re.search(r'(\d+) failed', out)
+                passed = int(m_pass.group(1)) if m_pass else 0
+                # OP88: 'N failed' matched fälschlich '692 info(s)'-ähnliche
+                # Zaehlen in verschachtelten Ausgaben. Nur das eigene
+                # 'RESULT: X passed, Y failed'-Muster der Matrix zaehlt;
+                # bei rc!=0 ohne erkennbares Muster = 1 Fehler.
+                failed = int(m_fail.group(1)) if m_fail else (1 if proc.returncode else 0)
+                # Wenn die Matrix selbst gruen lief (rc=0) und 'failed'
+                # nur aus einer verschachtelten Fremd-Ausgabe stammt,
+                # ist der wahre Wert 0.
+                if proc.returncode == 0 and m_fail:
+                    # pruefe: eigenes RESULT-Muster mit failed > 0?
+                    own = re.search(r'RESULT:\s*(\d+) passed,\s*(\d+) failed', out)
+                    own2 = re.search(r'matrix:\s*(\d+) passed,\s*(\d+) failed', out)
+                    if own and int(own.group(2)) > 0:
+                        failed = int(own.group(2))
+                    elif own2 and int(own2.group(2)) > 0:
+                        failed = int(own2.group(2))
+                    else:
+                        failed = 0
+                result['passed'] += passed
+                result['failed'] += failed
+                if proc.returncode != 0:
+                    result['success'] = False
+                    result['matrices_failed'].append(matrix.name)
+                logger.info(
+                    'matrix %s: %d passed, %d failed (%.1fs, rc=%d)',
+                    matrix.name, passed, failed, dt, proc.returncode,
+                )
+            except subprocess.TimeoutExpired:
+                result['success'] = False
+                result['failed'] += 1
+                result['matrices_failed'].append(matrix.name)
+                logger.error('matrix %s: TIMEOUT', matrix.name)
+            except Exception as exc:
+                result['success'] = False
+                result['failed'] += 1
+                result['matrices_failed'].append(matrix.name)
+                logger.error('matrix %s: %s', matrix.name, exc)
+        return result
+
     def _to_snake_case(self, name: str) -> str:
         """Convert CamelCase to snake_case"""
-        import re
         name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
         name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name)
         return name.lower()
@@ -272,8 +403,6 @@ class AgentTester:
     
     def _parse_failed_tests(self, output: str, result: TestResult):
         """Parse failed test details from pytest output"""
-        import re
-        
         # Look for FAILED entries
         failed_pattern = r'FAILED\s+(.+?)\s+-\s+(.+)'
         matches = re.finditer(failed_pattern, output)
@@ -588,7 +717,3 @@ class AgentTester:
         
         return "".join(html)
 
-
-# Import time at the end to avoid circular imports
-import time
-import re

@@ -42,7 +42,14 @@ The NIR_MISTRAL system has been **successfully tested** and is **ready for produ
 
 ### ✅ Implemented and Tested Components
 
-#### 1. **Agent Ecosystem** (31 agents total)
+#### 1. **Agent Ecosystem** (34 agents total — Stand OP88, 2026-10-22)
+
+> **Nachtrag OP88:** Der Agent-Stand wurde geprueft. Es existieren **34 Agent-Module**
+> (`agents/*_agent.py`, ohne `base_agent`), und die `AGENT_REGISTRY` in
+> `agents/__init__.py` ist vollstaendig — inklusive der produktiv genutzten
+> `chatbot_agent`, `ilias_course_agent` und `sensor_agent`, die vor OP88 fehlten.
+> Die Angabe „31 agents" in aelteren Abschnitten stammt aus der urspruenglichen
+> Erhebung und ist damit ueberholt.
 - **Core Analysis Agents**: ✅ All functional
   - `ShiftDetectorAgent` - Wavelength shift & intensity drift detection
   - `ParameterRecommenderAgent` - Spectrometer parameter optimization

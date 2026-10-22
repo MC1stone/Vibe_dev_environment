@@ -129,6 +129,8 @@ jobs:
           python tests/test_op68_fusion_sensor_correction.py
           python tests/test_op70_bandmatrix_xai_charts.py
           python tests/test_op71_warning_aggregation.py
+          python tests/test_op87_change_impact_gate.py
+          python tests/test_op88_dev_framework_review.py
 
       - name: Django system check
         run: python django_project/manage.py check

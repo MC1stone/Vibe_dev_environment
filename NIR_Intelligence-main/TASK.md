@@ -3,6 +3,34 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
+## Current Task: OP88 - Review & Optimierung der uebrigen Framework-Agenten
+### Ziel
+Nutzer-Auftrag (2026-10-22): 'Bitte ueberpruefe die anderen Agenten ebenso
+und verbessere/optimiere wo moeglich.' Review der dev_framework-Agenten
+(tester, quality, validator, generator, docs, server, cli) + agents-Registry
+mit laufendem Framework — 6 Befunde, kleinste korrekte Fixes (Roadmap OP88).
+### Umsetzung
+- agents/__init__.py: chatbot_agent, ilias_course_agent, sensor_agent in
+  AGENT_REGISTRY aufnehmen (sie werden produktiv genutzt, fehlten aber).
+- dev_framework/tester.py: ehrlicher Fallback auf die flache OP-Matrix
+  (tests/test_*.py) — kein silent '0 passed, 0 failed' exit 0; time/re
+  an den Dateianfang (PEP 8).
+- dev_framework/validator.py: _validate_agent_mandatory_files prueft den
+  falschen Pfad (agents/<snake>.py statt <snake>_agent.py) — korrigieren;
+  PY_007 false-positive (BaseAgent setzt Attribute via super) entfernen.
+- dev_framework/quality.py: fehlende Tools (black/flake8/isort/mypy) als
+  skipped melden, nicht 692 Errors; cli.py run_quality Exit-Code fixen.
+- dev_framework/docs.py: relative_to-Crash fixen (Fallback absoluter Pfad);
+  cli.py: docs als eigener Subcommand (Alias fuer generate docs).
+- PRODUCTION_READINESS.md: Nachtrag aktueller Agent-Stand (34 Dateien,
+  vollstaendige Registry).
+### Verifikation
+- Neue Matrix tests/test_op88_dev_framework_review.py: Registry-Vollstand,
+  Tester-Fallback, Validator ohne False-Positives, Quality skipped ehrlich,
+  Docs-CLI beides, CI-Registrierung, py_compile, Regression dev_framework.
+- dev_framework live: validate/test/quality/docs/info laufen ohne Crash.
+- manage.py check OK; bestehende Matrizen unberuehrt.
+
 ## Current Task: OP87 - Change-Impact Test Gate (Tester Agent 2.0)
 ### Ziel
 Nutzer-Befund (2026-10-22): Zu viel manuelle Zeit für einfache Tests. Der

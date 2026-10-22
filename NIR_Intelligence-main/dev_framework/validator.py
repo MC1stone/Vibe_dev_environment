@@ -174,6 +174,7 @@ class AgentValidator:
         mandatory_result = self._validate_agent_mandatory_files(agent_name)
         result.errors.extend(mandatory_result.errors)
         result.warnings.extend(mandatory_result.warnings)
+        result.info.extend(mandatory_result.info)
         result.valid = result.valid and mandatory_result.valid
         
         return result
@@ -297,8 +298,27 @@ class AgentValidator:
                     fix="super().__init__(name=..., version=..., **kwargs)"
                 ))
         
-        # Check for required attributes
+        # OP88: Check for required attributes — aber nur wenn die Klasse sie
+        # nicht schon von BaseAgent erbt. BaseAgent.__init__ setzt name,
+        # version, dependencies, errors (siehe agents/base_agent.py) — ein
+        # Agent, der super().__init__() aufruft, hat sie automatisch. Der
+        # alte Check meldete 99 false positives ('Recommended attribute not
+        # set'), weil er die Vererbung nicht beruecksichtigte.
+        inherited_attrs = {'name', 'version', 'dependencies', 'errors'}
+        has_super_init = False
+        if init_method:
+            for node in ast.walk(init_method):
+                if isinstance(node, ast.Call):
+                    if (isinstance(node.func, ast.Attribute) and
+                        node.func.attr == '__init__' and
+                        isinstance(node.func.value, ast.Call) and
+                        isinstance(node.func.value.func, ast.Name) and
+                        node.func.value.func.id == 'super'):
+                        has_super_init = True
+                        break
         for attr in self.REQUIRED_ATTRIBUTES:
+            if has_super_init and attr in inherited_attrs:
+                continue  # von BaseAgent geerbt — kein Befund
             found = False
             for node in ast.walk(init_method) if init_method else []:
                 if isinstance(node, ast.Assign):
@@ -428,36 +448,38 @@ class AgentValidator:
         return result
     
     def _validate_agent_mandatory_files(self, agent_name: str) -> ValidationResult:
-        """Validate that agent reads mandatory files"""
+        """OP88: Kontext statt False-Positive — Startsequenz-Doku-Hinweis.
+
+        Realitaet im Repo: Kein einzelner Agent liest TASK.md/task_definition/
+        system_manifest — die Startsequenz ist Session-Ebene (AGENTS.md +
+        MISSION_STATEMENT verpflichten die KI, die Dateien vor jedem Schritt
+        zu lesen), nicht Agent-Code-Ebene. Der alte Check pruefte ausserdem
+        den falschen Pfad (agents/<snake>.py statt <snake>_agent.py) und
+        lieferte 99 identische False-Positive pro Lauf.
+
+        Ehrliche Loesung: ein einzelner Info-Hinweis pro Agent, der auf die
+        Startsequenz verweist — kein Warning-Spam, kein toter Check.
+        """
         result = ValidationResult(valid=True, agent_name=agent_name)
         
         snake_name = self._to_snake_case(agent_name)
-        python_file = self.agents_dir / f"{snake_name}.py"
+        if snake_name.endswith('_agent'):
+            base = snake_name[:-6]
+        else:
+            base = snake_name
+        python_file = self.agents_dir / f"{base}_agent.py"
         
         if not python_file.exists():
             return result
-        
-        try:
-            with open(python_file, 'r') as f:
-                content = f.read()
-        except Exception as e:
-            return result
-        
-        # Check for mandatory file reads
-        mandatory_files = ['TASK.md', 'task_definition.yaml', 'system_manifest.json']
-        
-        for mandatory_file in mandatory_files:
-            # Check for direct file reads
-            if mandatory_file not in content:
-                # Check for path joins
-                if f"'{mandatory_file}'" not in content and f'"{mandatory_file}"' not in content:
-                    result.add_issue(ValidationIssue(
-                        severity='warning',
-                        code='AGENT_003',
-                        message=f"Agent should read mandatory file: {mandatory_file}",
-                        file=str(python_file),
-                        fix=f"Add: with open('{mandatory_file}', 'r') as f: ..."
-                    ))
+
+        result.add_issue(ValidationIssue(
+            severity='info',
+            code='AGENT_003',
+            message=(f"Startsequenz (TASK.md, task_definition.yaml, "
+                     f"system_manifest.json) wird auf Session-Ebene gelesen "
+                     f"(AGENTS.md/MISSION_STATEMENT), nicht im Agent-Code"),
+            file=str(python_file),
+        ))
         
         return result
     
