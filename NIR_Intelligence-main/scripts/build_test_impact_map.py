@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""OP87: Build the static test impact map for the change-impact test gate.
+"""OP89: Build the static test impact map for the change-impact test gate.
 
 Scans the project sources and discovers, for every test matrix in
 tests/test_*.py, which source modules it covers. The result is written to

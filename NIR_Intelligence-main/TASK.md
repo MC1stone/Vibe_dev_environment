@@ -3,12 +3,12 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP87 - Change-Impact Test Gate (Tester Agent 2.0)
+## Current Task: OP89 - Change-Impact Test Gate (Tester Agent 2.0)
 ### Ziel
 Nutzer-Befund (2026-10-22): Zu viel manuelle Zeit für einfache Tests. Der
 Tester Agent soll jeden zum Merge vorgeschlagenen Code-Change vollständig
 testen — Funktionen, Gesamtworkflow, interagierende Teile — ohne manuelle
-Testauswahl. PO-Freigabe erteilt; Roadmap-Abschnitt OP87 in
+Testauswahl. PO-Freigabe erteilt; Roadmap-Abschnitt OP89 in
 REPOSITORY_ALIGNMENT_AND_ROADMAP.md angelegt (vor Umsetzung, bindende Regel).
 ### Umsetzung
 - scripts/build_test_impact_map.py (neu): statische Impact-Map
@@ -26,7 +26,7 @@ REPOSITORY_ALIGNMENT_AND_ROADMAP.md angelegt (vor Umsetzung, bindende Regel).
 - CI: Job `change-impact` (nur pull_request) gegen origin/main...HEAD;
   Vollmatrix-Job bleibt unverändert (Merge-Backstop).
 ### Verifikation
-- Neue Matrix tests/test_op87_change_impact_gate.py: Impact-Map-Bau,
+- Neue Matrix tests/test_op89_change_impact_gate.py: Impact-Map-Bau,
   Zuordnung, Runner-Auswahl (Diff->Matrizen), Smoke-Vertrag,
   Exit-Codes, CLI-Wiring, CI-Registrierung, py_compile/bash-Hygiene.
 - Runner lokal gegen echten Diff verifiziert; manage.py check OK;

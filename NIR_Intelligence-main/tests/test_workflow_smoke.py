@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""OP87: Gesamtworkflow-Smoke (interagierende Teile, ein Durchlauf).
+"""OP89: Gesamtworkflow-Smoke (interagierende Teile, ein Durchlauf).
 
 Nutzer-Anforderung (2026-10-22): Der Tester Agent soll jeden Code-Change
 vollstaendig testen — Funktionen, GESAMTER Workflow und interagierende
@@ -64,18 +64,18 @@ if "testserver" not in settings.ALLOWED_HOSTS:
 # ---------------------------------------------------------------------------
 User = get_user_model()
 try:
-    User.objects.filter(username="op87smoke").first()
+    User.objects.filter(username="op89smoke").first()
 except Exception:
     call_command("migrate", interactive=False, verbosity=0)
-user = User.objects.filter(username="op87smoke").first()
+user = User.objects.filter(username="op89smoke").first()
 if user is None:
-    user = User(username="op87smoke", email="op87smoke@test.local")
-user.set_password("op87smoke")
+    user = User(username="op89smoke", email="op89smoke@test.local")
+user.set_password("op89smoke")
 user.is_staff = True
 user.save()
 
 c = Client()
-check("T0a login works", c.login(username="op87smoke", password="op87smoke"))
+check("T0a login works", c.login(username="op89smoke", password="op89smoke"))
 
 # ---------------------------------------------------------------------------
 # T1: Datei-Upload (Station 2 — Ingest & Datengrundlage)
@@ -86,7 +86,7 @@ csv_bytes = (b"wavelength,intensity\n"
                  for i, wl in enumerate(range(700, 1160, 10))
              ))
 r = c.post("/api/files/upload/", {
-    "files": SimpleUploadedFile("op87_smoke.csv", csv_bytes,
+    "files": SimpleUploadedFile("op89_smoke.csv", csv_bytes,
                                 content_type="text/csv")
 }, format="multipart")
 body = r.json() if r.status_code == 200 else {}
@@ -100,7 +100,7 @@ check("T1b uploaded_files ids returned", len(file_ids) == 1,
 # ---------------------------------------------------------------------------
 # T2: Projekt anlegen + Aufbereitung abwarten (Station 1 -> 2)
 # ---------------------------------------------------------------------------
-project_name = f"OP87 Smoke {int(time.time())}"
+project_name = f"OP89 Smoke {int(time.time())}"
 r = c.post("/api/projects/create/",
            data={"file_ids": file_ids, "name": project_name},
            content_type="application/json")
@@ -218,7 +218,7 @@ if pid:
 # Summary
 # ---------------------------------------------------------------------------
 print()
-print(f"OP87 workflow smoke: {PASS} passed, {FAIL} failed")
+print(f"OP89 workflow smoke: {PASS} passed, {FAIL} failed")
 if FAILED:
     print("FAILED checks:", FAILED)
 sys.exit(1 if FAIL else 0)

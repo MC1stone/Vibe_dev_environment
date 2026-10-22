@@ -653,7 +653,7 @@ test_op53_sensor_pages.py 37/37.
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.
 
-### OP87 — Change-Impact Test Gate (Tester Agent 2.0) — IN ARBEIT (PO-Freigabe 2026-10-22)
+### OP89 — Change-Impact Test Gate (Tester Agent 2.0) — IN ARBEIT (PO-Freigabe 2026-10-22)
 Nutzer-Befund: Zu viel manuelle Zeit für einfache Tests — pro OP wird eine
 Testmatrix von Hand geschrieben, in CI als einzelner `python tests/...`-Aufruf
 eingetragen, und die Auswahl der relevanten Tests erfolgt manuell. Ziel: Der
@@ -698,7 +698,7 @@ Teile — ohne manuelle Testauswahl.
   betroffenen Matrizen + Smoke-Test; lokal gegen echten Diff verifiziert.
 - `tests/test_workflow_smoke.py` läuft offline grün (ehrliches Degraded bei
   fehlenden externen Dienste, kein Fake-Erfolg).
-- Neue Matrix `tests/test_op87_change_impact_gate.py` grün; CI-Job
+- Neue Matrix `tests/test_op89_change_impact_gate.py` grün; CI-Job
   `change-impact` in `ci.yml` registriert.
 - Selbstprüfung §7 beantwortet; Anti-Code-Creep: kleinste korrekte Lösung,
   bestehende Matrizen unberührt.

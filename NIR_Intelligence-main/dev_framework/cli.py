@@ -222,7 +222,7 @@ Examples:
     test_parser.add_argument(
         '--impact',
         action='store_true',
-        help='OP87: run the change-impact test gate — only the test '
+        help='OP89: run the change-impact test gate — only the test '
              'matrices affected by the current diff plus the workflow '
              'smoke test (scripts/run_change_tests.py)'
     )
@@ -230,13 +230,13 @@ Examples:
         '--base',
         type=str,
         default=None,
-        help='OP87: git ref to diff against for --impact '
+        help='OP89: git ref to diff against for --impact '
              '(default: origin/main...HEAD, fallback main...HEAD)'
     )
     test_parser.add_argument(
         '--full',
         action='store_true',
-        help='OP87: with --impact, run the complete test matrix '
+        help='OP89: with --impact, run the complete test matrix '
              '(backstop mode)'
     )
     
@@ -442,7 +442,7 @@ def run_validate(args: argparse.Namespace) -> int:
 
 def run_test(args: argparse.Namespace) -> int:
     """Handle test command"""
-    # OP87: change-impact gate — delegate to the dedicated runner
+    # OP89: change-impact gate — delegate to the dedicated runner
     if getattr(args, 'impact', False) or getattr(args, 'full', False):
         import subprocess
         project_root = Path(__file__).resolve().parent.parent

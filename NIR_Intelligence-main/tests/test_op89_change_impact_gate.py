@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# OP87 test matrix: Change-Impact Test Gate (Tester Agent 2.0).
+# OP89 test matrix: Change-Impact Test Gate (Tester Agent 2.0).
 # Nutzer-Anforderung (2026-10-22): 'Ich moechte den Test-Agenten so
 # weiterentwickeln, dass er JEDEN Code-Change, der zum Merge
 # vorgeschlagen werden soll, so vollstaendig testet, dass die
@@ -67,7 +67,7 @@ for rel in ("scripts/build_test_impact_map.py",
 # ---------------------------------------------------------------------------
 # T2: Impact-Map — Bau + Struktur
 # ---------------------------------------------------------------------------
-bim = load_module("op87_bim", "scripts/build_test_impact_map.py")
+bim = load_module("op89_bim", "scripts/build_test_impact_map.py")
 impact_map = bim.build_map(PROJECT_ROOT)
 check("T2a map has module_to_tests", bool(impact_map.get("module_to_tests")))
 check("T2b map has test_assignment", bool(impact_map.get("test_assignment")))
@@ -98,7 +98,7 @@ with tempfile.TemporaryDirectory() as td:
 # ---------------------------------------------------------------------------
 # T3: Runner — Diff-Parsing + Matrix-Auswahl (ohne echten git-Aufruf)
 # ---------------------------------------------------------------------------
-rct = load_module("op87_rct", "scripts/run_change_tests.py")
+rct = load_module("op89_rct", "scripts/run_change_tests.py")
 
 # file_to_module mapping
 check("T3a django_project/api/project_views.py -> api.project_views",
@@ -146,6 +146,15 @@ m4, _, _, _ = rct.select_matrices(
     impact_map, ["tests/test_op63_fusion_branch.py"])
 check("T3h geaenderte Testmatrix laeuft direkt",
       "test_op63_fusion_branch.py" in m4)
+
+# Test-Datei geloescht/umbenannt (existiert nicht mehr) -> NICHT auswaehlen
+m4b, _, _, _ = rct.select_matrices(
+    impact_map, ["tests/test_op87_change_impact_gate.py"])
+check("T3h2 geloeschte/umbenannte Testmatrix wird uebersprungen",
+      "test_op87_change_impact_gate.py" not in m4b
+      and not (PROJECT_ROOT / "tests"
+               / "test_op87_change_impact_gate.py").exists(),
+      f"got {m4b}")
 
 # leere Auswahl -> nur Smoke (wird vom Runner angehaengt, hier nackt leer)
 m5, _, _, _ = rct.select_matrices(impact_map, ["README.md"])
@@ -211,8 +220,8 @@ check("T7c CI-Job ist PR-only (if pull_request)",
       "if: github.event_name == 'pull_request'" in ci_src)
 check("T7d CI-Vollmatrix bleibt als Backstop erhalten",
       "test-matrices:" in ci_src)
-check("T7e OP87-Matrix selbst in CI (change-impact Job)",
-      "test_op87_change_impact_gate.py" in ci_src)
+check("T7e OP89-Matrix selbst in CI (change-impact Job)",
+      "test_op89_change_impact_gate.py" in ci_src)
 
 try:
     import yaml
@@ -222,11 +231,11 @@ except Exception as exc:
     check("T7f ci.yml ist valides YAML", False, str(exc))
 
 task_src = (PROJECT_ROOT / "TASK.md").read_text(encoding="utf-8")
-check("T7g TASK.md traegt OP87 als Current Task",
-      "Current Task: OP87" in task_src)
+check("T7g TASK.md traegt OP89 als Current Task",
+      "Current Task: OP89" in task_src)
 roadmap_src = (PROJECT_ROOT.parent / "REPOSITORY_ALIGNMENT_AND_ROADMAP.md") \
     .read_text(encoding="utf-8")
-check("T7h Roadmap traegt OP87", "### OP87" in roadmap_src)
+check("T7h Roadmap traegt OP89", "### OP89" in roadmap_src)
 
 # ---------------------------------------------------------------------------
 # T8: Impact-Map ist gitignored (generiert, kein Check-in-Noise)
@@ -244,7 +253,7 @@ r = subprocess.run(
     cwd=str(PROJECT_ROOT.parent), timeout=60)
 changed_tests = [l for l in r.stdout.splitlines() if l.strip()]
 allowed_new = {"NIR_Intelligence-main/tests/test_workflow_smoke.py",
-               "NIR_Intelligence-main/tests/test_op87_change_impact_gate.py"}
+               "NIR_Intelligence-main/tests/test_op89_change_impact_gate.py"}
 unexpected = [f for f in changed_tests
               if f not in allowed_new
               and not f.endswith(".impact_map.json")]
@@ -255,7 +264,7 @@ check("T9a keine bestehende Testmatrix veraendert",
 # Summary
 # ---------------------------------------------------------------------------
 print()
-print(f"OP87 change-impact gate matrix: {PASS} passed, {FAIL} failed")
+print(f"OP89 change-impact gate matrix: {PASS} passed, {FAIL} failed")
 if FAILED:
     print("FAILED checks:", FAILED)
 sys.exit(1 if FAIL else 0)

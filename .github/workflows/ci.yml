@@ -134,10 +134,10 @@ jobs:
         run: python django_project/manage.py check
 
   change-impact:
-    # OP87: Change-Impact Test Gate — schnelle PR-Schleife. Wählt selbst
+    # OP89: Change-Impact Test Gate — schnelle PR-Schleife. Wählt selbst
     # die betroffenen Testmatrizen + Workflow-Smoke aus dem Diff gegen
     # origin/main. Der Vollmatrix-Job oben bleibt Merge-Backstop.
-    name: Change-impact test gate (OP87)
+    name: Change-impact test gate (OP89)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     defaults:
@@ -169,5 +169,5 @@ jobs:
       - name: Run change-impact gate against origin/main
         run: python scripts/run_change_tests.py --base origin/main
 
-      - name: Run OP87 gate matrix
-        run: python tests/test_op87_change_impact_gate.py
+      - name: Run OP89 gate matrix
+        run: python tests/test_op89_change_impact_gate.py
