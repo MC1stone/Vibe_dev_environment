@@ -102,6 +102,18 @@ class OllamaMetadataClient:
         # ueberschreibbar.
         self.timeout = (timeout if timeout is not None
                         else int(os.environ.get("NIR_LLM_TIMEOUT", "300")))
+        # OP83: Wartezeit-Begrenzung fuer die Aufbereitung - auf CPU-only
+        # Ollama dauert EIN Metadaten-Prompt Minuten; 2 Versuche x 300 s
+        # = bis 10 min PRO DATEI blockierten die gesamte Aufbereitung
+        # (Nutzer-Befund 2026-10-22: Reingest 30+ min ohne Ergebnis,
+        # Fahrplan-Karte zeigte Datei 1/2 im KI-Schritt seit 5:34).
+        # Default jetzt: 1 Versuch, 120 s - via NIR_LLM_TIMEOUT und
+        # NIR_LLM_ATTEMPTS konfigurierbar (alte 300 s bleiben moeglich).
+        self.attempts = max(1, int(os.environ.get("NIR_LLM_ATTEMPTS", "1")))
+        if timeout is None:
+            env_timeout = os.environ.get("NIR_LLM_TIMEOUT")
+            if not env_timeout:
+                self.timeout = 120
 
     def chat(self, prompt: str) -> Optional[str]:
         import requests
@@ -111,7 +123,7 @@ class OllamaMetadataClient:
             "stream": False,
             "format": "json",
         }
-        attempts = 2 if self.timeout >= 60 else 1
+        attempts = self.attempts
         last_error: Optional[Exception] = None
         for attempt in range(attempts):
             try:

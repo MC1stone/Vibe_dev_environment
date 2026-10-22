@@ -5,6 +5,7 @@
 # data usability with improvement recommendations for the user. File-type
 # and spectrometer agnostic per the init prompt ground rules.
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -675,7 +676,19 @@ def _ki_metadata_pass(entry: Dict[str, Any], file_path: str, loader) -> None:
     layer already holds a value for a field and the LLM disagrees, the
     conflict is recorded and escalated to the user (open_questions) -
     never silently resolved. Never raises; without Ollama the entry
-    keeps its deterministic metadata (resilience)."""
+    keeps its deterministic metadata (resilience).
+
+    OP83: NIR_INGEST_LLM=skip/off deaktiviert den KI-Pass fuer die
+    Aufbereitung komplett (CPU-only Ollama: Minuten pro Datei) - die
+    Aufbereitung laeuft dann rein deterministisch in Sekunden; der
+    Report vermerkt das ehrlich statt still zu schweigen."""
+    if str(os.environ.get("NIR_INGEST_LLM", "")).strip().lower() \
+            in ("skip", "off", "no", "0", "false"):
+        sources = entry.setdefault("metadata_sources", {})
+        sources["llm"] = ("KI-Pass deaktiviert (NIR_INGEST_LLM=skip) - "
+                          "deterministische Aufbereitung, deutlich "
+                          "schneller; Metadaten ggf. im Editor ergänzen.")
+        return
     try:
         from services.metadata_llm import MetadataLLMService
         text = _file_text_for_llm(file_path, loader)
