@@ -653,6 +653,56 @@ test_op53_sensor_pages.py 37/37.
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.
 
+### OP87 — Change-Impact Test Gate (Tester Agent 2.0) — IN ARBEIT (PO-Freigabe 2026-10-22)
+Nutzer-Befund: Zu viel manuelle Zeit für einfache Tests — pro OP wird eine
+Testmatrix von Hand geschrieben, in CI als einzelner `python tests/...`-Aufruf
+eingetragen, und die Auswahl der relevanten Tests erfolgt manuell. Ziel: Der
+Tester Agent wird so weiterentwickelt, dass er jeden zum Merge vorgeschlagenen
+Code-Change vollständig testet — Funktionen, Gesamtworkflow und interagierende
+Teile — ohne manuelle Testauswahl.
+
+### Umfang
+- `scripts/build_test_impact_map.py` (neu): Baut eine statische Impact-Map
+  (Source → abhängige Module via Import-Graph für `agents/`, `services/`,
+  `django_project/`; JS-Module via `static/js/`-Abhängigkeiten) und ordnet
+  jede Testmatrix (`tests/test_*.py`) den von ihr abgedeckten Source-Modulen
+  zu (Tag-Konvention `# covers:` + heuristischer Import-Scan). Ausgabe:
+  `tests/.impact_map.json` (generiert, gitignored, bei Bedarf rebuild).
+- `tests/test_workflow_smoke.py` (neu): Gesamtworkflow-Smoke als ein
+  Durchlauf — Projekt anlegen → Upload → Ingest/Aufbereitung → Analyse-Trigger
+  → Report → Chatbot-Kontext — gegen Django-Testclient (loopback, keine
+  externen Dienste), mit ehrlichem Degraded-Handling (fehlendes Ollama/Qdrant
+  wird als solcher Status gemeldet, nie als grüner Test). Deckt die
+  interagierenden Teile ab, die einzelne OP-Matrizen nicht sehen.
+- `scripts/run_change_tests.py` (neu): Das eigentliche Gate. `git diff`
+  (Basis: `--base` Branch/Commit, Default `origin/main...HEAD` bzw.
+  `main...HEAD`) → betroffene Source-Dateien → Impact-Map → betroffene
+  Matrizen + immer `test_workflow_smoke.py` + `manage.py check` +
+  `node --check` auf geänderte JS-Dateien. Ein Prozess für alle Matrizen
+  (kein 85-facher Python-Startup), Exit-Code 0/1, klare Ausgabe welche
+  Matrizen warum laufen. `--full` für die komplette Matrix (CI auf main).
+- `dev_framework/cli.py`: `test --impact [--base REF]` angebunden.
+- CI: zusätzlicher Job `change-impact` (nur bei `pull_request`), der das
+  Gate gegen `origin/main...HEAD` laufen lässt; der bestehende Job
+  `test-matrices` (Vollmatrix auf push/PR) bleibt unverändert.
+
+### Out of Scope
+- Keine Änderung an bestehenden OP-Matrizen (Rückwärtskompatibilität: sie
+  laufen weiter einzeln via `python tests/test_opXX_*.py`).
+- Keine neuen Abhängigkeiten (stdlib + git + bestehende Test-Deps).
+- Kein Ersatz der CI-Vollmatrix auf main — das Gate ist die schnelle
+  PR-Schleife, die Vollmatrix bleibt das Merge-Backstop.
+
+### Success Criteria
+- `python scripts/run_change_tests.py --base <ref>` wählt selbstständig die
+  betroffenen Matrizen + Smoke-Test; lokal gegen echten Diff verifiziert.
+- `tests/test_workflow_smoke.py` läuft offline grün (ehrliches Degraded bei
+  fehlenden externen Dienste, kein Fake-Erfolg).
+- Neue Matrix `tests/test_op87_change_impact_gate.py` grün; CI-Job
+  `change-impact` in `ci.yml` registriert.
+- Selbstprüfung §7 beantwortet; Anti-Code-Creep: kleinste korrekte Lösung,
+  bestehende Matrizen unberührt.
+
 ---
 
 ## 4. Abgleichs-Regel (bindend)

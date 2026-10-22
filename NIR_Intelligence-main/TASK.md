@@ -3,6 +3,35 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
+## Current Task: OP87 - Change-Impact Test Gate (Tester Agent 2.0)
+### Ziel
+Nutzer-Befund (2026-10-22): Zu viel manuelle Zeit für einfache Tests. Der
+Tester Agent soll jeden zum Merge vorgeschlagenen Code-Change vollständig
+testen — Funktionen, Gesamtworkflow, interagierende Teile — ohne manuelle
+Testauswahl. PO-Freigabe erteilt; Roadmap-Abschnitt OP87 in
+REPOSITORY_ALIGNMENT_AND_ROADMAP.md angelegt (vor Umsetzung, bindende Regel).
+### Umsetzung
+- scripts/build_test_impact_map.py (neu): statische Impact-Map
+  (Import-Graph agents/services/django_project + JS-Abhängigkeiten),
+  Testmatrix-Zuordnung via `# covers:`-Tags + Import-Scan, Ausgabe
+  tests/.impact_map.json (generiert, gitignored).
+- tests/test_workflow_smoke.py (neu): Gesamtworkflow-Smoke
+  (Projekt anlegen -> Upload -> Ingest -> Analyse -> Report -> Chatbot)
+  gegen Django-Testclient, loopback, ehrliches Degraded (kein Fake).
+- scripts/run_change_tests.py (neu): Gate. git diff --base -> betroffene
+  Source-Dateien -> Impact-Map -> betroffene Matrizen + Smoke +
+  manage.py check + node --check (geänderte JS). Ein Prozess, Exit 0/1.
+  --full fuer die komplette Matrix.
+- dev_framework/cli.py: `test --impact [--base REF]` angebunden.
+- CI: Job `change-impact` (nur pull_request) gegen origin/main...HEAD;
+  Vollmatrix-Job bleibt unverändert (Merge-Backstop).
+### Verifikation
+- Neue Matrix tests/test_op87_change_impact_gate.py: Impact-Map-Bau,
+  Zuordnung, Runner-Auswahl (Diff->Matrizen), Smoke-Vertrag,
+  Exit-Codes, CLI-Wiring, CI-Registrierung, py_compile/bash-Hygiene.
+- Runner lokal gegen echten Diff verifiziert; manage.py check OK;
+  bestehende Matrizen unberührt (Rückwärtskompatibilität).
+
 ## Current Task: OP68 - Sensor-Analyse + Korrektur-Loop der Fusion
 
 ### Ziel
