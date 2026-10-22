@@ -194,6 +194,14 @@ services:
       - OLLAMA_URL=http://ollama:11434
       - FAISS_URL=http://faiss:8081
       - NIR_LLM_MODEL=${NIR_LLM_MODEL:-mistral}
+      # OP83: KI-Pass der Aufbereitung steuerbar - auf CPU-only Ollama
+      # dauert EIN Metadaten-Prompt Minuten (2 Versuche x 300 s = bis
+      # 10 min PRO DATEI). NIR_INGEST_LLM=skip -> rein deterministische
+      # Aufbereitung in Sekunden; NIR_LLM_ATTEMPTS/NIR_LLM_TIMEOUT
+      # begrenzen die Wartezeit je Versuch (Default seit OP83: 1x 120s).
+      - NIR_INGEST_LLM=${NIR_INGEST_LLM:-}
+      - NIR_LLM_ATTEMPTS=${NIR_LLM_ATTEMPTS:-1}
+      - NIR_LLM_TIMEOUT=${NIR_LLM_TIMEOUT:-}
       - ILIAS_URL=http://ilias:80
       - ILIAS_API_URL=http://ilias:80
       - ILIAS_EXTERNAL_URL=${ILIAS_EXTERNAL_URL:-http://localhost:8080}
