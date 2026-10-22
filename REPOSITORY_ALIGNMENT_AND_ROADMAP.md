@@ -653,6 +653,54 @@ test_op53_sensor_pages.py 37/37.
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.
 
+### OP90 — Test-Matrizen OP63/OP79: Thread-sichere Test-DB (Temp-Datei statt `:memory:`) — ✅ ERLEDIGT (2026-10-22)
+Befund (aus Verifikation PR #229/#230, pre-existing seit OP63): Die Matrizen
+`tests/test_op63_fusion_branch.py` und `tests/test_op79_fusion_candidate_selection.py`
+setzen `DATABASES["default"]["NAME"] = ":memory:"`. `execute_fusion`
+(`services/project_fusion.py`) startet `build_preparation_report` in einem
+Daemon-Thread — SQLite `:memory:` ist pro Connection, der Thread sieht eine
+leere DB und loggt `OperationalError: no such table: core_analysisproject`
+(nach der RESULT-Zeile, Exit-Code 0, Tests bestehen — kosmetisches
+Output-Rauschen). In Produktion (Datei-SQLite/PostgreSQL) nicht betroffen.
+
+### Umfang
+- `tests/test_op63_fusion_branch.py` + `tests/test_op79_fusion_candidate_selection.py`:
+  `:memory:` durch Temp-Datei-DB (`tempfile.mkdtemp` + `probe.sqlite3`)
+  ersetzen; nach `migrate` `connections.close_all()` im Haupt-Thread, damit
+  der Daemon-Thread eine frische Connection zur Datei-DB aufbaut.
+  Cleanup der Temp-Datei am Dateiende (best effort).
+- Keine Änderung an `services/project_fusion.py` (Produktionscode unangetastet —
+  dort ist Datei-SQLite/PostgreSQL der Normalfall, Threads funktionieren).
+- Keine Änderung an anderen Testmatrizen (OP55 nutzt bereits
+  `DiscoverRunner.setup_databases()` und ist nicht betroffen).
+
+### Out of Scope
+- Kein Refactoring von `execute_fusion` (Thread-Handling bleibt wie es ist).
+- Keine neuen Abhängigkeiten (stdlib `tempfile` + `threading`).
+
+### Success Criteria
+- OP63/OP79 lokal: RESULT-Zeile ohne nachfolglichen Traceback, Exit-Code 0.
+  ✅ OP63 45/45, OP79 56/56, stderr ohne `no such table`/`Traceback`.
+- Regression: OP80 (49/49 auf main-Stand), OP55 (14/14), OP63_st3 (37/37) grün.
+- `manage.py check` OK; Diff beschränkt auf die zwei Testdateien + Doku.
+  ✅ +29/−2 in `test_op63_fusion_branch.py` + `test_op79_fusion_candidate_selection.py`;
+  `services/project_fusion.py` unangetastet.
+
+### Selbstprüfung (§7, 11 Fragen) — beantwortet vor Umsetzung
+1. Mission Statement gelesen? Ja (Phase 1, Session-Start).
+2. AGENTS.md + AGENT_FRAMEWORK_INIT_PROMPT gelesen? Ja.
+3. Roadmap-Eintrag vor Umsetzung? Ja — dieser Abschnitt.
+4. Kleinste korrekte Lösung? Ja — nur Test-Setup, kein Produktionscode.
+5. Keine neuen Abhängigkeiten? Ja — stdlib only.
+6. Alle Datei-Formate/Spektrometer berücksichtigt? N/A (Test-Infrastruktur,
+   kein Spektrum-/Format-Code berührt).
+7. Weaviate-Thema? Out of scope (Qdrant-Ersatz, unverändert).
+8. paperless-mistral-setup/? Unberührt (frozen).
+9. Lizenz-Compliance? Keine neuen Deps, keine neuen Lizenzen.
+10. Ehrlichkeits-Regel (degraded ≠ fake success)? Ja — Traceback-Entfernung
+    ändert keine Testergebnisse, Tests müssen weiterhin echt grün sein.
+11. Iterations-Regel? Ziel: ERRORS=0, CRITICAL_WARNINGS=0 nach Abschluss.
+
 ---
 
 ## 4. Abgleichs-Regel (bindend)
