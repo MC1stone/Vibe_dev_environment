@@ -218,5 +218,36 @@ check("T5g Review-Karte gerendert mit echten Zahlen",
 check("T5h Harmonisierungs-Hinweis sichtbar (linearer Interpolation)",
       "linearer Interpolation" in html)
 
+# ---------------------------------------------------------------------------
+# T6: OP82 - Reingest am Fusionsprojekt erhaelt die fusion-Sektion.
+# Nutzer-Versuch (2026-10-22): 'Aufbereitung erneut ausfuehren' am
+# zusammengefuehrten Projekt LEERTE den Report inkl. fusion -> der
+# OP80-Hook erkannte das Projekt nicht mehr als Fusion, es wurde KEIN
+# kombinierter Datensatz gebaut (Merge ins Leere).
+# ---------------------------------------------------------------------------
+views_src = (REPO_ROOT / "django_project" / "api"
+             / "project_views.py").read_text("utf-8")
+check("T6a Reingest bewahrt fusion-Sektion (OP82)",
+      "preserved['fusion'] = report['fusion']" in views_src)
+
+# E2E: Reingest-Endpoint laesst fusion im Report stehen
+import json as _json3  # noqa: E402
+client2 = Client(HTTP_HOST="testserver")
+client2.force_login(user)
+# Projekt ist nach T3 vorbereitet (fusion + kombinierter Datensatz);
+# Reingest triggern und pruefen, dass fusion ueberlebt.
+fused.phase = "drafted"
+fused.save()
+r7 = client2.post(f"/projects/{fused.id}/reingest/")
+d7 = r7.json()
+check("T6b Reingest-Endpoint antwortet mit preparing",
+      d7.get("preparing") is True, str(d7)[:120])
+fused.refresh_from_db()
+rep7 = fused.preparation_report or {}
+check("T6c fusion-Sektion nach Reingest-Start erhalten",
+      bool(rep7.get("fusion")), str(rep7.keys())[:120])
+check("T6d user_options ebenfalls erhalten",
+      "user_options" in rep7)
+
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)

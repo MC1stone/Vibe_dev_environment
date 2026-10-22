@@ -1210,9 +1210,18 @@ class ProjectReingestView(APIView if DRF_AVAILABLE else object):
         # OP78-Fahrplan-Karte je erschien (Nutzer-Befund 2026-10-21:
         # 'Ich sehe die Fahrplan-Karte nicht'). Der alte Report wird
         # geleert -> nach dem Reload zeigt die Karte den _PrepTrace.
+        # OP82-Fix: Die fusion-Sektion (source_projects) muss erhalten
+        # bleiben - sonst erkennt der OP80-Hook das Fusionsprojekt nach
+        # dem Leeren NICHT mehr, es wird kein kombinierter Datensatz
+        # gebaut und die Herkunft (Stufe-3-Vergleich, OP65-Doppel-
+        # schutz) geht still verloren (Nutzer-Versuch 2026-10-22:
+        # Reingest am zusammengefuehrten Projekt).
         report = (project.preparation_report or {})
         user_options = report.get('user_options') or {}
-        report = {'user_options': user_options}
+        preserved = {'user_options': user_options}
+        if report.get('fusion'):
+            preserved['fusion'] = report['fusion']
+        report = preserved
         project.preparation_report = report
         project.save(update_fields=['preparation_report', 'updated_at'])
         from threading import Thread
