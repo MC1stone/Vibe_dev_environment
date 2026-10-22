@@ -158,6 +158,53 @@ def build_combined_dataset(datasets: List[Dict[str, Any]],
     if not samples:
         return None
 
+    # OP86: Die Metadaten der QUELL-Datensaetze mit in den kombinierten
+    # Satz uebernehmen - der bisherige Hardcode ('sample_id: Fusion
+    # kombiniert' + interne Felder) liess den Metadaten-Score des Merge
+    # auf ~20% stuerzen, obwohl alle Quellen 100% hatten (Nutzer-Befund
+    # 2026-10-22: 'Das Metadatenergebnis ist bescheiden - dann brauchen
+    # wir den Aufwand nicht zu betreiben'). Merge-Regeln ehrlich:
+    # - alle Quellen mit gleichem Wert -> Wert + Quelle uebernehmen
+    # - Werte unterschiedlich -> Konflikt dokumentieren (wert_a | wert_b)
+    #   und als offene Frage an den Nutzer (nie still waehlen)
+    # - interne Verwaltungsfelder (group_labels, source_files,
+    #   fusion_merged, n_sources) bleiben intern
+    _INTERNAL_FIELDS = {'group_labels', 'source_files', 'fusion_merged',
+                        'n_sources'}
+    merged_meta: Dict[str, Any] = {}
+    merged_sources: Dict[str, Any] = {}
+    conflicts: List[str] = []
+    for d in usable:
+        src_meta = d.get('metadata') or {}
+        src_sources = d.get('metadata_sources') or {}
+        for key, value in src_meta.items():
+            if key in _INTERNAL_FIELDS:
+                continue
+            val = str(value).strip()
+            if not val:
+                continue
+            if key not in merged_meta:
+                merged_meta[key] = val
+                merged_sources[key] = src_sources.get(key, 'deterministisch')
+            elif str(merged_meta[key]).strip() != val:
+                # Konflikt: beide Werte ehrlich dokumentieren
+                new_val = f"{merged_meta[key]} | {val}"
+                merged_meta[key] = new_val
+                merged_sources[key] = (
+                    f"konflikt ({src_sources.get(key, 'deterministisch')})")
+                conflicts.append(
+                    f"Metadatenkonflikt im Merge fuer '{key}': "
+                    f"'{merged_meta[key]}' - Quellen haben unterschiedliche "
+                    f"Werte. Bitte im Editor klaeren.")
+    merged_meta.update({
+        'sample_id': 'Fusion kombiniert ('
+                     + ' + '.join(group_files) + ')',
+        'fusion_merged': True,
+        'group_labels': group_labels,
+        'source_files': group_files,
+        'n_sources': len(group_files),
+    })
+
     combined.append({
         'file_name': 'Fusion kombiniert ('
                      + ' + '.join(group_files) + ')',
@@ -168,17 +215,17 @@ def build_combined_dataset(datasets: List[Dict[str, Any]],
         'reference_values': targets,
         'preview': {'wavelengths': list(combined_grid),
                     'intensities': []},
-        'metadata': {
-            'sample_id': 'Fusion kombiniert',
-            'fusion_merged': True,
-            'group_labels': group_labels,
-            'source_files': group_files,
-            'n_sources': len(group_files),
-        },
+        'metadata': merged_meta,
+        'metadata_sources': merged_sources,
         'measurement_samples': samples,
         'derived_classes': None,
         'fusion_merge': merge_report,
     })
+    if conflicts:
+        combined_ds0 = combined[0]
+        questions = combined_ds0.setdefault('open_questions', [])
+        questions.extend(conflicts)
+        merge_report['metadata_conflicts'] = len(conflicts)
     # OP77: Klassen-Wuensche wirken auf den KOMBINIERTEN Zielwerten -
     # die Zusatz-Klassifikation laeuft auf den gemergten Daten (eine
     # Auswertung), Klassen aus der gemeinsamen Verteilung.
