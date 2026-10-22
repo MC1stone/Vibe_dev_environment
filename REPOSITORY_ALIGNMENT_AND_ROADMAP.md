@@ -703,6 +703,68 @@ Teile — ohne manuelle Testauswahl.
 - Selbstprüfung §7 beantwortet; Anti-Code-Creep: kleinste korrekte Lösung,
   bestehende Matrizen unberührt.
 
+### OP88 — Review & Optimierung der übrigen Development-Framework-Agenten — ERLEDIGT (2026-10-22, PR folgt)
+Alle 6 Befunde umgesetzt; zusaetzlich zwei Nebenbefunde aus dem Live-Test
+gefixed (CLI test --agent default + Parser-Robustheit gegen verschachtelte
+Ausgabe). Verifikation: Matrix 48/48, Regressionen OP89/OP63/OP12/OP89-Smoke
+gruen, manage.py check 0 issues, dev_framework validate/quality/test/docs/info
+live ohne Crash.
+Nutzer-Auftrag nach OP89: 'Bitte ueberpruefe die anderen Agenten ebenso und
+verbessere/optimiere wo moeglich.' Review der dev_framework-Agenten
+(tester, quality, validator, generator, docs, server, cli) + agents-Registry
+mit laufendem Framework. Sechs Befunde, kleinste korrekte Fixes:
+
+1. **Registry unvollstaendig** (`agents/__init__.py`): `chatbot_agent`,
+   `ilias_course_agent`, `sensor_agent` fehlen — obwohl produktiv genutzt
+   (project_views, dashboard_views, report_chatbot, ilias_course_agent_runner).
+   → In AGENT_REGISTRY aufnehmen (Import + Key), verifizieren.
+2. **Tester meldet silent success** (`dev_framework/tester.py`):
+   `python -m dev_framework test` liefert 'Tests passed! 0 passed, 0 failed'
+   und exit 0 — die erwartete tests/unit|integration|e2e-Struktur existiert
+   nicht, die reale flache OP-Matrix (tests/test_*.py) wird nicht gefunden.
+   → Ehrlicher Fallback: flache Matrix erkennen + als ein Lauf melden;
+   `time`/`re` von Datei-Ende an den Anfang (PEP 8); kein Fake-Erfolg.
+3. **Validator: toter + false-positiver Check** (`dev_framework/validator.py`):
+   (a) `_validate_agent_mandatory_files` prueft `agents/<snake>.py` statt
+   `agents/<snake>_agent.py` — laeuft ins Leere, nie ein echter Befund.
+   (b) PY_007 meldet 'Recommended attribute not set' obwohl BaseAgent die
+   Attribute via super().__init__ setzt (99 false positives).
+   → (a) Pfad korrigieren, (b) Check gegen BaseAgent-Vererbung pruefen.
+4. **Quality: fehlende Tools = 692 Errors + falscher Exit-Code**
+   (`dev_framework/quality.py`): black/flake8/isort/mypy nicht installiert →
+   pro Datei 4 'not installed'-Errors; `quality --all --check` loggt
+   'failed with 692 issues', exit aber 0 (Bug in run_quality: `return 1`
+   im else-Zweig nach logger.error ist toter Code — siehe Handler).
+   → Fehlende Tools als 'skipped' (info, nicht error) melden; Exit-Code
+   ehrlich setzen (1 bei echten Issues, 0 bei skipped-only).
+5. **Docs: relative_to-Crash + toter CLI-Alias** (`dev_framework/docs.py`,
+   `cli.py`): `docs_file.relative_to(self.project_root)` crasht wenn
+   docs_dir nicht unter project_root (z. B. Tests mit tmp_path);
+   `python -m dev_framework docs` existiert nicht (nur `generate docs`),
+   obwohl __init__.py und cli-Epilog es suggerieren.
+   → relative_to mit Fallback auf absoluten Pfad; CLI-Alias `docs` als
+   eigener Subcommand (delegiert an generate docs).
+6. **Doc-Drift PRODUCTION_READINESS.md**: '31 agents total', aber 34
+   Agent-Dateien existieren; 3 fehlen in der Registry (siehe 1).
+   → Nachtrag mit aktuellem Stand (34 Dateien, 34 Registry-Eintraege).
+
+### Out of Scope
+- Kein Redesign des Frameworks; keine neuen Abhaengigkeiten.
+- Keine Aenderung an produktiven Agent-Implementierungen (nur Registry-Wiring).
+- Keine neuen JSON-Configs fuer Agenten ohne JSON (Validator-Warnung
+  AGENT_002 bleibt bewusst — Doku-Entscheidung, kein Code-Fix).
+
+### Success Criteria
+- `from agents import AGENT_REGISTRY` enthaelt chatbot/ilias_course/sensor.
+- `python -m dev_framework test` findet die flache OP-Matrix (oder meldet
+  ehrlich 'no tests found', exit 1 — nie silent 0/0 success).
+- `python -m dev_framework validate` ohne die 99 PY_007-False-Positives und
+  ohne toten Mandatory-File-Check.
+- `python -m dev_framework quality --all --check` ohne installierte Tools:
+  skipped-Meldung, exit 0 (degraded ehrlich, kein Fake-Fehler).
+- `python -m dev_framework docs --all` und `generate docs --all` beides OK.
+- Neue Matrix tests/test_op88_dev_framework_review.py gruen; CI registriert.
+
 ---
 
 ## 4. Abgleichs-Regel (bindend)

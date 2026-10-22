@@ -34,6 +34,16 @@ class QualityResult:
     issues: List[QualityIssue] = field(default_factory=list)
     files_checked: int = 0
     metrics: Dict[str, Any] = field(default_factory=dict)
+    # OP88: Tools, die nicht installiert waren (degraded, kein Fehler)
+    skipped_tools: List[str] = field(default_factory=list)
+
+
+def count_by_severity(result: 'QualityResult') -> Dict[str, int]:
+    """OP88: Count issues by severity (error/warning/info)."""
+    counts = {'error': 0, 'warning': 0, 'info': 0}
+    for issue in result.issues:
+        counts[issue.severity] = counts.get(issue.severity, 0) + 1
+    return counts
 
 
 class QualityEnforcer:
@@ -83,12 +93,14 @@ class QualityEnforcer:
         result.issues.extend(agents_result.issues)
         result.files_checked += agents_result.files_checked
         result.success = result.success and agents_result.success
+        result.skipped_tools.extend(agents_result.skipped_tools)
         
         # Check scripts
         scripts_result = self._check_directory(self.scripts_dir)
         result.issues.extend(scripts_result.issues)
         result.files_checked += scripts_result.files_checked
         result.success = result.success and scripts_result.success
+        result.skipped_tools.extend(scripts_result.skipped_tools)
         
         # Check tests
         if self.tests_dir.exists():
@@ -96,6 +108,7 @@ class QualityEnforcer:
             result.issues.extend(tests_result.issues)
             result.files_checked += tests_result.files_checked
             result.success = result.success and tests_result.success
+            result.skipped_tools.extend(tests_result.skipped_tools)
         
         # Check framework itself
         framework_dir = self.project_root / 'dev_framework'
@@ -104,6 +117,7 @@ class QualityEnforcer:
             result.issues.extend(framework_result.issues)
             result.files_checked += framework_result.files_checked
             result.success = result.success and framework_result.success
+            result.skipped_tools.extend(framework_result.skipped_tools)
         
         return result
     
@@ -129,6 +143,7 @@ class QualityEnforcer:
         result.issues.extend(file_result.issues)
         result.files_checked += 1
         result.success = result.success and file_result.success
+        result.skipped_tools.extend(file_result.skipped_tools)
         
         return result
     
@@ -141,12 +156,14 @@ class QualityEnforcer:
         result.issues.extend(agents_result.issues)
         result.files_checked += agents_result.files_checked
         result.success = result.success and agents_result.success
+        result.skipped_tools.extend(agents_result.skipped_tools)
         
         # Fix scripts
         scripts_result = self._fix_directory(self.scripts_dir)
         result.issues.extend(scripts_result.issues)
         result.files_checked += scripts_result.files_checked
         result.success = result.success and scripts_result.success
+        result.skipped_tools.extend(scripts_result.skipped_tools)
         
         # Fix tests
         if self.tests_dir.exists():
@@ -154,6 +171,7 @@ class QualityEnforcer:
             result.issues.extend(tests_result.issues)
             result.files_checked += tests_result.files_checked
             result.success = result.success and tests_result.success
+            result.skipped_tools.extend(tests_result.skipped_tools)
         
         return result
     
@@ -179,6 +197,7 @@ class QualityEnforcer:
         result.issues.extend(file_result.issues)
         result.files_checked += 1
         result.success = result.success and file_result.success
+        result.skipped_tools.extend(file_result.skipped_tools)
         
         return result
     
@@ -204,6 +223,9 @@ class QualityEnforcer:
             result.issues.extend(file_result.issues)
             result.files_checked += 1
             result.success = result.success and file_result.success
+            for tool in file_result.skipped_tools:
+                if tool not in result.skipped_tools:
+                    result.skipped_tools.append(tool)
         
         return result
     
@@ -220,18 +242,21 @@ class QualityEnforcer:
             
             try:
                 tool_result = self._run_tool(tool_name, file_path)
-                if not tool_result['success']:
+                if tool_result.get('skipped'):
+                    # OP88: Tool nicht installiert — Issues bleiben info/skipped
+                    result.skipped_tools.append(tool_name)
+                elif not tool_result['success']:
                     result.success = False
-                    for issue in tool_result['issues']:
-                        result.issues.append(QualityIssue(
-                            severity=issue['severity'],
-                            code=issue['code'],
-                            message=issue['message'],
-                            file=issue['file'],
-                            line=issue.get('line'),
-                            column=issue.get('column'),
-                            fix=issue.get('fix')
-                        ))
+                for issue in tool_result['issues']:
+                    result.issues.append(QualityIssue(
+                        severity=issue['severity'],
+                        code=issue['code'],
+                        message=issue['message'],
+                        file=issue['file'],
+                        line=issue.get('line'),
+                        column=issue.get('column'),
+                        fix=issue.get('fix')
+                    ))
             except Exception as e:
                 logger.error(f"Error running {tool_name} on {file_path}: {str(e)}")
                 result.issues.append(QualityIssue(
@@ -259,6 +284,9 @@ class QualityEnforcer:
             result.issues.extend(file_result.issues)
             result.files_checked += 1
             result.success = result.success and file_result.success
+            for tool in file_result.skipped_tools:
+                if tool not in result.skipped_tools:
+                    result.skipped_tools.append(tool)
         
         return result
     
@@ -277,7 +305,11 @@ class QualityEnforcer:
             
             try:
                 tool_result = self._run_tool_fix(tool_name, file_path)
-                if not tool_result['success']:
+                if tool_result.get('skipped'):
+                    # OP88: Tool nicht installiert — skipped, kein Fehler
+                    if tool_name not in result.skipped_tools:
+                        result.skipped_tools.append(tool_name)
+                elif not tool_result['success']:
                     result.success = False
                     for issue in tool_result['issues']:
                         result.issues.append(QualityIssue(
@@ -305,7 +337,8 @@ class QualityEnforcer:
         result = {
             'success': True,
             'issues': [],
-            'output': ''
+            'output': '',
+            'skipped': False
         }
         
         if tool_name == 'black':
@@ -326,7 +359,8 @@ class QualityEnforcer:
         result = {
             'success': True,
             'issues': [],
-            'output': ''
+            'output': '',
+            'skipped': False
         }
         
         if tool_name == 'black':
@@ -341,7 +375,8 @@ class QualityEnforcer:
         result = {
             'success': True,
             'issues': [],
-            'output': ''
+            'output': '',
+            'skipped': False
         }
         
         cmd = ['black']
@@ -386,11 +421,12 @@ class QualityEnforcer:
                 'file': str(file_path)
             })
         except FileNotFoundError:
-            result['success'] = False
+            # OP88: Tool nicht installiert = skipped (degraded, kein Fehler)
+            result['skipped'] = True
             result['issues'].append({
-                'severity': 'error',
+                'severity': 'info',
                 'code': 'BLACK_003',
-                'message': 'Black not installed',
+                'message': 'Black not installed (skipped)',
                 'file': str(file_path),
                 'fix': 'pip install black'
             })
@@ -410,7 +446,8 @@ class QualityEnforcer:
         result = {
             'success': True,
             'issues': [],
-            'output': ''
+            'output': '',
+            'skipped': False
         }
         
         cmd = [
@@ -464,11 +501,12 @@ class QualityEnforcer:
                 'file': str(file_path)
             })
         except FileNotFoundError:
-            result['success'] = False
+            # OP88: Tool nicht installiert = skipped (degraded, kein Fehler)
+            result['skipped'] = True
             result['issues'].append({
-                'severity': 'error',
+                'severity': 'info',
                 'code': 'FLAKE8_003',
-                'message': 'Flake8 not installed',
+                'message': 'Flake8 not installed (skipped)',
                 'file': str(file_path),
                 'fix': 'pip install flake8'
             })
@@ -488,7 +526,8 @@ class QualityEnforcer:
         result = {
             'success': True,
             'issues': [],
-            'output': ''
+            'output': '',
+            'skipped': False
         }
         
         cmd = ['isort']
@@ -528,11 +567,12 @@ class QualityEnforcer:
                 'file': str(file_path)
             })
         except FileNotFoundError:
-            result['success'] = False
+            # OP88: Tool nicht installiert = skipped (degraded, kein Fehler)
+            result['skipped'] = True
             result['issues'].append({
-                'severity': 'error',
+                'severity': 'info',
                 'code': 'ISORT_003',
-                'message': 'Isort not installed',
+                'message': 'Isort not installed (skipped)',
                 'file': str(file_path),
                 'fix': 'pip install isort'
             })
@@ -552,7 +592,8 @@ class QualityEnforcer:
         result = {
             'success': True,
             'issues': [],
-            'output': ''
+            'output': '',
+            'skipped': False
         }
         
         cmd = [
@@ -604,11 +645,12 @@ class QualityEnforcer:
                 'file': str(file_path)
             })
         except FileNotFoundError:
-            result['success'] = False
+            # OP88: Tool nicht installiert = skipped (degraded, kein Fehler)
+            result['skipped'] = True
             result['issues'].append({
-                'severity': 'error',
+                'severity': 'info',
                 'code': 'MYPY_003',
-                'message': 'Mypy not installed',
+                'message': 'Mypy not installed (skipped)',
                 'file': str(file_path),
                 'fix': 'pip install mypy'
             })
@@ -628,7 +670,8 @@ class QualityEnforcer:
         result = {
             'success': True,
             'issues': [],
-            'output': ''
+            'output': '',
+            'skipped': False
         }
         
         cmd = [
@@ -687,11 +730,12 @@ class QualityEnforcer:
                 'file': str(file_path)
             })
         except FileNotFoundError:
-            result['success'] = False
+            # OP88: Tool nicht installiert = skipped (degraded, kein Fehler)
+            result['skipped'] = True
             result['issues'].append({
-                'severity': 'error',
+                'severity': 'info',
                 'code': 'PYLINT_003',
-                'message': 'Pylint not installed',
+                'message': 'Pylint not installed (skipped)',
                 'file': str(file_path),
                 'fix': 'pip install pylint'
             })
