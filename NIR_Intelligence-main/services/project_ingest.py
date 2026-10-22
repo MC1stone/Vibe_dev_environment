@@ -1688,9 +1688,50 @@ def build_preparation_report(project) -> Dict[str, Any]:
                            + " Zeilen, "
                            + str(combined_dataset['metadata']['n_sources'])
                            + " Quellen)")
+            else:
+                # OP85: Still-Schweigen war der Bug - der Nutzer sah
+                # KEINE Review-Karte und wusste nicht, warum (Nutzer-
+                # Befund 2026-10-22: 'Review-Karte erscheint nicht').
+                # Ehrliche Diagnose: kalibrationsfaehige Datensaetze
+                # zaehlen und Grund dokumentieren.
+                calib = [d for d in datasets
+                         if d.get('usable')
+                         and d.get('calibration_samples')
+                         and d.get('reference_values')]
+                if len(calib) < 2:
+                    reason = ('Nur ' + str(len(calib)) + ' von '
+                              + str(len(datasets))
+                              + ' Datensätzen sind kalibrationsfähig '
+                              '(Referenzspalte + min. 12 Messpunkte) - '
+                              'Merge braucht mindestens 2.')
+                else:
+                    reason = ('Kanäle/Raster der kalibrationsfähigen '
+                              'Datensätze sind nicht kombinierbar '
+                              '(unterschiedliche Kanalzahl ohne '
+                              'gemeinsames Raster).')
+                report = (getattr(project, 'preparation_report', None)
+                          or {})
+                merge_note = report.setdefault('fusion_merge_note', {})
+                merge_note['combined'] = False
+                merge_note['reason'] = reason
+                merge_note['calibratable_datasets'] = len(calib)
+                project.preparation_report = report
+                project.save(update_fields=['preparation_report',
+                                            'updated_at'])
+                trace.step('Merge nicht möglich: ' + reason)
         except Exception:
             logger.exception('combined fusion dataset failed '
                              '(non-fatal, fallback: Einzelauswertung)')
+            report = (getattr(project, 'preparation_report', None)
+                      or {})
+            note = report.setdefault('fusion_merge_note', {})
+            note['combined'] = False
+            note['reason'] = ('Interner Fehler beim Kombinieren '
+                              '(Details im Server-Log) - '
+                              'Einzelauswertung als Fallback.')
+            project.preparation_report = report
+            project.save(update_fields=['preparation_report',
+                                        'updated_at'])
     if parsed_wishes:
         try:
             from services.analysis_wishes import apply_wishes_to_dataset
@@ -1781,6 +1822,14 @@ def build_preparation_report(project) -> Dict[str, Any]:
         report['fusion'] = fusion_section
     trace.step("Aufbereitung abgeschlossen")
     report["progress"] = trace.snapshot()
+    # OP85: die Merge-Note aus dem Hook (falls der Merge scheiterte)
+    # in den finalen Bericht uebernehmen - der Hook schrieb sie in
+    # project.preparation_report, dieser Write hier ueberschrieb sie
+    # bisher still.
+    hook_note = ((getattr(project, "preparation_report", None) or {})
+                 .get("fusion_merge_note"))
+    if hook_note:
+        report["fusion_merge_note"] = hook_note
     project.preparation_report = report
     project.save(update_fields=["preparation_report", "updated_at"])
     logger.info(
