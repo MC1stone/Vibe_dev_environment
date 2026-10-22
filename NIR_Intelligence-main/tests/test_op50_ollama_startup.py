@@ -132,14 +132,25 @@ check("T4a project_crew gate uses ollama_reachable",
       "ollama_reachable" in src and "timeout=2" not in src)
 
 # T4b/T4c: chat call survives the model cold start (retry on timeout,
-# configurable timeout instead of the previous fixed 60s read timeout)
+# configurable timeout instead of the previous fixed 60s read timeout).
+# OP83/OP84: Default ist jetzt 120 s / 1 Versuch (CPU-only Ollama
+# blockierte mit 2 x 300 s bis 10 min PRO DATEI die Aufbereitung);
+# das alte Verhalten bleibt via NIR_LLM_TIMEOUT=300 +
+# NIR_LLM_ATTEMPTS=2 einstellbar.
 import requests as _requests
 from services.metadata_llm import OllamaMetadataClient
 
-check("T4b metadata client timeout configurable (NIR_LLM_TIMEOUT, default 300)",
-      OllamaMetadataClient(timeout=None).timeout == 300
+check("T4b metadata client timeout configurable (NIR_LLM_TIMEOUT, default 120 seit OP83)",
+      OllamaMetadataClient(timeout=None).timeout == 120
       if "NIR_LLM_TIMEOUT" not in os.environ
       else OllamaMetadataClient(timeout=None).timeout == int(os.environ["NIR_LLM_TIMEOUT"]))
+os.environ["NIR_LLM_ATTEMPTS"] = "2"
+try:
+    _c = OllamaMetadataClient(timeout=120)
+    check("T4b2 attempts via NIR_LLM_ATTEMPTS konfigurierbar (Kaltstart-Retry)",
+          _c.attempts == 2)
+finally:
+    os.environ.pop("NIR_LLM_ATTEMPTS", None)
 
 call_count = {"n": 0}
 
@@ -149,16 +160,35 @@ def flaky_post(url, json=None, timeout=None):
         raise _requests.exceptions.Timeout("read timed out (cold start)")
     return mock.Mock(status_code=200, json=lambda: {"message": {"content": "{}"}})
 
+os.environ["NIR_LLM_ATTEMPTS"] = "2"
+try:
+    with mock.patch.object(_requests, "post", side_effect=flaky_post):
+        client = OllamaMetadataClient(timeout=120)
+        content = client.chat("prompt")
+    check("T4c chat retries once after cold-start read timeout (mit NIR_LLM_ATTEMPTS=2)",
+          content == "{}" and call_count["n"] == 2)
+finally:
+    os.environ.pop("NIR_LLM_ATTEMPTS", None)
+# Default seit OP83: 1 Versuch - ein Timeout wird ehrlich gemeldet
+call_count["n"] = 0
 with mock.patch.object(_requests, "post", side_effect=flaky_post):
-    client = OllamaMetadataClient(timeout=120)
-    content = client.chat("prompt")
-check("T4c chat retries once after cold-start read timeout", content == "{}" and call_count["n"] == 2)
+    try:
+        OllamaMetadataClient(timeout=120).chat("prompt")
+        timed_out = False
+    except _requests.exceptions.Timeout:
+        timed_out = True
+check("T4c2 Default seit OP83: 1 Versuch, kein endloser Kaltstart-Block",
+      timed_out and call_count["n"] == 1)
 
 call_count["n"] = 0
 timeout_post = mock.Mock(side_effect=_requests.exceptions.Timeout("down"))
 with mock.patch.object(_requests, "post", timeout_post):
     try:
-        OllamaMetadataClient(timeout=120).chat("prompt")
+        os.environ["NIR_LLM_ATTEMPTS"] = "2"
+        try:
+            OllamaMetadataClient(timeout=120).chat("prompt")
+        finally:
+            os.environ.pop("NIR_LLM_ATTEMPTS", None)
         raised = False
     except _requests.exceptions.Timeout:
         raised = True
