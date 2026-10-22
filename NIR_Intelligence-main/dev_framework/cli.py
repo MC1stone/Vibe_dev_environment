@@ -194,8 +194,8 @@ Examples:
     test_parser.add_argument(
         '--all',
         action='store_true',
-        default=True,
-        help='Test all agents'
+        default=False,
+        help='Test all agents (default when neither --all nor --agent given)'
     )
     test_parser.add_argument(
         '--type',
@@ -321,7 +321,25 @@ Examples:
         action='store_true',
         help='Clean documentation artifacts'
     )
-    
+
+    # OP88: docs als eigener Subcommand — Alias fuer `generate docs`
+    # (__init__.py und der CLI-Epilog suggerieren `docs`, existierte aber nicht)
+    docs_cmd_parser = subparsers.add_parser(
+        'docs',
+        help='Generate documentation (alias for: generate docs)'
+    )
+    docs_cmd_parser.add_argument(
+        '--agent',
+        type=str,
+        help='Generate docs for specific agent'
+    )
+    docs_cmd_parser.add_argument(
+        '--all',
+        action='store_true',
+        default=True,
+        help='Generate docs for all agents'
+    )
+
     return parser
 
 
@@ -460,23 +478,34 @@ def run_test(args: argparse.Namespace) -> int:
     
     tester = AgentTester(verbose=args.verbose)
     
-    if args.all:
-        result = tester.run_all_tests(
-            test_type=args.type,
-            with_coverage=args.coverage
-        )
-    elif args.agent:
+    if args.agent:
         result = tester.run_agent_tests(
             agent_name=args.agent,
             test_type=args.type,
             with_coverage=args.coverage
         )
     else:
-        logger.error("Please specify --agent or --all")
-        return 1
+        # OP88: default ist --all (auch ohne explizites Flag), damit
+        # `test --agent X` nicht versehentlich die gesamte Matrix laufen lässt
+        result = tester.run_all_tests(
+            test_type=args.type,
+            with_coverage=args.coverage
+        )
     
     # Handle both dictionary and object results
     if isinstance(result, dict):
+        # OP88: flacher Matrix-Modus — Zusammenfassung ehrlich melden
+        if result.get('mode', '').startswith('flat-matrix'):
+            total = result.get('matrices_total', 0)
+            failed_matrices = result.get('matrices_failed', [])
+            logger.info(
+                "Flat matrix: %d matrices, %d passed, %d failed checks",
+                total, result['passed'], result['failed'],
+            )
+            if failed_matrices:
+                logger.error("Failed matrices: %s", ", ".join(failed_matrices))
+                return 1
+            return 0
         if result['success']:
             logger.info(f"Tests passed! {result['passed']} passed, {result['failed']} failed")
             if args.coverage:
@@ -520,14 +549,58 @@ def run_quality(args: argparse.Namespace) -> int:
         logger.error("Please specify --agent or --all")
         return 1
     
-    if result.success:
-        if hasattr(result, 'issues') and result.issues:
-            for issue in result.issues:
-                logger.info(f"{issue.severity}: {issue.message} ({issue.file}:{issue.line})")
+    # OP88: Ehrliche Auswertung — skipped Tools (nicht installiert) sind
+    # degraded, kein Fehler. Nur echte error-Issues failen den Lauf.
+    skipped = sorted(set(getattr(result, 'skipped_tools', []) or []))
+    real_errors = [i for i in result.issues if i.severity == 'error']
+    real_warnings = [i for i in result.issues if i.severity == 'warning']
+    infos = [i for i in result.issues if i.severity == 'info']
+
+    if skipped:
+        logger.warning(
+            "Skipped tools (not installed, degraded): %s", ", ".join(skipped)
+        )
+    if real_warnings:
+        logger.warning("%d warning(s)", len(real_warnings))
+    if infos:
+        logger.info("%d info(s)", len(infos))
+
+    if result.success and not real_errors:
+        logger.info(
+            "Quality check passed (%d files checked, %d warnings, %d skipped tools)",
+            result.files_checked, len(real_warnings), len(skipped),
+        )
         return 0
+    logger.error(
+        "Quality check failed: %d error(s), %d warning(s), %d skipped tools",
+        len(real_errors), len(real_warnings), len(skipped),
+    )
+    for issue in real_errors[:20]:
+        logger.error("  ERROR %s: %s (%s:%s)",
+                     issue.code, issue.message, issue.file, issue.line)
+    return 1
+
+
+def run_docs(args: argparse.Namespace) -> int:
+    """OP88: Handle `docs` command — alias for `generate docs`."""
+    from .docs import DocsGenerator
+
+    generator = DocsGenerator()
+    if getattr(args, 'all', False):
+        result = generator.generate_all_docs()
+    elif getattr(args, 'agent', None):
+        result = generator.generate_agent_docs(agent_name=args.agent)
     else:
-        logger.error(f"Quality check failed with {len(result.issues) if hasattr(result, 'issues') else 0} issues")
+        logger.error("Please specify --agent or --all")
         return 1
+
+    if result.success:
+        logger.info("Documentation generated successfully!")
+        for file in result.files_created:
+            logger.info(f"  Created: {file}")
+        return 0
+    logger.error(f"Failed to generate docs: {result.error or 'Unknown error'}")
+    return 1
 
 
 def run_serve(args: argparse.Namespace) -> int:
@@ -712,6 +785,7 @@ def main() -> int:
         'serve': run_serve,
         'info': run_info,
         'clean': run_clean,
+        'docs': run_docs,
     }
     
     handler = handlers.get(args.command)

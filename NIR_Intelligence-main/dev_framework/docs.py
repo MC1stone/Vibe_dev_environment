@@ -25,6 +25,16 @@ class DocsResult:
     warnings: List[str] = field(default_factory=list)
 
 
+def _rel_path(path: Path, root: Path) -> str:
+    """OP88: Safe relative path — falls back to absolute when the file is
+    outside the project root (z. B. Tests mit tmp_path). Vorher crashte
+    Path.relative_to mit ValueError und die Doku-Generierung brach ab."""
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        return str(path)
+
+
 class DocsGenerator:
     """Generates documentation for the project"""
     
@@ -105,7 +115,7 @@ class DocsGenerator:
             with open(docs_file, 'w') as f:
                 f.write(docs_content)
             
-            result.files_created.append(str(docs_file.relative_to(self.project_root)))
+            result.files_created.append(_rel_path(docs_file, self.project_root))
             logger.info(f"Generated documentation for {agent_name}: {docs_file}")
         except Exception as e:
             result.success = False
@@ -126,7 +136,7 @@ class DocsGenerator:
         
         info = {
             'name': agent_name,
-            'file': str(file_path.relative_to(self.project_root)),
+            'file': _rel_path(file_path, self.project_root),
             'description': '',
             'version': '1.0.0',
             'dependencies': [],
@@ -316,7 +326,7 @@ class DocsGenerator:
             with open(index_file, 'w') as f:
                 f.write(index_content)
             
-            result.files_created.append(str(index_file.relative_to(self.project_root)))
+            result.files_created.append(_rel_path(index_file, self.project_root))
         except Exception as e:
             result.success = False
             result.error = f"Failed to write main index: {str(e)}"
@@ -427,7 +437,7 @@ class DocsGenerator:
             with open(api_file, 'w') as f:
                 f.write(api_content)
             
-            result.files_created.append(str(api_file.relative_to(self.project_root)))
+            result.files_created.append(_rel_path(api_file, self.project_root))
         except Exception as e:
             result.success = False
             result.error = f"Failed to write API reference: {str(e)}"
@@ -562,7 +572,7 @@ class DocsGenerator:
             with open(guide_file, 'w') as f:
                 f.write(guide_content)
             
-            result.files_created.append(str(guide_file.relative_to(self.project_root)))
+            result.files_created.append(_rel_path(guide_file, self.project_root))
         except Exception as e:
             result.success = False
             result.error = f"Failed to write development guide: {str(e)}"
@@ -766,7 +776,7 @@ class DocsGenerator:
             with open(guide_file, 'w') as f:
                 f.write(guide_content)
             
-            result.files_created.append(str(guide_file.relative_to(self.project_root)))
+            result.files_created.append(_rel_path(guide_file, self.project_root))
         except Exception as e:
             result.success = False
             result.error = f"Failed to write installation guide: {str(e)}"
