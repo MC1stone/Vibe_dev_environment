@@ -653,7 +653,7 @@ test_op53_sensor_pages.py 37/37.
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.
 
-### OP90 — Test-Matrizen OP63/OP79: Thread-sichere Test-DB (Temp-Datei statt `:memory:`) — IN ARBEIT (PO-Freigabe 2026-10-22)
+### OP90 — Test-Matrizen OP63/OP79: Thread-sichere Test-DB (Temp-Datei statt `:memory:`) — ✅ ERLEDIGT (2026-10-22)
 Befund (aus Verifikation PR #229/#230, pre-existing seit OP63): Die Matrizen
 `tests/test_op63_fusion_branch.py` und `tests/test_op79_fusion_candidate_selection.py`
 setzen `DATABASES["default"]["NAME"] = ":memory:"`. `execute_fusion`
@@ -680,8 +680,11 @@ Output-Rauschen). In Produktion (Datei-SQLite/PostgreSQL) nicht betroffen.
 
 ### Success Criteria
 - OP63/OP79 lokal: RESULT-Zeile ohne nachfolglichen Traceback, Exit-Code 0.
-- Regression: OP80 (55/55), OP55 (14/14), OP63_st3 (37/37) grün.
+  ✅ OP63 45/45, OP79 56/56, stderr ohne `no such table`/`Traceback`.
+- Regression: OP80 (49/49 auf main-Stand), OP55 (14/14), OP63_st3 (37/37) grün.
 - `manage.py check` OK; Diff beschränkt auf die zwei Testdateien + Doku.
+  ✅ +29/−2 in `test_op63_fusion_branch.py` + `test_op79_fusion_candidate_selection.py`;
+  `services/project_fusion.py` unangetastet.
 
 ### Selbstprüfung (§7, 11 Fragen) — beantwortet vor Umsetzung
 1. Mission Statement gelesen? Ja (Phase 1, Session-Start).
