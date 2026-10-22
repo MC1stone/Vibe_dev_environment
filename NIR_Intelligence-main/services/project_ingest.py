@@ -1376,7 +1376,17 @@ def _assess_metadata(datasets: List[Dict[str, Any]]) -> Dict[str, Any]:
             dataset.setdefault("metadata_rating", {})["konflikte"] = conflicts
     assessed["metadata_fields"] = sorted(fields_found)
     recommended = RECOMMENDED_METADATA_FIELDS
-    missing = [f for f in recommended if f not in fields_found]
+    # OP87: kanonische Namen zaehlen fuer die empfohlenen Felder mit -
+    # die Loader/KI liefern 'operator_name', 'instrument_type',
+    # 'timestamp'; die Empfehlungsliste nutzt die Kurz-Aliase ('operator',
+    # 'instrument', 'acquisition_time'). Ohne diese Mit-Zaehlung war der
+    # Score eines Datensatzes mit ALLEN kanonischen Feldern 0% statt 60%.
+    def _found(field: str) -> bool:
+        if field in fields_found:
+            return True
+        canonical = RECOMMENDED_FIELD_ALIASES.get(field)
+        return bool(canonical) and canonical in fields_found
+    missing = [f for f in recommended if not _found(f)]
     assessed["missing_recommended_fields"] = missing
     assessed["overall_quality_score"] = round(
         100.0 * (len(recommended) - len(missing)) / len(recommended), 1

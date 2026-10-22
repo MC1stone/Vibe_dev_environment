@@ -361,5 +361,59 @@ check("T8h Konflikt als offene Frage dokumentiert",
           for q in (c_conf.get('open_questions') or []))
       if c_conf else False)
 
+# ---------------------------------------------------------------------------
+# T9: OP87 - Metadaten-Score des Merge: Alias/kanonische Namen zaehlen.
+# Der Score zaehlt RECOMMENDED-Kurznamen (operator/instrument/
+# acquisition_time), der Merge liefert kanonische Loader-Namen
+# (operator_name/instrument_type/timestamp) - Score des Merge war 0-20%
+# trotz vollstaendiger Quell-Metadaten. Fix: Alias-Spiegelung im
+# kombinierten Satz + kanonische Namen zaehlen mit.
+# ---------------------------------------------------------------------------
+combine_src2 = (REPO_ROOT / "services" / "fusion_combine.py").read_text("utf-8")
+ingest_src3 = (REPO_ROOT / "services" / "project_ingest.py").read_text("utf-8")
+check("T9a Alias-Spiegelung im kombinierten Satz (_sync_recommended_aliases)",
+      "_sync_recommended_aliases" in combine_src2)
+check("T9b Score zaehlt kanonische Namen mit (OP87)",
+      "RECOMMENDED_FIELD_ALIASES.get(field)" in ingest_src3)
+
+from services.project_ingest import _assess_metadata  # noqa: E402
+from services.fusion_combine import build_combined_dataset as _bcd2  # noqa: E402
+META2 = {"operator_name": "Anna", "instrument_type": "diy_matchbox",
+         "timestamp": "2026-10-22 07:00:00", "location": "Lab 1"}
+d_s1 = {
+    'usable': True, 'file_name': 's1.csv', 'target_name': 'brix',
+    'preview': {'wavelengths': [900.0, 910.0, 920.0], 'intensities': []},
+    'calibration_samples': [[0.5, 0.6, 0.7]] * 12,
+    'reference_values': [4.0 + 0.1 * i for i in range(12)],
+    'metadata': dict(META2),
+    'metadata_sources': {k: 'deterministisch' for k in META2},
+}
+d_s2 = dict(d_s1, file_name='s2.csv',
+            calibration_samples=[[0.52, 0.62, 0.72]] * 12,
+            reference_values=[6.0 + 0.1 * i for i in range(12)])
+c_op87 = _bcd2([d_s1, d_s2])
+check("T9c Merge gebaut", c_op87 is not None)
+meta_op87 = (c_op87.get('metadata') or {}) if c_op87 else {}
+check("T9d Aliase gespiegelt (operator/instrument/acquisition_time)",
+      all(meta_op87.get(a) for a in
+          ('operator', 'instrument', 'acquisition_time')),
+      str({a: meta_op87.get(a) for a in
+           ('operator', 'instrument', 'acquisition_time')}))
+assess = _assess_metadata([c_op87])
+check("T9e Score des Merge: 60% statt 0-20% (humidity/temperature fehlen real)",
+      assess['overall_quality_score'] == 60.0,
+      f"score={assess['overall_quality_score']}")
+
+# Vollstaendige Quelle (inkl. humidity/temperature) -> 100%
+d_s3 = dict(d_s1, file_name='s3.csv',
+            metadata=dict(META2, humidity='50', temperature='22'))
+d_s4 = dict(d_s2, file_name='s4.csv',
+            metadata=dict(META2, humidity='50', temperature='22'))
+c_full = _bcd2([d_s3, d_s4])
+assess_full = _assess_metadata([c_full])
+check("T9f vollstaendige Quellen -> Merge-Score 100%",
+      assess_full['overall_quality_score'] == 100.0,
+      f"score={assess_full['overall_quality_score']}")
+
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)
