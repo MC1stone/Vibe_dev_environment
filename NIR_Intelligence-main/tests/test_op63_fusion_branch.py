@@ -35,11 +35,25 @@ from django.conf import settings as dj_settings  # noqa: E402
 
 if "testserver" not in dj_settings.ALLOWED_HOSTS:
     dj_settings.ALLOWED_HOSTS = [*dj_settings.ALLOWED_HOSTS, "testserver"]
-dj_settings.DATABASES["default"]["NAME"] = ":memory:"
+# OP90: Temp-Datei-DB statt :memory: — SQLite :memory: ist pro Connection,
+# der Daemon-Thread von execute_fusion saehe sonst eine leere DB
+# ("no such table: core_analysisproject" als kosmetisches Test-Rauschen).
+import atexit as _atexit  # noqa: E402
+import shutil as _shutil  # noqa: E402
+import tempfile as _tempfile  # noqa: E402
+_TEST_DB_DIR = _tempfile.mkdtemp(prefix="op90_testdb_")
+_atexit.register(_shutil.rmtree, _TEST_DB_DIR, True)
+dj_settings.DATABASES["default"]["NAME"] = str(
+    Path(_TEST_DB_DIR) / "test.sqlite3")
 dj_settings.DATABASES["default"].setdefault("ATOMIC_REQUESTS", False)
 
 from django.core.management import call_command  # noqa: E402
 call_command("migrate", interactive=False, verbosity=0)
+# Haupt-Thread-Connection schliessen, damit Hintergrund-Threads eine
+# frische Connection zur Datei-DB aufbauen (sonst haelt der Thread die
+# geschlossene :memory:-Verbindung oder sieht Stale-State).
+from django.db import connections as _dj_connections  # noqa: E402
+_dj_connections.close_all()
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SERVICES = REPO_ROOT / "services"

@@ -204,6 +204,24 @@ def build_combined_dataset(datasets: List[Dict[str, Any]],
         'source_files': group_files,
         'n_sources': len(group_files),
     })
+    # OP87: Alias-Spiegelung wie im Ingest (_sync_recommended_aliases) -
+    # der Metadaten-Score zaehlt die RECOMMENDED-Kurznamen (operator,
+    # instrument, acquisition_time), der Merge uebernimmt aber die
+    # kanonischen Loader-Namen (operator_name, instrument_type,
+    # timestamp). Ohne Spiegelung schlug der Score des kombinierten
+    # Satzes von 100% auf 20% durch (Nutzer-Befund 2026-10-22: 'Die
+    # Metadaten sind immer noch bei 20%').
+    try:
+        from services.project_ingest import _sync_recommended_aliases
+        _sync_recommended_aliases(merged_meta)
+    except Exception:
+        _ALIASES = {'operator': 'operator_name',
+                    'instrument': 'instrument_type',
+                    'acquisition_time': 'timestamp'}
+        for alias, canonical in _ALIASES.items():
+            if (merged_meta.get(canonical) not in (None, '')
+                    and merged_meta.get(alias) in (None, '')):
+                merged_meta[alias] = merged_meta[canonical]
 
     combined.append({
         'file_name': 'Fusion kombiniert ('
