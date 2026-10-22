@@ -221,8 +221,11 @@ views_src2 = (REPO_ROOT / "django_project" / "api" / "project_views.py").read_te
 check("T7a Reingest asynchron (Thread + preparing: True)",
       "Background reingest failed" in views_src2
       and "'preparing': True" in views_src2)
+# OP82: das Leeren passiert jetzt ueber die preserved-Variable, die
+# user_options UND (bei Fusionsprojekten) die fusion-Sektion erhaelt -
+# datasets werden in beiden Faellen weggeleert -> Karte erscheint.
 check("T7b Reingest leert den alten Report (Karte wird sichtbar)",
-      "report = {'user_options': user_options}" in views_src2)
+      "preserved = {'user_options': user_options}" in views_src2)
 check("T7c Reingest erhaelt user_options (Wuensche ueberleben)",
       "user_options = report.get('user_options') or {}" in views_src2)
 tpl2 = tpl_src
