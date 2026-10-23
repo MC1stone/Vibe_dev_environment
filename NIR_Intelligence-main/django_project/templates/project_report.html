@@ -1045,6 +1045,13 @@ document.addEventListener('click', function (ev) {
             var saveBtn = form.querySelector('button[type="submit"]');
             if (saveBtn) { saveBtn.disabled = true; }
             status.textContent = 'Speichern…';
+            // OP93: Client-Timeout als Sicherheitsnetz — ohne diesen Guard
+            // blieb der Button endlos auf "Speichern...", wenn der Request
+            // hing (sync build_preparation_report blockte ~18 min bei
+            // hängendem Ollama). Jetzt antwortet der Server sofort (async),
+            // aber der Timeout schützt auch gegen Netzwerk-Hänger.
+            var controller = ('AbortController' in window) ? new AbortController() : null;
+            var timeoutId = controller ? setTimeout(function () { controller.abort(); }, 120000) : null;
             fetch('/projects/{{ project.id }}/metadata/', {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -1052,8 +1059,28 @@ document.addEventListener('click', function (ev) {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCsrfToken()
                 },
+                signal: controller ? controller.signal : undefined,
                 body: JSON.stringify({ metadata: (function () { var m = {}; m[fileId] = fields; return m; })() })
-            }).then(function (r) { return r.json(); }).then(function (d) { if (d.success) { status.textContent = 'Gespeichert ✓ (Score: ' + d.metadata_quality_score + ')'; setTimeout(function(){ location.reload(); }, 800); } else { status.textContent = 'Fehler: ' + (d.error || 'unbekannt'); } }).catch(function (e) { status.textContent = 'Netzwerkfehler: ' + e; });
+            }).then(function (r) { return r.json(); }).then(function (d) {
+                if (timeoutId) { clearTimeout(timeoutId); }
+                if (d.success) {
+                    // OP93: Server antwortet sofort (async) — Score kommt nach
+                    // dem Reload von der Seite (Fahrplan-Karte + Polling).
+                    if (d.preparing) {
+                        status.textContent = 'Gespeichert ✓ — Aufbereitung läuft im Hintergrund…';
+                    } else {
+                        status.textContent = 'Gespeichert ✓ (Score: ' + d.metadata_quality_score + ')';
+                    }
+                    setTimeout(function(){ location.reload(); }, 900);
+                } else {
+                    status.textContent = 'Fehler: ' + (d.error || 'unbekannt');
+                    if (saveBtn) { saveBtn.disabled = false; }
+                }
+            }).catch(function (e) {
+                if (timeoutId) { clearTimeout(timeoutId); }
+                status.textContent = 'Netzwerkfehler: ' + e + ' — bitte Seite neu laden.';
+                if (saveBtn) { saveBtn.disabled = false; }
+            });
         });
     });
     document.getElementById('btn-reingest').addEventListener('click', function () {

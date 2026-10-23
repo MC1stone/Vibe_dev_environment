@@ -173,6 +173,20 @@ r = c.post('/api/projects/create/',
 pid = r.json().get('project_id')
 check('T3c project created in drafted phase', bool(pid))
 
+# OP55/OP93: both create and metadata-save run the preparation in a
+# background thread. Wait for the INITIAL preparation to finish before
+# posting metadata — otherwise the metadata POST's report-clearing can
+# race the still-running initial preparation (observed as a flake:
+# ~20% of runs saw score=0.0 because the metadata thread cleared the
+# report while the initial thread was still writing).
+import time as _time0  # noqa: E402
+_deadline0 = _time0.time() + 60
+while _time0.time() < _deadline0:
+    _r0 = c.get(f'/api/projects/create/{pid}/status/').json()
+    if _r0.get('ready') or _r0.get('error'):
+        break
+    _time0.sleep(0.5)
+
 r = c.post(f'/api/projects/{pid}/metadata/',
            data={'metadata': {file_ids[0]: {'operator': 'M. Meister',
                                              'instrument': 'DIY-Spektrometer V2'}}},
@@ -180,8 +194,23 @@ r = c.post(f'/api/projects/{pid}/metadata/',
 body = r.json() if r.status_code == 200 else {}
 check('T3d metadata update accepted', r.status_code == 200 and body.get('success') is True,
       f'status={r.status_code} body={str(body)[:200]}')
-check('T3e score reported back', 'metadata_quality_score' in body,
-      f'body={str(body)[:200]}')
+# OP93: the view now answers immediately (async rebuild in a background
+# thread, 'preparing': True) — the score is no longer in the response but
+# arrives with the rebuilt report. Wait for the background thread.
+check('T3e preparing flag reported back (OP93 async)',
+      body.get('preparing') is True, f'body={str(body)[:200]}')
+
+import time as _time  # noqa: E402
+_deadline = _time.time() + 60
+_ready = False
+while _time.time() < _deadline:
+    _r = c.get(f'/api/projects/create/{pid}/status/').json()
+    if _r.get('ready') or _r.get('error'):
+        _ready = _r.get('ready')
+        break
+    _time.sleep(0.5)
+check('T3e2 background rebuild finished', _ready is True,
+      f'ready={_ready}')
 
 project = AnalysisProject.objects.get(id=pid)
 prep = project.preparation_report

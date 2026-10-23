@@ -1101,6 +1101,13 @@ def _ki_forward_questions(entry: Dict[str, Any],
     (anti-hallucination); it asks, naming the standards the fields unlock.
     Never raises; without Ollama the deterministic template question is
     used so the user is still asked."""
+    # OP93: NIR_INGEST_LLM=skip-Guard wie in _ki_metadata_pass (OP83) —
+    # ohne diesen Guard blockte der Metadaten-Save-Request auch mit skip
+    # bis zu 240 s (2 Topics x 120 s Timeout), weil dieser Pass NICHT
+    # geschützt war (Nutzer-Befund 2026-10-23: "Speichern..." hängt).
+    if str(os.environ.get("NIR_INGEST_LLM", "")).strip().lower() \
+            in ("skip", "off", "no", "0", "false"):
+        return
     try:
         metadata = entry.get("metadata") or {}
         questions = entry.setdefault("open_questions", [])
@@ -1256,6 +1263,15 @@ def _ki_relevance_pass(metadata_assessment: Dict[str, Any],
     field names from the actual present/missing lists and only known
     standards survive. Never raises; None offline (the report then keeps
     the deterministic standards verdicts)."""
+    # OP93: NIR_INGEST_LLM=skip-Guard wie in _ki_metadata_pass (OP83) —
+    # ohne diesen Guard blockte der Metadaten-Save-Request auch mit skip
+    # bis zu 120 s (Timeout), weil dieser Pass NICHT geschützt war.
+    if str(os.environ.get("NIR_INGEST_LLM", "")).strip().lower() \
+            in ("skip", "off", "no", "0", "false"):
+        metadata_assessment["ki_relevance_status"] = (
+            "KI-Pass deaktiviert (NIR_INGEST_LLM=skip) - "
+            "deterministische Standards-Bewertung")
+        return None
     try:
         from services.metadata_llm import MetadataRelevanceService
         service = MetadataRelevanceService()

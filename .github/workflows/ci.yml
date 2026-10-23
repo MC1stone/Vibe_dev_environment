@@ -132,6 +132,7 @@ jobs:
           python tests/test_op88_dev_framework_review.py
           python tests/test_op91_health_check_honest.py
           python tests/test_op92_reingest_spinner_timeouts.py
+          python tests/test_op93_metadata_save_hang.py
 
       - name: Django system check
         run: python django_project/manage.py check
