@@ -87,6 +87,13 @@ from .image_processor_agent import ImageProcessorAgent
 from .shift_detector_agent import ShiftDetectorAgent
 from .parameter_recommender_agent import ParameterRecommenderAgent
 
+# OP88: produktiv genutzte Agenten, die in der Registry fehlten
+# (project_views/dashboard_views nutzen SensorAgent, report_chatbot den
+# ChatbotAgent, scripts/ilias_course_agent_runner den IliasCourseAgent)
+from .chatbot_agent import ChatbotAgent
+from .ilias_course_agent import IliasCourseAgent
+from .sensor_agent import SensorAgent
+
 # Update agent registry with new agents
 AGENT_REGISTRY.update({
     "hswt_styling_agent": HSWTStylingAgent,
@@ -95,5 +102,8 @@ AGENT_REGISTRY.update({
     "image_processor_agent": ImageProcessorAgent,
     "shift_detector_agent": ShiftDetectorAgent,
     "parameter_recommender_agent": ParameterRecommenderAgent,
-    "ilias_integration_agent": ILIASIntegrationAgent
+    "ilias_integration_agent": ILIASIntegrationAgent,
+    "chatbot_agent": ChatbotAgent,
+    "ilias_course_agent": IliasCourseAgent,
+    "sensor_agent": SensorAgent,
 })
