@@ -310,6 +310,17 @@ check("T7b CI change-impact Job: Compile VOR dem Gate-Run",
 check("T7c CI change-impact Job: polib kompiliert ALLE locale-Kataloge",
       "locale.glob('*/LC_MESSAGES/django.po')" in gate_section)
 
+# Der Vollmatrix-Job MUSS polib in seinen Deps haben (OP92: OP92-Matrix
+# selbst importiert polib im finally-Block zum .mo-Restore — ohne
+# polib in CI crasht der Restore mit ImportError -> .mo fehlen ->
+# Folgelauf von OP49 schlaegt fehl).
+matrix_section = ci_src.split("test-matrices:")[1].split("change-impact:")[0] \
+    if "test-matrices:" in ci_src else ""
+check("T7c2 CI Vollmatrix-Job: polib in den Test-Dependencies",
+      "polib" in matrix_section
+      and "pip install" in matrix_section,
+      "polib fehlt in Vollmatrix-Deps — OP92-Matrix wuerde in CI crashen")
+
 # Live-Reproduktion des CI- originais: OP49 crasht ohne .mo, gruen mit .mo
 import subprocess as _sp  # noqa: E402
 locale_dir = (REPO_ROOT / "django_project" / "locale").resolve()
@@ -332,12 +343,14 @@ finally:
     except ImportError:
         pass
 
+# OP49 schreibt das RESULT auf stdout UND stderr (logging); robust pruefen
 r = _sp.run([sys.executable, str(REPO_ROOT / "tests" / "test_op49_sensor_diy.py")],
             capture_output=True, text=True, timeout=120,
             cwd=str(REPO_ROOT))
+combined = r.stdout + r.stderr
 check("T7e OP49 mit polib-kompilierten .mo: 23/23 gruen (CI-Fix wirkt)",
-      r.returncode == 0 and "23 passed, 0 failed" in r.stdout,
-      f"rc={r.returncode} {r.stdout[-200:]}")
+      r.returncode == 0 and "23 passed, 0 failed" in combined,
+      f"rc={r.returncode} tail={combined[-200:]!r}")
 
 print(f"\nOP92 reingest-spinner/timeouts matrix: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)
