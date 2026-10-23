@@ -3,6 +3,34 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
+## Current Task: OP93 - Metadaten-Speichern hängt endlos ("Speichern..." stoppt nie)
+### Ziel
+Befund aus Nutzer-Feedback (2026-10-23, nach OP92-Merge): Metadaten im
+Editor ergänzt + "Speichern" gedrückt -> Button bleibt auf "Speichern..."
+und endet nicht. Root-Cause (lokal reproduziert): ProjectMetadataView.post
+ruft build_preparation_report SYNCHRON im Request. KI-Pässe blocken bei
+hängendem Ollama: _ki_forward_questions (2 Topics x 120s = 240s) +
+_ki_relevance_pass (120s) + _ki_metadata_pass (6 Dateien x 120s = 720s)
+= ~18 Minuten Request-Blockade. NIR_INGEST_LLM=skip schützt nur
+_ki_metadata_pass, nicht _ki_forward_questions/_ki_relevance_pass.
+PO-Freigabe erteilt; Roadmap-Abschnitt OP93 angelegt (vor Umsetzung).
+### Umsetzung
+- api/project_views.py ProjectMetadataView.post: Metadaten-Override
+  speichern, dann build_preparation_report ASYNCHRON im Hintergrund-
+  Thread (OP55/OP78-Muster wie ProjectReingestView), sofort antworten
+  mit {'success': True, 'preparing': True, 'report_url': ...}. Report
+  leeren (datasets entfernt, user_options/fusion erhalten).
+- templates/project_report.html (Metadaten-Save-JS): on success ->
+  "Gespeichert, Aufbereitung läuft im Hintergrund" + Reload nach 900ms;
+  Client-Timeout (120s) als Fallback (kein endloses "Speichern...").
+- services/project_ingest.py: NIR_INGEST_LLM=skip-Guard auch in
+  _ki_forward_questions + _ki_relevance_pass.
+- Neue Matrix tests/test_op93_metadata_save_hang.py (covers: project_views).
+### Verifikation
+- OP93-Matrix gruen (inkl. Live-Testclient: POST antwortet < 5s auch
+  wenn Ollama hängt); Regression OP13/OP55/OP78/OP83/OP84/Smoke;
+  manage.py check 0 issues; OP89-Gate gegen origin/main GREEN.
+
 ## Current Task: OP88 - Review & Optimierung der uebrigen Framework-Agenten
 ### Ziel
 Nutzer-Auftrag (2026-10-22): 'Bitte ueberpruefe die anderen Agenten ebenso

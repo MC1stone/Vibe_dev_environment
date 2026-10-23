@@ -847,6 +847,105 @@ aufeinanderhaengende Bugs, die zusammen den endlosen Spinner erklaeren.
   + Doku; keine neuen Abhaengigkeiten.
 - OP89-Gate gegen origin/main GREEN (covers: api/project_views.py).
 
+### OP93 — Metadaten-Speichern hängt endlos ("Speichern..." stoppt nie) — IN ARBEIT (2026-10-23)
+Befund aus Nutzer-Feedback (2026-10-23, nach OP92-Merge): Metadaten im
+Editor ergänzt + "Speichern" gedrückt -> Button bleibt auf "Speichern..."
+und endet nicht.
+
+**Root-Cause (lokal reproduziert, 2026-10-23):**
+`ProjectMetadataView.post` (`api/project_views.py:1418`) ruft
+`build_preparation_report(project)` **SYNCHRON** im Request — im
+Gegensatz zu `ProjectReingestView` (OP78: Thread + `'preparing': True`).
+`build_preparation_report` enthält KI-Pässe, die bei hängendem Ollama
+`requests.post(timeout=120)` blocken:
+
+| Pass | Aufruf | Blockzeit (chat hängt) |
+|------|--------|------------------------|
+| `_ki_metadata_pass` pro Datei | `client.chat()` | 120 s × N Dateien |
+| `_ki_forward_questions` | 2 Topics × `client.chat()` | 240 s (2×120) |
+| `_ki_relevance_pass` | 1 × `client.chat()` | 120 s |
+| **GESAMT (6 Dateien)** | | **~18 Minuten** |
+
+Lokal gemessen: `_ki_forward_questions` = 10 s (2×5 s Timeout),
+`_ki_relevance_pass` = 5 s (1×5 s Timeout) — bei default 120 s wären es
+240 s + 120 s. Plus 6 × `_ki_metadata_pass` à 120 s = **18 Minuten
+Request-Blockade**. Der Browser zeigt "Speichern..." endlos (kein
+Client-Timeout im JS, kein Server-Timeout).
+
+**Verstärker:** `NIR_INGEST_LLM=skip` (OP83) schützt NUR
+`_ki_metadata_pass` — `_ki_forward_questions` und `_ki_relevance_pass`
+haben **keinen Guard** und laufen auch mit `skip` weiter (jeder mit
+bis zu 120 s × Topics).
+
+### Umfang
+- `django_project/api/project_views.py` `ProjectMetadataView.post`:
+  Metadaten-Override speichern (wie bisher), dann `build_preparation_report`
+  **asynchron** im Hintergrund-Thread starten (OP55/OP78-Muster wie
+  `ProjectReingestView`) und sofort `{'success': True, 'preparing': True,
+  'report_url': ...}` antworten. Der Report wird geleert (datasets
+  entfernt, user_options + fusion erhalten wie beim Reingest), damit
+  die Fahrplan-Karte + Status-Polling greifen. Antwort-Contract bleibt
+  abwärtskompatibel: `metadata_quality_score` etc. kommen nach dem
+  Reload von der Seite (wie beim Reingest).
+  - Ausnahme: Wunsch-only-Pfad (Zeile ~1340) bleibt async wie bisher.
+- `django_project/templates/project_report.html` (Metadaten-Save-JS,
+  Zeile ~1047): on success -> Status "Gespeichert ✓, Aufbereitung
+  läuft im Hintergrund…" + `setTimeout(location.reload, 900)` (wie
+  Reingest-Button); kein "Speichern..."-Endloszustand mehr. Client-
+  seitiger Timeout (z. B. 120 s) als Sicherheitsnetz: bei Netzwerkfehler
+  -> "Netzwerkfehler" + Button reaktivieren.
+- `services/project_ingest.py`: `NIR_INGEST_LLM=skip`-Guard auch in
+  `_ki_forward_questions` und `_ki_relevance_pass` (früher Return mit
+  deterministischer Template-Frage bzw. `ki_relevance_status`), damit
+  `skip` die Aufbereitung wirklich auf Sekunden verkürzt.
+
+### Out of Scope
+- Kein Wechsel auf Celery/Worker (keine neue Abhängigkeit).
+- Kein eigener Status-Endpunkt für Metadaten-Save (der bestehende
+  `project-prepare-status` deckt ab — die Fahrplan-Karte erscheint nach
+  dem Reload, weil datasets geleert sind).
+- Keine Änderung an `_ki_metadata_pass` (OP83/OP84-Logik bleibt).
+
+### Success Criteria
+- Neue Matrix `tests/test_op93_metadata_save_hang.py` gruen:
+  (a) `ProjectMetadataView.post` startet Thread + antwortet sofort mit
+     `preparing: True` (kein synchroner `build_preparation_report`-Call
+     im Metadaten-Pfad);
+  (b) Report wird geleert (datasets entfernt, user_options/fusion
+     erhalten) wie beim Reingest;
+  (c) `NIR_INGEST_LLM=skip` Guard in `_ki_forward_questions` +
+     `_ki_relevance_pass` (Source-Check + Live-Verhalten);
+  (d) Template-JS: kein endloses "Speichern..." (Reload nach Erfolg,
+     Client-Timeout als Fallback);
+  (e) Live-Testclient: Metadaten-POST antwortet in < 5 s (auch wenn
+     Ollama hängt — simuliert via Fake-Server);
+  (f) py_compile aller geänderten Dateien.
+- Regression: OP13 (online metadata editing), OP55 14/14, OP78 35/35,
+  OP83 21/21, OP84, Smoke 15/15, `manage.py check` 0 issues.
+- Anti-Code-Creep: 1 View-Methode + 1 JS-Handler + 2 Guard-Zeilen +
+  neue Matrix + Doku; keine neuen Abhängigkeiten.
+- OP89-Gate gegen origin/main GREEN.
+
+### Selbstpruefung (§7, 11 Fragen) — beantwortet vor Umsetzung
+1. Was gefordert? Metadaten-Speichern darf nicht endlos hängen
+   ("Speichern..." stoppt nie) — Nutzer-Feedback 2026-10-23.
+2. Master Objectives? Zuverlässige Plattform + Ehrlichkeits-Regel
+   (der Nutzer sieht ehrlich "Aufbereitung läuft im Hintergrund" statt
+   eines hängenden Buttons).
+3. Agenten betroffen? Tester Agent (neue Matrix); keine Agent-Änderung.
+4. Tests? Neue Matrix OP93 (a-f) + Regression OP13/OP55/OP78/OP83/OP84/Smoke.
+5. Wiederverwendung? OP78-async-Muster (`ProjectReingestView` Thread +
+   `preparing: True`), OP55-Status-Endpunkt, OP92-Stale-Detection
+   (greift automatisch, weil datasets geleert werden).
+6. Code Creep? 1 View + 1 JS-Handler + 2 Guards; keine neuen Deps.
+7. Alle Datei-Formate/Spektrometer? N/A (kein Spektrum-Code betroffen).
+8. CrewAI-Agentennetzwerk? Unberührt.
+9. Software-Stufe? Bugfix; Stufe bleibt.
+10. Workflow-Einbindung? Fahrplan-Karte + Status-Polling greifen nach
+    dem Reload (datasets geleert) — OP92-Stale-Detection als Safety-Net.
+11. UI? Button zeigt "Gespeichert ✓, Aufbereitung läuft…" + Reload;
+    kein endloser "Speichern..."-Zustand mehr.
+
 ### Selbstpruefung (§7, 11 Fragen) — beantwortet vor Umsetzung
 1. Was gefordert? 3h-Spinner nach Reingest fixen + env-Crash-Bugs
    (Nutzer-Feedback 2026-10-23 mit docker logs).
