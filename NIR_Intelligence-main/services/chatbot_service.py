@@ -67,11 +67,20 @@ class OllamaChatClient:
 
     def __init__(self, base_url: str = OLLAMA_DEFAULT_URL, model: str = DEFAULT_MODEL,
                  timeout: Optional[int] = None):
-        self.timeout = (timeout if timeout is not None
-                        else int(os.environ.get("NIR_LLM_TIMEOUT", "120")))
+        # OP92: robuster Env-Parse (leer/ungueltig -> Default, nie ValueError;
+        # Compose reichte NIR_LLM_TIMEOUT='' durch) UND der alte Bug
+        # `self.timeout = timeout` (ueberschrieb den env-Default mit None
+        # -> requests.post(timeout=None) -> ewiger Hang) entfernt.
+        if timeout is not None:
+            self.timeout = timeout
+        else:
+            raw = os.environ.get("NIR_LLM_TIMEOUT")
+            try:
+                self.timeout = int(raw.strip()) if raw and raw.strip() else 120
+            except (ValueError, AttributeError):
+                self.timeout = 120
         self.base_url = base_url.rstrip("/")
         self.model = model
-        self.timeout = timeout
 
     def chat(self, messages: List[Dict[str, str]], options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         if not REQUESTS_AVAILABLE:

@@ -24,7 +24,7 @@ jobs:
       - name: Install minimal test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest numpy pandas scipy scikit-learn pyyaml django pillow requests packaging djangorestframework djangorestframework-simplejwt django-cors-headers matplotlib h5py openpyxl pyarrow
+          pip install pytest numpy pandas scipy scikit-learn pyyaml django pillow requests packaging djangorestframework djangorestframework-simplejwt django-cors-headers matplotlib h5py openpyxl pyarrow polib
 
       - name: Install gettext and compile i18n message catalogs (OP48)
         run: |
@@ -131,6 +131,7 @@ jobs:
           python tests/test_op71_warning_aggregation.py
           python tests/test_op88_dev_framework_review.py
           python tests/test_op91_health_check_honest.py
+          python tests/test_op92_reingest_spinner_timeouts.py
 
       - name: Django system check
         run: python django_project/manage.py check
@@ -163,6 +164,23 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest numpy pandas scipy scikit-learn pyyaml django pillow requests packaging djangorestframework djangorestframework-simplejwt django-cors-headers matplotlib h5py openpyxl pyarrow
+
+      # OP92-Fix: Der Gate-Job hat KEINEN compilemessages-Step (nur der
+      # Vollmatrix-Job oben hat ihn). Matrizen wie test_op49_sensor_diy.py
+      # brauchen kompilierte .mo-Kataloge (gettext.translation crasht mit
+      # FileNotFoundError ohne .mo). polib ist abhaengigkeitsfrei -> .mo
+      # direkt aus den .po bauen, kein gettext/msgfmt noetig.
+      - name: Compile i18n catalogs for gate (OP92)
+        run: |
+          pip install polib
+          python -c "
+          import polib, pathlib
+          locale = pathlib.Path('django_project/locale')
+          for po in sorted(locale.glob('*/LC_MESSAGES/django.po')):
+              mo = po.with_suffix('.mo')
+              polib.pofile(str(po)).save_as_mofile(str(mo))
+              print(f'compiled {mo}')
+          "
 
       - name: Fetch base branch for impact diff
         run: |

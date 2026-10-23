@@ -753,6 +753,117 @@ Ein einzelner Smoke-Lauf zeigte 403/302 auf crew-status/delete — Baseline
 10. Ehrlichkeits-Regel? Kern des OPs — Health-Werte werden wahr.
 11. Iterations-Regel? Ziel: ERRORS=0, CRITICAL_WARNINGS=0 nach Abschluss.
 
+### OP92 — Reingest-Spinner 3h + LLM-Timeout-Bugs (env-leer, timeout=None, Stale-Detection) — ✅ ERLEDIGT (2026-10-23, Branch vibe/op92-reingest-spinner-timeouts-e1efba)
+Befund aus Nutzer-Feedback (2026-10-23, nach Merge #238/OP91): Drei
+aufeinanderhaengende Bugs, die zusammen den endlosen Spinner erklaeren.
+
+1. **`NIR_LLM_TIMEOUT=''`-Crash** (sichtbar im Log: `Internal Server Error:
+   /api/chatbot/message/` + `ValueError: invalid literal for int() with base
+   10: ''` in `services/metadata_llm.py:104` und `chatbot_service.py:71`):
+   `docker-compose.yml:204` reicht `NIR_LLM_TIMEOUT=${NIR_LLM_TIMEOUT:-}`
+   — bei unset ein LEEKER STRING in den Container. `int('')` crasht.
+2. **`chatbot_service.py:75` `self.timeout = timeout`** — ueberschreibt den
+   env-Default mit `None` (wenn `timeout=None` uebergeben) ->
+   `requests.post(timeout=None)` -> KEIN Timeout, ewiger Hang.
+3. **Reingest-Spinner laeuft 3h** trotz fertigem/gestorbenem Hintergrund-
+   Thread: OP78-Reingest startet `Thread(daemon=True)`. Ein Container-
+   Restart (`docker compose up -d` nach git pull) KILLT den daemon-Thread.
+   Der Report bleibt geleert (`{'user_options': ...}`) -> Status-Endpunkt
+   liefert `ready=False, error=None` -> JS pollt ENDLOS (kein Timeout,
+   keine Stale-Detection). Log zeigt zwar `Preparation report for project
+   28c290b7: 3/3 usable datasets` — aber der User-Report-Dump crashte am
+   Platzhalter `<Projektname>` (DoesNotExist), die echte Projekt-ID ist
+   unbekannt; der Mechanismus (Thread killed by restart -> leerer Report
+   -> endloser Poll) ist strukturell begruendet.
+
+### Umfang
+- `docker-compose.yml:204`: `NIR_LLM_TIMEOUT=${NIR_LLM_TIMEOUT:-}` ->
+  `${NIR_LLM_TIMEOUT:-120}` (Default statt leer; 120 s = OP83-Default).
+- `services/metadata_llm.py` (`OllamaMetadataClient.__init__`):
+  `int(os.environ.get("NIR_LLM_TIMEOUT", "300"))` und
+  `int(os.environ.get("NIR_LLM_ATTEMPTS", "1"))` robuster Parse —
+  leer/ungueltig -> jeweiliger Default (300 bzw. 1), nie ValueError.
+- `services/chatbot_service.py` (`OllamaChatClient.__init__`): gleicher
+  robuster Parse; Bug `self.timeout = timeout` (zeile 75, ueberschreibt
+  env-Default mit None) entfernen — `self.timeout` nur setzen wenn
+  `timeout is not None`.
+- `django_project/api/project_views.py` (`ProjectPrepareStatusView.get`):
+  Stale-Detection — wenn `not ready and not error` und
+  `progress.last_update` parsebar und aelter als 10 Minuten ->
+  `'stale': True` + `'error'` mit ehrlichem Hinweis (deutsch:
+  "Aufbereitung seit ueber X Minuten ohne Lebenszeichen — bitte Seite
+  neu laden oder erneut ausfuehren.").
+- `django_project/templates/project_report.html` (Preparing-Poll-JS):
+  (a) `data.stale` wie `data.error` behandeln (roter Alert, kein Reload);
+  (b) harter Poll-Cap: nach 30 Minuten ohne ready/error -> Alert
+  "Aufbereitung dauert ungewoehnlich lange" + Polling stoppen.
+
+### CI-Fix (im selben PR, pre-existing Bug)
+- `change-impact`-Job: `compilemessages`-Step fehlte (nur Vollmatrix-Job
+  hatte ihn). OP49 crashte in CI mit `FileNotFoundError: No translation
+  file found for domain: 'django'` — lokal nicht sichtbar, weil die
+  `.mo`-Files in der Sandbox kompiliert sind. OP91-CI (#238) selektierte
+  OP49 nicht (nur 5 Matrizen), deshalb erst bei OP92 aufgefallen (43
+  Matrizen via `services.metadata_llm`/`chatbot_service`-Impact).
+- Fix: `pip install polib` + glob-compile aller 24 `locale/*/LC_MESSAGES/
+  django.po` -> `.mo` VOR dem Gate-Run. polib ist abhaengigkeitsfrei
+  (kein gettext/msgfmt noetig, kein apt-get in diesem Job).
+- Verifiziert: OP49 ohne .mo crasht lokal mit EXAKT dem CI-Fehler;
+  mit polib-Compile 23/23 gruen.
+
+### Out of Scope
+- Kein Wechsel von daemon-Thread auf Celery/Worker (keine neue Abhaengigkeit,
+  Anti-Code-Creep); Stale-Detection macht den Tod des Threads sichtbar.
+- Kein automatischer Re-Run der Aufbereitung nach Container-Restart
+  (zu invasiv; ehrlicher Fehler + manueller Reingest genuegt).
+- Kein Fix der `ilias`-Container-Restarting-Beobachtung (separates Thema).
+- Kein Wechsel des Vollmatrix-Jobs auf polib (der hat bereits
+  compilemessages mit gettext — unveraendert).
+
+### Success Criteria
+- ✅ Neue Matrix `tests/test_op92_reingest_spinner_timeouts.py` **36/36** gruen:
+  (a) compose: `NIR_LLM_TIMEOUT=${NIR_LLM_TIMEOUT:-120}` (kein `:-}`);
+  (b) `metadata_llm`/`chatbot_service`: `NIR_LLM_TIMEOUT=''` -> OP83-Default
+     120, nie ValueError; unset -> 120; ungueltig -> Fallback 300;
+     chatbot `self.timeout` nie None (Bug `self.timeout = timeout` entfernt);
+  (c) Status-Endpunkt: stale nach 10 min ohne last_update -> stale+error
+     (Live-Testclient: 5 Cases — fresh/stale/live/ready/error);
+  (d) Template-JS: `data.stale` behandelt wie error, Poll-Cap 30 min;
+  (e) py_compile aller geaenderten Dateien;
+  (f) **CI-Fix verifiziert**: change-impact-Job polib-Compile-Step +
+     OP49-Reproduktion (ohne .mo crasht mit exakt dem CI-Fehler,
+     mit .mo 23/23 gruen).
+- ✅ Regression: OP55 14/14, OP78 35/35, OP83 21/21, OP50 35/35,
+  OP49 23/23, OP89 47/47, Smoke 15/15, `manage.py check` 0 issues.
+- ✅ **CI-Fix (pre-existing Bug, nicht OP92-caused):** Der `change-impact`-
+  Job hatte KEINEN compilemessages-Step (nur der Vollmatrix-Job). OP49
+  crashte in CI mit `FileNotFoundError: No translation file found`.
+  Lokal auf main gruen (weil .mo hier kompiliert sind), in CI rot.
+  OP91-CI (#238) selektierte OP49 nicht (nur 5 Matrizen) -> nicht
+  aufgefallen. Fix: polib-basierter Compile-Step im change-impact-Job
+  (`pip install polib` + glob-compile aller 24 locale-Kataloge, VOR dem
+  Gate-Run). polib ist abhaengigkeitsfrei, kein gettext/msgfmt noetig.
+- ✅ Anti-Code-Creep: 4 kleine Code-Stellen + 1 Compose-Zeile + neue Matrix
+  + Doku; keine neuen Abhaengigkeiten.
+- OP89-Gate gegen origin/main GREEN (covers: api/project_views.py).
+
+### Selbstpruefung (§7, 11 Fragen) — beantwortet vor Umsetzung
+1. Was gefordert? 3h-Spinner nach Reingest fixen + env-Crash-Bugs
+   (Nutzer-Feedback 2026-10-23 mit docker logs).
+2. Master Objectives? Zuverlaessige Plattform + Ehrlichkeits-Regel
+   (Spinner darf nicht ewig luegen; Health/Status ehrlich).
+3. Agenten betroffen? Tester Agent (neue Matrix); keine Agent-Aenderung.
+4. Tests? Neue Matrix OP92 (a-e) + Regression OP55/OP78/OP83/OP50/Smoke.
+5. Wiederverwendung? `_PrepTrace.progress.last_update` (OP78),
+   OP83-Env-Guards, OP55-Status-Endpunkt, OP91-TCP-Helper-Muster.
+6. Code Creep? 4 kleine Stellen + 1 Compose-Zeile; keine neuen Deps.
+7. Alle Datei-Formate/Spektrometer? N/A (kein Spektrum-Code betroffen).
+8. CrewAI-Agentennetzwerk? Unberuehrt.
+9. Software-Stufe? Bugfix; Stufe bleibt.
+10. Workflow-Einbindung? Status-Endpunkt + Template direkt im
+    Reingest-Flow erreichbar.
+11. UI? Spinner stoppt ehrlich mit Fehlermeldung statt endlos zu laufen.
+
 ### OP89 — Change-Impact Test Gate (Tester Agent 2.0) — IN ARBEIT (PO-Freigabe 2026-10-22)
 Nutzer-Befund: Zu viel manuelle Zeit für einfache Tests — pro OP wird eine
 Testmatrix von Hand geschrieben, in CI als einzelner `python tests/...`-Aufruf

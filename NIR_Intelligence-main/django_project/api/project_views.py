@@ -825,10 +825,36 @@ class ProjectPrepareStatusView(APIView if DRF_AVAILABLE else object):
         report = project.preparation_report or {}
         ready = bool(report.get('datasets'))
         progress = report.get('progress') or {}
+        error = report.get('preparation_error')
+        # OP92: Stale-Detection — wenn der Hintergrund-Thread (daemon) z. B.
+        # durch einen Container-Restart gekillt wurde, bleibt der Report
+        # geleert und der letzte Trace stehen. Ohne diesen Guard pollt das
+        # Frontend endlos (Nutzer-Befund 2026-10-23: Spinner 3h+). Ehrlicher
+        # Fehler statt stillem Weiterlaufen.
+        stale = False
+        if not ready and not error:
+            last_update = str(progress.get('last_update') or '')
+            if last_update:
+                try:
+                    import datetime as _dt
+                    ts = _dt.datetime.strptime(last_update,
+                                               '%Y-%m-%d %H:%M:%S')
+                    age_min = (_dt.datetime.now() - ts).total_seconds() / 60
+                    if age_min > 10:
+                        stale = True
+                        error = (
+                            'Aufbereitung seit ueber '
+                            f'{int(age_min)} Minuten ohne Lebenszeichen. '
+                            'Bitte Seite neu laden und die Aufbereitung '
+                            'erneut ausfuehren.'
+                        )
+                except (ValueError, TypeError):
+                    pass
         return Response({
             'success': True,
             'ready': ready,
-            'error': report.get('preparation_error'),
+            'error': error,
+            'stale': stale,
             'dataset_count': len(report.get('datasets') or []),
             # OP78: schrittweiser Fortschritts-Trace statt Black Box -
             # aktuelle Datei, Schritt, Zähler und Zeitdaten fuer die
