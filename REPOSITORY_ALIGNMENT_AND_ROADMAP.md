@@ -665,7 +665,7 @@ nach `migrate` `connections.close_all()`, Cleanup via `atexit`.
 `services/project_fusion.py` unangetastet. Verifiziert: OP63 45/45,
 OP79 56/56, beide ohne Traceback; Regression OP80/OP55/OP63_st3 grün.
 
-### OP91 — Health-Check ehrlich: flower-URL-Bug + agents_loaded (Registry statt toter DB-Tabelle) — IN ARBEIT (PO-Freigabe 2026-10-23)
+### OP91 — Health-Check ehrlich: flower-URL-Bug + agents_loaded (Registry statt toter DB-Tabelle) — ✅ ERLEDIGT (2026-10-23, Commit 146bab1)
 Befund aus lokalem Systemtest nach Merge #231/#234/#237 (2026-10-23):
 `GET /health/` meldet `status: healthy`, aber zwei Werte luegen.
 
@@ -723,10 +723,22 @@ Befund aus lokalem Systemtest nach Merge #231/#234/#237 (2026-10-23):
 - `GET /health/` lokal (Docker-Stack): `agents_loaded` = 34,
   `docker_services.flower` ohne 'Failed to parse' (healthy oder
   ehrliches unhealthy mit Verbindungsgrund).
-- Neue Matrix `tests/test_op91_health_check_honest.py` grün; CI registriert.
-- Regression: OP89-Smoke (nutzt `/health/`), OP88, OP76 grün;
+  ✅ OP91-Matrix T4b/T4d/T4e: agents_loaded == len(AGENT_REGISTRY),
+     flower-Status ohne 'Failed to parse'.
+- Neue Matrix `tests/test_op91_health_check_honest.py` **27/27** grün.
+- Regression: OP89-Smoke 15/15 (3 aufeinanderfolgende Läufe),
+  OP88 48/48, OP76 21/21, OP89 47/47, api.views-Matrizen
+  (fa1_password 12/12, fa1_settings 9/9, mui_scientific 6/6) grün;
   `manage.py check` 0 issues.
-- Anti-Code-Creep: nur `views.py` + neue Testmatrix + Doku.
+- Anti-Code-Creep: nur `views.py` (+28/−5) + neue Testmatrix + Doku.
+- `covers:`-Tag in OP91-Matrix: `api.views` wird vom OP89-Gate korrekt
+  zugeordnet (Impact-Map rebuild; Gate GREEN gegen origin/main).
+
+### Notiz: Smoke-Test-Flake (nicht OP91-caused)
+Ein einzelner Smoke-Lauf zeigte 403/302 auf crew-status/delete — Baseline
+(stash, ohne OP91-Code) war 15/15 grün, 3 Folge-Runs mit OP91 ebenfalls
+15/15. Ursache: Projekt- ohne Dateien -> release 422 -> Crew-Status
+403/302-Race (bekanntes OP57/OP55-Verhalten, nicht durch OP91 berührt).
 
 ### Selbstprüfung (§7, 11 Fragen) — beantwortet vor Umsetzung
 1. Mission Statement gelesen? Ja (Session-Start + heute erneut).

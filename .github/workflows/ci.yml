@@ -130,6 +130,7 @@ jobs:
           python tests/test_op70_bandmatrix_xai_charts.py
           python tests/test_op71_warning_aggregation.py
           python tests/test_op88_dev_framework_review.py
+          python tests/test_op91_health_check_honest.py
 
       - name: Django system check
         run: python django_project/manage.py check

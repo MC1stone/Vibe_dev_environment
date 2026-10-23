@@ -3,29 +3,6 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP91 - Health-Check ehrlich: flower-URL-Bug + agents_loaded (Registry statt toter DB-Tabelle)
-### Ziel
-Befund aus lokalem Systemtest (2026-10-23, nach Merge #231/#234/#237):
-`GET /health/` meldet `status: healthy`, aber zwei Werte luegen.
-(1) flower: `views.py:312` baut `'http://flower_server:5556Flower'`
-(health_path ohne `/`) -> 'Failed to parse'. (2) `agents_loaded: 0`,
-weil `Agent.objects.count()` eine Legacy-DB-Tabelle zaehlt, die niemand
-befuellt — die echten Agenten sind in `agents/AGENT_REGISTRY` (34 seit OP88).
-PO-Freigabe erteilt; Roadmap-Abschnitt OP91 angelegt (vor Umsetzung).
-### Umsetzung
-- views.py HealthCheckView: (a) flower-Check -> TCP-Connect auf
-  `flower_server:9091` (SuperLink Runtime-API-Port, siehe
-  scripts/flower_superlink_entry.py), Timeout 2s; (b) `agents_loaded`
-  = `len(AGENT_REGISTRY)` (ImportError -> 0, nie Crash).
-- Neue Matrix tests/test_op91_health_check_honest.py: URL-Konstruktion,
-  TCP-Connect-Logik (loopback), Live-Health via Testclient
-  (agents_loaded=34, flower ohne 'Failed to parse').
-- Doku-Heilung: Roadmap OP89/OP90 auf ERLEDIGT (PR #231/#234 gemerged).
-### Verifikation
-- OP91-Matrix gruen; OP89-Smoke (nutzt /health/), OP88, OP76 gruen;
-  manage.py check 0 issues; lokaler Docker-Health-Check zeigt
-  agents_loaded=34 und flower ohne Parse-Fehler.
-
 ## Current Task: OP88 - Review & Optimierung der uebrigen Framework-Agenten
 ### Ziel
 Nutzer-Auftrag (2026-10-22): 'Bitte ueberpruefe die anderen Agenten ebenso
