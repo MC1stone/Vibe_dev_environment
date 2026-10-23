@@ -38,3 +38,6 @@ data/processed/reports/
 templates/reports/comprehensive.qmd
 django_project/templates/reports/comprehensive.qmd
 dist/
+
+# OP89: generated change-impact map (rebuild via scripts/build_test_impact_map.py)
+tests/.impact_map.json

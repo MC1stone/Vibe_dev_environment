@@ -8,6 +8,7 @@ Provides CLI commands for agent development workflow
 import argparse
 import sys
 import logging
+from pathlib import Path
 from typing import Optional
 
 # Set up logging
@@ -218,6 +219,26 @@ Examples:
         action='store_true',
         help='Watch for changes and re-run tests'
     )
+    test_parser.add_argument(
+        '--impact',
+        action='store_true',
+        help='OP89: run the change-impact test gate — only the test '
+             'matrices affected by the current diff plus the workflow '
+             'smoke test (scripts/run_change_tests.py)'
+    )
+    test_parser.add_argument(
+        '--base',
+        type=str,
+        default=None,
+        help='OP89: git ref to diff against for --impact '
+             '(default: origin/main...HEAD, fallback main...HEAD)'
+    )
+    test_parser.add_argument(
+        '--full',
+        action='store_true',
+        help='OP89: with --impact, run the complete test matrix '
+             '(backstop mode)'
+    )
     
     # Quality command
     quality_parser = subparsers.add_parser(
@@ -421,6 +442,20 @@ def run_validate(args: argparse.Namespace) -> int:
 
 def run_test(args: argparse.Namespace) -> int:
     """Handle test command"""
+    # OP89: change-impact gate — delegate to the dedicated runner
+    if getattr(args, 'impact', False) or getattr(args, 'full', False):
+        import subprocess
+        project_root = Path(__file__).resolve().parent.parent
+        cmd = [sys.executable,
+               str(project_root / 'scripts' / 'run_change_tests.py')]
+        if args.impact:
+            if args.base:
+                cmd += ['--base', args.base]
+        if args.full:
+            cmd.append('--full')
+        proc = subprocess.run(cmd, cwd=str(project_root))
+        return proc.returncode
+
     from .tester import AgentTester
     
     tester = AgentTester(verbose=args.verbose)

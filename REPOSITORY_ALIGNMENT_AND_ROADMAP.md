@@ -653,53 +653,55 @@ test_op53_sensor_pages.py 37/37.
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.
 
-### OP90 — Test-Matrizen OP63/OP79: Thread-sichere Test-DB (Temp-Datei statt `:memory:`) — ✅ ERLEDIGT (2026-10-22)
-Befund (aus Verifikation PR #229/#230, pre-existing seit OP63): Die Matrizen
-`tests/test_op63_fusion_branch.py` und `tests/test_op79_fusion_candidate_selection.py`
-setzen `DATABASES["default"]["NAME"] = ":memory:"`. `execute_fusion`
-(`services/project_fusion.py`) startet `build_preparation_report` in einem
-Daemon-Thread — SQLite `:memory:` ist pro Connection, der Thread sieht eine
-leere DB und loggt `OperationalError: no such table: core_analysisproject`
-(nach der RESULT-Zeile, Exit-Code 0, Tests bestehen — kosmetisches
-Output-Rauschen). In Produktion (Datei-SQLite/PostgreSQL) nicht betroffen.
+### OP89 — Change-Impact Test Gate (Tester Agent 2.0) — IN ARBEIT (PO-Freigabe 2026-10-22)
+Nutzer-Befund: Zu viel manuelle Zeit für einfache Tests — pro OP wird eine
+Testmatrix von Hand geschrieben, in CI als einzelner `python tests/...`-Aufruf
+eingetragen, und die Auswahl der relevanten Tests erfolgt manuell. Ziel: Der
+Tester Agent wird so weiterentwickelt, dass er jeden zum Merge vorgeschlagenen
+Code-Change vollständig testet — Funktionen, Gesamtworkflow und interagierende
+Teile — ohne manuelle Testauswahl.
 
 ### Umfang
-- `tests/test_op63_fusion_branch.py` + `tests/test_op79_fusion_candidate_selection.py`:
-  `:memory:` durch Temp-Datei-DB (`tempfile.mkdtemp` + `probe.sqlite3`)
-  ersetzen; nach `migrate` `connections.close_all()` im Haupt-Thread, damit
-  der Daemon-Thread eine frische Connection zur Datei-DB aufbaut.
-  Cleanup der Temp-Datei am Dateiende (best effort).
-- Keine Änderung an `services/project_fusion.py` (Produktionscode unangetastet —
-  dort ist Datei-SQLite/PostgreSQL der Normalfall, Threads funktionieren).
-- Keine Änderung an anderen Testmatrizen (OP55 nutzt bereits
-  `DiscoverRunner.setup_databases()` und ist nicht betroffen).
+- `scripts/build_test_impact_map.py` (neu): Baut eine statische Impact-Map
+  (Source → abhängige Module via Import-Graph für `agents/`, `services/`,
+  `django_project/`; JS-Module via `static/js/`-Abhängigkeiten) und ordnet
+  jede Testmatrix (`tests/test_*.py`) den von ihr abgedeckten Source-Modulen
+  zu (Tag-Konvention `# covers:` + heuristischer Import-Scan). Ausgabe:
+  `tests/.impact_map.json` (generiert, gitignored, bei Bedarf rebuild).
+- `tests/test_workflow_smoke.py` (neu): Gesamtworkflow-Smoke als ein
+  Durchlauf — Projekt anlegen → Upload → Ingest/Aufbereitung → Analyse-Trigger
+  → Report → Chatbot-Kontext — gegen Django-Testclient (loopback, keine
+  externen Dienste), mit ehrlichem Degraded-Handling (fehlendes Ollama/Qdrant
+  wird als solcher Status gemeldet, nie als grüner Test). Deckt die
+  interagierenden Teile ab, die einzelne OP-Matrizen nicht sehen.
+- `scripts/run_change_tests.py` (neu): Das eigentliche Gate. `git diff`
+  (Basis: `--base` Branch/Commit, Default `origin/main...HEAD` bzw.
+  `main...HEAD`) → betroffene Source-Dateien → Impact-Map → betroffene
+  Matrizen + immer `test_workflow_smoke.py` + `manage.py check` +
+  `node --check` auf geänderte JS-Dateien. Ein Prozess für alle Matrizen
+  (kein 85-facher Python-Startup), Exit-Code 0/1, klare Ausgabe welche
+  Matrizen warum laufen. `--full` für die komplette Matrix (CI auf main).
+- `dev_framework/cli.py`: `test --impact [--base REF]` angebunden.
+- CI: zusätzlicher Job `change-impact` (nur bei `pull_request`), der das
+  Gate gegen `origin/main...HEAD` laufen lässt; der bestehende Job
+  `test-matrices` (Vollmatrix auf push/PR) bleibt unverändert.
 
 ### Out of Scope
-- Kein Refactoring von `execute_fusion` (Thread-Handling bleibt wie es ist).
-- Keine neuen Abhängigkeiten (stdlib `tempfile` + `threading`).
+- Keine Änderung an bestehenden OP-Matrizen (Rückwärtskompatibilität: sie
+  laufen weiter einzeln via `python tests/test_opXX_*.py`).
+- Keine neuen Abhängigkeiten (stdlib + git + bestehende Test-Deps).
+- Kein Ersatz der CI-Vollmatrix auf main — das Gate ist die schnelle
+  PR-Schleife, die Vollmatrix bleibt das Merge-Backstop.
 
 ### Success Criteria
-- OP63/OP79 lokal: RESULT-Zeile ohne nachfolglichen Traceback, Exit-Code 0.
-  ✅ OP63 45/45, OP79 56/56, stderr ohne `no such table`/`Traceback`.
-- Regression: OP80 (49/49 auf main-Stand), OP55 (14/14), OP63_st3 (37/37) grün.
-- `manage.py check` OK; Diff beschränkt auf die zwei Testdateien + Doku.
-  ✅ +29/−2 in `test_op63_fusion_branch.py` + `test_op79_fusion_candidate_selection.py`;
-  `services/project_fusion.py` unangetastet.
-
-### Selbstprüfung (§7, 11 Fragen) — beantwortet vor Umsetzung
-1. Mission Statement gelesen? Ja (Phase 1, Session-Start).
-2. AGENTS.md + AGENT_FRAMEWORK_INIT_PROMPT gelesen? Ja.
-3. Roadmap-Eintrag vor Umsetzung? Ja — dieser Abschnitt.
-4. Kleinste korrekte Lösung? Ja — nur Test-Setup, kein Produktionscode.
-5. Keine neuen Abhängigkeiten? Ja — stdlib only.
-6. Alle Datei-Formate/Spektrometer berücksichtigt? N/A (Test-Infrastruktur,
-   kein Spektrum-/Format-Code berührt).
-7. Weaviate-Thema? Out of scope (Qdrant-Ersatz, unverändert).
-8. paperless-mistral-setup/? Unberührt (frozen).
-9. Lizenz-Compliance? Keine neuen Deps, keine neuen Lizenzen.
-10. Ehrlichkeits-Regel (degraded ≠ fake success)? Ja — Traceback-Entfernung
-    ändert keine Testergebnisse, Tests müssen weiterhin echt grün sein.
-11. Iterations-Regel? Ziel: ERRORS=0, CRITICAL_WARNINGS=0 nach Abschluss.
+- `python scripts/run_change_tests.py --base <ref>` wählt selbstständig die
+  betroffenen Matrizen + Smoke-Test; lokal gegen echten Diff verifiziert.
+- `tests/test_workflow_smoke.py` läuft offline grün (ehrliches Degraded bei
+  fehlenden externen Dienste, kein Fake-Erfolg).
+- Neue Matrix `tests/test_op89_change_impact_gate.py` grün; CI-Job
+  `change-impact` in `ci.yml` registriert.
+- Selbstprüfung §7 beantwortet; Anti-Code-Creep: kleinste korrekte Lösung,
+  bestehende Matrizen unberührt.
 
 ---
 
