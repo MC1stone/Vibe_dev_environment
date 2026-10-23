@@ -180,8 +180,23 @@ r = c.post(f'/api/projects/{pid}/metadata/',
 body = r.json() if r.status_code == 200 else {}
 check('T3d metadata update accepted', r.status_code == 200 and body.get('success') is True,
       f'status={r.status_code} body={str(body)[:200]}')
-check('T3e score reported back', 'metadata_quality_score' in body,
-      f'body={str(body)[:200]}')
+# OP93: the view now answers immediately (async rebuild in a background
+# thread, 'preparing': True) — the score is no longer in the response but
+# arrives with the rebuilt report. Wait for the background thread.
+check('T3e preparing flag reported back (OP93 async)',
+      body.get('preparing') is True, f'body={str(body)[:200]}')
+
+import time as _time  # noqa: E402
+_deadline = _time.time() + 60
+_ready = False
+while _time.time() < _deadline:
+    _r = c.get(f'/api/projects/create/{pid}/status/').json()
+    if _r.get('ready') or _r.get('error'):
+        _ready = _r.get('ready')
+        break
+    _time.sleep(0.5)
+check('T3e2 background rebuild finished', _ready is True,
+      f'ready={_ready}')
 
 project = AnalysisProject.objects.get(id=pid)
 prep = project.preparation_report

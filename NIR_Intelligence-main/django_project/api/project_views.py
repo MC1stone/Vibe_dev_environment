@@ -1410,13 +1410,56 @@ class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
         project.metadata_overrides = overrides
         project.save(update_fields=['metadata_overrides', 'updated_at'])
 
+        # OP93: Die Aufbereitung laeuft ASYNCHRON im Hintergrund (OP55/
+        # OP78-Muster wie ProjectReingestView). Der bisherige SYNC-Call
+        # blockte den Request bei haengendem Ollama ~18 Minuten
+        # (_ki_forward_questions 2x120s + _ki_relevance_pass 120s +
+        # _ki_metadata_pass Nx120s) — der Nutzer sah endlos
+        # "Speichern..." (Nutzer-Befund 2026-10-23). Report leeren wie
+        # beim Reingest -> Fahrplan-Karte + Status-Polling greifen nach
+        # dem Reload (OP92-Stale-Detection als Safety-Net).
+        report = (project.preparation_report or {})
+        user_options = report.get('user_options') or {}
+        preserved = {'user_options': user_options}
+        if report.get('fusion'):
+            preserved['fusion'] = report['fusion']
+        project.preparation_report = preserved
+        project.save(update_fields=['preparation_report', 'updated_at'])
+
+        from threading import Thread
         from services.project_ingest import build_preparation_report
-        report = build_preparation_report(project)
+
+        def _prepare(pid):
+            try:
+                from core.models import AnalysisProject as AP
+                proj = AP.objects.get(id=pid)
+                build_preparation_report(proj)
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).warning(
+                    'Background metadata rebuild failed for project %s: %s',
+                    pid, exc)
+                try:
+                    proj = AP.objects.get(id=pid)
+                    rep = proj.preparation_report or {}
+                    rep['preparation_error'] = str(exc)
+                    proj.preparation_report = rep
+                    proj.save(update_fields=['preparation_report',
+                                             'updated_at'])
+                except Exception:
+                    pass
+
+        thread = Thread(target=_prepare, args=(project.id,), daemon=True)
+        thread.start()
         return Response({
             'success': True,
-            'metadata_quality_score': report.get('metadata_quality', {}).get('overall_quality_score'),
-            'missing_recommended_fields': report.get('metadata_quality', {}).get('missing_recommended_fields', []),
-            'usable_dataset_count': report.get('usable_dataset_count'),
+            # OP93: abwaertskompatibel — alte Felder bleiben (nil-Werte,
+            # bis der Hintergrund-Report fertig ist); das JS zeigt nach
+            # dem Reload den echten Score.
+            'metadata_quality_score': None,
+            'missing_recommended_fields': [],
+            'usable_dataset_count': None,
+            'preparing': True,
             'report_url': f'/projects/{project.id}/',
         })
 
