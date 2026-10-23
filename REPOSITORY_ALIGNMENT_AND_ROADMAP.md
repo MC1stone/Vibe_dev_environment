@@ -653,6 +653,106 @@ test_op53_sensor_pages.py 37/37.
 - Echter MQTT-Broker-Worker (Acquisition-Layer); weitere Geräte-Adapter
   (NIR, UV-Vis, Raman, FTIR) nach Laborente.
 
+### OP89 — Change-Impact Test Gate (Tester Agent 2.0) — ✅ ERLEDIGT (2026-10-23, PR #231 gemerged 25bd96a)
+
+### OP90 — Test-Matrizen OP63/OP79: Thread-sichere Test-DB (Temp-Datei statt `:memory:`) — ✅ ERLEDIGT (2026-10-23, PR #234 gemerged f154568)
+Befund aus Verifikation PR #229/#230 (pre-existing seit OP63): OP63/OP79
+setzten SQLite `:memory:`; `execute_fusion` startet `build_preparation_report`
+in einem Daemon-Thread -> Thread sah leere DB -> `OperationalError: no such
+table: core_analysisproject` im Log (nach RESULT, Exit 0, kosmetisch).
+Fix (nur Test-Setup): `:memory:` -> Temp-Datei-DB (`tempfile.mkdtemp`),
+nach `migrate` `connections.close_all()`, Cleanup via `atexit`.
+`services/project_fusion.py` unangetastet. Verifiziert: OP63 45/45,
+OP79 56/56, beide ohne Traceback; Regression OP80/OP55/OP63_st3 grün.
+
+### OP91 — Health-Check ehrlich: flower-URL-Bug + agents_loaded (Registry statt toter DB-Tabelle) — ✅ ERLEDIGT (2026-10-23, Commit 146bab1)
+Befund aus lokalem Systemtest nach Merge #231/#234/#237 (2026-10-23):
+`GET /health/` meldet `status: healthy`, aber zwei Werte luegen.
+
+1. **flower-URL-Parsing-Bug** (`django_project/api/views.py:311-312`):
+   `flower_url = 'http://flower_server:5556'` +
+   `_check_service_health(flower_url, 'Flower')` baut die URL
+   `'http://flower_server:5556Flower'` (health_path ohne fuehrendes `/`)
+   -> `Failed to parse: ... is not a valid host or port`. Alle anderen
+   Dienste nutzen Pfade MIT `/` (`/healthz`, `/api/tags`, `/health`).
+   Flower-Server selbst: `services/flower_server.py` FlowerHTTPHandler
+   antwortet auf `GET /health` (Zeile 173-177) mit 200
+   `{'status': 'healthy', ...}` — aber der flwr-SuperLink-Entrypoint
+   (`scripts/flower_superlink_entry.py`, Ports 9091/9092) hat KEINEN
+   HTTP-Health-Endpunkt; der Dev-Compose startet SuperLink, nicht
+   `flower_server.py`. Ehrlicher Check: TCP-Connect auf 9091 (Runtime-API-
+   Port laut Entrypoint) ODER HTTP-GET gegen `flower_server:5556/health`
+   wenn der Legacy-Server laeuft. Entscheidung: TCP-Connect auf den
+   SuperLink-Runtime-API-Port (9091) — das ist der Dienst, der im
+   Dev-Compose tatsaechlich gestartet wird.
+2. **agents_loaded: 0** (`views.py:279`): zaehlt `Agent.objects.count()`
+   — die Legacy-DB-Tabelle `core_agent`, die NIEMAND befuellt (kein
+   Management-Command, kein `Agent.objects.create` in Produktion).
+   Die echten Agenten laufen ueber `agents/AGENT_REGISTRY` (34 Eintraege
+   seit OP88). → `agents_loaded = len(AGENT_REGISTRY)` (Import-versuch,
+   Fallback 0 bei Importfehler — nie crash).
+
+### Umfang
+- `django_project/api/views.py` (HealthCheckView):
+  (a) flower-Check: TCP-Connect auf `flower_server:9091` (SuperLink
+      Runtime-API-Port, siehe `scripts/flower_superlink_entry.py`),
+      Timeout 2s; `healthy` bei erfolgreichem Connect, sonst
+      `unhealthy: <grund>`.
+  (b) `agents_loaded`: `len(AGENT_REGISTRY)` statt `Agent.objects.count()`;
+      ImportError -> 0 (ehrlich, kein Crash).
+- Neue Matrix `tests/test_op91_health_check_honest.py`:
+  (a) flower-URL wird nicht mehr als `host:port+path` ohne `/` gebaut
+      (Source-Check + Unit-Test der URL-Konstruktion);
+  (b) TCP-Connect-Logik gegen lokalen Listener (loopback) testbar;
+  (c) `agents_loaded` spiegelt `AGENT_REGISTRY` (34) wider — live via
+      Django-Testclient gegen `/health/`;
+  (d) Health-Response-Vertrag: `agents_loaded` int >= 0,
+      `docker_services.flower` ist String ohne 'Failed to parse'.
+
+### Out of Scope
+- Kein Flower-Server-Health-Endpunkt implementieren (SuperLink ist
+  externes flwr-Paket; TCP-Connect ist der ehrliche verfuegbare Check).
+- Keine Aenderung an `services/flower_server.py` (Legacy-HTTP-Handler
+  bleibt; `/health` dort ist unberuehrt).
+- Kein Befuellen der Legacy-`core_agent`-Tabelle (toter Indikator wird
+  ersetzt, nicht gerettet).
+- faiss-Dev-Setup (kein Server im Container) bleibt — wird separat als
+  Dev-Doku-Thema behandelt, nicht in diesem OP.
+
+### Success Criteria
+- `GET /health/` lokal (Docker-Stack): `agents_loaded` = 34,
+  `docker_services.flower` ohne 'Failed to parse' (healthy oder
+  ehrliches unhealthy mit Verbindungsgrund).
+  ✅ OP91-Matrix T4b/T4d/T4e: agents_loaded == len(AGENT_REGISTRY),
+     flower-Status ohne 'Failed to parse'.
+- Neue Matrix `tests/test_op91_health_check_honest.py` **27/27** grün.
+- Regression: OP89-Smoke 15/15 (3 aufeinanderfolgende Läufe),
+  OP88 48/48, OP76 21/21, OP89 47/47, api.views-Matrizen
+  (fa1_password 12/12, fa1_settings 9/9, mui_scientific 6/6) grün;
+  `manage.py check` 0 issues.
+- Anti-Code-Creep: nur `views.py` (+28/−5) + neue Testmatrix + Doku.
+- `covers:`-Tag in OP91-Matrix: `api.views` wird vom OP89-Gate korrekt
+  zugeordnet (Impact-Map rebuild; Gate GREEN gegen origin/main).
+
+### Notiz: Smoke-Test-Flake (nicht OP91-caused)
+Ein einzelner Smoke-Lauf zeigte 403/302 auf crew-status/delete — Baseline
+(stash, ohne OP91-Code) war 15/15 grün, 3 Folge-Runs mit OP91 ebenfalls
+15/15. Ursache: Projekt- ohne Dateien -> release 422 -> Crew-Status
+403/302-Race (bekanntes OP57/OP55-Verhalten, nicht durch OP91 berührt).
+
+### Selbstprüfung (§7, 11 Fragen) — beantwortet vor Umsetzung
+1. Mission Statement gelesen? Ja (Session-Start + heute erneut).
+2. AGENTS.md + AGENT_FRAMEWORK_INIT_PROMPT gelesen? Ja.
+3. Roadmap-Eintrag vor Umsetzung? Ja — dieser Abschnitt.
+4. Kleinste korrekte Lösung? Ja — 2 Stellen in views.py, keine neuen Deps.
+5. Keine neuen Abhängigkeiten? Ja — stdlib `socket`.
+6. Alle Datei-Formate/Spektrometer? N/A (Health-Check, kein Spektrum-Code).
+7. Weaviate out of scope? Ja — Qdrant bleibt, unverändert.
+8. paperless-mistral-setup/ frozen? Ja — unberührt.
+9. Lizenz-Compliance? Keine neuen Deps.
+10. Ehrlichkeits-Regel? Kern des OPs — Health-Werte werden wahr.
+11. Iterations-Regel? Ziel: ERRORS=0, CRITICAL_WARNINGS=0 nach Abschluss.
+
 ### OP89 — Change-Impact Test Gate (Tester Agent 2.0) — IN ARBEIT (PO-Freigabe 2026-10-22)
 Nutzer-Befund: Zu viel manuelle Zeit für einfache Tests — pro OP wird eine
 Testmatrix von Hand geschrieben, in CI als einzelner `python tests/...`-Aufruf

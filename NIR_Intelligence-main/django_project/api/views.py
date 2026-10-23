@@ -13,6 +13,7 @@ def _is_finite_number(value):
     except (TypeError, ValueError):
         return False
 import os
+import socket
 import sys
 import json
 import logging
@@ -249,6 +250,15 @@ class HealthCheckView(APIView):
             return f'unhealthy: {str(e)}'
         except Exception as e:
             return f'unhealthy: {str(e)}'
+
+    def _check_tcp_port(self, host, port, timeout=2):
+        """OP91: Ehrlicher TCP-Connect-Check (z. B. flwr-SuperLink, der keinen
+        HTTP-Health-Endpunkt anbietet — siehe scripts/flower_superlink_entry.py)."""
+        try:
+            with socket.create_connection((host, port), timeout=timeout):
+                return 'healthy'
+        except OSError as e:
+            return f'unhealthy: {str(e)}'
     
     def get(self, request):
         # Check database
@@ -274,9 +284,12 @@ class HealthCheckView(APIView):
         except ImportError as e:
             framework_status = f'unhealthy: {str(e)}'
         
-        # Count loaded agents
+        # Count loaded agents — OP91: AGENT_REGISTRY statt der Legacy-DB-
+        # Tabelle core_agent (die niemand befuellt; die echten Agenten
+        # laufen ueber agents/AGENT_REGISTRY, 34 Eintraege seit OP88).
         try:
-            agents_loaded = Agent.objects.count()
+            from agents import AGENT_REGISTRY
+            agents_loaded = len(AGENT_REGISTRY)
         except Exception:
             agents_loaded = 0
         
@@ -307,9 +320,14 @@ class HealthCheckView(APIView):
         except Exception as e:
             docker_services['redis'] = f'unhealthy: {str(e)}'
         
-        # Check Flower server
-        flower_url = 'http://flower_server:5556'
-        docker_services['flower'] = self._check_service_health(flower_url, 'Flower')
+        # Check Flower server — OP91: Der Dev-Compose startet den flwr-
+        # SuperLink (scripts/flower_superlink_entry.py, Runtime-API auf
+        # Port 9091), der keinen HTTP-Health-Endpunkt hat. Der alte
+        # HTTP-Check ('http://flower_server:5556' + 'Flower') baute eine
+        # kaputte URL ('...:5556Flower' — Pfad ohne fuehrendes /) und
+        # meldete immer 'Failed to parse'. Ehrlicher Check: TCP-Connect
+        # auf den Runtime-API-Port.
+        docker_services['flower'] = self._check_tcp_port('flower_server', 9091)
         
         # Determine overall status (faiss/flower sind im Dev-Compose optionale Dienste)
         critical_services = [
