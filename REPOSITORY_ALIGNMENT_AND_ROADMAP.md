@@ -847,7 +847,7 @@ aufeinanderhaengende Bugs, die zusammen den endlosen Spinner erklaeren.
   + Doku; keine neuen Abhaengigkeiten.
 - OP89-Gate gegen origin/main GREEN (covers: api/project_views.py).
 
-### OP93 — Metadaten-Speichern hängt endlos ("Speichern..." stoppt nie) — IN ARBEIT (2026-10-23)
+### OP93 — Metadaten-Speichern hängt endlos ("Speichern..." stoppt nie) — ✅ ERLEDIGT (2026-10-23, Branch vibe/op93-metadata-save-hang-e1efba)
 Befund aus Nutzer-Feedback (2026-10-23, nach OP92-Merge): Metadaten im
 Editor ergänzt + "Speichern" gedrückt -> Button bleibt auf "Speichern..."
 und endet nicht.
@@ -907,24 +907,31 @@ bis zu 120 s × Topics).
 - Keine Änderung an `_ki_metadata_pass` (OP83/OP84-Logik bleibt).
 
 ### Success Criteria
-- Neue Matrix `tests/test_op93_metadata_save_hang.py` gruen:
+- ✅ Neue Matrix `tests/test_op93_metadata_save_hang.py` **30/30** gruen:
   (a) `ProjectMetadataView.post` startet Thread + antwortet sofort mit
      `preparing: True` (kein synchroner `build_preparation_report`-Call
      im Metadaten-Pfad);
   (b) Report wird geleert (datasets entfernt, user_options/fusion
      erhalten) wie beim Reingest;
   (c) `NIR_INGEST_LLM=skip` Guard in `_ki_forward_questions` +
-     `_ki_relevance_pass` (Source-Check + Live-Verhalten);
-  (d) Template-JS: kein endloses "Speichern..." (Reload nach Erfolg,
-     Client-Timeout als Fallback);
-  (e) Live-Testclient: Metadaten-POST antwortet in < 5 s (auch wenn
-     Ollama hängt — simuliert via Fake-Server);
+     `_ki_relevance_pass` (Source-Check: Guard vor try; Live: < 1s,
+     kein LLM-Call, ehrlicher Status);
+  (d) Template-JS: `AbortController` + 120s Client-Timeout,
+     `d.preparing`-Zweig, Button-Reaktivierung bei Fehler, Reload 900ms;
+  (e) Live-Testclient: Metadaten-POST antwortet **< 5s** (auch ohne
+     Ollama), Overrides gespeichert, Report geleert, Hintergrund-Rebuild
+     terminiert (ready=True);
   (f) py_compile aller geänderten Dateien.
-- Regression: OP13 (online metadata editing), OP55 14/14, OP78 35/35,
-  OP83 21/21, OP84, Smoke 15/15, `manage.py check` 0 issues.
-- Anti-Code-Creep: 1 View-Methode + 1 JS-Handler + 2 Guard-Zeilen +
-  neue Matrix + Doku; keine neuen Abhängigkeiten.
-- OP89-Gate gegen origin/main GREEN.
+- ✅ OP13-Matrix angepasst (jetzt **29/29**): T3e prüft `preparing`-Flag
+  (async), T3e2 wartet auf Hintergrund-Rebuild, T3f/T3h prüfen Score +
+  gemergte Metadaten wie gehabt. War vorher 28/28 (sync-Contract).
+- ✅ Regression: OP13 29/29, OP55 14/14, OP78 35/35, OP83 21/21,
+  OP84 17/17, OP92 37/37, OP89 47/47, OP88 48/48, Smoke 15/15,
+  `manage.py check` 0 issues.
+- ✅ Anti-Code-Creep: 1 View-Methode + 1 JS-Handler + 2 Guard-Zeilen +
+  neue Matrix + OP13-Anpassung + Doku; keine neuen Abhängigkeiten.
+- OP89-Gate gegen origin/main GREEN (Smoke + manage.py check; test_op93
+  korrekt `api.project_views` zugeordnet via `# covers:`-Tag).
 
 ### Selbstpruefung (§7, 11 Fragen) — beantwortet vor Umsetzung
 1. Was gefordert? Metadaten-Speichern darf nicht endlos hängen
