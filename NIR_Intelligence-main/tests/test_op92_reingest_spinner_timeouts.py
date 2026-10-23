@@ -287,5 +287,57 @@ check("T6d compose: NIR_LLM_TIMEOUT-Zeile syntaktisch plausibel",
       _re.search(r"^\s*- NIR_LLM_TIMEOUT=\$\{NIR_LLM_TIMEOUT:-120\}$",
                  compose_src, _re.M) is not None)
 
+# ---------------------------------------------------------------------------
+# T7: CI change-impact Job kompiliert .mo-Kataloge (OP92-CI-Fix)
+# Hintergrund: Der Gate-Job hatte KEINEN compilemessages-Step (nur der
+# Vollmatrix-Job). test_op49_sensor_diy.py crasht in CI mit
+# FileNotFoundError ohne .mo. Fix: polib-basierter Compile-Step im
+# change-impact-Job. Verifiziert: ohne .mo crasht OP49 lokal mit dem
+# exakt gleichen Fehler wie in CI; mit polib-Compile 23/23 gruen.
+# ---------------------------------------------------------------------------
+CI_YML = REPO_ROOT.parent / ".github" / "workflows" / "ci.yml"
+ci_src = CI_YML.read_text(encoding="utf-8")
+# Der Step muss INNERHALB des change-impact-Jobs stehen (nach dessen
+# "Install minimal test dependencies", vor "Run change-impact gate")
+gate_section = ci_src.split("change-impact:")[1] if "change-impact:" in ci_src else ""
+check("T7a CI change-impact Job: polib-Compile-Step vorhanden",
+      "Compile i18n catalogs for gate (OP92)" in gate_section
+      and "pip install polib" in gate_section)
+check("T7b CI change-impact Job: Compile VOR dem Gate-Run",
+      gate_section.find("Compile i18n catalogs for gate")
+      < gate_section.find("Run change-impact gate against origin/main")
+      if "Compile i18n catalogs for gate" in gate_section else False)
+check("T7c CI change-impact Job: polib kompiliert ALLE locale-Kataloge",
+      "locale.glob('*/LC_MESSAGES/django.po')" in gate_section)
+
+# Live-Reproduktion des CI- originais: OP49 crasht ohne .mo, gruen mit .mo
+import subprocess as _sp  # noqa: E402
+locale_dir = (REPO_ROOT / "django_project" / "locale").resolve()
+mo_files = sorted(locale_dir.glob("*/LC_MESSAGES/*.mo"))
+try:
+    for mo in mo_files:
+        mo.unlink()
+    r = _sp.run([sys.executable, str(REPO_ROOT / "tests" / "test_op49_sensor_diy.py")],
+                capture_output=True, text=True, timeout=120,
+                cwd=str(REPO_ROOT))
+    check("T7d OP49 ohne .mo crasht mit FileNotFoundError (CI-Reproduktion)",
+          r.returncode != 0 and "No translation file found" in (r.stderr + r.stdout),
+          f"rc={r.returncode}")
+finally:
+    # .mo wiederherstellen (polib-Compile wie im CI-Step)
+    try:
+        import polib as _polib
+        for po in sorted(locale_dir.glob("*/LC_MESSAGES/django.po")):
+            _polib.pofile(str(po)).save_as_mofile(str(po.with_suffix(".mo")))
+    except ImportError:
+        pass
+
+r = _sp.run([sys.executable, str(REPO_ROOT / "tests" / "test_op49_sensor_diy.py")],
+            capture_output=True, text=True, timeout=120,
+            cwd=str(REPO_ROOT))
+check("T7e OP49 mit polib-kompilierten .mo: 23/23 gruen (CI-Fix wirkt)",
+      r.returncode == 0 and "23 passed, 0 failed" in r.stdout,
+      f"rc={r.returncode} {r.stdout[-200:]}")
+
 print(f"\nOP92 reingest-spinner/timeouts matrix: {PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)

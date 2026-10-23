@@ -165,6 +165,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest numpy pandas scipy scikit-learn pyyaml django pillow requests packaging djangorestframework djangorestframework-simplejwt django-cors-headers matplotlib h5py openpyxl pyarrow
 
+      # OP92-Fix: Der Gate-Job hat KEINEN compilemessages-Step (nur der
+      # Vollmatrix-Job oben hat ihn). Matrizen wie test_op49_sensor_diy.py
+      # brauchen kompilierte .mo-Kataloge (gettext.translation crasht mit
+      # FileNotFoundError ohne .mo). polib ist abhaengigkeitsfrei -> .mo
+      # direkt aus den .po bauen, kein gettext/msgfmt noetig.
+      - name: Compile i18n catalogs for gate (OP92)
+        run: |
+          pip install polib
+          python -c "
+          import polib, pathlib
+          locale = pathlib.Path('django_project/locale')
+          for po in sorted(locale.glob('*/LC_MESSAGES/django.po')):
+              mo = po.with_suffix('.mo')
+              polib.pofile(str(po)).save_as_mofile(str(mo))
+              print(f'compiled {mo}')
+          "
+
       - name: Fetch base branch for impact diff
         run: |
           git fetch --no-tags origin main:refs/remotes/origin/main || true

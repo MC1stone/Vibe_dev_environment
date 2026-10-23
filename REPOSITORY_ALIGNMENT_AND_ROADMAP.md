@@ -798,15 +798,30 @@ aufeinanderhaengende Bugs, die zusammen den endlosen Spinner erklaeren.
   (b) harter Poll-Cap: nach 30 Minuten ohne ready/error -> Alert
   "Aufbereitung dauert ungewoehnlich lange" + Polling stoppen.
 
+### CI-Fix (im selben PR, pre-existing Bug)
+- `change-impact`-Job: `compilemessages`-Step fehlte (nur Vollmatrix-Job
+  hatte ihn). OP49 crashte in CI mit `FileNotFoundError: No translation
+  file found for domain: 'django'` — lokal nicht sichtbar, weil die
+  `.mo`-Files in der Sandbox kompiliert sind. OP91-CI (#238) selektierte
+  OP49 nicht (nur 5 Matrizen), deshalb erst bei OP92 aufgefallen (43
+  Matrizen via `services.metadata_llm`/`chatbot_service`-Impact).
+- Fix: `pip install polib` + glob-compile aller 24 `locale/*/LC_MESSAGES/
+  django.po` -> `.mo` VOR dem Gate-Run. polib ist abhaengigkeitsfrei
+  (kein gettext/msgfmt noetig, kein apt-get in diesem Job).
+- Verifiziert: OP49 ohne .mo crasht lokal mit EXAKT dem CI-Fehler;
+  mit polib-Compile 23/23 gruen.
+
 ### Out of Scope
 - Kein Wechsel von daemon-Thread auf Celery/Worker (keine neue Abhaengigkeit,
   Anti-Code-Creep); Stale-Detection macht den Tod des Threads sichtbar.
 - Kein automatischer Re-Run der Aufbereitung nach Container-Restart
   (zu invasiv; ehrlicher Fehler + manueller Reingest genuegt).
 - Kein Fix der `ilias`-Container-Restarting-Beobachtung (separates Thema).
+- Kein Wechsel des Vollmatrix-Jobs auf polib (der hat bereits
+  compilemessages mit gettext — unveraendert).
 
 ### Success Criteria
-- ✅ Neue Matrix `tests/test_op92_reingest_spinner_timeouts.py` **31/31** gruen:
+- ✅ Neue Matrix `tests/test_op92_reingest_spinner_timeouts.py` **36/36** gruen:
   (a) compose: `NIR_LLM_TIMEOUT=${NIR_LLM_TIMEOUT:-120}` (kein `:-}`);
   (b) `metadata_llm`/`chatbot_service`: `NIR_LLM_TIMEOUT=''` -> OP83-Default
      120, nie ValueError; unset -> 120; ungueltig -> Fallback 300;
@@ -814,9 +829,20 @@ aufeinanderhaengende Bugs, die zusammen den endlosen Spinner erklaeren.
   (c) Status-Endpunkt: stale nach 10 min ohne last_update -> stale+error
      (Live-Testclient: 5 Cases — fresh/stale/live/ready/error);
   (d) Template-JS: `data.stale` behandelt wie error, Poll-Cap 30 min;
-  (e) py_compile aller geaenderten Dateien.
+  (e) py_compile aller geaenderten Dateien;
+  (f) **CI-Fix verifiziert**: change-impact-Job polib-Compile-Step +
+     OP49-Reproduktion (ohne .mo crasht mit exakt dem CI-Fehler,
+     mit .mo 23/23 gruen).
 - ✅ Regression: OP55 14/14, OP78 35/35, OP83 21/21, OP50 35/35,
-  Smoke 15/15, `manage.py check` 0 issues.
+  OP49 23/23, OP89 47/47, Smoke 15/15, `manage.py check` 0 issues.
+- ✅ **CI-Fix (pre-existing Bug, nicht OP92-caused):** Der `change-impact`-
+  Job hatte KEINEN compilemessages-Step (nur der Vollmatrix-Job). OP49
+  crashte in CI mit `FileNotFoundError: No translation file found`.
+  Lokal auf main gruen (weil .mo hier kompiliert sind), in CI rot.
+  OP91-CI (#238) selektierte OP49 nicht (nur 5 Matrizen) -> nicht
+  aufgefallen. Fix: polib-basierter Compile-Step im change-impact-Job
+  (`pip install polib` + glob-compile aller 24 locale-Kataloge, VOR dem
+  Gate-Run). polib ist abhaengigkeitsfrei, kein gettext/msgfmt noetig.
 - ✅ Anti-Code-Creep: 4 kleine Code-Stellen + 1 Compose-Zeile + neue Matrix
   + Doku; keine neuen Abhaengigkeiten.
 - OP89-Gate gegen origin/main GREEN (covers: api/project_views.py).
