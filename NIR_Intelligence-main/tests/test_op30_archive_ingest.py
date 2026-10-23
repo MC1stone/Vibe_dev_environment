@@ -330,8 +330,32 @@ except ValueError:
     body = {}
 check('T9g metadata update succeeded',
       body.get('success') is True, f'body={body}')
+# OP93: the view now answers immediately (async rebuild, 'preparing': True)
+# — the score arrives with the rebuilt report, not in the POST response.
+# Wait for the background rebuild, then verify the override is reflected.
+check('T9g2 preparing flag reported back (OP93 async)',
+      body.get('preparing') is True, f'body={body}')
+_deadline = _time.time() + 60
+_ready = False
+while _time.time() < _deadline:
+    _r = c.get(f'/api/projects/create/{live_pid}/status/').json()
+    if _r.get('ready') or _r.get('error'):
+        _ready = _r.get('ready')
+        break
+    _time.sleep(0.5)
 check('T9h overridden operator reflected in the report',
-      body.get('metadata_quality_score') is not None, f'body={body}')
+      _ready is True, f'ready={_ready}')
+if _ready:
+    from core.models import AnalysisProject as _AP
+    _proj = _AP.objects.get(id=live_pid)
+    _prep = _proj.preparation_report or {}
+    _datasets = _prep.get('datasets', [])
+    _found = any(
+        d.get('metadata', {}).get('operator') == 'Martin'
+        for d in _datasets
+        if isinstance(d, dict))
+    check('T9h2 override visible in rebuilt report dataset',
+          _found, f'datasets={len(_datasets)}')
 
 # ---------------------------------------------------------------- summary
 print()

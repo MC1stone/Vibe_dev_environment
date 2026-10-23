@@ -173,6 +173,20 @@ r = c.post('/api/projects/create/',
 pid = r.json().get('project_id')
 check('T3c project created in drafted phase', bool(pid))
 
+# OP55/OP93: both create and metadata-save run the preparation in a
+# background thread. Wait for the INITIAL preparation to finish before
+# posting metadata — otherwise the metadata POST's report-clearing can
+# race the still-running initial preparation (observed as a flake:
+# ~20% of runs saw score=0.0 because the metadata thread cleared the
+# report while the initial thread was still writing).
+import time as _time0  # noqa: E402
+_deadline0 = _time0.time() + 60
+while _time0.time() < _deadline0:
+    _r0 = c.get(f'/api/projects/create/{pid}/status/').json()
+    if _r0.get('ready') or _r0.get('error'):
+        break
+    _time0.sleep(0.5)
+
 r = c.post(f'/api/projects/{pid}/metadata/',
            data={'metadata': {file_ids[0]: {'operator': 'M. Meister',
                                              'instrument': 'DIY-Spektrometer V2'}}},
