@@ -3,6 +3,32 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
+## Current Task: OP92 - Reingest-Spinner 3h + LLM-Timeout-Bugs (env-leer, timeout=None, Stale-Detection)
+### Ziel
+Befund aus Nutzer-Feedback (2026-10-23, nach Merge #238/OP91, docker logs):
+(1) Reingest-Spinner laeuft 3h — OP78-Reingest startet daemon-Thread, ein
+Container-Restart (`docker compose up -d` nach git pull) killt den Thread,
+Report bleibt geleert, Status liefert nie ready/error, JS pollt endlos.
+(2) `NIR_LLM_TIMEOUT=${NIR_LLM_TIMEOUT:-}` (compose:204) -> leerer String ->
+`int('')` ValueError (Chatbot-500 + metadata_llm.py:104 Traceback im Log).
+(3) `chatbot_service.py:75` `self.timeout = timeout` ueberschreibt env-
+Default mit None -> requests.post(timeout=None) -> ewiger Hang.
+PO-Freigabe erteilt; Roadmap-Abschnitt OP92 angelegt (vor Umsetzung).
+### Umsetzung
+- docker-compose.yml: `NIR_LLM_TIMEOUT=${NIR_LLM_TIMEOUT:-120}` (Default statt leer).
+- services/metadata_llm.py + services/chatbot_service.py: robuster Env-Parse
+  (leer/ungueltig -> Default, nie ValueError); chatbot `self.timeout = timeout`
+  Bug entfernen (nur setzen wenn `timeout is not None`).
+- api/project_views.py ProjectPrepareStatusView.get: Stale-Detection —
+  not ready, not error, progress.last_update > 10 min alt -> `stale: True`
+  + ehrlicher `error`-Hinweis.
+- templates/project_report.html (Preparing-Poll-JS): `data.stale` wie
+  `data.error` behandeln; Poll-Cap 30 min -> Alert + stoppen.
+- Neue Matrix tests/test_op92_reingest_spinner_timeouts.py (covers: project_views).
+### Verifikation
+- OP92-Matrix gruen; Regression OP55/OP78/OP83/OP50/Smoke; manage.py check
+  0 issues; OP89-Gate gegen origin/main GREEN.
+
 ## Current Task: OP88 - Review & Optimierung der uebrigen Framework-Agenten
 ### Ziel
 Nutzer-Auftrag (2026-10-22): 'Bitte ueberpruefe die anderen Agenten ebenso
