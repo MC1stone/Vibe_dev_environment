@@ -33,6 +33,21 @@ logger = logging.getLogger("Service.MetadataLLM")
 OLLAMA_DEFAULT_URL = "http://localhost:11434"
 DEFAULT_LLM_MODEL = "mistral"
 
+
+def _env_int(name: str, default: int) -> int:
+    """OP92: Robuster Env-Int-Parse. Compose reicht NIR_LLM_TIMEOUT als
+    leeren String durch (`${VAR:-}`), wenn die Variable im Host unset ist
+    -> `int('')` ValueError crashte OllamaMetadataClient/OllamaChatClient
+    (Nutzer-Log 2026-10-23: Chatbot-500 + metadata_llm.py Traceback).
+    Leer/ungueltig -> Default, nie ValueError."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw.strip())
+    except (ValueError, AttributeError):
+        return default
+
 # Canonical platform metadata fields (task_definition.yaml categories +
 # OP28 canonical loader fields). The LLM output is folded onto these -
 # anything else is rejected, so the model cannot invent new namespaces.
@@ -100,20 +115,27 @@ class OllamaMetadataClient:
         # 'Read timed out' scheitern (Tomaten-Datensatz, Vorfall
         # 2026-10-15). Default daher 300 s, via NIR_LLM_TIMEOUT
         # ueberschreibbar.
-        self.timeout = (timeout if timeout is not None
-                        else int(os.environ.get("NIR_LLM_TIMEOUT", "300")))
         # OP83: Wartezeit-Begrenzung fuer die Aufbereitung - auf CPU-only
         # Ollama dauert EIN Metadaten-Prompt Minuten; 2 Versuche x 300 s
         # = bis 10 min PRO DATEI blockierten die gesamte Aufbereitung
         # (Nutzer-Befund 2026-10-22: Reingest 30+ min ohne Ergebnis,
         # Fahrplan-Karte zeigte Datei 1/2 im KI-Schritt seit 5:34).
-        # Default jetzt: 1 Versuch, 120 s - via NIR_LLM_TIMEOUT und
+        # Default: 1 Versuch, 120 s - via NIR_LLM_TIMEOUT und
         # NIR_LLM_ATTEMPTS konfigurierbar (alte 300 s bleiben moeglich).
-        self.attempts = max(1, int(os.environ.get("NIR_LLM_ATTEMPTS", "1")))
-        if timeout is None:
-            env_timeout = os.environ.get("NIR_LLM_TIMEOUT")
-            if not env_timeout:
+        self.attempts = max(1, _env_int("NIR_LLM_ATTEMPTS", 1))
+        # OP92: robuster Env-Parse via _env_int (nie ValueError; Compose
+        # reichte frueher '' durch -> `int('')` crashte -> Chatbot-500).
+        # Zwei Default-Stufen: LEER/UNSET -> OP83-Default 120 (Doku +
+        # OP83-T2e); UNGUELTIG -> _env_int-Fallback 300 (historisch, siehe
+        # Kommentar: 120 s liess den KI-Pass systematisch scheitern).
+        if timeout is not None:
+            self.timeout = timeout
+        else:
+            raw_timeout = os.environ.get("NIR_LLM_TIMEOUT")
+            if raw_timeout is None or not raw_timeout.strip():
                 self.timeout = 120
+            else:
+                self.timeout = _env_int("NIR_LLM_TIMEOUT", 300)
 
     def chat(self, prompt: str) -> Optional[str]:
         import requests

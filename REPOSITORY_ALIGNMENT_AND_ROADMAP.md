@@ -753,7 +753,7 @@ Ein einzelner Smoke-Lauf zeigte 403/302 auf crew-status/delete — Baseline
 10. Ehrlichkeits-Regel? Kern des OPs — Health-Werte werden wahr.
 11. Iterations-Regel? Ziel: ERRORS=0, CRITICAL_WARNINGS=0 nach Abschluss.
 
-### OP92 — Reingest-Spinner 3h + LLM-Timeout-Bugs (env-leer, timeout=None, Stale-Detection) — IN ARBEIT (2026-10-23)
+### OP92 — Reingest-Spinner 3h + LLM-Timeout-Bugs (env-leer, timeout=None, Stale-Detection) — ✅ ERLEDIGT (2026-10-23, Branch vibe/op92-reingest-spinner-timeouts-e1efba)
 Befund aus Nutzer-Feedback (2026-10-23, nach Merge #238/OP91): Drei
 aufeinanderhaengende Bugs, die zusammen den endlosen Spinner erklaeren.
 
@@ -806,19 +806,20 @@ aufeinanderhaengende Bugs, die zusammen den endlosen Spinner erklaeren.
 - Kein Fix der `ilias`-Container-Restarting-Beobachtung (separates Thema).
 
 ### Success Criteria
-- Neue Matrix `tests/test_op92_reingest_spinner_timeouts.py` gruen:
+- ✅ Neue Matrix `tests/test_op92_reingest_spinner_timeouts.py` **31/31** gruen:
   (a) compose: `NIR_LLM_TIMEOUT=${NIR_LLM_TIMEOUT:-120}` (kein `:-}`);
-  (b) `metadata_llm`/`chatbot_service`: `NIR_LLM_TIMEOUT=''` -> Default,
-     nie ValueError; chatbot `self.timeout` nie None wenn env gesetzt;
-  (c) Status-Endpunkt: stale nach 10 min ohne last_update -> stale+error;
-  (d) Template-JS: `data.stale` behandelt, Poll-Cap 30 min;
+  (b) `metadata_llm`/`chatbot_service`: `NIR_LLM_TIMEOUT=''` -> OP83-Default
+     120, nie ValueError; unset -> 120; ungueltig -> Fallback 300;
+     chatbot `self.timeout` nie None (Bug `self.timeout = timeout` entfernt);
+  (c) Status-Endpunkt: stale nach 10 min ohne last_update -> stale+error
+     (Live-Testclient: 5 Cases — fresh/stale/live/ready/error);
+  (d) Template-JS: `data.stale` behandelt wie error, Poll-Cap 30 min;
   (e) py_compile aller geaenderten Dateien.
-- Regression: OP55 14/14, OP78 (prep progress), OP83  (LLM-Tuning),
-  OP50 (Ollama-Startup), Smoke 15/15, `manage.py check` 0 issues.
-- Anti-Code-Creep: 4 kleine Code-Stellen + 1 Compose-Zeile + neue Matrix
+- ✅ Regression: OP55 14/14, OP78 35/35, OP83 21/21, OP50 35/35,
+  Smoke 15/15, `manage.py check` 0 issues.
+- ✅ Anti-Code-Creep: 4 kleine Code-Stellen + 1 Compose-Zeile + neue Matrix
   + Doku; keine neuen Abhaengigkeiten.
-- OP89-Gate gegen origin/main GREEN (covers: project_views, project_ingest
-  nicht angefasst — nur project_views.py + template + 2 services + compose).
+- OP89-Gate gegen origin/main GREEN (covers: api/project_views.py).
 
 ### Selbstpruefung (§7, 11 Fragen) — beantwortet vor Umsetzung
 1. Was gefordert? 3h-Spinner nach Reingest fixen + env-Crash-Bugs

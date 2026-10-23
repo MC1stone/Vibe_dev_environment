@@ -830,6 +830,12 @@ document.addEventListener('click', function (ev) {
     if (!card) { return; }
     const statusUrl = '{% url "project-prepare-status" project.id %}';
     const startedAt = Date.now();
+    // OP92: Harter Poll-Cap — ohne diesen Guard pollt die Seite endlos,
+    // wenn der Hintergrund-Thread (daemon) z. B. durch einen Container-
+    // Restart gekillt wurde und der Status nie ready/error liefert
+    // (Nutzer-Befund 2026-10-23: Spinner 3h+). Nach 30 Minuten ohne
+    // Abschluss: ehrlicher Hinweis + Polling stoppen.
+    const POLL_CAP_MS = 30 * 60 * 1000;
     function tickClock() {
         var elapsed = Math.floor((Date.now() - startedAt) / 1000);
         var el = document.getElementById('prepare-elapsed');
@@ -888,8 +894,16 @@ document.addEventListener('click', function (ev) {
                 }
                 if (data.ready) {
                     window.location.reload();
-                } else if (data.error) {
-                    card.innerHTML = '<div class="alert alert-danger mb-0">' + data.error + '</div>';
+                } else if (data.error || data.stale) {
+                    // OP92: data.stale kommt vom Status-Endpunkt, wenn der
+                    // Hintergrund-Thread gestorben ist (z. B. Container-
+                    // Restart) — wie ein Fehler anzeigen, nie endlos polln.
+                    card.innerHTML = '<div class="alert alert-danger mb-0">' +
+                        (data.error || '{% trans "Aufbereitung ohne Lebenszeichen — bitte Seite neu laden und erneut ausfuehren." %}') + '</div>';
+                } else if (Date.now() - startedAt > POLL_CAP_MS) {
+                    card.innerHTML = '<div class="alert alert-warning mb-0">' +
+                        '{% trans "Die Aufbereitung dauert ungewoehnlich lange (ueber 30 Minuten). Bitte Seite neu laden — falls der Fehler bestehen bleibt, Aufbereitung erneut ausfuehren." %}' +
+                        '</div>';
                 } else {
                     setTimeout(poll, 3000);
                 }
