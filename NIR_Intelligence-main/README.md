@@ -8,12 +8,43 @@
 
 The NIR Intelligence Platform (NIR-IP) is a self-optimizing multi-agent system for Near-Infrared (NIR) spectroscopy data analysis. This platform integrates state-of-the-art machine learning, statistical analysis, and federated learning capabilities to provide comprehensive NIR data processing and interpretation.
 
+## Editions (OP95 — Software Split)
+
+The same code base ships in two editions:
+
+- **Open edition (default, MIT-licensed)** — the community / public-sector
+  edition with the full **core functionality** (import, metadata governance,
+  quality assurance, statistical + neural analysis, calibration, fusion with
+  the standardized test unit, similarity search, reporting). The three
+  **extended functions** — learning platform (ILIAS), sensor database, and
+  federated learning — are **gated**: the UI shows a teaser linking to the
+  startup page (`NIR_IP_STARTUP_URL`, placeholder by default) instead of the
+  feature, and the API answers 403 with an honest edition note.
+- **Pro edition (proprietary startup variant)** — contains everything the
+  open edition contains **plus** the three extended functions fully enabled.
+
+Selective activation per customer is possible via feature flags (a single
+flag overrides the edition default):
+
+```bash
+# .env
+NIR_IP_EDITION=open            # open (default) | pro
+NIR_IP_STARTUP_URL=https://your-startup.example/info
+NIR_IP_FEATURE_LEARNING=true   # optional: enable only the learning platform
+NIR_IP_FEATURE_SENSORS=true    # optional: enable only the sensor database
+NIR_IP_FEATURE_FEDERATED=true  # optional: enable only federated learning
+```
+
+The ILIAS and Flower containers only start in the pro edition:
+`docker compose --profile pro up -d`. See `.env.example` and
+`../SOFTWARE_SPLIT_PLAN.md` for the full split design.
+
 ## Key Features
 
 - **Multi-Agent Architecture**: 14 specialized agents working collaboratively
 - **Self-Optimizing**: Iterative improvement until quality thresholds are met
 - **Comprehensive Analysis**: Statistical and neural network approaches
-- **Federated Learning**: Privacy-preserving distributed model training
+- **Federated Learning**: Privacy-preserving distributed model training (pro edition)
 - **Containerized Deployment**: Docker-based environment for easy setup
 - **Complete Documentation**: Automated Quarto reporting
 
@@ -346,7 +377,11 @@ We welcome contributions! Please follow these steps:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+The **open edition** of this project is licensed under the MIT License - see
+the [LICENSE](LICENSE) file for details. The **pro edition** (learning
+platform, sensor database, federated learning fully enabled) is proprietary
+software of the startup and is distributed separately under a commercial
+license.
 
 ## Contact
 

@@ -229,6 +229,11 @@ def create_ilias_token_client(config: Optional[Dict[str, Any]] = None,
 def create_ilias_api_client(config: Optional[Dict[str, Any]] = None,
                             token_client: Optional[IliasTokenClient] = None,
                             transport: Optional[Callable[..., Any]] = None) -> IliasApiClient:
+    # OP95: learning platform (F1) is an edition-gated feature
+    from edition import feature_enabled, FEATURE_LEARNING, get_edition
+    if not feature_enabled(FEATURE_LEARNING):
+        raise RuntimeError(
+            f"Learning platform not available in edition '{get_edition()}'")
     return IliasApiClient(config=config, token_client=token_client,
                            transport=transport)
 

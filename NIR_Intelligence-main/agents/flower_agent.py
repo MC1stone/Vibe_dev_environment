@@ -541,6 +541,11 @@ class FlowerAgent(BaseAgent):
         try:
             self.status = AgentStatus.PROCESSING
             self.logger.info("Starting Flower agent execution")
+            # OP95: federated learning (F3) is an edition-gated feature
+            from edition import feature_enabled, FEATURE_FEDERATED, get_edition
+            if not feature_enabled(FEATURE_FEDERATED):
+                return self._handle_error(ValueError(
+                    f"Federated learning not available in edition '{get_edition()}'"))
             
             # Determine operation from context
             operation = context.get("operation", "status")

@@ -208,6 +208,11 @@ class ILIASLearningService:
 
 def create_ilias_learning_service(config: Optional[Dict[str, Any]] = None) -> ILIASLearningService:
     """Factory used by the ILIAS agent / Django layer"""
+    # OP95: learning platform (F1) is an edition-gated feature
+    from edition import feature_enabled, FEATURE_LEARNING, get_edition
+    if not feature_enabled(FEATURE_LEARNING):
+        raise RuntimeError(
+            f"Learning platform not available in edition '{get_edition()}'")
     return ILIASLearningService(config=config)
 
 

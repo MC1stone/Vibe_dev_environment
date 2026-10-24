@@ -51,9 +51,12 @@ services:
       - nir_network
 
   # ILIAS e-learning platform in its own container (roadmap S8)
+  # OP95: learning platform (F1) is edition-gated - the container only
+  # starts in the proprietary edition (compose profile "pro").
   ilias:
     image: srsolutions/ilias:9-php8.2-apache
     restart: unless-stopped
+    profiles: ["pro"]
     ports:
       - "8080:80"
     environment:
@@ -88,6 +91,7 @@ services:
   ilias_db:
     image: mariadb:10.11
     restart: unless-stopped
+    profiles: ["pro"]
     environment:
       - MYSQL_ROOT_PASSWORD=${ILIAS_MYSQL_ROOT_PASSWORD:-ilias_root_change_me}
       - MYSQL_DATABASE=${ILIAS_DB_NAME:-ilias_nir}
@@ -131,8 +135,11 @@ services:
       - nir_network
 
   # Flower Federated Learning Server (FL1: SuperLink transport)
+  # OP95: federated learning (F3) is edition-gated - the container only
+  # starts in the proprietary edition (compose profile "pro").
   flower_server:
     image: python:3.12-slim
+    profiles: ["pro"]
     command: sh -c "pip install --no-cache-dir 'flwr>=1.4.0' numpy > /dev/null 2>&1; python scripts/flower_superlink_entry.py"
     ports:
       - "5555:5555"
@@ -147,8 +154,10 @@ services:
     networks:
       - nir_network
   # Federated learning client node (FL1: one SuperNode per group)
+  # OP95: profile "pro" only (F3 edition-gated).
   flower_client:
     image: python:3.12-slim
+    profiles: ["pro"]
     command: sh -c "pip install --no-cache-dir 'flwr>=1.4.0' numpy > /dev/null 2>&1; python scripts/flower_supernode_entry.py"
     volumes:
       - ./services:/app/services
@@ -191,6 +200,15 @@ services:
       - DJANGO_DB_HOST=postgresql
       - DJANGO_DB_PORT=5432
       - NIR_FRAMEWORK_PATH=/app
+      # OP95: software split - edition + per-feature flags + startup URL.
+      # Open edition (default): F1/F2/F3 show teaser links to the startup
+      # page. Proprietary edition: NIR_IP_EDITION=pro enables all three.
+      # Selective activation per customer: NIR_IP_FEATURE_LEARNING=true etc.
+      - NIR_IP_EDITION=${NIR_IP_EDITION:-open}
+      - NIR_IP_STARTUP_URL=${NIR_IP_STARTUP_URL:-https://example.invalid/startup}
+      - NIR_IP_FEATURE_LEARNING=${NIR_IP_FEATURE_LEARNING:-}
+      - NIR_IP_FEATURE_SENSORS=${NIR_IP_FEATURE_SENSORS:-}
+      - NIR_IP_FEATURE_FEDERATED=${NIR_IP_FEATURE_FEDERATED:-}
       - OLLAMA_URL=http://ollama:11434
       - FAISS_URL=http://faiss:8081
       - NIR_LLM_MODEL=${NIR_LLM_MODEL:-mistral}
@@ -263,10 +281,12 @@ services:
 
   # ILIAS course development agent in its own container (FL5 follow-up):
   # continuously develops NIR curricula and syncs them to the ILIAS container
+  # OP95: profile "pro" only (learning platform F1 edition-gated).
   ilias_course_agent:
     build:
       context: .
       dockerfile: Dockerfile.django
+    profiles: ["pro"]
     working_dir: /app
     command: python scripts/ilias_course_agent_runner.py
     volumes:

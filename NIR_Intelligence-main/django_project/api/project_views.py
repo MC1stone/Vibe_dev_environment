@@ -270,6 +270,11 @@ class SensorListView(TemplateView):
     def get(self, request):
         if not request.user.is_authenticated:
             return redirect('/login/?next=' + request.get_full_path())
+        # OP95: sensor database (F2) is an edition-gated feature
+        from core import edition
+        if not edition.feature_enabled(edition.FEATURE_SENSORS):
+            from core.feature_guard import render_teaser
+            return render_teaser(request, edition.FEATURE_SENSORS)
         from agents.sensor_agent import SensorAgent
         output = SensorAgent().execute({
             'operation': 'collect',
@@ -318,6 +323,11 @@ class SensorDetailView(TemplateView):
     def get(self, request, sensor_key):
         if not request.user.is_authenticated:
             return redirect('/login/?next=' + request.get_full_path())
+        # OP95: sensor database (F2) is an edition-gated feature
+        from core import edition
+        if not edition.feature_enabled(edition.FEATURE_SENSORS):
+            from core.feature_guard import render_teaser
+            return render_teaser(request, edition.FEATURE_SENSORS)
         from urllib.parse import unquote
 
         from agents.sensor_agent import SensorAgent
@@ -371,6 +381,15 @@ class SensorSummaryView(APIView if DRF_AVAILABLE else object):
             return Response({'success': False,
                              'error': gettext('Authentication required')},
                             status=status.HTTP_401_UNAUTHORIZED)
+        # OP95: sensor database (F2) is an edition-gated feature
+        from core import edition
+        if not edition.feature_enabled(edition.FEATURE_SENSORS):
+            return Response(
+                {'success': False,
+                 'error': gettext('Sensor database not available in this edition'),
+                 'edition': edition.get_edition(),
+                 'startup_url': edition.startup_url()},
+                status=status.HTTP_403_FORBIDDEN)
         from urllib.parse import unquote
 
         from agents.sensor_agent import SensorAgent
@@ -425,6 +444,15 @@ class SensorDocumentUploadView(APIView if DRF_AVAILABLE else object):
         if not request.user.is_authenticated:
             return Response({'success': False, 'error': gettext('Authentication required')},
                             status=status.HTTP_401_UNAUTHORIZED)
+        # OP95: sensor database (F2) is an edition-gated feature
+        from core import edition
+        if not edition.feature_enabled(edition.FEATURE_SENSORS):
+            return Response(
+                {'success': False,
+                 'error': gettext('Sensor database not available in this edition'),
+                 'edition': edition.get_edition(),
+                 'startup_url': edition.startup_url()},
+                status=status.HTTP_403_FORBIDDEN)
         from urllib.parse import unquote
 
         name = unquote(sensor_key)
@@ -465,6 +493,15 @@ class SensorDocumentDeleteView(APIView if DRF_AVAILABLE else object):
         if not request.user.is_authenticated:
             return Response({'success': False, 'error': gettext('Authentication required')},
                             status=status.HTTP_401_UNAUTHORIZED)
+        # OP95: sensor database (F2) is an edition-gated feature
+        from core import edition
+        if not edition.feature_enabled(edition.FEATURE_SENSORS):
+            return Response(
+                {'success': False,
+                 'error': gettext('Sensor database not available in this edition'),
+                 'edition': edition.get_edition(),
+                 'startup_url': edition.startup_url()},
+                status=status.HTTP_403_FORBIDDEN)
         try:
             doc = SensorDocument.objects.get(id=document_id, user=request.user)
         except SensorDocument.DoesNotExist:
@@ -657,6 +694,11 @@ class DiySpectrometerView(TemplateView):
     def get(self, request):
         if not request.user.is_authenticated:
             return redirect('/login/?next=' + request.get_full_path())
+        # OP95: sensor database (F2) is an edition-gated feature
+        from core import edition
+        if not edition.feature_enabled(edition.FEATURE_SENSORS):
+            from core.feature_guard import render_teaser
+            return render_teaser(request, edition.FEATURE_SENSORS)
         from services.sensor_websearch import (
             ollama_available, websearch_enabled,
         )
@@ -699,6 +741,11 @@ class DiyDetailView(TemplateView):
     def get(self, request, slug):
         if not request.user.is_authenticated:
             return redirect('/login/?next=' + request.get_full_path())
+        # OP95: sensor database (F2) is an edition-gated feature
+        from core import edition
+        if not edition.feature_enabled(edition.FEATURE_SENSORS):
+            from core.feature_guard import render_teaser
+            return render_teaser(request, edition.FEATURE_SENSORS)
         project = self.get_project(slug)
         if project is None:
             raise Http404('DIY project not found')

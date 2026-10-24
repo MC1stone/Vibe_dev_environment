@@ -47,6 +47,14 @@ def federated_consent(request):
     users must explicitly enable federated sharing). Body:
     {"consent": true/false}.
     """
+    # OP95: federated learning (F3) is an edition-gated feature
+    from core import edition
+    if not edition.feature_enabled(edition.FEATURE_FEDERATED):
+        return Response(
+            {"error": "federated learning not available in this edition",
+             "edition": edition.get_edition(),
+             "startup_url": edition.startup_url()},
+            status=status.HTTP_403_FORBIDDEN)
     global _consent_given
     payload = request.data
     if not isinstance(payload, dict) or not isinstance(payload.get("consent"), bool):
@@ -61,6 +69,15 @@ def federated_consent(request):
 @permission_classes([AllowAny])
 def federated_status(request):
     """GET /api/federated/status/ - session, runtime and privacy status."""
+    # OP95: federated learning (F3) is an edition-gated feature
+    from core import edition
+    if not edition.feature_enabled(edition.FEATURE_FEDERATED):
+        return Response(
+            {"error": "federated learning not available in this edition",
+             "edition": edition.get_edition(),
+             "startup_url": edition.startup_url(),
+             "available": False},
+            status=status.HTTP_403_FORBIDDEN)
     return Response(_session_status(), status=status.HTTP_200_OK)
 
 
@@ -110,6 +127,14 @@ def federated_round(request):
     Runs one federated calibration round (S9 core semantics via the FL2
     calibration service). Requires explicit consent (403 otherwise).
     """
+    # OP95: federated learning (F3) is an edition-gated feature
+    from core import edition
+    if not edition.feature_enabled(edition.FEATURE_FEDERATED):
+        return Response(
+            {"error": "federated learning not available in this edition",
+             "edition": edition.get_edition(),
+             "startup_url": edition.startup_url()},
+            status=status.HTTP_403_FORBIDDEN)
     body, code = run_federated_round(request.data)
     return Response(body, status=code)
 
@@ -118,6 +143,15 @@ def federated_round(request):
 @permission_classes([AllowAny])
 def federated_privacy(request):
     """GET /api/federated/privacy/ - privacy mechanisms status (FL3)."""
+    # OP95: federated learning (F3) is an edition-gated feature
+    from core import edition
+    if not edition.feature_enabled(edition.FEATURE_FEDERATED):
+        return Response(
+            {"error": "federated learning not available in this edition",
+             "edition": edition.get_edition(),
+             "startup_url": edition.startup_url(),
+             "available": False},
+            status=status.HTTP_403_FORBIDDEN)
     from services.federated_privacy import DPConfig, PrivacyAccountant
 
     accountant = PrivacyAccountant(DPConfig())

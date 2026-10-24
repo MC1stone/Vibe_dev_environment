@@ -34,6 +34,14 @@ def learning_path_sync(request):
     Body: a learning path dict (title, description, target_group, modules
     with objectives and content_ref).
     """
+    # OP95: learning platform (F1) is an edition-gated feature
+    from core import edition
+    if not edition.feature_enabled(edition.FEATURE_LEARNING):
+        return Response(
+            {"error": gettext("learning platform not available in this edition"),
+             "edition": edition.get_edition(),
+             "startup_url": edition.startup_url()},
+            status=status.HTTP_403_FORBIDDEN)
     payload = request.data
     if not isinstance(payload, dict) or not payload.get("title"):
         return Response({"error": gettext("title is required")},
@@ -82,5 +90,14 @@ def learning_path_sync(request):
 @permission_classes([AllowAny])
 def ilias_status(request):
     """GET /api/ilias/status/ - ILIAS container availability"""
+    # OP95: learning platform (F1) is an edition-gated feature
+    from core import edition
+    if not edition.feature_enabled(edition.FEATURE_LEARNING):
+        return Response(
+            {"error": gettext("learning platform not available in this edition"),
+             "edition": edition.get_edition(),
+             "startup_url": edition.startup_url(),
+             "available": False},
+            status=status.HTTP_403_FORBIDDEN)
     service = _get_service()
     return Response(service.status())

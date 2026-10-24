@@ -122,6 +122,7 @@
                                 </li>
                             </ul>
                         </li>
+                        {% if feature_sensors %}
                         <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/projects/sensors/" class="c-nav-main__action {% if request.path == '/projects/sensors/' or request.path == '/api/projects/sensors/diy/' %}c-nav-main__action--active{% endif %}">
                                 <span class="c-nav-main__label">{% trans "Sensoren" %}</span>
@@ -134,6 +135,15 @@
                                 </li>
                             </ul>
                         </li>
+                        {% else %}
+                        {# OP95: open edition without the sensor-database feature -> teaser link #}
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="{{ startup_url }}" target="_blank" rel="noopener" class="c-nav-main__action">
+                                <span class="c-nav-main__label">{% trans "Sensoren" %} <i class="bi bi-box-arrow-up-right" style="font-size:0.7em"></i></span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if feature_learning %}
                         <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/ilias/" class="c-nav-main__action {% if request.path == '/ilias/' %}c-nav-main__action--active{% endif %}">
                                 <span class="c-nav-main__label">{% trans "Lernen" %}</span>
@@ -144,13 +154,32 @@
                                         {% trans "ILIAS-Kurse" %}
                                     </a>
                                 </li>
+                                {% if feature_federated %}
                                 <li>
                                     <a href="/federated/" class="c-nav-sub__action {% if request.path == '/federated/' %}c-nav-sub__action--active{% endif %}">
                                         {% trans "Federated Learning" %}
                                     </a>
                                 </li>
+                                {% endif %}
                             </ul>
                         </li>
+                        {% else %}
+                        {# OP95: open edition without the learning-platform feature -> teaser link #}
+                        <li class="c-nav-main__item c-nav-main__item--desktop">
+                            <a href="{{ startup_url }}" target="_blank" rel="noopener" class="c-nav-main__action">
+                                <span class="c-nav-main__label">{% trans "Lernen" %} <i class="bi bi-box-arrow-up-right" style="font-size:0.7em"></i></span>
+                            </a>
+                            {% if not feature_federated %}
+                            <ul class="c-nav-sub">
+                                <li>
+                                    <a href="{{ startup_url }}" target="_blank" rel="noopener" class="c-nav-sub__action">
+                                        {% trans "Federated Learning" %} <i class="bi bi-box-arrow-up-right" style="font-size:0.55em"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                            {% endif %}
+                        </li>
+                        {% endif %}
                         {% if user.is_staff %}
                         <li class="c-nav-main__item c-nav-main__item--desktop">
                             <a href="/jobs/" class="c-nav-main__action {% if request.path in '/jobs/ /agents/ /analysis/' %}c-nav-main__action--active{% endif %}">
@@ -253,8 +282,13 @@
                             <p class="c-footer__legal">
                                 <a href="/projects/">{% trans "Projects" %}</a> |
                                 <a href="/projects/database/">{% trans "Spectrum database" %}</a> |
+                                {% if feature_sensors %}
                                 <a href="/projects/sensors/">{% trans "Sensors" %}</a> |
                                 <a href="/api/projects/sensors/diy/">{% trans "DIY-Spektrometer" %}</a>
+                                {% else %}
+                                {# OP95: open edition -> teaser link to the startup page #}
+                                <a href="{{ startup_url }}" target="_blank" rel="noopener">{% trans "Sensors" %} <i class="bi bi-box-arrow-up-right"></i></a>
+                                {% endif %}
                             </p>
                         </div>
                     </div>

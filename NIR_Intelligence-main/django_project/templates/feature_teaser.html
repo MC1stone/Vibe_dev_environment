@@ -1,0 +1,19 @@
+{% load i18n %}
+{# OP95: teaser shown in the open edition when a feature is not enabled.
+   `feature_name` = human-readable function name (already translated),
+   `feature_desc` = one-sentence description (already translated).
+   Honest by design: a labelled external link, never a dead button. #}
+<div class="container mt-4">
+    <div class="card shadow-sm border-warning">
+        <div class="card-body">
+            <h1 class="h4"><i class="bi bi-lock me-2"></i>{{ feature_name }}</h1>
+            <p class="text-muted">{{ feature_desc }}</p>
+            <p>
+                {% blocktrans %}Diese Funktion ist in der proprietären Startup-Variante von NIR-IP verfügbar.{% endblocktrans %}
+            </p>
+            <a href="{{ startup_url }}" class="btn btn-primary" target="_blank" rel="noopener">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% trans "Zur Startup-Seite" %}
+            </a>
+        </div>
+    </div>
+</div>

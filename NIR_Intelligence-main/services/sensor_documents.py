@@ -26,7 +26,12 @@ def sensor_documents(sensor_key: str, user: Optional[Any] = None) -> List[Any]:
 
     Returns a queryset of SensorDocument, newest first. Never raises.
     """
+    # OP95: sensor database (F2) is an edition-gated feature - no document
+    # access when the feature is disabled (fail-closed, empty result).
+    from edition import feature_enabled, FEATURE_SENSORS
     from core.models import SensorDocument
+    if not feature_enabled(FEATURE_SENSORS):
+        return SensorDocument.objects.none()
     if not sensor_key:
         return SensorDocument.objects.none()
     qs = SensorDocument.objects.filter(sensor_key=sensor_key)
