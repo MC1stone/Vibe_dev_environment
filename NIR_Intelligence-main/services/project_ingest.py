@@ -1404,9 +1404,51 @@ def _assess_metadata(datasets: List[Dict[str, Any]]) -> Dict[str, Any]:
         return bool(canonical) and canonical in fields_found
     missing = [f for f in recommended if not _found(f)]
     assessed["missing_recommended_fields"] = missing
-    assessed["overall_quality_score"] = round(
-        100.0 * (len(recommended) - len(missing)) / len(recommended), 1
-    ) if usable else 0.0
+    # OP94: Der Score zaehlt ALLE kanonischen Felder (CANONICAL_FIELDS,
+    # 16 Felder aus metadata_llm), nicht nur die 5 recommended ones.
+    # Nutzer-Feedback 2026-10-24: "Speichern ging schnell aber ohne
+    # Effekt - weiterhin 20 von 100 Punkten" - der User gab sample_id,
+    # location, notes etc. ein (canonical), aber der Score blieb bei
+    # 20% (1/5 recommended). Ehrlicher Score = Anteil der gesetzten
+    # kanonischen Felder an allen 16. Alias-Mapping in BEIDE Richtungen:
+    # ein Feld zaehlt als gesetzt, wenn sein Alias ODER sein kanonischer
+    # Name gesetzt ist (operator/operator_name, instrument/
+    # instrument_type, acquisition_time/timestamp).
+    try:
+        from services.metadata_llm import CANONICAL_FIELDS as _CANONICAL
+    except Exception:
+        _CANONICAL = []
+    # Beide Richtungen des Alias-Mappings: kanonischer Name und Alias
+    # zeigen auf denselben Eintrag in CANONICAL_FIELDS.
+    _ALIAS_TO_CANONICAL = {v: k for k, v in RECOMMENDED_FIELD_ALIASES.items()}
+    _CANONICAL_TO_ALIAS = dict(RECOMMENDED_FIELD_ALIASES)
+    canonical_found = set()
+    for field_name in fields_found:
+        # Alias -> kanonisch (operator -> operator_name)
+        canonical_name = _ALIAS_TO_CANONICAL.get(field_name, field_name)
+        if canonical_name in _CANONICAL:
+            canonical_found.add(canonical_name)
+        # Kanonisch -> Alias (operator_name -> operator): der Alias ist
+        # KEIN eigener canonical field, aber wenn der kanonische Name
+        # direkt gesetzt ist, zaehlt er natuerlich.
+        if field_name in _CANONICAL:
+            canonical_found.add(field_name)
+    # Zusaetzlich: Felder, die ueber ihren Alias gesetzt sind, aber deren
+    # kanonischer Name nicht in fields_found steht (nur Alias vorhanden).
+    for alias, canonical in RECOMMENDED_FIELD_ALIASES.items():
+        if alias in fields_found and canonical in _CANONICAL:
+            canonical_found.add(canonical)
+    if _CANONICAL:
+        assessed["overall_quality_score"] = round(
+            100.0 * len(canonical_found) / len(_CANONICAL), 1
+        ) if usable else 0.0
+        assessed["canonical_fields_found"] = sorted(canonical_found)
+        assessed["canonical_fields_total"] = len(_CANONICAL)
+    else:
+        # Fallback (kein metadata_llm verfuegbar): alte 5-Felder-Logik
+        assessed["overall_quality_score"] = round(
+            100.0 * (len(recommended) - len(missing)) / len(recommended), 1
+        ) if usable else 0.0
     # OP32: standards compliance - which of the NIR-relevant standards
     # (ASTM E1655, ISO 12099, ...) the collected fields satisfy, presented
     # not as a percentage but as a per-standard present/missing verdict so
@@ -1645,7 +1687,7 @@ class _PrepTrace:
         return dict(report.get("progress") or {})
 
 
-def build_preparation_report(project) -> Dict[str, Any]:
+def build_preparation_report(project, generation: int = None) -> Dict[str, Any]:
     """Build the full phase-1 preparation report for an AnalysisProject.
 
     The report contains: usable datasets (measurement series + metadata),
@@ -1653,6 +1695,13 @@ def build_preparation_report(project) -> Dict[str, Any]:
     stored on project.preparation_report and rendered to the user.
     User-entered metadata overrides (project.metadata_overrides, OP13) are
     applied per file before the assessment.
+
+    OP94: ``generation`` ist ein Race-Guard. Wenn angegeben, wird die
+    Generation aus ``project.preparation_report['preparation_generation']``
+    verglichen — stimmt sie nicht mehr (ein neuerer Reingest/Metadaten-Save
+    hat inzwischen gestartet), wird der fertige Report NICHT geschrieben
+    (der neuere Thread gewinnt, sein Report landet in der DB). Ohne
+    ``generation`` (None) wird immer geschrieben (abwaertskompatibel).
     """
     overrides = getattr(project, "metadata_overrides", None) or {}
     # OP77: Freie Analyse-Wuensche (vom Upload) - generisch ausgefuehrt
@@ -1817,6 +1866,12 @@ def build_preparation_report(project) -> Dict[str, Any]:
         # ausfuehren' verloren.
         "user_options": user_options,
     }
+    # OP94: Generation uebernehmen, damit der naechste Reingest/Metadaten-
+    # Save korrekt inkrementieren kann (sonst startet er wieder bei 0/1).
+    current_gen = ((getattr(project, "preparation_report", None) or {})
+                   .get("preparation_generation"))
+    if current_gen is not None:
+        report["preparation_generation"] = current_gen
     # OP53: sensor database reference check - does the sensor used in
     # this new project have a reference entry (documents) in the sensor
     # database? Honest result with links, appended to the report.
@@ -1856,6 +1911,21 @@ def build_preparation_report(project) -> Dict[str, Any]:
                  .get("fusion_merge_note"))
     if hook_note:
         report["fusion_merge_note"] = hook_note
+    # OP94: Race-Guard — nur schreiben, wenn die Generation noch stimmt.
+    # Ein konkurrierender Thread (Reingest vs. Metadaten-Save) hat sonst
+    # seinen fertigen Report MIT datasets geschrieben, obwohl ein neuerer
+    # Thread laeuft -> die Fahrplan-Karte erscheint nicht (Nutzer-Befund:
+    # "Neue Aufbereitung fuehrt zu keiner neuen Karte").
+    if generation is not None:
+        current = ((getattr(project, "preparation_report", None) or {})
+                   .get("preparation_generation"))
+        if current != generation:
+            logger.info(
+                "Preparation report for project %s verworfen (Generation "
+                "%s != %s) — ein neuerer Thread hat uebernommen",
+                project.id, generation, current,
+            )
+            return report
     project.preparation_report = report
     project.save(update_fields=["preparation_report", "updated_at"])
     logger.info(

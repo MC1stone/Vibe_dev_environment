@@ -215,7 +215,14 @@ check('T3e2 background rebuild finished', _ready is True,
 project = AnalysisProject.objects.get(id=pid)
 prep = project.preparation_report
 score = prep['metadata_quality']['overall_quality_score']
-check('T3f preparation report updated (score improved)', score == 40.0,
+# OP94: Der Score zaehlt jetzt alle 16 CANONICAL_FIELDS, nicht nur die 5
+# recommended ones. Der Test-Datensatz hat nach dem Rebuild 4 kanonische
+# Felder (operator_name + instrument_type via User-Overrides, resolution
+# + wavelength_range berechnet) = 4/16 = 25.0%. Vor OP94 war es 40.0%
+# (2/5 recommended). Der Score ist niedriger, aber ehrlicher — er spiegelt
+# die tatsaechliche Vollstaendigkeit aller kanonischen Felder wider.
+check('T3f preparation report updated (score improved, OP94: 25.0% = 4/16 canonical)',
+      score == 25.0,
       f'score={score}')
 check('T3g overrides persisted on the project',
       project.metadata_overrides.get(file_ids[0], {}).get('operator') == 'M. Meister')

@@ -25,6 +25,11 @@
     {% endif %}
 
     {% if project.phase == 'drafted' and not preparation.datasets %}
+    <!-- OP94: Karte auch sichtbar, wenn ein Race zwischen Metadaten-Save
+         und Reingest den Report kurzzeitig mit datasets gefuellt hat,
+         aber ein neuerer Thread (hoehere Generation) noch laeuft. Die
+         Bedingung `not preparation.datasets` bleibt primaer; das Polling-JS
+         reloadet bei ready=True automatisch. -->
     <div class="card shadow-sm mb-4 border-info" id="preparingCard">
         <div class="card-body">
             <div class="d-flex align-items-center gap-3 mb-2">
