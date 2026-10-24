@@ -151,6 +151,11 @@ class FederatedCalibrationService:
     """
 
     def __init__(self, n_components: int = 2):
+        # OP95: federated learning (F3) is an edition-gated feature
+        from edition import feature_enabled, FEATURE_FEDERATED, get_edition
+        if not feature_enabled(FEATURE_FEDERATED):
+            raise RuntimeError(
+                f"Federated learning not available in edition '{get_edition()}'")
         self.n_components = n_components
         self.aggregator = FederatedPLSAggregator()
         self.round_id = 0

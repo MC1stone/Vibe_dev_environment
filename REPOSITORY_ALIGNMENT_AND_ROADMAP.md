@@ -973,6 +973,28 @@ erscheint nicht.
 11. UI? Score steigt ehrlich (alle canonical Felder zaehlen); Karte
     erscheint auch waehrend des Race-Fensters (progress vorhanden).
 
+### OP95 — Software-Teilung: Open-Source-Edition vs. proprietäre Startup-Edition — ✅ ERLEDIGT (2026-10-24, Branch vibe/op95-software-split-f7b35d)
+
+Startup-Planung (2026-10-24): Die Software wird in 2 Teile geteilt. Die
+Open-Source-Edition (MIT) enthält die Grundfunktionalität; für die drei
+erweiterten Funktionen (Lernplattform/ILIAS F1, Sensor-Datenbank F2,
+Federated Learning F3) zeigt sie nur Teaser-Links zu einer Startup-Seite
+(Platzhalter-URL). Die Funktionen sind selektiv freischaltbar
+(Feature-Flags). Die proprietäre Edition enthält alle Funktionen zusätzlich
+zum Open-Source-Content. Plan: `SOFTWARE_SPLIT_PLAN.md`.
+
+- `django_project/core/edition.py` + top-level `edition.py`: Edition
+  (`NIR_IP_EDITION=open|pro`) + Feature-Flags + `startup_url()`.
+- Dreifache Absicherung: Navigation (Teaser-Links in `base.html` /
+  `dashboard_start.html`), Views/URLs (Teaser-Seite bzw. 403 mit
+  Edition-Note), Services/Agenten (fail-closed).
+- settings: `FLOWERAI_ENABLED`/`FEDERATED_LEARNING_ENABLED`/`ILIAS_ENABLED`
+  mit den Feature-Flags AND-verknüpft.
+- Docker: ilias/flower-Container mit `profiles: ["pro"]`.
+- Test-Matrix `tests/test_op95_edition_split.py`: **42/42 grün**;
+  Regression OP29/OP49/OP53/S8/S9/FL2/FL3 grün (pro), OP68 44/44 in
+  BEIDEN Editionen (Referenz-Protokoll-Vertrag bleibt Grundfunktionalität).
+
 ### OP93 — Metadaten-Speichern hängt endlos ("Speichern..." stoppt nie) — ✅ ERLEDIGT (2026-10-23, Branch vibe/op93-metadata-save-hang-e1efba)
 Befund aus Nutzer-Feedback (2026-10-23, nach OP92-Merge): Metadaten im
 Editor ergänzt + "Speichern" gedrückt -> Button bleibt auf "Speichern..."

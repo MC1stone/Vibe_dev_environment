@@ -42,6 +42,11 @@ class ILIASAgent(BaseAgent):
         try:
             self.status = AgentStatus.PROCESSING
             self.logger.info("Starting ILIAS agent execution")
+            # OP95: learning platform (F1) is an edition-gated feature
+            from edition import feature_enabled, FEATURE_LEARNING, get_edition
+            if not feature_enabled(FEATURE_LEARNING):
+                return self._handle_error(ValueError(
+                    f"Learning platform not available in edition '{get_edition()}'"))
 
             context = context or {}
             operation = str(context.get("operation", "status"))

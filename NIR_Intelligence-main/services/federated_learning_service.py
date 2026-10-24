@@ -178,6 +178,11 @@ class FederatedLearningService:
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
+        # OP95: federated learning (F3) is an edition-gated feature
+        from edition import feature_enabled, FEATURE_FEDERATED, get_edition
+        if not feature_enabled(FEATURE_FEDERATED):
+            raise RuntimeError(
+                f"Federated learning not available in edition '{get_edition()}'")
         self.config = config or {}
         self.strategy = self.config.get("strategy", "fedavg")
         self.proximal_mu = float(self.config.get("proximal_mu", 0.1))

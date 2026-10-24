@@ -417,6 +417,12 @@ def _usage_from_database(user_id: Optional[Any] = None) -> List[Dict[str, Any]]:
 def get_sensor_profiles(user_id: Optional[Any] = None) -> Dict[str, Any]:
     """Full sensor catalog: registered adapters (static profiles), setting
     options and the usage actually recorded in the existing database."""
+    # OP95: sensor database (F2) is an edition-gated feature. The catalog
+    # view is gated; analysis-internal setting assessment stays available.
+    from edition import feature_enabled, FEATURE_SENSORS, get_edition
+    if not feature_enabled(FEATURE_SENSORS):
+        raise RuntimeError(
+            f"Sensor database not available in edition '{get_edition()}'")
     profiles = _registry_profiles()
     usage = _usage_from_database(user_id=user_id)
     used_models = {entry["model_id"] for entry in usage if entry["model_id"]}

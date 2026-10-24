@@ -122,6 +122,7 @@ TEMPLATES = [
                 'django.template.context_processors.i18n',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.edition_features',
             ],
         },
     },
@@ -344,12 +345,27 @@ APP_VERSION = '1.0.0'
 APP_DESCRIPTION = 'Advanced NIR Spectroscopy Analysis Platform'
 
 # FlowerAI and Federated Learning Settings
-FLOWERAI_ENABLED = os.getenv('FLOWERAI_ENABLED', 'True').lower() == 'true'
+# OP95: the federated-learning feature flag (core.edition) is the master
+# switch for F3; FLOWERAI_ENABLED/FEDERATED_LEARNING_ENABLED stay as
+# transport-level detail flags and are AND-ed with the feature flag so a
+# disabled edition can never reach the Flower transport.
+from core import edition as _edition  # noqa: E402
+FLOWERAI_ENABLED = (
+    os.getenv('FLOWERAI_ENABLED', 'True').lower() == 'true'
+    and _edition.feature_enabled(_edition.FEATURE_FEDERATED)
+)
 FLOWERAI_SERVER_URL = os.getenv('FLOWERAI_SERVER_URL', 'http://flower_server:5555')
-FEDERATED_LEARNING_ENABLED = os.getenv('FEDERATED_LEARNING_ENABLED', 'True').lower() == 'true'
+FEDERATED_LEARNING_ENABLED = (
+    os.getenv('FEDERATED_LEARNING_ENABLED', 'True').lower() == 'true'
+    and _edition.feature_enabled(_edition.FEATURE_FEDERATED)
+)
 
 # ILIAS Integration Settings
-ILIAS_ENABLED = os.getenv('ILIAS_ENABLED', 'True').lower() == 'true'
+# OP95: ILIAS_ENABLED is AND-ed with the learning-platform feature flag (F1).
+ILIAS_ENABLED = (
+    os.getenv('ILIAS_ENABLED', 'True').lower() == 'true'
+    and _edition.feature_enabled(_edition.FEATURE_LEARNING)
+)
 ILIAS_API_URL = os.getenv('ILIAS_API_URL', 'http://ilias:80')
 ILIAS_URL = os.getenv('ILIAS_URL', 'http://ilias:80')
 ILIAS_EXTERNAL_URL = os.getenv('ILIAS_EXTERNAL_URL', 'http://localhost:8080')

@@ -31,6 +31,24 @@ from api.views import (
 )
 from api.file_views import FileCrewReportView
 from api.i18n_views import js_catalog_json, i18n_status
+from core.feature_guard import render_teaser
+from core import edition as _edition
+
+
+def edition_page_guard(feature):
+    """OP95: wrap a page view so a disabled feature renders the teaser page."""
+    def decorator(view):
+        def guarded(request, *args, **kwargs):
+            if not _edition.feature_enabled(feature):
+                return render_teaser(request, feature)
+            return view(request, *args, **kwargs)
+        return guarded
+    return decorator
+
+
+def feature_teaser_view(request, feature):
+    """OP95: standalone teaser page for an edition-gated feature."""
+    return render_teaser(request, feature)
 from api.quarto_views import (
     generate_spectral_report, generate_metadata_report,
     get_report_templates, check_quarto_status,
@@ -80,9 +98,14 @@ urlpatterns = [
     # Authentication Views (Traditional Django)
     
     # FlowerAI and ILIAS Integration API
+    # OP95: F1 (learning platform) and F3 (federated learning) are
+    # edition-gated - the views answer 403 with an honest edition note
+    # when the feature is disabled in this deployment.
     path('api/auth/flowerai/', FlowerAIAuthView.as_view(), name='flowerai-auth'),
     path('api/auth/ilias/', ILIASAuthView.as_view(), name='ilias-auth'),
     path('api/auth/federated/', FederatedLearningView.as_view(), name='federated-learning-auth'),
+    # OP95: teaser page for edition-gated features (open edition)
+    path('feature/<str:feature>/', feature_teaser_view, name='feature-teaser'),
     
     # System
     path('api/health/', HealthCheckView.as_view(), name='health-check'),
@@ -93,15 +116,21 @@ urlpatterns = [
     
     # Main Entry Point
     path('', DashboardStartView.as_view(), name='home'),
-    path('intro/spectroscopy/', IntroSpectroscopyView.as_view(), name='intro-spectroscopy'),
+    # OP95: intro page is part of the learning platform (F1) -> guarded
+    path('intro/spectroscopy/', edition_page_guard('learning_platform')(
+        IntroSpectroscopyView.as_view()), name='intro-spectroscopy'),
     path('dashboard/', TemplateView.as_view(template_name='dashboard_colorful.html'), name='dashboard'),
     path('agents/', user_passes_test(lambda u: u.is_staff, login_url='/login/')(TemplateView.as_view(template_name='agents.html')), name='agents-page'),
     path('spectra/', ensure_csrf_cookie(
         TemplateView.as_view(template_name='spectra.html')),
         name='spectra-page'),
     path('files/', TemplateView.as_view(template_name='files.html'), name='files-page'),
-    path('analysis/report/<uuid:file_id>/', FileCrewReportView.as_view(), name='file-crew-report'),    path('chatbot/', TemplateView.as_view(template_name='chatbot.html'), name='chatbot-page'),    path('ilias/', TemplateView.as_view(template_name='ilias.html'), name='ilias-page'),
-    path('federated/', TemplateView.as_view(template_name='federated.html'), name='federated-page'),
+    path('analysis/report/<uuid:file_id>/', FileCrewReportView.as_view(), name='file-crew-report'),    path('chatbot/', TemplateView.as_view(template_name='chatbot.html'), name='chatbot-page'),
+    # OP95: ilias page is F1, federated page is F3 -> guarded
+    path('ilias/', edition_page_guard('learning_platform')(
+        TemplateView.as_view(template_name='ilias.html')), name='ilias-page'),
+    path('federated/', edition_page_guard('federated_learning')(
+        TemplateView.as_view(template_name='federated.html')), name='federated-page'),
     path('analysis/', user_passes_test(lambda u: u.is_staff, login_url='/login/')(TemplateView.as_view(template_name='analysis.html')), name='analysis-page'),
     path('jobs/', user_passes_test(lambda u: u.is_staff, login_url='/login/')(TemplateView.as_view(template_name='jobs.html')), name='jobs-page'),
     path('settings/', ensure_csrf_cookie(
@@ -147,8 +176,14 @@ urlpatterns += i18n_patterns(
     path('files/', TemplateView.as_view(template_name='files.html'), name='files-page'),
     path('analysis/', user_passes_test(lambda u: u.is_staff, login_url='/login/')(TemplateView.as_view(template_name='analysis.html')), name='analysis-page'),
     path('chatbot/', TemplateView.as_view(template_name='chatbot.html'), name='chatbot-page'),
-    path('ilias/', TemplateView.as_view(template_name='ilias.html'), name='ilias-page'),
-    path('federated/', TemplateView.as_view(template_name='federated.html'), name='federated-page'),
+    # OP95: intro page is part of the learning platform (F1) -> guarded
+    path('intro/spectroscopy/', edition_page_guard('learning_platform')(
+        IntroSpectroscopyView.as_view()), name='intro-spectroscopy'),
+    # OP95: ilias page is F1, federated page is F3 -> guarded
+    path('ilias/', edition_page_guard('learning_platform')(
+        TemplateView.as_view(template_name='ilias.html')), name='ilias-page'),
+    path('federated/', edition_page_guard('federated_learning')(
+        TemplateView.as_view(template_name='federated.html')), name='federated-page'),
     path('jobs/', user_passes_test(lambda u: u.is_staff, login_url='/login/')(TemplateView.as_view(template_name='jobs.html')), name='jobs-page'),
     path('settings/', ensure_csrf_cookie(
         TemplateView.as_view(template_name='settings.html')),
@@ -164,7 +199,7 @@ urlpatterns += i18n_patterns(
 _ui_duplicate_names = {
     'home', 'dashboard', 'agents-page', 'spectra-page', 'files-page',
     'analysis-page', 'chatbot-page', 'ilias-page', 'federated-page',
-    'jobs-page', 'settings-page', 'documentation-page',
+    'jobs-page', 'settings-page', 'documentation-page', 'intro-spectroscopy',
 }
 urlpatterns = [
     p for p in urlpatterns

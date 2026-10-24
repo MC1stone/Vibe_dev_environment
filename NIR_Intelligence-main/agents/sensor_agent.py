@@ -70,6 +70,11 @@ class SensorAgent(BaseAgent):
         try:
             self.status = AgentStatus.PROCESSING
             self.logger.info("Starting sensor agent execution")
+            # OP95: sensor database (F2) is an edition-gated feature
+            from edition import feature_enabled, FEATURE_SENSORS, get_edition
+            if not feature_enabled(FEATURE_SENSORS):
+                return self._handle_error(ValueError(
+                    f"Sensor database not available in edition '{get_edition()}'"))
             context = context or {}
             operation = str(context.get("operation", "collect"))
             if operation == "collect":

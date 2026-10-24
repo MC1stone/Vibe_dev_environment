@@ -3,6 +3,70 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
+## Current Task: OP95 - Software-Teilung (Open-Source-Edition vs. proprietäre Startup-Edition)
+### Ziel
+Nutzer-Auftrag (2026-10-24, Startup-Planung): Die Software wird in 2 Teile
+geteilt. Die Open-Source-Variante (MIT) enthält die Grundfunktionalität; für
+die erweiterten Funktionen (Lernplattform/ILIAS F1, Sensor-Datenbank F2,
+Federated Learning F3) enthält sie nur Links zu einer Startup-Seite
+(Platzhalter-URL). Die Funktionen müssen selektiv freischaltbar sein. Die
+proprietäre Software enthält diese Funktionen zusätzlich zum Open-Source-Content.
+Plan: `../SOFTWARE_SPLIT_PLAN.md`.
+### Umsetzung
+- `django_project/core/edition.py` (neu): Edition (`NIR_IP_EDITION=open|pro`)
+  + Feature-Flags (`NIR_IP_FEATURE_LEARNING/SENSORS/FEDERATED`) +
+  `feature_enabled()` + `startup_url()` (Default open -> F1/F2/F3 aus,
+  pro -> an; Einzelflag schlägt Edition-Default).
+- Top-level `edition.py` (neu): Re-Export für standalone-Kontexte (Agenten,
+  Services, Flower-Container, Testmatrizen ohne django_project auf sys.path).
+- `django_project/core/context_processors.py` (neu): Feature-Status in alle
+  Templates (registriert in settings.py TEMPLATES).
+- `django_project/core/feature_guard.py` (neu): `render_teaser()`,
+  `require_feature()`, `guarded()`, `FeatureUnavailable`, `check_feature()`.
+- `django_project/templates/feature_teaser.html` (neu): ehrlicher Teaser mit
+  Link zur Startup-Seite (kein toter Button, keine Simulation).
+- `templates/base.html` + `dashboard_start.html`: Navigation und Footer -
+  Sensoren (F2), Lernen/ILIAS + Federated (F1/F3), Intro-Link -> Teaser-Link
+  zur Startup-Seite wenn Feature aus.
+- View/URL-Guards: `nir_web/urls.py` (Intro/ILIAS/Federated-Seiten +
+  Teaser-Route `feature/<str:feature>/`), `api/views.py` (FlowerAIAuthView,
+  ILIASAuthView, FederatedLearningView je get/post -> 403 mit Edition-Note),
+  `api/project_views.py` (SensorList/Detail/Summary/DocumentUpload/
+  DocumentDelete/Diy/DiyDetail -> Teaser-Seite bzw. 403),
+  `api/ilias_views.py` + `api/federated_views.py` (alle Endpunkte -> 403).
+- settings.py: `FLOWERAI_ENABLED`/`FEDERATED_LEARNING_ENABLED`/`ILIAS_ENABLED`
+  mit den Feature-Flags AND-verknuepft (dreifache Absicherung).
+- Service/Agenten-Guards (fail-closed): `services/sensor_catalog.py`
+  (get_sensor_profiles), `services/sensor_documents.py` (sensor_documents ->
+  empty), `services/ilias_learning_service.py` + `services/ilias_api_service.py`
+  (Factories), `services/federated_learning_service.py` +
+  `services/federated_calibration.py` (Konstruktoren),
+  `agents/sensor_agent.py` + `agents/flower_agent.py` + `agents/ilias_agent.py`
+  (execute -> ehrlicher AgentOutput-Fehler).
+- Docker: `docker-compose.yml` - ilias, ilias_db, flower_server,
+  flower_client, ilias_course_agent mit `profiles: ["pro"]`; django_app
+  bekommt NIR_IP_EDITION/NIR_IP_STARTUP_URL/NIR_IP_FEATURE_* aus .env.
+- `.env.example`: Edition-Block dokumentiert.
+- `LICENSE` (neu, MIT) + README: Editions-Abschnitt + Lizenz-Hinweis.
+- Artikel-Konsistenz: `../ARTICLE_FINAL_VERSION_MARKED.md` §3.2/§6.7 -
+  Edition-Hinweis (Sensor-DB-Oberfläche in Open-Edition als Vorschau/Teaser;
+  Referenz-Protokoll-Vertrag bleibt Grundfunktionalität).
+### Verifikation
+- Neue Matrix tests/test_op95_edition_split.py: **42/42 grün**
+  (Edition-Defaults, selektive Overrides, fail-closed, Platzhalter-URL,
+  Service-Guards, Dokument-Zugriff, Nav-Teaser, Page-Guards, API-403,
+  Settings-Kopplung, pro-Edition green, Compose-Profile).
+- Regression (pro-Edition, Features an): OP29 53/53, OP49 23/23, OP53 46/46,
+  S8 26/26, S9 28/28, FL2 20/20, FL3 25/25.
+- Regression (open-Edition, Fusion-Kern): OP68 44/44 in BEIDEN Editionen
+  (Referenz-Protokoll-Vertrag bleibt Grundfunktionalität),
+  test_workflow_smoke 15/15, test_ui_bedienelemente 5/5, test_s6_chatbot 17/17.
+- `manage.py check` OK; docker-compose.yml valides YAML.
+### Out of Scope
+- Kommerzielle Lizenz-Texte der pro-Edition (Start-up-seitig)
+- Eine tatsächliche Startup-URL (Platzhalter genügt, via .env konfigurierbar)
+- Umbau der Analyse-Kernfunktionalität (bleibt in beiden Editionen identisch)
+
 ## Current Task: OP88 - Review & Optimierung der uebrigen Framework-Agenten
 ### Ziel
 Nutzer-Auftrag (2026-10-22): 'Bitte ueberpruefe die anderen Agenten ebenso

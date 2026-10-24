@@ -119,6 +119,8 @@ What no device in any class ships with is the analytical infrastructure around t
 
 The database feeds back into analysis: the metadata agent's plausibility checks use the known device limits, the fusion branch's reference-protocol compliance check (§6.7) reads the sensor's declared references, and the introduction page teaches device-specific measurement practice — the same dark/white reference protocol the fusion branch enforces. For the public sector this is the difference between owning a sensor and being able to defend its measurements: the database turns scattered device knowledge into one governed, inspectable record per instrument.
 
+🟡 **Edition note (software split, OP95):** NIR-IP ships in two editions. The **open-source edition** (MIT) contains the full core functionality — including the reference-measurement protocol contract of Section 6.7, which is part of the fusion core and remains fully available; the sensor database *interface* (catalog pages, document management, AI summaries) appears as a preview linking to the provider's information page. The **proprietary edition** contains the sensor database in full, together with the learning platform and federated learning. The scientific description in this article covers the platform's capabilities; the edition note states honestly which interface is available in which distribution.
+
 ---
 
 ## 4. Notation of the Loop
@@ -233,6 +235,8 @@ The decisive diagnostic is the **confounding diagnosis**. Without shared measure
 
 Three properties make this contract suitable for the public sector. **Comparability:** any device that measures the two references can be placed on a common radiometric scale — a school's DIY spectrometer and a municipal lab's consumer sensor become comparable without either institution buying anything beyond a diffuse white standard and a light-tight cover. **Teachability:** the platform's introduction page teaches exactly this protocol — lighting conditions, the dark/white reference procedure, the metadata contract — with the sensor database (§3.2) feeding device-specific guidance; one procedure, every device. **Trust without certification:** dark and white references are reproducible by anyone, and the repetition spread states the confidence honestly; the platform never simulates a gain curve when the contract is not met — it reports "not estimable" together with the protocol text, as it did for both tomato sources. The measurement-condition contract, not a device list, is what makes the infrastructure sensor-agnostic — and it is the same contract that scales to every future sensor added to the growing database.
 
+🟡 **Edition note (software split, OP95):** The standardized test unit — the reference-measurement protocol contract itself, its compliance check, the radiometric evaluation, and the honest "not estimable" reporting — is **core functionality** and is fully contained in the open-source edition. What is edition-gated is the surrounding *learning platform* (the introduction page as a guided course, ILIAS integration) and the *sensor database interface* (§3.2); both are fully available in the proprietary edition.
+
 Federation remains the third level of the iterative method (Section 5.6): each aggregation round is a recorded iteration of the shared model, and the discussion layer (Section 6.5) receives the full comparison — metrics, hit quotas, significance verdict, corrected verdict, conclusion — as context, so the results can be examined in dialogue with the platform's reasoning assistant rather than only read.
 
 ---
@@ -328,7 +332,7 @@ Federation remains the third level of the iterative method (Section 5.6): each a
 | 8b | Band-Matrix-Abbildung | §6.7 | Export aus Live-Report + Bildunterschrift | Text steht im Canvas |
 | 9 | Grafiken final einbauen | §1.3/§3.2/§6.2/§6.7 | fig2 (§3), fig1+fig3 (§6.7), 🟡 **[NEU]** fig5 Sensor-Datenbank (§3.2), fig6+fig7 Screenshots Metadaten-Governance (§6.2), fig8 standardisierte Testeinheit (§6.7) — SVG oder PNG | article_figures/ |
 | 14 | 🟡 **[NEU]** Neuausrichtung Öffentlicher Sektor | Titel, Abstract, §1.2, §1.3, §1.5, §3.2, §5, §6.2, §6.7, §7.3, §8 | Artikel ausschließlich auf öffentliche Sektor ausrichten; Sensor-Datenbank + standardisierte Testeinheit als Artikel-Bestandteil; Software-Teilung dokumentieren | ARTICLE_UPDATE_PUBLIC_SECTOR.md |
-| 15 | 🟡 **[NEU]** Software-Teilung (Teil 2) | — | Zweiter Arbeitsschritt: Software in 2 Teile teilen (öffentlicher Sektor / kommerziell) — folgt nach dieser Artikel-Anpassung | Roadmap S1–S9 |
+| 15 | 🟢 **[ERLEDIGT — OP95]** Software-Teilung (Teil 2) | `NIR_Intelligence-main/` (edition.py, feature_guard.py, Guards, Docker-Profile) | Software in 2 Teile geteilt: Open-Source (Grundfunktionalität + Teaser-Links) / proprietär (alle Funktionen). Selektiv freischaltbar via Feature-Flags. Edition-Hinweise in §3.2 und §6.7 ergänzt | SOFTWARE_SPLIT_PLAN.md + tests/test_op95_edition_split.py (42/42) |
 | 10 | Referenzen | Literaturverzeichnis | [1]–[28] + 5 neue Zitate ergänzen | Checkliste §9 |
 | 11 | Danksagung/COI | Ack./Conflicts | Tester ergänzen, Varianten prüfen | Checkliste |
 | 12 | Supplementary/DOI | Supp. Materials | Repository-DOI nach Deposition | Checkliste |

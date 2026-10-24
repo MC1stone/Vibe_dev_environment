@@ -679,9 +679,24 @@ class CustomLogoutView(TemplateView):
 class FlowerAIAuthView(APIView):
     """Handle FlowerAI authentication and federated learning setup"""
     permission_classes = [IsAuthenticated]
-    
+
+    def _edition_block(self):
+        # OP95: federated learning (F3) is an edition-gated feature
+        from core import edition
+        if not edition.feature_enabled(edition.FEATURE_FEDERATED):
+            return Response({
+                'status': 'error',
+                'message': gettext('Federated learning not available in this edition'),
+                'edition': edition.get_edition(),
+                'startup_url': edition.startup_url(),
+            }, status=status.HTTP_403_FORBIDDEN)
+        return None
+
     def get(self, request):
         """Get FlowerAI authentication status and configuration"""
+        blocked = self._edition_block()
+        if blocked is not None:
+            return blocked
         user = request.user
         
         # Check if user has FlowerAI enabled
@@ -704,6 +719,9 @@ class FlowerAIAuthView(APIView):
     
     def post(self, request):
         """Enable or disable FlowerAI integration for the user"""
+        blocked = self._edition_block()
+        if blocked is not None:
+            return blocked
         user = request.user
         
         # Update user preferences for FlowerAI
@@ -729,9 +747,24 @@ class FlowerAIAuthView(APIView):
 class ILIASAuthView(APIView):
     """Handle ILIAS platform integration and authentication"""
     permission_classes = [IsAuthenticated]
-    
+
+    def _edition_block(self):
+        # OP95: learning platform (F1) is an edition-gated feature
+        from core import edition
+        if not edition.feature_enabled(edition.FEATURE_LEARNING):
+            return Response({
+                'status': 'error',
+                'message': gettext('Learning platform not available in this edition'),
+                'edition': edition.get_edition(),
+                'startup_url': edition.startup_url(),
+            }, status=status.HTTP_403_FORBIDDEN)
+        return None
+
     def get(self, request):
         """Get ILIAS integration status and configuration"""
+        blocked = self._edition_block()
+        if blocked is not None:
+            return blocked
         user = request.user
         
         # Check if user has ILIAS integration enabled
@@ -754,6 +787,9 @@ class ILIASAuthView(APIView):
     
     def post(self, request):
         """Enable or disable ILIAS integration for the user"""
+        blocked = self._edition_block()
+        if blocked is not None:
+            return blocked
         user = request.user
         
         # Update user preferences for ILIAS
@@ -779,9 +815,24 @@ class ILIASAuthView(APIView):
 class FederatedLearningView(APIView):
     """Handle federated learning configuration and data sharing preferences"""
     permission_classes = [IsAuthenticated]
-    
+
+    def _edition_block(self):
+        # OP95: federated learning (F3) is an edition-gated feature
+        from core import edition
+        if not edition.feature_enabled(edition.FEATURE_FEDERATED):
+            return Response({
+                'status': 'error',
+                'message': gettext('Federated learning not available in this edition'),
+                'edition': edition.get_edition(),
+                'startup_url': edition.startup_url(),
+            }, status=status.HTTP_403_FORBIDDEN)
+        return None
+
     def get(self, request):
         """Get federated learning configuration for the user"""
+        blocked = self._edition_block()
+        if blocked is not None:
+            return blocked
         user = request.user
         
         try:
@@ -813,6 +864,9 @@ class FederatedLearningView(APIView):
     
     def post(self, request):
         """Update federated learning preferences"""
+        blocked = self._edition_block()
+        if blocked is not None:
+            return blocked
         user = request.user
         
         try:

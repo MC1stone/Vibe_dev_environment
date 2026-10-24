@@ -163,7 +163,12 @@
                     <div class="phase-card__title">{% trans "Einführung: Richtig messen" %}</div>
                     <div class="phase-card__desc">{% trans "Wie führe ich eine Spektroskopie-Messung durch? Licht, Schwarz/Weiß-Abgleich und Metadaten - für Einsteiger erklärt." %}</div>
                 </div>
+                {% if feature_learning %}
                 <a href="/intro/spectroscopy/" class="btn btn-sm btn-outline-primary">{% trans "Zur Einführung" %}</a>
+                {% else %}
+                {# OP95: open edition without the learning-platform feature -> teaser link #}
+                <a href="{{ startup_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">{% trans "Mehr erfahren" %} <i class="bi bi-box-arrow-up-right"></i></a>
+                {% endif %}
             </div>
         </div>
         <div class="col-md-6 col-12">
