@@ -847,7 +847,7 @@ aufeinanderhaengende Bugs, die zusammen den endlosen Spinner erklaeren.
   + Doku; keine neuen Abhaengigkeiten.
 - OP89-Gate gegen origin/main GREEN (covers: api/project_views.py).
 
-### OP94 — Metadaten-Score 20/100 trotz Eingaben + Reingest zeigt keine Fahrplan-Karte — IN ARBEIT (2026-10-24)
+### OP94 — Metadaten-Score 20/100 trotz Eingaben + Reingest zeigt keine Fahrplan-Karte — ✅ ERLEDIGT (2026-10-24, Branch vibe/op94-metadata-score-reingest-card-e1efba)
 Zwei Bugs aus Nutzer-Feedback (2026-10-24, nach OP93-Merge):
 
 **Bug A: "Speichern ging schnell aber ohne Effekt — weiterhin 20 von 100 Punkten"**
@@ -933,21 +933,23 @@ erscheint nicht.
   ehrlich dokumentiert).
 
 ### Success Criteria
-- Neue Matrix `tests/test_op94_metadata_score_reingest_card.py` gruen:
+- ✅ Neue Matrix `tests/test_op94_metadata_score_reingest_card.py` **43/43** gruen:
   (a) Score zaehlt alle 16 CANONICAL_FIELDS (6/16 = 37.5%, nicht 20%);
-  (b) Alias-Mapping bleibt (operator_name zaehlt als operator);
+  (b) Alias-Mapping in beide Richtungen (operator alias zaehlt als operator_name);
   (c) missing_recommended_fields bleibt korrekt (nur 5 recommended);
-  (d) Reingest nach Metadaten-Save (Race): letzter Thread gewinnt,
-      Karte erscheint nach Reload (phase=drafted + keine datasets);
-  (e) Template: preparingCard auch mit progress (ohne datasets) sichtbar;
-  (f) Live-Testclient: Score nach Metadaten-Save > 20% bei 6 Feldern;
-  (g) py_compile aller geaenderten Dateien.
-- Regression: OP13 29/29, OP30 29/29, OP93 30/30, OP55 14/14,
-  OP78 35/35, OP83 21/21, OP84 17/17, OP92 37/37, Smoke 15/15,
-  `manage.py check` 0 issues.
-- Anti-Code-Creep: Score-Logik (1 Funktion) + Race-Guard (2 Threads)
-  + Template-Bedingung (1 Zeile) + neue Matrix + Doku; keine neuen Deps.
-- OP89-Gate gegen origin/main GREEN.
+  (d) Race-Guard: alter Thread (gen 2) schreibt NICHT, aktueller (gen 3) schon;
+  (e) Live-Testclient: Metadaten-Save -> Gen 2, Reingest -> Gen 3, Score 37.5%;
+  (f) py_compile aller geaenderten Dateien; CI-Registrierung.
+- ✅ Angepasste Matrizen (OP94-Score-Aenderung):
+  OP13 T3f: 40.0% -> 25.0% (4/16 canonical statt 2/5 recommended) — 29/29 gruen.
+  OP80 T9e/T9f: 60%/100% -> 31.2%/43.8% (5/16 bzw. 7/16 canonical) — 55/55 gruen.
+- ✅ Regression: OP13 29/29, OP28 30/30, OP30 29/29, OP31 25/25, OP32 19/19,
+  OP33 23/23, OP55 14/14, OP78 35/35, OP80 55/55, OP83 21/21, OP84 17/17,
+  OP92 37/37, OP93 30/30, OP94 43/43, Smoke 15/15, `manage.py check` 0 issues.
+- ✅ Anti-Code-Creep: Score-Logik (1 Funktion) + Race-Guard (4 Stellen)
+  + Template-Kommentar (1 Block) + neue Matrix + 2 Test-Anpassungen + Doku;
+  keine neuen Abhaengigkeiten.
+- ✅ OP89-Gate gegen origin/main GREEN (Smoke + manage.py check).
 
 ### Selbstpruefung (§7, 11 Fragen) — beantwortet vor Umsetzung
 1. Was gefordert? (A) Score zeigt 20/100 trotz eingegebener Felder;

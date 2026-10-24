@@ -3,38 +3,6 @@
 ## Overview
 This document defines the current task for the NIR Intelligence Platform development.
 
-## Current Task: OP94 - Metadaten-Score 20/100 trotz Eingaben + Reingest ohne Karte
-### Ziel
-Zwei Bugs aus Nutzer-Feedback (2026-10-24, nach OP93-Merge):
-(A) "Speichern ging schnell aber ohne Effekt - weiterhin 20 von 100
-Punkten": Der Metadaten-Score zaehlt NUR die 5 RECOMMENDED_METADATA_FIELDS,
-nicht die 16 CANONICAL_FIELDS. User-Eingaben wie sample_id, location,
-notes zaehlen nicht -> Score bleibt 20%.
-(B) "Neue Aufbereitung fuehrt zu keiner neuen Karte": Race zwischen
-Metadaten-Rebuild-Thread (OP93 async) und Reingest-Thread - beide
-konkurrieren um project.preparation_report. Wenn der Metadaten-Thread
-nach dem Reingest datasets schreibt, erscheint die preparingCard nicht
-(Bedingung: phase=drafted AND not datasets).
-### Umsetzung
-- services/project_ingest.py _assess_metadata(): Score zaehlt alle 16
-  CANONICAL_FIELDS (Import aus metadata_llm), Alias-Mapping bleibt.
-  missing_recommended_fields bleibt (Empfehlungen fokussiert).
-- django_project/api/project_views.py: Preparation-Generation-Guard -
-  project.preparation_report['preparation_generation'] wird bei jedem
-  Reingest/Metadaten-Save inkrementiert; Hintergrund-Threads merken sich
-  die Generation beim Start und schreiben nur, wenn sie noch aktuell ist
-  (letzter Thread gewinnt, ehrlich).
-- django_project/templates/project_report.html: preparingCard auch
-  anzeigen wenn progress vorhanden (auch ohne datasets), damit die Karte
-  waehrend des Race-Fensters sichtbar bleibt.
-### Verifikation
-- Neue Matrix tests/test_op94_metadata_score_reingest_card.py:
-  Score zaehlt alle canonical Felder (6/16=37.5%), Alias-Mapping,
-  missing_recommended_fields korrekt, Race-Guard (letzter gewinnt),
-  Template-Bedingung, Live-Testclient, py_compile.
-- Regression: OP13 29/29, OP30 29/29, OP93 30/30, OP55 14/14,
-  OP78 35/35, OP83 21/21, OP84 17/17, OP92 37/37, Smoke 15/15.
-
 ## Current Task: OP88 - Review & Optimierung der uebrigen Framework-Agenten
 ### Ziel
 Nutzer-Auftrag (2026-10-22): 'Bitte ueberpruefe die anderen Agenten ebenso
