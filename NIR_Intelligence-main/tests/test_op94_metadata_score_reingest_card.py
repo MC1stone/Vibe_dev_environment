@@ -260,6 +260,19 @@ try:
     check("T4d Generation nach Metadaten-Save = 2",
           gen_after_save == 2, f"gen={gen_after_save}")
 
+    # OP94 CI-Fix: Warte auf den Metadaten-Rebuild-Thread, BEVOR der
+    # Reingest kommt. Sonst kollidieren beide Threads um die SQLite-
+    # Schreibzugriffe (CI: "database table is locked"). Der Race-Guard
+    # selbst wird in T5 direkt getestet (alter Thread darf nicht
+    # schreiben) — der Live-Race ist hier nicht noetig.
+    _deadline_save = time.time() + 30
+    while time.time() < _deadline_save:
+        project.refresh_from_db()
+        _rep = project.preparation_report or {}
+        if len(_rep.get("datasets") or []) > 0 or _rep.get("preparation_error"):
+            break
+        time.sleep(0.3)
+
     # Reingest -> Generation 3
     resp2 = client.post(f"/projects/{project.id}/reingest/")
     check("T4e Reingest: success + preparing",
