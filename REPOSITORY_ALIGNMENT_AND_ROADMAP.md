@@ -847,6 +847,130 @@ aufeinanderhaengende Bugs, die zusammen den endlosen Spinner erklaeren.
   + Doku; keine neuen Abhaengigkeiten.
 - OP89-Gate gegen origin/main GREEN (covers: api/project_views.py).
 
+### OP94 — Metadaten-Score 20/100 trotz Eingaben + Reingest zeigt keine Fahrplan-Karte — IN ARBEIT (2026-10-24)
+Zwei Bugs aus Nutzer-Feedback (2026-10-24, nach OP93-Merge):
+
+**Bug A: "Speichern ging schnell aber ohne Effekt — weiterhin 20 von 100 Punkten"**
+
+Root-Cause (lokal reproduziert, 2026-10-24): `_assess_metadata()` in
+`services/project_ingest.py:1362` zaehlt NUR die 5
+`RECOMMENDED_METADATA_FIELDS` (`operator`, `humidity`, `temperature`,
+`instrument`, `acquisition_time`). Der User gibt aber Felder wie
+`sample_id`, `location`, `notes`, `wavelength_range`, `resolution` ein
+(die in den 16 `CANONICAL_FIELDS` aus `services/metadata_llm.py:54` sind).
+Diese zaehlen NICHT fuer den Score. Reproduktion: Datensatz mit 6
+gesetzten Feldern (davon 1 recommended) -> Score = 20.0% (1/5). Der
+User sieht keinen Effekt seiner Eingaben.
+
+**Bug B: "Neue Aufbereitung fuehrt zu keiner neuen Karte"**
+
+Analyse (lokal, 2026-10-24): Reingest auf released Projekt funktioniert
+korrekt — `ProjectReingestView.post` setzt `phase='drafted'`, leert den
+Report (`{'user_options': ...}`), startet Hintergrund-Thread. Nach dem
+Reload erscheint die `preparingCard` SOFORT (phase=drafted + keine
+datasets). Sobald der Hintergrund-Thread fertig ist (datasets gefuellt),
+verschwindet die Karte korrekt (Polling reloadet die Seite bei
+`ready=True`).
+
+ABER: Der `_PrepTrace._write()` schreibt `progress` NICHT in das
+geleerte `preserved`-Dict, sondern liest `project.preparation_report`
+(noch `{'user_options': ...}`) und schreibt `progress` dazu. Das ist
+korrekt — ABER die `preparingCard` erscheint nur wenn
+`project.phase == 'drafted' and not preparation.datasets`. Sobald der
+Hintergrund-Thread auch nur EINEN progress-Eintrag schreibt (noch ohne
+datasets), ist die Bedingung weiterhin erfuellt (keine datasets) — die
+Karte bleibt sichtbar. Das Polling-JS liest `progress` vom Status-
+Endpunkt und zeigt den Fortschritt. Sobald `ready=True` (datasets
+vorhanden), reloadet das JS die Seite und die Karte verschwindet.
+
+**Der tatsaechliche Bug B** (nach weiterer Analyse): Wenn der User auf
+einem **drafted** Projekt (nicht released) auf "Aufbereitung erneut
+ausfuehren" klickt, aber der Report bereits datasets hat (z.B. nach
+einem vorherigen Metadaten-Save, der noch laeuft), dann:
+- `ProjectReingestView.post` leert den Report korrekt
+- ABER der noch laufende Metadaten-Rebuild-Thread (OP93) schreibt
+  seinen fertigen Report MIT datasets in `project.preparation_report`
+  — RACE: der Reingest-Thread und der Metadaten-Thread konkurrieren
+  um den Report. Wenn der Metadaten-Thread gewinnt (schreibt datasets
+  nach dem Reingest geleert hat), hat der Report datasets ->
+  `preparingCard` erscheint NICHT (Bedingung `not preparation.datasets`
+  nicht erfuellt).
+
+Lokal reproduziert (2026-10-24): Metadaten-Save (OP93 async) + sofort
+Reingest -> zwei Threads konkurrieren. Beide laufen, aber der Report
+kann datasets enthalten, obwohl die Aufbereitung noch laeuft -> Karte
+erscheint nicht.
+
+### Umfang
+- **Bug A** (`services/project_ingest.py` `_assess_metadata`): Score
+  zaehlt ALLE 16 `CANONICAL_FIELDS` (aus `metadata_llm.CANONICAL_FIELDS`),
+  nicht nur die 5 `RECOMMENDED_METADATA_FIELDS`. Alias-Mapping bleibt
+  (`RECOMMENDED_FIELD_ALIASES` fuer `_found()`). `missing_recommended_
+  fields` bleibt fuer die Empfehlungen (welche empfohlenen Felder
+  fehlen), aber der Score spiegelt die tatsaechliche Vollstaendigkeit
+  aller kanonischen Felder wider. Ehrlich: 6/16 = 37.5% statt 20%.
+- **Bug B** (`django_project/api/project_views.py`): Reingest +
+  Metadaten-Save Race entschaerfen. Loesung: Ein projektweites Lock
+  oder ein "preparation generation"-Zaehler. Beim Reingest wird die
+  Generation inkrementiert; der Metadaten-Rebuild-Thread prueft vor
+  dem finalen Schreiben, ob seine Generation noch aktuell ist — wenn
+  nicht, verwirft er seinen Report (der Reingest-Thread gewinnt).
+  Umgekehrt: Metadaten-Save inkrementiert ebenfalls. Kleineste Loesung:
+  `project.preparation_report['preparation_generation']` — jeder Thread
+  merkt sich die Generation beim Start und schreibt nur, wenn sie noch
+  stimmt.
+- **Template** (`project_report.html`): `preparingCard` auch anzeigen
+  wenn `progress` vorhanden ist (auch ohne datasets), damit die Karte
+  sichtbar bleibt, waehrend der Hintergrund-Thread laeuft — auch wenn
+  ein Race den Report kurzzeitig mit datasets gefuellt hat.
+  Bedingung: `phase == 'drafted' and (not datasets or progress.last_update)`.
+
+### Out of Scope
+- Kein Celery/Worker (keine neue Abhaengigkeit).
+- Keine Aenderung an der Score-Formel fuer `missing_recommended_fields`
+  (Empfehlungen bleiben fokussiert auf die 5 recommended Felder).
+- Kein automatischer Re-Run nach Race (der letzte Thread gewinnt,
+  ehrlich dokumentiert).
+
+### Success Criteria
+- Neue Matrix `tests/test_op94_metadata_score_reingest_card.py` gruen:
+  (a) Score zaehlt alle 16 CANONICAL_FIELDS (6/16 = 37.5%, nicht 20%);
+  (b) Alias-Mapping bleibt (operator_name zaehlt als operator);
+  (c) missing_recommended_fields bleibt korrekt (nur 5 recommended);
+  (d) Reingest nach Metadaten-Save (Race): letzter Thread gewinnt,
+      Karte erscheint nach Reload (phase=drafted + keine datasets);
+  (e) Template: preparingCard auch mit progress (ohne datasets) sichtbar;
+  (f) Live-Testclient: Score nach Metadaten-Save > 20% bei 6 Feldern;
+  (g) py_compile aller geaenderten Dateien.
+- Regression: OP13 29/29, OP30 29/29, OP93 30/30, OP55 14/14,
+  OP78 35/35, OP83 21/21, OP84 17/17, OP92 37/37, Smoke 15/15,
+  `manage.py check` 0 issues.
+- Anti-Code-Creep: Score-Logik (1 Funktion) + Race-Guard (2 Threads)
+  + Template-Bedingung (1 Zeile) + neue Matrix + Doku; keine neuen Deps.
+- OP89-Gate gegen origin/main GREEN.
+
+### Selbstpruefung (§7, 11 Fragen) — beantwortet vor Umsetzung
+1. Was gefordert? (A) Score zeigt 20/100 trotz eingegebener Felder;
+   (B) Reingest zeigt keine Fahrplan-Karte (Race mit Metadaten-Save).
+2. Master Objectives? Ehrlichkeits-Regel (Score spiegelt reale
+   Vollstaendigkeit); zuverlaessige Plattform (Karte erscheint).
+3. Agenten betroffen? Tester Agent (neue Matrix); Metadata Agent
+   (Score-Logik); keine Agent-Aenderung.
+4. Tests? Neue Matrix OP94 (a-g) + Regression OP13/OP30/OP93/OP55/
+   OP78/OP83/OP84/OP92/Smoke.
+5. Wiederverwendung? OP87-Alias-Mapping (`RECOMMENDED_FIELD_ALIASES`),
+   OP78-async-Muster (Thread + preparing), OP55-Status-Endpunkt.
+6. Code Creep? Score-Logik (1 Funktion) + Generation-Guard (2 Stellen)
+   + Template (1 Zeile); keine neuen Deps.
+7. Alle Datei-Formate/Spektrometer? N/A (kein Spektrum-Code betroffen;
+   Score ist formatunabhaengig).
+8. CrewAI-Agentennetzwerk? Unberuehrt.
+9. Software-Stufe? Bugfix; Stufe bleibt.
+10. Workflow-Einbindung? Fahrplan-Karte + Status-Polling greifen nach
+    dem Reload; Race-Guard stellt sicher, dass der letzte Thread gewinnt.
+11. UI? Score steigt ehrlich (alle canonical Felder zaehlen); Karte
+    erscheint auch waehrend des Race-Fensters (progress vorhanden).
+
 ### OP93 — Metadaten-Speichern hängt endlos ("Speichern..." stoppt nie) — ✅ ERLEDIGT (2026-10-23, Branch vibe/op93-metadata-save-hang-e1efba)
 Befund aus Nutzer-Feedback (2026-10-23, nach OP92-Merge): Metadaten im
 Editor ergänzt + "Speichern" gedrückt -> Button bleibt auf "Speichern..."
