@@ -1,6 +1,7 @@
-# NIR-IP: An Open-Science Infrastructure for Iterative, Reproducible Low-Cost VIS/NIR Spectroscopy
+# NIR-IP: An Open-Science Infrastructure for Iterative, Reproducible Low-Cost VIS/NIR Spectroscopy in the Public Sector
 
-**FINALE VERSION — KONSOLIDIERTES CANVAS (20.10.2026)**
+**FINALE VERSION — KONSOLIDIERTES CANVAS (24.10.2026, Neuausrichtung Öffentlicher Sektor)**
+> **Änderung gegenüber dem Stand 20.10.2026:** Der Artikel ist auf den **öffentlichen Sektor** ausgerichtet (Kommunen, Bildungseinrichtungen, Umwelt- und Lebensmittelbehörden, NGOs, Citizen Science). Die Software wird in zwei Teile geteilt: dieser Artikel beschreibt ausschließlich die **Plattform für den öffentlichen Sektor** (Teil 1); die Sensor-Datenbank und die Informationen zur standardisierten Testeinheit sind Teil dieses Artikels. Die Teilung der Software folgt als zweiter Arbeitsschritt.
 > **Legende der Markierungen:**
 > 🔴 **[ANPASSUNG nötig]** — hier muss der Autor vor Einreichung etwas konkret ergänzen/entscheiden (ehemalige [ENTWURF]-Marken; Details + Formulierungsvorschläge in `ARTICLE_FINALIZATION_CHECKLIST.md`)
 > 🟡 **[NEU integriert]** — seit dem konsolidierten Stand (19.10.2026) neuer Inhalt aus OP66–OP72; direkt übernehmen oder final glätten
@@ -22,9 +23,9 @@ Received: / Revised: / Accepted: / Published: [wird vom Journal vergeben]
 
 ## Abstract
 
-Low-cost VIS/NIR sensor hardware has become widely accessible, but the surrounding software ecosystem remains fragmented: data are captured without metadata, quality problems are detected late or not at all, analytical pipelines are not traceable, and calibration models cannot be shared across sites without centralizing raw data. This manuscript presents NIR-IP (NIR-Intelligence Platform), an open-science infrastructure that unifies five capabilities that exist today only in isolation: metadata governance, automated quality assurance, provenance tracking, AI-assisted reasoning, and federated calibration. The contribution is twofold: the integration itself, and the working method built on top of it. NIR-IP does not treat analysis as a one-way pipeline but as an iterative loop: every analysis run is followed by a manager-organized review in which the results are checked per agent, divergences are diagnosed and delegated, corrections are proposed and version-tracked, and each iteration is archived as an auditable comparison report. Negative verdicts — too noisy for precision calibration, replicate structure inflating validation scores, implausible instrument settings — are first-class results, and proposed corrections are never silently executed. A tomato Brix dataset from a representative 18-channel consumer sensor serves solely as proof of concept; the manuscript does not claim a superior prediction model. In the platform's current state, its cross-validated PLS calibration coincides with an independently implemented, external reference workflow within 0.004 R² (0.626 vs. 0.622), it autonomously detects the replicate structure of its own validation data and proposes group-wise cross-validation (now quantified: 0.555 group-wise vs. 0.621 naive 🟡), and it emits a deployable calibration equation with full coefficients and stated limitations. Since the previous revision, the fusion path and a first federated exercise were added to the reported state: two-source fusion is a review-governed analysis branch that measures (not assumes) its calibration benefit with a significance test, and a controlled two-operator federated session executed the full contract chain — consent, parameter-only transport, honest privacy accounting, and aggregation — yielding a global model that outperforms both local models without either site seeing the other's data. 🟡 The fusion path is sensor-aware: a full source comparison with a confounding diagnosis separates sensor gain from sample effects, a sensor-agnostic reference-measurement contract (dark/white, ≥ 50 repetitions) makes the inter-sensor gain curve estimable without prescribing hardware, and a correction loop re-evaluates fusion on corrected data — reporting on real data that spectral correction measurably improves a heterogeneous fusion yet cannot replace compliant reference measurements. This iterative, self-critical, fully traceable behaviour, not predictive accuracy, is the property that reproducible citizen-science spectroscopy requires.
+Low-cost VIS/NIR sensor hardware has become widely accessible, but the surrounding software ecosystem remains fragmented: data are captured without metadata, quality problems are detected late or not at all, analytical pipelines are not traceable, and calibration models cannot be shared across sites without centralizing raw data. This fragmentation hits the **public sector** hardest — municipal laboratories, schools and universities, environmental and food-safety authorities, and non-governmental organizations buy the same inexpensive sensors as industry, but lack the commercial suites, the certified reference materials, and the specialist staff that make their measurements trustworthy and comparable. This manuscript presents NIR-IP (NIR-Intelligence Platform), an open-science infrastructure that unifies five capabilities that exist today only in isolation: metadata governance, automated quality assurance, provenance tracking, AI-assisted reasoning, and federated calibration. Two further components address the public-sector setting directly: a **sensor database** that consolidates everything the platform knows about every device in use — adapter profiles, recorded settings, plausibility assessments, documents, and AI-generated summaries — and a **standardized test unit** in the form of a sensor-agnostic reference-measurement protocol contract (dark/white references, at least 50 repetitions, declared as metadata) that places any compliant device on a common radiometric scale without prescribing hardware and without certified reference material. The contribution is twofold: the integration itself, and the working method built on top of it. NIR-IP does not treat analysis as a one-way pipeline but as an iterative loop: every analysis run is followed by a manager-organized review in which the results are checked per agent, divergences are diagnosed and delegated, corrections are proposed and version-tracked, and each iteration is archived as an auditable comparison report. Negative verdicts — too noisy for precision calibration, replicate structure inflating validation scores, implausible instrument settings — are first-class results, and proposed corrections are never silently executed. A tomato Brix dataset from a representative 18-channel consumer sensor serves solely as proof of concept; the manuscript does not claim a superior prediction model. In the platform's current state, its cross-validated PLS calibration coincides with an independently implemented, external reference workflow within 0.004 R² (0.626 vs. 0.622), it autonomously detects the replicate structure of its own validation data and proposes group-wise cross-validation (now quantified: 0.555 group-wise vs. 0.621 naive 🟡), and it emits a deployable calibration equation with full coefficients and stated limitations. Since the previous revision, the fusion path and a first federated exercise were added to the reported state: two-source fusion is a review-governed analysis branch that measures (not assumes) its calibration benefit with a significance test, and a controlled two-operator federated session executed the full contract chain — consent, parameter-only transport, honest privacy accounting, and aggregation — yielding a global model that outperforms both local models without either site seeing the other's data. 🟡 The fusion path is sensor-aware: a full source comparison with a confounding diagnosis separates sensor gain from sample effects, a sensor-agnostic reference-measurement contract (dark/white, ≥ 50 repetitions) makes the inter-sensor gain curve estimable without prescribing hardware, and a correction loop re-evaluates fusion on corrected data — reporting on real data that spectral correction measurably improves a heterogeneous fusion yet cannot replace compliant reference measurements. This iterative, self-critical, fully traceable behaviour, not predictive accuracy, is the property that reproducible spectroscopy in the public sector requires: a measurement taken by a municipal lab, a school, or a citizen-science group becomes scientifically usable exactly when its analysis can show, from its own archived history, why its number deserves trust — and comparable across institutions when every device declares the same standardized test unit.
 
-**Keywords:** low-cost spectroscopy; VIS/NIR spectroscopy; iterative analysis; multi-agent systems; metadata governance; FAIR data; scientific reproducibility; provenance tracking; citizen science; federated calibration; chemometrics; automated quality assurance; data fusion
+**Keywords:** low-cost spectroscopy; VIS/NIR spectroscopy; public sector; municipal laboratories; education; citizen science; iterative analysis; multi-agent systems; metadata governance; FAIR data; scientific reproducibility; provenance tracking; sensor database; standardized test unit; reference measurement protocol; federated calibration; chemometrics; automated quality assurance; data fusion
 
 ---
 
@@ -38,15 +39,17 @@ Crucially, the principle does not prescribe the hardware. Low-cost optical spect
 
 This paper uses one such device as a working example: the SparkFun Triad Spectroscopy Sensor (ams AS7265x chipset), a multi-channel consumer sensor that reports 18 fixed reflectance bands between 410 and 940 nm. The Triad is deliberately minimal, which makes it a demanding rather than a flattering test case. Nothing in NIR-IP assumes this device: channel count, wavelength grid, and value semantics are dataset metadata, so a project recorded with any other low-cost spectrometer is processed by the same agents, the same quality gates, and the same review loop.
 
-### 1.2 Motivation: Spectroscopy Is Easy to Do and Hard to Trust
+### 1.2 Motivation: Spectroscopy Is Easy to Do and Hard to Trust — Especially in the Public Sector
 
-VIS/NIR spectroscopy is attractive for citizen science and applied field work [1,2] because the measurement itself is fast, non-destructive, and increasingly cheap [3]. The hard part is not the measurement. The hard part is everything around it: knowing whether the instrument was calibrated, whether the signal is dominated by noise, whether a stored spectrum can still be interpreted a year later, and whether an analysis that produced a number today can produce the same number tomorrow.
+VIS/NIR spectroscopy is attractive for citizen science, applied field work, and an increasing range of public-sector tasks [1,2] — municipal food and water monitoring, school and university teaching, environmental screening by authorities and NGOs — because the measurement itself is fast, non-destructive, and increasingly cheap [3]. The hard part is not the measurement. The hard part is everything around it: knowing whether the instrument was calibrated, whether the signal is dominated by noise, whether a stored spectrum can still be interpreted a year later, and whether an analysis that produced a number today can produce the same number tomorrow.
+
+The public sector faces this trust problem under the tightest constraints. A municipal laboratory or a school buys the same consumer-grade sensor as a research group, but cannot buy the commercial analysis suite, cannot commission certified reference materials, and cannot employ a chemometrician to audit every pipeline. Measurements that should be comparable across institutions — the same water body measured by an authority and by a citizen group, the same batch screened by two municipal labs — are in practice incomparable, because nothing records the device, the settings, the reference measurements, or the quality verdict behind each number. When public decisions rest on such measurements, the missing infrastructure is not a convenience gap but a governance gap. NIR-IP addresses this audience directly: it is designed to run on local hardware, to require no certified reference material, to teach correct measurement practice through its interface, and to make every number traceable to the device, the settings, and the quality verdicts that produced it.
 
 This is not a peripheral concern. Reproducibility is an open crisis across computational disciplines: Peng documented the gap between published claims and executable evidence [4], and a survey of more than 1,500 researchers found that the majority had failed to reproduce a published experiment at least once [5]. Spectroscopy adds its own failure modes: raw ADC values with channel-dependent offsets that silently dominate multivariate models, replicate measurements of the same object leaking into both training and test folds, sensor drift that appears or disappears with the time window examined, and metadata — if captured at all — stored in formats no other tool can read.
 
 ### 1.3 Today's Technology Landscape and the Gap
 
-Three classes of low-cost measurement hardware are in practical use (Table 1): chip-level multi-band sensors (ams AS726x family, SparkFun Triad), compact grating spectrometers, and DIY/community-built spectrometers (Public Lab kits) [1,2,3]. Their applications are the same handful — fruit ripeness, crop and soil monitoring, food quality, water assessment, education [3,21] — precisely the applications in which measurement conditions are least controlled.
+Three classes of low-cost measurement hardware are in practical use (Table 1): chip-level multi-band sensors (ams AS726x family, SparkFun Triad), compact grating spectrometers, and DIY/community-built spectrometers (Public Lab kits) [1,2,3]. Their applications are the same handful — fruit ripeness, crop and soil monitoring, food quality, water assessment, education [3,21] — and increasingly the statutory and educational tasks of the public sector: municipal food and water surveillance, school and university teaching, environmental screening by authorities, and community-based monitoring by NGOs and citizen groups. These are precisely the applications in which measurement conditions are least controlled **and** the operators are least specialized: a public-sector user is typically not a chemometrician, works with a consumer device, and must still produce a number that a colleague in another institution — or a regulator — can trust and compare.
 
 **Table 1.** Low-cost optical measurement hardware classes in practical use today.
 
@@ -71,6 +74,8 @@ What no device in any class ships with is the analytical infrastructure around t
 
 🟢 H1–H6 unverändert; 🟡 H5-Formulierung im Conclusions-Teil wurde aktualisiert (siehe §8 unten).
 
+🟡 **Neuausrichtung Öffentlicher Sektor — Dieser Artikel beschreibt ausschließlich die Plattform für den öffentlichen Sektor (Teil 1 der Software-Teilung).** Er behandelt nicht: kommerzielle Labor-Workflows, proprietäre Herstellerformate kommerzieller Laborinstrumente, zertifizierte Referenzmaterialien (certified reference materials, CRMs) und regulatorische Zertifizierungsverfahren — der öffentliche Sektor kann diese in der Regel nicht beschaffen; stattdessen setzt die Plattform auf die standardisierte Testeinheit (dark/white-Referenzprotokoll, §6.7). Ebenfalls nicht behandelt: die kommerzielle Produktiv-Variante der Software (Teil 2), die in einem zweiten Arbeitsschritt von dieser Software abgespalten wird. Der Artikel behauptet keine Überlegenheit des Vorhersagemodells; der Tomaten-Brix-Datensatz dient ausschließlich als Proof of Concept.
+
 ---
 
 ## 2. Materials and Methods
@@ -89,11 +94,30 @@ What no device in any class ships with is the analytical infrastructure around t
 
 ## 3. System Design
 
+### 3.1 Agent-Service Architecture and Deployment Tiers
+
 🟢 *(Agent-Beschreibungen unverändert, mit zwei Ergänzungen:)*
 
 > 🟡 **Sensor quality agent.** (…) For fusion projects the agent additionally contributes the source-pair sensor comparison and the reference-measurement compliance check (dark/white, ≥ 50 repetitions) to the fusion branch (Section 6.7).
 
 > 🟡 *(optional)* A dedicated introduction page teaches correct measurement practice — lighting conditions, the dark/white reference protocol, and the metadata contract — with the sensor database feeding device-specific guidance; the reference protocol it teaches is the same contract the fusion branch enforces.
+
+### 3.2 The Sensor Database
+
+🟡 **[NEU — Öffentlicher Sektor]** The platform maintains a **sensor database** that consolidates everything it knows about every spectrometer in use — the component a public-sector institution needs most, because its devices are heterogeneous (a school's DIY spectrometer, a municipal lab's consumer sensor, a university's grating module) and nobody keeps the overview by hand. The database has three layers (Figure 5).
+
+🟡 **[Figur einfügen — Sensor-Datenbank, drei Ebenen]**
+
+![Figure 5: NIR-IP Sensor Database — three layers: registered adapters (device registry), usage from the existing database (no new tables), and the per-sensor information page](article_figures/fig5_sensor_database.png)
+*(SVG-Quelle: `article_figures/fig5_sensor_database.svg`)*
+
+**Layer 1 — registered adapters.** Every device the platform can talk to is described by an adapter profile in the device registry (`devices/`): capabilities (wavelength range, detector, interface, resolution, streaming, external trigger) and the calibration contract. New devices are integrated by implementing one adapter interface and registering a model ID — the platform core never changes, and no file format is hard-coded. The registry currently covers the proof-of-concept sensor (SparkFun Triad, AS7265x), a DIY ESP32-S3 camera spectrometer, and a DIY matchbox spectrometer; the adapter contract is the extension point for every further device.
+
+**Layer 2 — usage from the existing database.** The catalog reads what analyses have actually recorded — instrument types on spectrum records, recorded settings in preparation reports and crew results — without introducing new tables. Usage statistics (spectra, projects, samples, last used) and the recorded setting values appear per sensor, together with deduplicated optimization suggestions from the crew analyses. Names that do not match a registered adapter are not silently deduplicated: an AI-supported matcher proposes assignments ("SparkFun Triad" vs. "Triad") and asks the user.
+
+**Layer 3 — the per-sensor information page.** Each sensor has a single page (`/projects/sensors/<name>/`) combining the adapter profile, the recorded usage, a completeness and plausibility assessment of the recorded settings (checked against the known device limits, e.g. a scan count above the instrument maximum is flagged), uploaded documents of any type (datasheet, manual, calibration certificate), and a live AI-generated summary executed locally — with an honest fallback when the local model server is unavailable.
+
+The database feeds back into analysis: the metadata agent's plausibility checks use the known device limits, the fusion branch's reference-protocol compliance check (§6.7) reads the sensor's declared references, and the introduction page teaches device-specific measurement practice — the same dark/white reference protocol the fusion branch enforces. For the public sector this is the difference between owning a sensor and being able to defend its measurements: the database turns scattered device knowledge into one governed, inspectable record per instrument.
 
 ---
 
@@ -107,6 +131,8 @@ What no device in any class ships with is the analytical infrastructure around t
 
 🟢 *(5.1–5.6 unverändert)*
 
+🟡 **Ergänzung Öffentlicher Sektor (nach §5.6):** For the public sector the loop is more than convenience. A measurement taken by a municipal laboratory, a school, or a citizen-science group becomes scientifically usable — and comparable across institutions — exactly when its analysis can show, from its own archived history, why its number deserves trust: which device produced it (sensor database, §3.2), which settings and quality verdicts accompanied it, and which standardized test unit (§6.7) placed it on a common scale.
+
 ---
 
 ## 6. Proof of Concept: Current State of the Platform and the Tomato Brix Project
@@ -115,7 +141,15 @@ What no device in any class ships with is the analytical infrastructure around t
 🟢 *(unverändert)*
 
 ### 6.2 Metadata Governance and Provenance
-🟢 *(unverändert)*
+🟢 *(Text unverändert; Screenshots der Bedienoberfläche ergänzt — Berichte siehe unten)*
+
+🟡 **[Abbildungen ergänzen — Screenshots der Metadaten-Governance]**
+
+![Figure 6: NIR-IP web interface — dataset overview with metadata quality score, missing-field analysis and open AI questions (German UI, as deployed for public-sector users)](article_figures/fig6_metadata_scorecard_screenshot.png)
+
+![Figure 7: NIR-IP web interface — metadata improvement dialogue: fields to complete (operator, humidity, temperature, instrument, acquisition time) with the list of missing metadata fields (German UI, as deployed for public-sector users)](article_figures/fig7_metadata_dialog_screenshot.png)
+
+The two screenshots show the governance dialogue in operation on the proof-of-concept dataset: the overview grades the recorded metadata (Figure 6) and surfaces the open questions the metadata agent formulates; the improvement dialogue (Figure 7) turns each missing field into a concrete, answerable question. For a public-sector user without specialist training this dialogue is the governance mechanism made tangible: governance becomes a conversation, not a checklist. Both screenshots are taken from the running platform (German UI); the platform is fully internationalized (i18n), and the figures are labelled as German originals in the caption.
 
 ### 6.3 Automated Quality Assurance
 🟢 *(Text unverändert; die Schwellen-Herleitungs-Stelle bleibt markiert:)*
@@ -190,6 +224,15 @@ The decisive diagnostic is the **confounding diagnosis**. Without shared measure
 
 🟡 **[Abbildung ergänzen — Band-Matrix]:** Figure X: Brix-band confusion matrix of the combined calibration (rows = measured band, columns = predicted band), shown per source dataset and for the fused set — the band-level view localizes systematic prediction offsets that aggregate metrics hide. *(Export aus dem Fusions-Report des Live-Stacks.)*
 
+**The standardized test unit: a reference-measurement protocol, not a device.** 🟡 The reference-protocol contract of Section 6.7 is the platform's answer to a question the public sector cannot solve by procurement: how can measurements from different institutions, on different devices, become comparable when no one can afford certified reference materials or a calibration laboratory? NIR-IP defines a **standardized test unit** as a *measurement condition* — not a prescribed instrument. Every source declares two reference measurements as metadata: a **dark** reference (shutter closed / no illumination) and a **white** reference (a diffuse reflectance standard), each with at least 50 repetitions and a declared artifact (Figure 8). From compliant references the platform estimates the sensor transfer function radiometrically — (raw − dark)/(white − dark) per channel, smoothed over the wavelength axis, with a confidence note derived from the repetition spread — and offers the resulting gain curve as a correction variant in the fusion loop. Reference datasets never enter a calibration: they are declared as `reference_measurement` and are not samples.
+
+🟡 **[Figur einfügen — Standardisierte Testeinheit]**
+
+![Figure 8: NIR-IP standardized test unit — the reference-measurement protocol contract: dark/white references (≥ 50 repetitions, declared as metadata), radiometric evaluation, role in the fusion correction loop, and the public-sector rationale (comparability, teachability, trust without certification)](article_figures/fig8_test_unit.png)
+*(SVG-Quelle: `article_figures/fig8_test_unit.svg`)*
+
+Three properties make this contract suitable for the public sector. **Comparability:** any device that measures the two references can be placed on a common radiometric scale — a school's DIY spectrometer and a municipal lab's consumer sensor become comparable without either institution buying anything beyond a diffuse white standard and a light-tight cover. **Teachability:** the platform's introduction page teaches exactly this protocol — lighting conditions, the dark/white reference procedure, the metadata contract — with the sensor database (§3.2) feeding device-specific guidance; one procedure, every device. **Trust without certification:** dark and white references are reproducible by anyone, and the repetition spread states the confidence honestly; the platform never simulates a gain curve when the contract is not met — it reports "not estimable" together with the protocol text, as it did for both tomato sources. The measurement-condition contract, not a device list, is what makes the infrastructure sensor-agnostic — and it is the same contract that scales to every future sensor added to the growing database.
+
 Federation remains the third level of the iterative method (Section 5.6): each aggregation round is a recorded iteration of the shared model, and the discussion layer (Section 6.5) receives the full comparison — metrics, hit quotas, significance verdict, corrected verdict, conclusion — as context, so the results can be examined in dialogue with the platform's reasoning assistant rather than only read.
 
 ---
@@ -204,6 +247,8 @@ Federation remains the third level of the iterative method (Section 5.6): each a
 
 ### 7.3 Limitations
 🟢 *(vier Limitationen; die Federated-path-Limitation aktualisiert + Fusion-path-Satz neu:)*
+
+> 🟡 Public-sector scope: the platform is designed for, and demonstrated on, consumer-grade low-cost devices in public-sector settings; it does not replace certified reference materials or regulatory calibration procedures, and its standardized test unit (§6.7) is a comparability contract, not a certification. The proof of concept uses one dataset, one sensor model, one target analyte; the public-sector claim is about the infrastructure's behaviour — governance, quality verdicts, comparability — not about predictive performance on any particular analyte.
 
 > 🟡 Federated path: the infrastructure is integrated and its contracts (consent, parameter-only transport, privacy accounting, aggregation) have been exercised end-to-end on a controlled two-operator split; a multi-site campaign on real distributed data has not yet run, so the empirical claim remains limited to contract verification, and hyperplane averaging is documented as a one-shot aggregation without iterative refinement (neural heads with true gradient rounds remain future work).
 
@@ -226,6 +271,8 @@ Federation remains the third level of the iterative method (Section 5.6): each a
 
 **Future perspective.** 🟡 The measured refusal of the real-source fusion is not the end of the story — it defines the path forward. The sensor-agnostic reference protocol (dark/white, ≥ 50 repetitions per source, declared as metadata) is already implemented and contract-verified: once the two tomato sources acquire reference measurements, the platform estimates the inter-sensor transfer function radiometrically — (raw − dark)/(white − dark) per channel, smoothed over the wavelength axis — and offers the gain curve as a correction variant. Re-running the fusion then promotes the gain-curve correction from contract-verified to empirically validated, and completes the arc of Section 6.7: the platform detected the incompatibility, diagnosed its cause, refused to hide it, and now prescribes the exact measurement that resolves it. The same protocol scales to every future sensor in the growing database: any device that measures the two references can be placed on a common radiometric scale without centralizing raw spectra — the measurement-condition contract, not a device list, is what makes the infrastructure sensor-agnostic.
 
+**Vision for the public sector.** 🟡 The longer-term vision is a standard infrastructure for public-sector spectroscopy: a world in which a measurement taken by a municipal laboratory, a school, or a citizen-science group on a consumer device carries enough governance to be scientifically usable — and enough standardization to be comparable across institutions. The sensor database (§3.2) gives every institution one governed record per device; the standardized test unit (§6.7) gives every device a common radiometric scale without certified reference material; the metadata governance and provenance machinery makes every number traceable; and the platform that produced the analysis can prove, from its own iteration archive, exactly why that number deserves trust. Public-sector institutions then share calibration models federated — improving each other's measurements without centralizing their data — and a regulator, a teacher, or a citizen can audit any number back to the device, the settings, and the quality verdicts that produced it.
+
 🟢 *(längere Vision unverändert)*
 
 ---
@@ -243,7 +290,7 @@ Federation remains the third level of the iterative method (Section 5.6): each a
 🟢 *(unverändert)*
 
 ## Data Availability Statement
-🟢 *(unverändert; ergänzen:)* 🟡 The raw proof-of-concept dataset, the Orange reference workflow, the KNIME reference analysis (including the importable workflow and the fusion counter-check with correction variants), and all deterministic test matrices are versioned in the project repository.
+🟢 *(unverändert; ergänzen:)* 🟡 The raw proof-of-concept dataset, the Orange reference workflow, the KNIME reference analysis (including the importable workflow and the fusion counter-check with correction variants), and all deterministic test matrices are versioned in the project repository. The platform-generated production report (29 pages, 23 figures, quality score 81.7/100), the fusion verification run record, the federated session record, and the sensor comparison and correction-variant results (JSON + figures) are archived with the study; the sensor database contents (adapter profiles, recorded usage, plausibility assessments) are reproducible from the platform's own database via the sensor pages (§3.2).
 
 ## Acknowledgments
 🔴 **[ANPASSUNG: konkrete Tester/Unterstützer ergänzen]** *(restlicher Text unverändert, inkl. GenAI-Disclosure — [ANPASSUNG: GenAI-Disclosure verifizieren])*
@@ -255,14 +302,14 @@ Federation remains the third level of the iterative method (Section 5.6): each a
 🟢 *(unverändert; ggf. SNV ergänzen: standard normal variate; MSC: multiplicative scatter correction)*
 
 ## Appendix A. Project Artifacts
-🟢 *(Tabelle A1; ergänzen:)* 🟡 KNIME reference analysis (workflow + fusion counter-check with SNV/MSC correction variants, R²cv 0.545→0.646 vs. best single source 0.722); federated session record and fusion verification run (numbers as in Tables 7–9); sensor comparison artifacts (channel ratios, correlation-structure difference, confounding diagnosis).
+🟢 *(Tabelle A1; ergänzen:)* 🟡 KNIME reference analysis (workflow + fusion counter-check with SNV/MSC correction variants, R²cv 0.545→0.646 vs. best single source 0.722); federated session record and fusion verification run (numbers as in Tables 7–9); sensor comparison artifacts (channel ratios, correlation-structure difference, confounding diagnosis); 🟡 **[NEU]** sensor database export (adapter profiles for all registered devices, recorded usage statistics, setting plausibility assessments); 🟡 **[NEU]** standardized test unit specification (reference-measurement protocol contract: dark/white, ≥ 50 repetitions, metadata schema) with the compliance-check implementation and the honest "not estimable" reporting path; 🟡 **[NEU]** UI screenshots of the metadata governance dialogue (Figures 6–7) and the figure sources (SVG + 300-dpi PNG) for Figures 1–8 in `article_figures/`.
 
 ## Appendix B. Reproducibility Statement
 🟢 *(unverändert)*
 
 ## Supplementary Materials
 
-🔴 **[ANPASSUNG: DOI des Repositoriums nach öffentlicher Deposition ergänzen]** 🟡 Liste ergänzen um: fusion verification run records, federated session record, KNIME reference analysis incl. workflow file, sensor comparison and correction-variant results (JSON + figures).
+🔴 **[ANPASSUNG: DOI des Repositoriums nach öffentlicher Deposition ergänzen]** 🟡 Liste ergänzen um: fusion verification run records, federated session record, KNIME reference analysis incl. workflow file, sensor comparison and correction-variant results (JSON + figures), 🟡 **[NEU]** sensor database export (adapter profiles + recorded usage), 🟡 **[NEU]** standardized test unit specification (reference-measurement protocol contract), 🟡 **[NEU]** UI screenshots (Figures 6–7) and figure sources (SVG + 300-dpi PNG) for Figures 1–8.
 
 ---
 
@@ -279,7 +326,9 @@ Federation remains the third level of the iterative method (Section 5.6): each a
 | 7 | Alt-Text einfügen | §1.3 etc. | unveränderte Alt-Abschnitte aus der Word/PDF-Quelle an „*(… unverändert …)*"-Stellen | konsolidierter Stand 19.10.2026 |
 | 8a | KNIME-Workflow-Figur | §2.1 | fig4 einbauen; Ehrlichkeits-Note zur .knwf im Captions/Supp. | Canvas §2.1 |
 | 8b | Band-Matrix-Abbildung | §6.7 | Export aus Live-Report + Bildunterschrift | Text steht im Canvas |
-| 9 | Grafiken final einbauen | §1.3/§6.7 | fig2 (§3), fig1+fig3 (§6.7) — SVG oder PNG | article_figures/ |
+| 9 | Grafiken final einbauen | §1.3/§3.2/§6.2/§6.7 | fig2 (§3), fig1+fig3 (§6.7), 🟡 **[NEU]** fig5 Sensor-Datenbank (§3.2), fig6+fig7 Screenshots Metadaten-Governance (§6.2), fig8 standardisierte Testeinheit (§6.7) — SVG oder PNG | article_figures/ |
+| 14 | 🟡 **[NEU]** Neuausrichtung Öffentlicher Sektor | Titel, Abstract, §1.2, §1.3, §1.5, §3.2, §5, §6.2, §6.7, §7.3, §8 | Artikel ausschließlich auf öffentliche Sektor ausrichten; Sensor-Datenbank + standardisierte Testeinheit als Artikel-Bestandteil; Software-Teilung dokumentieren | ARTICLE_UPDATE_PUBLIC_SECTOR.md |
+| 15 | 🟡 **[NEU]** Software-Teilung (Teil 2) | — | Zweiter Arbeitsschritt: Software in 2 Teile teilen (öffentlicher Sektor / kommerziell) — folgt nach dieser Artikel-Anpassung | Roadmap S1–S9 |
 | 10 | Referenzen | Literaturverzeichnis | [1]–[28] + 5 neue Zitate ergänzen | Checkliste §9 |
 | 11 | Danksagung/COI | Ack./Conflicts | Tester ergänzen, Varianten prüfen | Checkliste |
 | 12 | Supplementary/DOI | Supp. Materials | Repository-DOI nach Deposition | Checkliste |
