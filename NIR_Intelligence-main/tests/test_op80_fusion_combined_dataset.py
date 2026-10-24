@@ -400,19 +400,24 @@ check("T9d Aliase gespiegelt (operator/instrument/acquisition_time)",
       str({a: meta_op87.get(a) for a in
            ('operator', 'instrument', 'acquisition_time')}))
 assess = _assess_metadata([c_op87])
-check("T9e Score des Merge: 60% statt 0-20% (humidity/temperature fehlen real)",
-      assess['overall_quality_score'] == 60.0,
+# OP94: Score zaehlt alle 16 CANONICAL_FIELDS. Der Merge hat 5 kanonische
+# Felder (operator_name, instrument_type, timestamp, location, sample_id)
+# = 5/16 = 31.2%. Vor OP94 war es 60% (3/5 recommended). Ehrlicher.
+check("T9e Score des Merge: 31.2% = 5/16 canonical (OP94, humidity/temperature fehlen real)",
+      assess['overall_quality_score'] == 31.2,
       f"score={assess['overall_quality_score']}")
 
-# Vollstaendige Quelle (inkl. humidity/temperature) -> 100%
+# Vollstaendige Quelle (inkl. humidity/temperature) -> hoeherer Score
 d_s3 = dict(d_s1, file_name='s3.csv',
             metadata=dict(META2, humidity='50', temperature='22'))
 d_s4 = dict(d_s2, file_name='s4.csv',
             metadata=dict(META2, humidity='50', temperature='22'))
 c_full = _bcd2([d_s3, d_s4])
 assess_full = _assess_metadata([c_full])
-check("T9f vollstaendige Quellen -> Merge-Score 100%",
-      assess_full['overall_quality_score'] == 100.0,
+# OP94: 7/16 canonical = 43.8% (operator_name, instrument_type, timestamp,
+# location, sample_id, humidity, temperature). Vor OP94: 100% (5/5).
+check("T9f vollstaendige Quellen -> Merge-Score 43.8% = 7/16 canonical (OP94)",
+      assess_full['overall_quality_score'] == 43.8,
       f"score={assess_full['overall_quality_score']}")
 
 print(f"\nRESULT: {PASS} passed, {FAIL} failed")

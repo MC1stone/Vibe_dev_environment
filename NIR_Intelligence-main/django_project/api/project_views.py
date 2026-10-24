@@ -778,14 +778,22 @@ class ProjectCreateView(APIView if DRF_AVAILABLE else object):
                 }}
             project.save(update_fields=['preparation_report'])
 
+        # OP94: Race-Guard — Generation initialisieren (frisches Projekt,
+        # aber konsistent mit Reingest/Metadaten-Save).
+        project.preparation_report = {
+            **(project.preparation_report or {}),
+            'preparation_generation': 1,
+        }
+        project.save(update_fields=['preparation_report', 'updated_at'])
+
         from threading import Thread
         from services.project_ingest import build_preparation_report
 
-        def _prepare(pid):
+        def _prepare(pid, gen):
             try:
                 from core.models import AnalysisProject as AP
                 proj = AP.objects.get(id=pid)
-                build_preparation_report(proj)
+                build_preparation_report(proj, generation=gen)
             except Exception as exc:
                 import logging
                 logging.getLogger(__name__).warning(
@@ -799,7 +807,7 @@ class ProjectCreateView(APIView if DRF_AVAILABLE else object):
                 except Exception:
                     pass
 
-        thread = Thread(target=_prepare, args=(project.id,), daemon=True)
+        thread = Thread(target=_prepare, args=(project.id, 1), daemon=True)
         thread.start()
         return Response({
             'success': True,
@@ -1247,17 +1255,24 @@ class ProjectReingestView(APIView if DRF_AVAILABLE else object):
         preserved = {'user_options': user_options}
         if report.get('fusion'):
             preserved['fusion'] = report['fusion']
+        # OP94: Race-Guard — Generation inkrementieren, damit ein noch
+        # laufender Metadaten-Rebuild-Thread (OP93) seinen fertigen
+        # Report NICHT mehr schreibt, wenn der Reingest inzwischen
+        # gestartet wurde (sonst: Report hat datasets -> Fahrplan-Karte
+        # erscheint nicht, Nutzer-Befund 2026-10-24).
+        generation = int(report.get('preparation_generation') or 0) + 1
+        preserved['preparation_generation'] = generation
         report = preserved
         project.preparation_report = report
         project.save(update_fields=['preparation_report', 'updated_at'])
         from threading import Thread
         from services.project_ingest import build_preparation_report
 
-        def _prepare(pid):
+        def _prepare(pid, gen):
             try:
                 from core.models import AnalysisProject as AP
                 proj = AP.objects.get(id=pid)
-                build_preparation_report(proj)
+                build_preparation_report(proj, generation=gen)
             except Exception as exc:
                 import logging
                 logging.getLogger(__name__).warning(
@@ -1272,7 +1287,8 @@ class ProjectReingestView(APIView if DRF_AVAILABLE else object):
                 except Exception:
                     pass
 
-        thread = Thread(target=_prepare, args=(project.id,), daemon=True)
+        thread = Thread(target=_prepare, args=(project.id, generation),
+                        daemon=True)
         thread.start()
         return Response({
             'success': True,
@@ -1341,18 +1357,23 @@ class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
                 # karte 'Datenaufbereitung laeuft...' mit Polling.
                 report.pop('datasets', None)
                 report.pop('preparation_error', None)
+                # OP94: Race-Guard — Generation inkrementieren (wie Reingest
+                # und Metadaten-Save), damit konkurrierende Threads ihre
+                # Reports nicht gegenseitig ueberschreiben.
+                gen = int(report.get('preparation_generation') or 0) + 1
+                report['preparation_generation'] = gen
                 project.preparation_report = report
                 project.save(update_fields=['preparation_report',
                                             'updated_at'])
                 from threading import Thread
 
-                def _prepare_wishes(pid):
+                def _prepare_wishes(pid, generation):
                     try:
                         from core.models import AnalysisProject as AP
                         proj = AP.objects.get(id=pid)
                         from services.project_ingest import \
                             build_preparation_report
-                        build_preparation_report(proj)
+                        build_preparation_report(proj, generation=generation)
                     except Exception as exc:
                         import logging
                         logging.getLogger(__name__).warning(
@@ -1368,7 +1389,7 @@ class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
                         except Exception:
                             pass
                 thread = Thread(target=_prepare_wishes,
-                                 args=(project.id,), daemon=True)
+                                 args=(project.id, gen), daemon=True)
                 thread.start()
                 return Response({
                     'success': True,
@@ -1423,17 +1444,21 @@ class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
         preserved = {'user_options': user_options}
         if report.get('fusion'):
             preserved['fusion'] = report['fusion']
+        # OP94: Race-Guard — Generation inkrementieren (wie beim Reingest),
+        # damit ein konkurrierender Reingest-Thread seinen Report gewinnt.
+        generation = int(report.get('preparation_generation') or 0) + 1
+        preserved['preparation_generation'] = generation
         project.preparation_report = preserved
         project.save(update_fields=['preparation_report', 'updated_at'])
 
         from threading import Thread
         from services.project_ingest import build_preparation_report
 
-        def _prepare(pid):
+        def _prepare(pid, gen):
             try:
                 from core.models import AnalysisProject as AP
                 proj = AP.objects.get(id=pid)
-                build_preparation_report(proj)
+                build_preparation_report(proj, generation=gen)
             except Exception as exc:
                 import logging
                 logging.getLogger(__name__).warning(
@@ -1449,7 +1474,8 @@ class ProjectMetadataView(APIView if DRF_AVAILABLE else object):
                 except Exception:
                     pass
 
-        thread = Thread(target=_prepare, args=(project.id,), daemon=True)
+        thread = Thread(target=_prepare, args=(project.id, generation),
+                        daemon=True)
         thread.start()
         return Response({
             'success': True,
